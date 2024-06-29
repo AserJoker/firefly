@@ -1,0 +1,10 @@
+
+file(GLOB PROJECTS ${PROJECT_SOURCE_DIR}/packages/src/*)
+foreach(PROJECT ${PROJECTS})
+    if(IS_DIRECTORY ${PROJECT})
+        get_filename_component(PROJECT ${PROJECT} NAME)
+        set(FF_PROJECT_NAME ${FF_ROOT_PROJECT_NAME}.${PROJECT})
+        list(APPEND ${FF_PACKAGES} ${FF_ROOT_PROJECT_NAME}.${PROJECT})
+        add_subdirectory(src/${PROJECT})
+    endif()
+endforeach(PROJECT ${PROJECTS})

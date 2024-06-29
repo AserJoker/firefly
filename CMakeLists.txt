@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.12)
+project(firefly)
+set(FF_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/packages/include)
+set(FF_ROOT_PROJECT_NAME ${PROJECT_NAME})
+set(CMAKE_CXX_STANDARD 20)
+add_subdirectory(packages)
+add_subdirectory(projects)
