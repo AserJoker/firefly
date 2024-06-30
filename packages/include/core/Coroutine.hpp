@@ -11,23 +11,23 @@
 #include <windows.h>
 #endif
 namespace firefly::core {
-enum class CoPromiseType { FULFILLED, REJECTED, PENDDING };
-template <class T> class CoPromise : public Object {
+enum class CoPromiseType { FULFILLED, REJECTED, PENDING };
+template <class T> class CoFuture : public Object {
 private:
   std::exception _error;
   T _value;
   CoPromiseType _status;
 
 public:
-  CoPromise() { _status = CoPromiseType::PENDDING; }
+  CoFuture() { _status = CoPromiseType::PENDING; }
   void resolve(T value) {
-    if (_status == CoPromiseType::PENDDING) {
+    if (_status == CoPromiseType::PENDING) {
       _value = value;
       _status = CoPromiseType::FULFILLED;
     }
   }
   void reject(const std::exception &e) {
-    if (_status == CoPromiseType::PENDDING) {
+    if (_status == CoPromiseType::PENDING) {
       _error = e;
       _status = CoPromiseType::REJECTED;
     }
@@ -37,20 +37,20 @@ public:
   const std::exception &error() const { return _error; }
 };
 
-template <> class CoPromise<void> : public Object {
+template <> class CoFuture<void> : public Object {
 private:
   std::exception _error;
   CoPromiseType _status;
 
 public:
-  CoPromise() { _status = CoPromiseType::PENDDING; }
+  CoFuture() { _status = CoPromiseType::PENDING; }
   void resolve() {
-    if (_status == CoPromiseType::PENDDING) {
+    if (_status == CoPromiseType::PENDING) {
       _status = CoPromiseType::FULFILLED;
     }
   }
   void reject(const std::exception &e) {
-    if (_status == CoPromiseType::PENDDING) {
+    if (_status == CoPromiseType::PENDING) {
       _error = e;
       _status = CoPromiseType::REJECTED;
     }
@@ -58,11 +58,12 @@ public:
   const CoPromiseType &status() const { return _status; }
   const std::exception &error() const { return _error; }
 };
+
+template <class T> using CoPromise = AutoPtr<CoFuture<T>>;
 class CoContext {
 public:
   inline static constexpr size_t STACK_SIZE = 4096;
 
-public:
 private:
   template <class T = std::any> class Coroutine {
   private:
@@ -78,7 +79,7 @@ private:
     LPVOID fiber;
 #endif
 
-    AutoPtr<CoPromise<T>> result;
+    CoPromise<T> result;
     bool running;
 
   public:
@@ -86,7 +87,7 @@ private:
       next = nullptr;
       exec = nullptr;
       running = true;
-      result = new CoPromise<T>();
+      result = new CoFuture<T>();
       memset(stack, 0, STACK_SIZE);
 #ifdef __unix__
       getcontext(&cpuinfo);
@@ -101,6 +102,7 @@ private:
 #endif
   };
 
+private:
   inline static Coroutine<void> *current = nullptr;
 
   static void schedule() {
@@ -113,10 +115,21 @@ private:
     yield();
   }
 
+  static void init() {
+    current = new Coroutine<void>;
+    current->next = current;
+#ifndef __unix__
+    current->fiber = ConvertThreadToFiber(NULL);
+#endif
+  }
+
 public:
   template <class T, class... ARGS, class... VARGS>
-  static AutoPtr<CoPromise<T>> start(const std::function<T(ARGS...)> &exec,
-                                     VARGS... args) {
+  static CoPromise<T> start(const std::function<T(ARGS...)> &exec,
+                            VARGS... args) {
+    if (!current) {
+      init();
+    }
     Coroutine<T> *routine = new Coroutine<T>;
     routine->exec = [=]() -> void { routine->result->resolve(exec(args...)); };
 #ifdef __unix__
@@ -133,8 +146,11 @@ public:
     return routine->result;
   }
   template <class... ARGS, class... VARGS>
-  static AutoPtr<CoPromise<void>>
-  start(const std::function<void(ARGS...)> &exec, VARGS... args) {
+  static CoPromise<void> start(const std::function<void(ARGS...)> &exec,
+                               VARGS... args) {
+    if (!current) {
+      init();
+    }
     Coroutine<void> *routine = new Coroutine<void>;
     routine->exec = [=]() -> void {
       exec(args...);
@@ -154,6 +170,9 @@ public:
     return routine->result;
   }
   static void yield() {
+    if (!current) {
+      return;
+    }
     auto *old = current;
     auto *last = old;
     current = current->next;
@@ -172,27 +191,22 @@ public:
     }
   }
 
-  static void init() {
-    current = new Coroutine<void>;
-    current->next = current;
-#ifndef __unix__
-    current->fiber = ConvertThreadToFiber(NULL);
-#endif
-  }
   static void dispose() {
-    while (current->next != current) {
-      auto p = current->next;
-      current->next = current->next->next;
-      delete p;
+    if (current) {
+      while (current->next != current) {
+        auto p = current->next;
+        current->next = current->next->next;
+        delete p;
+      }
+      delete current;
+      current = nullptr;
     }
-    delete current;
-    current = nullptr;
   }
 
-  static bool ready() { return current->next == current; }
+  static bool ready() { return !current || current->next == current; }
 
-  template <class T> static T wait(const AutoPtr<CoPromise<T>> promise) {
-    while (promise->status() == CoPromiseType::PENDDING) {
+  template <class T> static T wait(const CoPromise<T> &promise) {
+    while (promise->status() == CoPromiseType::PENDING) {
       yield();
     }
     if (promise->status() == CoPromiseType::FULFILLED) {
