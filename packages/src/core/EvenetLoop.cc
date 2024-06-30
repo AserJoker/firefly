@@ -10,6 +10,7 @@ void EventLoop::cancel(const uint32_t &id) {
     }
   }
 }
+
 EventLoop::EventLoop() : _running(true) {}
 void EventLoop::run() {
   while (_running) {
@@ -31,10 +32,12 @@ void EventLoop::run() {
     }
   }
 }
+
 const uint32_t &EventLoop::start(const std::function<void()> &callee,
                                  system_clock::duration timeout) {
   static uint32_t counter = 0;
   _tasks.push_back({callee, ++counter, timeout, system_clock::now(), false});
   return _tasks.rbegin()->id;
 }
+
 void EventLoop::stop() { _running = false; }
