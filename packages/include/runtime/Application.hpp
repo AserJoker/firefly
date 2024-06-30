@@ -6,10 +6,11 @@ namespace firefly::runtime {
 class Application : public core::Object {
 private:
   std::vector<std::string> _args;
-  int _nExitCode;
+  int _exitcode;
+  bool _running;
 
 private:
-  static void CoSchedule();
+  static void onMainLoop();
 
 protected:
   virtual void Initialize();

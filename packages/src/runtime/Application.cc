@@ -4,11 +4,14 @@
 #include "core/Singleton.hpp"
 using namespace firefly;
 using namespace firefly::runtime;
-void Application::CoSchedule() {
+void Application::onMainLoop() {
   auto loop = core::Singleton<core::EventLoop>::instance();
   if (!core::CoContext::ready()) {
     core::CoContext::yield();
-    loop->start(CoSchedule);
+  }
+  auto theApp = core::Singleton<Application>::instance();
+  if (theApp->_running) {
+    loop->start(onMainLoop);
   }
 }
 
@@ -19,13 +22,14 @@ void Application::Initialize() {
   }
 }
 
-Application::Application(int argc, char *argv[]) : _args(argc), _nExitCode(0) {
+Application::Application(int argc, char *argv[])
+    : _args(argc), _exitcode(0), _running(true) {
   for (int index = 0; index < argc; index++) {
     _args[index] = argv[index];
   }
   Initialize();
   auto &loop = core::Singleton<core::EventLoop>::instance();
-  loop->start(CoSchedule);
+  loop->start(onMainLoop);
 }
 
 Application::~Application() { core::CoContext::dispose(); }
@@ -33,11 +37,11 @@ Application::~Application() { core::CoContext::dispose(); }
 int Application::run() {
   auto loop = core::Singleton<core::EventLoop>::instance();
   loop->run();
-  return _nExitCode;
+  return _exitcode;
 }
 
-void Application::exit(int nExitCode) {
+void Application::exit(int exitcode) {
   auto loop = core::Singleton<core::EventLoop>::instance();
-  loop->stop();
-  _nExitCode = nExitCode;
+  _exitcode = exitcode;
+  _running = false;
 }

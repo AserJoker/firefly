@@ -15,12 +15,9 @@ private:
     bool canceled;
   };
   std::list<Task> _tasks;
-  bool _running;
 
 public:
-  EventLoop();
   void run();
-  void stop();
   const uint32_t &start(const std::function<void()> &callee,
                         system_clock::duration timeout = 0s);
   void cancel(const uint32_t &id);

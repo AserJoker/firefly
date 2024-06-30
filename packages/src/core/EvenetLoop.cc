@@ -11,9 +11,8 @@ void EventLoop::cancel(const uint32_t &id) {
   }
 }
 
-EventLoop::EventLoop() : _running(true) {}
 void EventLoop::run() {
-  while (_running) {
+  while (true) {
     auto task = _tasks.begin();
     while (task != _tasks.end() && task->canceled) {
       _tasks.erase(task);
@@ -39,5 +38,3 @@ const uint32_t &EventLoop::start(const std::function<void()> &callee,
   _tasks.push_back({callee, ++counter, timeout, system_clock::now(), false});
   return _tasks.rbegin()->id;
 }
-
-void EventLoop::stop() { _running = false; }
