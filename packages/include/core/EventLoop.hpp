@@ -17,7 +17,7 @@ private:
   std::list<Task> _tasks;
 
 public:
-  void run();
+  void nextTick();
   const uint32_t &start(const std::function<void()> &callee,
                         system_clock::duration timeout = 0s);
   void cancel(const uint32_t &id);

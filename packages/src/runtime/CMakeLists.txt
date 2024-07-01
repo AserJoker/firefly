@@ -1,4 +1,6 @@
 include_directories(${FF_INCLUDE_DIR})
 file(GLOB SOURCES *.cc)
 add_library(${FF_PROJECT_NAME} ${SOURCES})
-target_link_libraries(${FF_PROJECT_NAME} ${FF_ROOT_PROJECT_NAME}.core)
+target_link_libraries(${FF_PROJECT_NAME} PRIVATE ${FF_ROOT_PROJECT_NAME}.core)
+find_package(SDL2 CONFIG REQUIRED)
+target_link_libraries(${FF_PROJECT_NAME} PRIVATE SDL2::SDL2)

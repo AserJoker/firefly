@@ -2,23 +2,18 @@
 #include "core/Coroutine.hpp"
 #include "core/EventLoop.hpp"
 #include "core/Singleton.hpp"
+#include "runtime/EventBus.hpp"
 using namespace firefly;
 using namespace firefly::runtime;
-void Application::onMainLoop() {
-  auto loop = core::Singleton<core::EventLoop>::instance();
-  if (!core::CoContext::ready()) {
-    core::CoContext::yield();
-  }
-  auto theApp = core::Singleton<Application>::instance();
-  if (theApp->_running) {
-    loop->start(onMainLoop);
-  }
-}
 
 void Application::Initialize() {
   auto &loop = core::Singleton<core::EventLoop>::instance();
   if (loop == nullptr) {
     loop = new core::EventLoop();
+  }
+  auto &bus = core::Singleton<EventBus>::instance();
+  if (bus == nullptr) {
+    bus = new EventBus();
   }
 }
 
@@ -28,15 +23,16 @@ Application::Application(int argc, char *argv[])
     _args[index] = argv[index];
   }
   Initialize();
-  auto &loop = core::Singleton<core::EventLoop>::instance();
-  loop->start(onMainLoop);
 }
 
 Application::~Application() { core::CoContext::dispose(); }
 
 int Application::run() {
   auto loop = core::Singleton<core::EventLoop>::instance();
-  loop->run();
+  while (_running) {
+    loop->nextTick();
+    core::CoContext::yield();
+  }
   return _exitcode;
 }
 

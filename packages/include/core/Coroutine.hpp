@@ -174,13 +174,12 @@ public:
       return;
     }
     auto *old = current;
-    auto *last = old;
     current = current->next;
     while (!current->running) {
       auto *tmp = current;
       current = current->next;
       delete tmp;
-      last->next = current;
+      old->next = current;
     }
     if (current != old) {
 #ifdef __unix__
