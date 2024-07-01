@@ -10,10 +10,10 @@ private:
   bool _running;
 
 private:
-  static void onMainLoop();
+  void Initialize();
 
 protected:
-  virtual void Initialize();
+  virtual void onInitialize();
 
 public:
   Application(int argc, char *argv[]);
