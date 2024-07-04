@@ -8,6 +8,6 @@ public:
   Event();
   Event(const Event &) = delete;
   void cancel();
-  bool isCanceled();
+  bool isCanceled() const;
 };
 } // namespace firefly::runtime

@@ -1,20 +1,28 @@
 #pragma once
+
 #include "runtime/Application.hpp"
 #include <SDL2/SDL.h>
+
 namespace firefly::runtime {
-class OpenGLApplication : public Application {
-private:
-  SDL_Window *_mainWindow;
-  SDL_GLContext _glContext;
+    class OpenGLApplication : public Application {
+    private:
+        SDL_Window *_mainWindow;
+        SDL_GLContext _glContext;
+        struct {
+            std::string engine;
+        } _config;
 
-private:
-  static void onMainLoop();
+    private:
+        void initOpenGL();
 
-protected:
-  void onInitialize() override;
+    protected:
+        void onInitialize() override;
 
-public:
-  OpenGLApplication(int argc, char *argv[]);
-  ~OpenGLApplication() override;
-};
+        virtual void onMainLoop();
+
+    public:
+        OpenGLApplication(int argc, char *argv[]);
+
+        ~OpenGLApplication() override;
+    };
 } // namespace firefly::runtime

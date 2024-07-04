@@ -1,10 +1,12 @@
 #pragma once
 #include "core/Object.hpp"
+#include <exception>
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <yaml-cpp/yaml.h>
+#include <regex>
 namespace firefly::runtime {
 class ConfigProvider : public core::Object {
 private:
@@ -39,14 +41,39 @@ public:
         return;
       }
       YAML::Node tmp = *root;
-      try {
-        for (auto &part : parts) {
-          tmp = tmp[part];
-        }
-        *value = tmp.as<T>();
-      } catch (...) {
-        *value = defaultValue;
+      for (auto &part : parts) {
+        tmp = tmp[part];
       }
+      *value = tmp.as<T>();
+    });
+  }
+  template <class T>
+  void define(const std::string &name, const std::string &key, T *value) {
+    auto &schemas = _schemas[name];
+    std::vector<std::string> parts;
+    std::string part;
+    for (const auto &c : key) {
+      if (c == '.') {
+        if (!part.empty()) {
+          parts.push_back(part);
+          part = "";
+        }
+      } else {
+        part += c;
+      }
+    }
+    if (!part.empty()) {
+      parts.push_back(part);
+    }
+    schemas.push_back([=](YAML::Node *root) -> void {
+      if (!root) {
+        return;
+      }
+      YAML::Node tmp = *root;
+      for (auto &part : parts) {
+        tmp = tmp[part];
+      }
+      *value = tmp.as<T>();
     });
   }
 };

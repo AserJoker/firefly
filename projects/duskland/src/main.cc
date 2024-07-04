@@ -1,4 +1,3 @@
-#include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "runtime/Application.hpp"
 #include "runtime/Logger.hpp"
@@ -14,4 +13,5 @@ int main(int argc, char *argv[]) {
     auto &theLogger = core::Singleton<runtime::Logger>::instance();
     theLogger->panic("{}", e.what());
   }
+  return 0;
 }
