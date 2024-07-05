@@ -5,26 +5,11 @@
 #include "core/Provider.hpp"
 #include "core/EventLoop.hpp"
 #include <exception>
-#include <iostream>
 
 using namespace firefly;
 
-class A : public core::Object {
-private:
-    std::string str;
-public:
-    A(const std::string &s) {
-        str = s;
-    }
-
-    void print() const {
-        std::cout << str << std::endl;
-    }
-};
-
 int main(int argc, char *argv[]) {
     auto &provider = core::Singleton<core::Provider>::instance();
-    // base components
     provider->provide<core::EventLoop, "firefly.core.EventLoop">();
     provider->provide<runtime::Logger, "firefly.runtime.Logger">();
     provider->provide<runtime::CmdLine, "firefly.runtime.CmdLine">();
