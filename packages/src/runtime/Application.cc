@@ -1,60 +1,23 @@
+//
+// Created by w30029682 on 2024/7/5.
+//
 #include "runtime/Application.hpp"
-#include "core/Coroutine.hpp"
-#include "core/Singleton.hpp"
-#include <filesystem>
-#include <iostream>
 
-using namespace firefly;
 using namespace firefly::runtime;
 
-Application::Application(int argc, char *argv[])
-        : _args(argc), _exitcode(0), _running(true) {
-    for (int index = 0; index < argc; index++) {
-        _args[index] = argv[index];
-    }
-    _cmdline->define("help", _cmdline->placeholder, "h", "Display this information.");
-}
+Application::Application(int argc, char **argv) : BaseApplication(argc, argv) {
 
-Application::~Application() { core::CoContext::dispose(); }
-
-int Application::run() {
-    auto parsed = _cmdline->parse(_args);
-    if (parsed.contains("help")) {
-        showHelp();
-        return 0;
-    }
-    _config->parse(this->cwd().append("config").string());
-    onInitialize();
-    while (_running) {
-        onMainLoop();
-        _loop->nextTick();
-        core::CoContext::yield();
-    }
-    onUnInitialize();
-    return _exitcode;
-}
-
-void Application::exit(int exitcode) {
-    _exitcode = exitcode;
-    _running = false;
-}
-
-std::filesystem::path Application::cwd() {
-    std::filesystem::path dir = _args[0];
-    return dir.parent_path();
-}
-
-void Application::showHelp() {
-    std::cout << "Usage: firefly [options]" << std::endl;
-    std::cout << "Options:" << std::endl;
-    std::cout << _cmdline->help() << std::endl;
 }
 
 void Application::onInitialize() {
+    BaseApplication::onInitialize();
 }
 
 void Application::onMainLoop() {
+    BaseApplication::onMainLoop();
+    exit();
 }
 
 void Application::onUnInitialize() {
+    BaseApplication::onUnInitialize();
 }
