@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <stdexcept>
 
 namespace firefly::core {
     template<class T>
@@ -39,9 +40,19 @@ namespace firefly::core {
             }
         }
 
-        T &operator*() { return *_object; }
+        T &operator*() {
+            if (!_object) {
+                throw std::runtime_error("Null pointer exception");
+            }
+            return *_object;
+        }
 
-        T *operator->() { return _object; }
+        T *operator->() {
+            if (!_object) {
+                throw std::runtime_error("Null pointer exception");
+            }
+            return _object;
+        }
 
         const T &operator*() const { return *_object; }
 
@@ -61,10 +72,24 @@ namespace firefly::core {
 
         template<class K>
         AutoPtr<T> &operator=(const AutoPtr<K> &another) {
-            if (_object && _object != *another) {
+            if (_object && _object != &*another) {
                 dispose();
             }
-            _object = *another;
+            _object = &*another;
+            if (_object) {
+                _object->addRef();
+            }
+            return *this;
+        }
+
+        AutoPtr<T> &operator=(const AutoPtr<T> &another) {
+            if (this == &another) {
+                return *this;
+            }
+            if (_object && _object != another._object) {
+                dispose();
+            }
+            _object = another._object;
             if (_object) {
                 _object->addRef();
             }

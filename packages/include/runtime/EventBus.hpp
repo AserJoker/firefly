@@ -24,15 +24,18 @@ namespace firefly::runtime {
         void on(core::AutoPtr<L> listener, void (L::*func)(E &)) {
             std::string type = typeid(E).name();
             auto &listeners = _listeners[type];
-            listeners.push_back({.callback = [=](Event &e) -> void {
-                (const_cast<L &>(*listener).*func)((E &) e);
-            },
-                                        .identity = typeid(L).name(),
-                                        .enbale = true});
+            listeners.push_back(
+                    {
+                            .callback = [=](Event &e) -> void {
+                                (const_cast<L &>(*listener).*func)((E &) e);
+                            },
+                            .identity = typeid(L).name(),
+                            .enable = true
+                    });
         }
 
         template<class L, class E>
-        void off(core::AutoPtr<L> listener, void (L::*)(E &)) {
+        void off() {
             std::string type = typeid(E).name();
             if (_listeners.contains(type)) {
                 auto &listeners = _listeners.at(type);
@@ -51,8 +54,8 @@ namespace firefly::runtime {
             if (_listeners.contains(type)) {
                 auto &listeners = _listeners.at(type);
                 E event(args...);
-                for (auto &[callback, _, enbale]: listeners) {
-                    if (enbale) {
+                for (auto &[callback, _, enable]: listeners) {
+                    if (enable) {
                         if (!event.isCanceled()) {
                             callback(event);
                         } else {

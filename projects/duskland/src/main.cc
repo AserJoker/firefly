@@ -1,17 +1,42 @@
+#include <SDL2/SDL.h>
 #include "core/Singleton.hpp"
 #include "runtime/Application.hpp"
 #include "runtime/Logger.hpp"
-#include "runtime/OpenGLApplication.hpp"
+#include "core/Provider.hpp"
+#include "core/EventLoop.hpp"
 #include <exception>
+#include <iostream>
+
 using namespace firefly;
+
+class A : public core::Object {
+private:
+    std::string str;
+public:
+    A(const std::string &s) {
+        str = s;
+    }
+
+    void print() const {
+        std::cout << str << std::endl;
+    }
+};
+
 int main(int argc, char *argv[]) {
-  try {
-    auto &theApp = core::Singleton<runtime::Application>::instance();
-    theApp = new runtime::OpenGLApplication(argc, argv);
-    return theApp->run();
-  } catch (std::exception &e) {
-    auto &theLogger = core::Singleton<runtime::Logger>::instance();
-    theLogger->panic("{}", e.what());
-  }
-  return 0;
+    auto &provider = core::Singleton<core::Provider>::instance();
+    // base components
+    provider->provide<core::EventLoop, "firefly.core.EventLoop">();
+    provider->provide<runtime::Logger, "firefly.runtime.Logger">();
+    provider->provide<runtime::CmdLine, "firefly.runtime.CmdLine">();
+    provider->provide<runtime::EventBus, "firefly.runtime.EventBus">();
+    provider->provide<runtime::ConfigProvider, "firefly.runtime.ConfigProvider">();
+    try {
+        core::Singleton<runtime::Application>::initialize<runtime::Application>(argc, argv);
+        auto &theApp = core::Singleton<runtime::Application>::instance();
+        return theApp->run();
+    } catch (std::exception &e) {
+        auto &theLogger = core::Singleton<runtime::Logger>::instance();
+        theLogger->panic("{}", e.what());
+    }
+    return 0;
 }
