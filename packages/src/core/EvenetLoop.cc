@@ -20,6 +20,7 @@ void EventLoop::nextTick() {
         task = _tasks.begin();
     }
     if (task == _tasks.end()) {
+        std::this_thread::sleep_for(4ms);
         return;
     }
     if (system_clock::now() - task->start >= task->timeout) {
