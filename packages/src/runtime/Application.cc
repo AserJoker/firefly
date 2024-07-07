@@ -5,19 +5,19 @@
 
 using namespace firefly::runtime;
 
-Application::Application(int argc, char **argv) : BaseApplication(argc, argv) {
-
-}
+Application::Application(int argc, char **argv) : BaseApplication(argc, argv) {}
 
 void Application::onInitialize() {
-    BaseApplication::onInitialize();
+  BaseApplication::onInitialize();
+  _logger->info("Application Initialize");
 }
 
 void Application::onMainLoop() {
-    BaseApplication::onMainLoop();
-    exit();
+  BaseApplication::onMainLoop();
+  exit();
 }
 
 void Application::onUnInitialize() {
-    BaseApplication::onUnInitialize();
+  _logger->info("Application UnInitialize");
+  BaseApplication::onUnInitialize();
 }

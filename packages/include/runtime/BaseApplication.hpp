@@ -1,50 +1,50 @@
 #pragma once
 
-#include "core/Object.hpp"
+#include "CmdLine.hpp"
+#include "ConfigProvider.hpp"
+#include "EventBus.hpp"
+#include "Logger.hpp"
 #include "core/EventLoop.hpp"
 #include "core/Injector.hpp"
-#include "Logger.hpp"
-#include "ConfigProvider.hpp"
-#include "CmdLine.hpp"
-#include "EventBus.hpp"
+#include "core/Object.hpp"
+#include "injector.hpp"
+#include <filesystem>
 #include <string>
 #include <vector>
-#include <filesystem>
 
 namespace firefly::runtime {
-    class BaseApplication : public core::Object {
-    private:
-        std::vector<std::string> _args;
-        int _exitcode;
-        bool _running;
+class BaseApplication : public core::Object {
+private:
+  std::vector<std::string> _args;
+  int _exitcode;
+  bool _running;
 
-    private:
-        void showHelp();
+private:
+  void showHelp();
 
-    protected:
-        core::Injector<core::EventLoop, "firefly.core.EventLoop"> _loop;
-        core::Injector<Logger, "firefly.runtime.Logger"> _logger;
-        core::Injector<CmdLine, "firefly.runtime.CmdLine"> _cmdline;
-        core::Injector<ConfigProvider, "firefly.runtime.ConfigProvider"> _config;
-        core::Injector<EventBus, "firefly.runtime.EventBus"> _eventbus;
+protected:
+  core::Injector<core::EventLoop, INJECTOR_EVENTLOOP> _loop;
+  core::Injector<Logger, INJECTOR_LOGGER> _logger;
+  core::Injector<CmdLine, INJECTOR_CMDLINE> _cmdline;
+  core::Injector<ConfigProvider, INJECTOR_CONFIGPROVIDER> _config;
+  core::Injector<EventBus, INJECTOR_EVENTBUS> _eventbus;
 
-    protected:
-        virtual void onInitialize();
+protected:
+  virtual void onInitialize();
 
-        virtual void onMainLoop();
+  virtual void onMainLoop();
 
-        virtual void onUnInitialize();
+  virtual void onUnInitialize();
 
-    public:
-        BaseApplication(int argc, char *argv[]);
+public:
+  BaseApplication(int argc, char *argv[]);
 
-        ~BaseApplication() override;
+  ~BaseApplication() override;
 
-        int run();
+  int run();
 
-        void exit(int nExitCode = 0);
+  void exit(int nExitCode = 0);
 
-        std::filesystem::path cwd();
-
-    };
+  std::filesystem::path cwd();
+};
 } // namespace firefly::runtime
