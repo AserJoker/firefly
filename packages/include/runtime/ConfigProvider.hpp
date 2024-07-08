@@ -1,12 +1,11 @@
 #pragma once
 #include "core/Object.hpp"
-#include <exception>
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include <yaml-cpp/yaml.h>
-#include <regex>
+
 namespace firefly::runtime {
 class ConfigProvider : public core::Object {
 private:

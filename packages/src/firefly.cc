@@ -1,4 +1,12 @@
 #include "firefly.hpp"
+#include "core/EventLoop.hpp"
+#include "core/Provider.hpp"
+#include "injector.hpp"
+#include "runtime/CmdLine.hpp"
+#include "runtime/ConfigProvider.hpp"
+#include "runtime/EventBus.hpp"
+#include "runtime/Logger.hpp"
+
 namespace firefly {
 void InitFirefly() {
   auto &provider = core::Singleton<core::Provider>::instance();

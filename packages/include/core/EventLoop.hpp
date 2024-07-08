@@ -19,8 +19,16 @@ namespace firefly::core {
         };
         std::list<Task> _tasks;
 
+        bool _isRunning;
+
     public:
+        EventLoop();
+
         void nextTick();
+
+        bool ready();
+
+        void stop();
 
         const uint32_t &start(const std::function<void()> &callee,
                               system_clock::duration timeout = 0s);

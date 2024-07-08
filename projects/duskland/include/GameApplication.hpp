@@ -1,15 +1,22 @@
 #pragma once
-#include "firefly.hpp"
+
+#include "runtime/Application.hpp"
+#include "runtime/Window.hpp"
+#include "video/Renderer.hpp"
 namespace duskland {
 using namespace firefly;
+
 class GameApplication : public runtime::Application {
+
 private:
-  core::AutoPtr<runtime::IWindow> _window;
-  core::AutoPtr<video::IRenderer> _renderer;
+  core::AutoPtr<runtime::Window> _window;
+  core::AutoPtr<video::Renderer> _renderer;
 
 protected:
   void onInitialize() override;
+
   void onMainLoop() override;
+
   void onUnInitialize() override;
 
 public:

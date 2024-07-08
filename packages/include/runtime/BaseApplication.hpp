@@ -17,10 +17,11 @@ class BaseApplication : public core::Object {
 private:
   std::vector<std::string> _args;
   int _exitcode;
-  bool _running;
 
 private:
   void showHelp();
+
+  void execCoTask();
 
 protected:
   core::Injector<core::EventLoop, INJECTOR_EVENTLOOP> _loop;
@@ -31,8 +32,6 @@ protected:
 
 protected:
   virtual void onInitialize();
-
-  virtual void onMainLoop();
 
   virtual void onUnInitialize();
 

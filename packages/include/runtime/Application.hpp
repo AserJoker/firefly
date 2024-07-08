@@ -4,29 +4,21 @@
 #pragma once
 
 #include "BaseApplication.hpp"
-#include "core/AutoPtr.hpp"
-#include "runtime/IWindow.hpp"
-#include "video/IRenderer.hpp"
+#include "Event_Quit.hpp"
 
 namespace firefly::runtime {
 class Application : public BaseApplication {
-public:
-  enum class GRAPHIC_API { NONE, OPENGL, VULKAN, DIRECTX12, DIRECTX11 };
 
 public:
   Application(int argc, char **argv);
 
-  core::AutoPtr<IWindow> createWindow(const std::string &title, int width,
-                                      int height,
-                                      GRAPHIC_API api = GRAPHIC_API::OPENGL);
-
 protected:
-  void processEvent();
-
   void onInitialize() override;
 
-  void onMainLoop() override;
+  virtual void onMainLoop();
 
   void onUnInitialize() override;
+
+  virtual void onQuit(Event_Quit &);
 };
 } // namespace firefly::runtime

@@ -1,15 +1,15 @@
-#include "runtime/Window_OpenGL.hpp"
-#include "core/AutoPtr.hpp"
-#include "video/Renderer_OpenGL.hpp"
-#include <SDL.h>
+#include "runtime/Window.hpp"
+#include <SDL2/SDL.h>
 #include <glad/glad.h>
 #include <stdexcept>
+
 using namespace firefly;
 using namespace firefly::runtime;
 #define SDL_ASSERT(expr)                                                       \
   if (!(expr))                                                                 \
   throw std::runtime_error(SDL_GetError())
-Window_OpenGL::Window_OpenGL(const std::string &title, int width, int height) {
+
+Window::Window(const std::string &title, int width, int height) {
   SDL_ASSERT(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4) == 0);
   SDL_ASSERT(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2) == 0);
 #ifndef __apple__
@@ -30,13 +30,16 @@ Window_OpenGL::Window_OpenGL(const std::string &title, int width, int height) {
     throw std::runtime_error("Failed to initialize glad");
   }
 }
-void Window_OpenGL::setTitle(const std::string &title) {
+
+void Window::setTitle(const std::string &title) {
   SDL_SetWindowTitle(_window, title.c_str());
 }
-std::string Window_OpenGL::getTitle() const {
-  return SDL_GetWindowTitle(_window);
-}
-void Window_OpenGL::present() { SDL_GL_SwapWindow(_window); }
-core::AutoPtr<video::IRenderer> Window_OpenGL::createRenderer() {
-  return new video::Renderer_OpenGL();
+
+std::string Window::getTitle() const { return SDL_GetWindowTitle(_window); }
+
+void Window::present() { SDL_GL_SwapWindow(_window); }
+
+
+void Window::setSwapInterval(int flag) {
+  SDL_ASSERT(SDL_GL_SetSwapInterval(flag) >= 0);
 }
