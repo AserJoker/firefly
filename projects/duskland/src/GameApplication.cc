@@ -11,7 +11,6 @@
 #include <initializer_list>
 #include <iostream>
 
-using namespace std::chrono;
 using namespace firefly;
 using namespace duskland;
 core::AutoPtr<video::VertexArray> vertexarray;
@@ -57,7 +56,7 @@ void GameApplication::onInitialize() {
 }
 
 void GameApplication::onMainLoop() {
-  static int i = 0;
+  static uint32_t i = 0;
   runtime::Application::onMainLoop();
   _renderer->clear({0.2f, 0.3f, 0.3f, 1.0f});
   shader->use();
