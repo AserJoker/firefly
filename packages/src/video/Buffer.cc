@@ -26,3 +26,13 @@ void Buffer::unbind() const { glBindBuffer((uint32_t)_type, 0); }
 const BufferType &Buffer::getType() const { return _type; }
 const BufferUsage &Buffer::getUsage() const { return _usage; }
 const uint32_t &Buffer::getSize() const { return _size; }
+void Buffer::lock(size_t *size, void **ppBuffer) {
+  bind();
+  *ppBuffer = glMapBuffer((uint32_t)_type, GL_READ_WRITE);
+  unbind();
+}
+void Buffer::unlock() {
+  bind();
+  glUnmapBuffer((uint32_t)_type);
+  unbind();
+}

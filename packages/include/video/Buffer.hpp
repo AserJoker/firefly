@@ -46,5 +46,7 @@ public:
   const BufferType &getType() const;
   const BufferUsage &getUsage() const;
   const uint32_t &getSize() const;
+  void lock(size_t *size, void **ppBuffer);
+  void unlock();
 };
 } // namespace firefly::video

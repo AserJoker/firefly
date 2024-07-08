@@ -33,15 +33,15 @@ core::AutoPtr<video::Shader> loadShader(const std::string &path) {
   return new video::Shader({{video::ShaderType::VERTEX, vertex},
                             {video::ShaderType::FRAGMENT, fragment}});
 }
-std::initializer_list<float> vertices = {
-    0.5f,  0.5f,  0.0f, // top right
-    0.5f,  -0.5f, 0.0f, // bottom right
-    -0.5f, -0.5f, 0.0f, // bottom left
-    -0.5f, 0.5f,  0.0f  // top left
+struct vertex {
+  float x, y, z;
 };
+
+std::initializer_list<float> vertices = {-0.5f, -0.5f, 0.f,   0.f, 0.5f,
+                                         0.f,   0.5f,  -0.5f, 0.f};
+
 std::initializer_list<video::Face> indices = {
-    {0, 1, 3}, // first Triangle
-    {1, 2, 3}  // second Triangle
+    {0, 1, 2}, // first Triangle
 };
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv) {}
