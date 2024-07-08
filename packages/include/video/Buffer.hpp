@@ -29,9 +29,6 @@ enum class BufferUsage {
   DYNAMIC_READ = GL_DYNAMIC_READ,
   DYNAMIC_COPY = GL_DYNAMIC_COPY
 };
-struct Face {
-  int indices[3];
-};
 class Buffer : public core::Object {
 private:
   BufferType _type;

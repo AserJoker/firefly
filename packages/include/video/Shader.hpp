@@ -1,6 +1,7 @@
 #pragma once
 #include "core/Object.hpp"
 #include <glad/glad.h>
+#include <glm/glm.hpp>
 #include <map>
 #include <string>
 namespace firefly::video {
@@ -19,6 +20,20 @@ private:
 public:
   Shader(const std::map<ShaderType, std::string> &sources);
   ~Shader() override;
-  void use();
+  void use() const;
+  void setValue(const std::string &name, const int32_t &val);
+  void setValue(const std::string &name, const uint32_t &val);
+  void setValue(const std::string &name, const float &val);
+  void setValue(const std::string &name, const glm::vec2 &val);
+  void setValue(const std::string &name, const float &x, const float &y);
+  void setValue(const std::string &name, const glm::vec3 &val);
+  void setValue(const std::string &name, const float &x, const float &y,
+                const float &z);
+  void setValue(const std::string &name, const glm::vec4 &val);
+  void setValue(const std::string &name, const float &x, const float &y,
+                const float &z, const float &w);
+  void setValue(const std::string &name, const glm::mat2 &val);
+  void setValue(const std::string &name, const glm::mat3 &val);
+  void setValue(const std::string &name, const glm::mat4 &val);
 };
 } // namespace firefly::video
