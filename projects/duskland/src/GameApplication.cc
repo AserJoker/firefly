@@ -2,6 +2,7 @@
 #include "core/AutoPtr.hpp"
 #include "runtime/Application.hpp"
 #include "runtime/Window.hpp"
+#include "video/ElementBuffer.hpp"
 #include "video/Mesh.hpp"
 #include "video/Renderer.hpp"
 #include "video/Shader.hpp"
@@ -33,12 +34,13 @@ core::AutoPtr<video::Shader> loadShader(const std::string &path) {
   return new video::Shader({{video::ShaderType::VERTEX, vertex},
                             {video::ShaderType::FRAGMENT, fragment}});
 }
-struct vertex {
-  float x, y, z;
+struct Vertex {
+  float x, y, z, r, g, b;
 };
 
-std::initializer_list<float> vertices = {-0.5f, -0.5f, 0.f,   0.f, 0.5f,
-                                         0.f,   0.5f,  -0.5f, 0.f};
+std::initializer_list<Vertex> vertices = {{-0.5f, -0.5f, 0.f, 1.0f, 0.0f, 0.0f},
+                                          {0.f, 0.5f, 0.f, 0.0f, 1.0f, 0.0f},
+                                          {0.5f, -0.5f, 0.f, 0.0f, 0.0f, 1.0f}};
 
 std::initializer_list<video::Face> indices = {
     {0, 1, 2}, // first Triangle
@@ -52,7 +54,8 @@ void GameApplication::onInitialize() {
   _renderer = new video::Renderer();
   shader = loadShader("shader");
 
-  mesh = new video::Mesh({video::POSITION_XYZ}, vertices, indices);
+  mesh = new video::Mesh({video::POSITION_XYZ, video::COLOR_RGB}, vertices,
+                         indices);
 }
 
 void GameApplication::onMainLoop() {
