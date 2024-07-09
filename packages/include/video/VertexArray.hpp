@@ -24,6 +24,8 @@ constexpr const VertexAttribute POSITION_XYZ = {VertexValueType::FLOAT, 3};
 constexpr const VertexAttribute NORMAL_XYZ = {VertexValueType::FLOAT, 3};
 constexpr const VertexAttribute TEXCROOD_UV = {VertexValueType::FLOAT, 2};
 constexpr const VertexAttribute COLOR_RGB = {VertexValueType::FLOAT, 3};
+constexpr const VertexAttribute COLOR_RGBA = {VertexValueType::FLOAT, 4};
+constexpr const VertexAttribute COLOR_GRAY = {VertexValueType::FLOAT, 1};
 
 class VertexArray : public core::Object {
 private:

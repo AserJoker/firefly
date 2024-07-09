@@ -7,20 +7,16 @@ using namespace firefly;
 using namespace firefly::video;
 Mesh::Mesh(const core::AutoPtr<VertexArray> &vertex, const Material &material)
     : _vertex(vertex), _material(material) {}
-Mesh::Mesh(const VertexAttributeTable &attrs, const std::vector<float> &data,
-           const std::vector<Face> &faces, const Material &material)
-    : _material(material) {
-  auto vertex = new Buffer(data.size() * sizeof(float), (void *)data.data());
-  auto indices =
-      new Buffer(faces.size() * sizeof(Face), (void *)faces.data(),
-                 BufferType::ELEMENT_ARRAY, BufferUsage::STATIC_DRAW);
-  _vertex = new VertexArray(attrs, {vertex, indices});
-}
-Mesh::Mesh(const VertexAttributeTable &attrs, const std::vector<float> &data,
+Mesh::Mesh(const VertexAttributeTable &attrs, const core::AutoPtr<Buffer> &data,
+           const core::AutoPtr<ElementBuffer> &elements,
            const Material &material)
     : _material(material) {
-  auto vertex = new Buffer(data.size() * sizeof(float), (void *)data.data());
-  _vertex = new VertexArray(attrs, {vertex});
+  _vertex = new VertexArray(attrs, {data, elements});
+}
+Mesh::Mesh(const VertexAttributeTable &attrs, const core::AutoPtr<Buffer> &data,
+           const Material &material)
+    : _material(material) {
+  _vertex = new VertexArray(attrs, {data});
 }
 void Mesh::draw(core::AutoPtr<Shader> &shader) {
   shader->setValue("material.ambient", _material.ambient);
