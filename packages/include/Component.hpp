@@ -4,4 +4,4 @@
 #define INJECTOR_CMDLINE "firefly.runtime.CmdLine"
 #define INJECTOR_LOGGER "firefly.runtime.Logger"
 #define INJECTOR_EVENTBUS "firefly.runtime.EventBus"
-#define INJECTOR_CONFIGPROVIDER "firefly.runtime.ConfigProvider"
+#define INJECTOR_RESOURCEPROVIDER "firefly.runtime.ResourceProvider"

@@ -1,6 +1,7 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
 #include "runtime/Application.hpp"
+#include "runtime/Resource_Buffer.hpp"
 #include "runtime/Window.hpp"
 #include "video/ElementBuffer.hpp"
 #include "video/Mesh.hpp"
@@ -56,6 +57,8 @@ void GameApplication::onInitialize() {
 
   mesh = new video::Mesh({video::POSITION_XYZ, video::COLOR_RGB}, vertices,
                          indices);
+  auto resource = new runtime::Resource_Buffer("hello world", 11);
+  _resources->dump("a::b::c::d::1.txt", resource);
 }
 
 void GameApplication::onMainLoop() {

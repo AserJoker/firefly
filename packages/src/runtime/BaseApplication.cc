@@ -24,7 +24,7 @@ int BaseApplication::run() {
     showHelp();
     return 0;
   }
-  _config->parse(this->cwd().append("config").string());
+  _resources->setCurrentWorkspaceDirectory(cwd().string());
   onInitialize();
   while (!_loop->ready()) {
     _loop->nextTick();

@@ -1,16 +1,17 @@
 #pragma once
 
 #include "CmdLine.hpp"
-#include "ConfigProvider.hpp"
+#include "Component.hpp"
 #include "EventBus.hpp"
 #include "Logger.hpp"
+#include "ResourceProvider.hpp"
 #include "core/EventLoop.hpp"
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
-#include "injector.hpp"
 #include <filesystem>
 #include <string>
 #include <vector>
+
 
 namespace firefly::runtime {
 class BaseApplication : public core::Object {
@@ -27,8 +28,8 @@ protected:
   core::Injector<core::EventLoop, INJECTOR_EVENTLOOP> _loop;
   core::Injector<Logger, INJECTOR_LOGGER> _logger;
   core::Injector<CmdLine, INJECTOR_CMDLINE> _cmdline;
-  core::Injector<ConfigProvider, INJECTOR_CONFIGPROVIDER> _config;
   core::Injector<EventBus, INJECTOR_EVENTBUS> _eventbus;
+  core::Injector<ResourceProvider, INJECTOR_RESOURCEPROVIDER> _resources;
 
 protected:
   virtual void onInitialize();
