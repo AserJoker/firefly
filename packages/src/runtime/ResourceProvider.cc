@@ -4,9 +4,14 @@
 #include "runtime/Resource_File.hpp"
 #include <filesystem>
 #include <fmt/core.h>
+#include <stdexcept>
 using namespace firefly;
 using namespace firefly::runtime;
 core::AutoPtr<Resource> ResourceProvider::load(const std::string &name) {
+  auto filepath = resolve(name);
+  if (!std::filesystem::exists(filepath)) {
+    throw std::runtime_error(fmt::format("Failed to load resource: {}", name));
+  }
   return new Resource_File(resolve(name));
 }
 void ResourceProvider::dump(const std::string &name,
@@ -14,12 +19,10 @@ void ResourceProvider::dump(const std::string &name,
   auto filepath = resolve(name);
   core::AutoPtr res = new Resource_File(filepath);
   size_t len = 0;
-  void *chunk = nullptr;
   for (;;) {
-    chunk = data->read(128, &len);
-    if (chunk) {
-      res->write(chunk, len);
-      ::operator delete(chunk);
+    auto chunk = data->read(128);
+    if (chunk->getSize()) {
+      res->write(chunk);
     } else {
       break;
     }

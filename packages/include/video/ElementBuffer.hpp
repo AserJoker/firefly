@@ -1,13 +1,13 @@
 #pragma once
-#include "video/Buffer.hpp"
+#include "video/VBuffer.hpp"
 #include <vector>
 namespace firefly::video {
 struct Face {
   int indices[3];
 };
-class ElementBuffer : public Buffer {
+class ElementBuffer : public VBuffer {
 public:
   ElementBuffer(const std::vector<Face> &data,
-                const BufferUsage &usage = BufferUsage::STATIC_DRAW);
+                const VBufferUsage &usage = VBufferUsage::STATIC_DRAW);
 };
 }; // namespace firefly::video

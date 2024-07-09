@@ -4,6 +4,8 @@
 #include "runtime/Application.hpp"
 #include "runtime/Event_Quit.hpp"
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_mixer.h>
 #include <stdexcept>
 
 using namespace firefly;
@@ -16,6 +18,14 @@ Application::Application(int argc, char **argv) : BaseApplication(argc, argv) {
 void Application::onInitialize() {
   BaseApplication::onInitialize();
   if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
+    throw std::runtime_error(SDL_GetError());
+  }
+  if (!IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_TIF | IMG_INIT_WEBP |
+                IMG_INIT_JXL | IMG_INIT_AVIF)) {
+    throw std::runtime_error(SDL_GetError());
+  }
+  if (!Mix_Init(MIX_INIT_FLAC | MIX_INIT_MID | MIX_INIT_MOD | MIX_INIT_MP3 |
+                MIX_INIT_OGG | MIX_INIT_OPUS | MIX_INIT_WAVPACK)) {
     throw std::runtime_error(SDL_GetError());
   }
   _eventbus->on(this, &Application::onQuit);
@@ -34,6 +44,8 @@ void Application::onMainLoop() {
 }
 
 void Application::onUnInitialize() {
+  Mix_Quit();
+  IMG_Quit();
   SDL_Quit();
   BaseApplication::onUnInitialize();
 }

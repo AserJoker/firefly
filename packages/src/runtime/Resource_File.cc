@@ -1,8 +1,11 @@
 #include "runtime/Resource_File.hpp"
+#include "core/AutoPtr.hpp"
+#include "core/Buffer.hpp"
 #include <filesystem>
 #include <fmt/core.h>
 #include <fstream>
 #include <stdexcept>
+using namespace firefly;
 using namespace firefly::runtime;
 Resource_File::Resource_File(const std::string &filepath) {
   std::filesystem::path p = filepath;
@@ -17,50 +20,39 @@ Resource_File::Resource_File(const std::string &filepath) {
   }
 }
 Resource_File::~Resource_File() { _file.close(); }
-void *Resource_File::read(const size_t &size, size_t *len) {
-  void *buf = nullptr;
+core::AutoPtr<core::Buffer> Resource_File::read(const size_t &size) {
   if (!size) {
-    return readAll(len);
+    return readAll();
   }
-  buf = ::operator new(size);
   size_t pos = _file.tellg();
   _file.seekg(0, std::ios::end);
   size_t end = _file.tellg();
   _file.seekg(pos, std::ios::beg);
   if (end - pos == 0) {
-    *len = 0;
-    return nullptr;
+    return new core::Buffer(0);
   }
+  auto buf = new core::Buffer(size);
   if (end - pos < size) {
-    _file.read((char *)buf, end - pos);
-    if (len) {
-      *len = end - pos;
-    }
+    _file.read((char *)buf->getData(), end - pos);
   } else {
-    _file.read((char *)buf, size);
-    if (len) {
-      *len = size;
-    }
+    _file.read((char *)buf->getData(), size);
   }
   return buf;
 }
-void Resource_File::write(void *buf, const size_t &size) {
+void Resource_File::write(const core::AutoPtr<core::Buffer> &buffer) {
+  auto buf = buffer->getData();
+  auto &size = buffer->getSize();
   _file.write((char *)buf, size);
 }
-void *Resource_File::readAll(size_t *len) {
+core::AutoPtr<core::Buffer> Resource_File::readAll() {
   auto pos = _file.tellg();
-  void *buf = nullptr;
   _file.seekg(0, std::ios::end);
   auto end = _file.tellg();
   if (end - pos == 0) {
-    *len = 0;
-    return nullptr;
+    return new core::Buffer(0);
   }
-  buf = ::operator new(end - pos);
   _file.seekg(pos, std::ios::beg);
-  _file.read((char *)buf, end - pos);
-  if (len) {
-    *len = end - pos;
-  }
+  auto buf = new core::Buffer(end - pos);
+  _file.read((char *)buf->getData(), end - pos);
   return buf;
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
-#include "video/Buffer.hpp"
+#include "video/VBuffer.hpp"
 #include <map>
 #include <vector>
 namespace firefly::video {
@@ -29,18 +29,18 @@ constexpr const VertexAttribute COLOR_GRAY = {VertexValueType::FLOAT, 1};
 
 class VertexArray : public core::Object {
 private:
-  std::map<BufferType, core::AutoPtr<Buffer>> _buffers;
+  std::map<VBufferType, core::AutoPtr<VBuffer>> _buffers;
   uint32_t _handle;
   VertexAttributeTable _attributes;
 
 public:
   VertexArray(const VertexAttributeTable &attrs,
-              const std::vector<core::AutoPtr<Buffer>> &buffers);
+              const std::vector<core::AutoPtr<VBuffer>> &buffers);
   ~VertexArray();
   void bind() const;
   void unbind() const;
   const VertexAttributeTable &getVertexAttributeTable() const;
-  const core::AutoPtr<Buffer> getBuffer(const BufferType &type) const;
-  core::AutoPtr<Buffer> getBuffer(const BufferType &type);
+  const core::AutoPtr<VBuffer> getBuffer(const VBufferType &type) const;
+  core::AutoPtr<VBuffer> getBuffer(const VBufferType &type);
 };
 } // namespace firefly::video

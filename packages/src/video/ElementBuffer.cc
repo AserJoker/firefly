@@ -1,7 +1,7 @@
 #include "video/ElementBuffer.hpp"
-#include "video/Buffer.hpp"
+#include "video/VBuffer.hpp"
 using namespace firefly::video;
 ElementBuffer::ElementBuffer(const std::vector<Face> &data,
-                             const BufferUsage &usage)
-    : Buffer(data.size() * sizeof(Face), (void *)data.data(),
-             BufferType::ELEMENT_ARRAY, usage) {}
+                             const VBufferUsage &usage)
+    : VBuffer(data.size() * sizeof(Face), (void *)data.data(),
+              VBufferType::ELEMENT_ARRAY, usage) {}

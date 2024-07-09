@@ -23,10 +23,10 @@ private:
 public:
   Mesh(const core::AutoPtr<VertexArray> &vertex,
        const Material &material = {.shininess = 0});
-  Mesh(const VertexAttributeTable &attrs, const core::AutoPtr<Buffer> &data,
+  Mesh(const VertexAttributeTable &attrs, const core::AutoPtr<VBuffer> &data,
        const core::AutoPtr<ElementBuffer> &elements,
        const Material &material = {.shininess = 0});
-  Mesh(const VertexAttributeTable &attrs, const core::AutoPtr<Buffer> &data,
+  Mesh(const VertexAttributeTable &attrs, const core::AutoPtr<VBuffer> &data,
        const Material &material = {.shininess = 0});
   template <class T>
   Mesh(const VertexAttributeTable &attrs, const std::vector<T> &data,

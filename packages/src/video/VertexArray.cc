@@ -1,5 +1,5 @@
 #include "video/VertexArray.hpp"
-#include "video/Buffer.hpp"
+#include "video/VBuffer.hpp"
 #include <cstdint>
 #include <fmt/format.h>
 #include <stdexcept>
@@ -8,7 +8,7 @@ using namespace firefly::video;
 void VertexArray::bind() const { glBindVertexArray(_handle); }
 void VertexArray::unbind() const { glBindVertexArray(0); }
 VertexArray::VertexArray(const VertexAttributeTable &attrs,
-                         const std::vector<core::AutoPtr<Buffer>> &buffers)
+                         const std::vector<core::AutoPtr<VBuffer>> &buffers)
     : _handle(0) {
   static uint32_t sizeMap[] = {sizeof(char),  sizeof(char), sizeof(short),
                                sizeof(short), sizeof(int),  sizeof(uint32_t),
@@ -41,14 +41,14 @@ VertexArray::~VertexArray() { glDeleteVertexArrays(1, &_handle); }
 const VertexAttributeTable &VertexArray::getVertexAttributeTable() const {
   return _attributes;
 }
-const core::AutoPtr<Buffer>
-VertexArray::getBuffer(const BufferType &type) const {
+const core::AutoPtr<VBuffer>
+VertexArray::getBuffer(const VBufferType &type) const {
   if (!_buffers.contains(type)) {
     return nullptr;
   }
   return _buffers.at(type);
 }
-core::AutoPtr<Buffer> VertexArray::getBuffer(const BufferType &type) {
+core::AutoPtr<VBuffer> VertexArray::getBuffer(const VBufferType &type) {
   if (!_buffers.contains(type)) {
     return nullptr;
   }

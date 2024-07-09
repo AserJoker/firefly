@@ -1,5 +1,8 @@
 #include "runtime/Resource_Buffer.hpp"
+#include "core/AutoPtr.hpp"
+#include "core/Buffer.hpp"
 #include <cstring>
+using namespace firefly;
 using namespace firefly::runtime;
 
 Resource_Buffer::Resource_Buffer(const void *buffer, const uint32_t &size)
@@ -14,25 +17,20 @@ Resource_Buffer::~Resource_Buffer() {
     ::operator delete(_buffer);
   }
 };
-void *Resource_Buffer::read(const size_t &size, size_t *len) {
+core::AutoPtr<core::Buffer> Resource_Buffer::read(const size_t &size) {
   if (_pos == _size) {
-    *len = 0;
-    return nullptr;
+    return new core::Buffer(0);
   }
   if (size == 0) {
-    void *buf = ::operator new(_size - _pos);
-    memcpy(buf, (char *)_buffer + _pos, _size - _pos);
-    *len = _size - _pos;
-    _pos = _size;
-    return buf;
+    auto len = _size - _pos;
+    return new core::Buffer(_size - _pos, (char *)_buffer + _pos);
   }
-  void *buf = ::operator new(size);
-  *len = size > _size - _pos ? _size - _pos : size;
-  memcpy(buf, (char *)_buffer + _pos, *len);
-  _pos += *len;
-  return buf;
+  return new core::Buffer(size > _size - _pos ? _size - _pos : size,
+                          (char *)_buffer + _pos);
 };
-void Resource_Buffer::write(void *buf, const size_t &size) {
+void Resource_Buffer::write(const core::AutoPtr<core::Buffer> &buffer) {
+  auto &size = buffer->getSize();
+  auto buf = buffer->getData();
   if (_pos + size > _size) {
     void *buffer = ::operator new(_pos + size);
     memcpy(buffer, _buffer, _pos);

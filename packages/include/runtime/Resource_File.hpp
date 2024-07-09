@@ -8,9 +8,9 @@ private:
   std::fstream _file;
 
 public:
-  void write(void *buf, const size_t &size) override;
-  void *read(const size_t &size = 0, size_t *len = 0) override;
-  void *readAll(size_t *size = 0);
+  void write(const core::AutoPtr<core::Buffer> &data) override;
+  core::AutoPtr<core::Buffer> read(const size_t &size) override;
+  core::AutoPtr<core::Buffer> readAll();
   Resource_File(const std::string &filepath);
   ~Resource_File() override;
 };

@@ -1,5 +1,7 @@
 #pragma once
+#include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include "runtime/Resource.hpp"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <map>
@@ -18,7 +20,7 @@ private:
   uint32_t _handle;
 
 public:
-  Shader(const std::map<ShaderType, std::string> &sources);
+  Shader(const std::map<ShaderType, core::AutoPtr<runtime::Resource>> &sources);
   ~Shader() override;
   void use() const;
   void setValue(const std::string &name, const int32_t &val);

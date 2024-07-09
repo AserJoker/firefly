@@ -1,20 +1,21 @@
 #include "video/Mesh.hpp"
 #include "core/AutoPtr.hpp"
-#include "video/Buffer.hpp"
+#include "video/VBuffer.hpp"
 #include "video/VertexArray.hpp"
 #include <vector>
 using namespace firefly;
 using namespace firefly::video;
 Mesh::Mesh(const core::AutoPtr<VertexArray> &vertex, const Material &material)
     : _vertex(vertex), _material(material) {}
-Mesh::Mesh(const VertexAttributeTable &attrs, const core::AutoPtr<Buffer> &data,
+Mesh::Mesh(const VertexAttributeTable &attrs,
+           const core::AutoPtr<VBuffer> &data,
            const core::AutoPtr<ElementBuffer> &elements,
            const Material &material)
     : _material(material) {
   _vertex = new VertexArray(attrs, {data, elements});
 }
-Mesh::Mesh(const VertexAttributeTable &attrs, const core::AutoPtr<Buffer> &data,
-           const Material &material)
+Mesh::Mesh(const VertexAttributeTable &attrs,
+           const core::AutoPtr<VBuffer> &data, const Material &material)
     : _material(material) {
   _vertex = new VertexArray(attrs, {data});
 }
@@ -24,9 +25,9 @@ void Mesh::draw(core::AutoPtr<Shader> &shader) {
   shader->setValue("material.diffuse", _material.diffuse);
   shader->setValue("material.shininess", _material.shininess);
   _vertex->bind();
-  auto indexbuffer = _vertex->getBuffer(BufferType::ELEMENT_ARRAY);
+  auto indexbuffer = _vertex->getBuffer(VBufferType::ELEMENT_ARRAY);
   if (!indexbuffer) {
-    auto vertexbuffer = _vertex->getBuffer(BufferType::ARRAY);
+    auto vertexbuffer = _vertex->getBuffer(VBufferType::ARRAY);
     if (!vertexbuffer) {
       return;
     }

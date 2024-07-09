@@ -1,22 +1,28 @@
 #include "video/Shader.hpp"
+#include "core/AutoPtr.hpp"
 #include <fmt/core.h>
 #include <map>
 #include <stdexcept>
 #include <vector>
 using namespace firefly;
 using namespace firefly::video;
-Shader::Shader(const std::map<ShaderType, std::string> &sources) : _handle(0) {
+Shader::Shader(
+    const std::map<ShaderType, core::AutoPtr<runtime::Resource>> &sources)
+    : _handle(0) {
   std::vector<uint32_t> shaders;
   _handle = glCreateProgram();
   int success;
   char infoLog[512];
-  for (auto &[type, source] : sources) {
+  for (auto &[type, res] : sources) {
     uint32_t shader = glCreateShader((uint32_t)type);
     if (!shader) {
       throw std::runtime_error(
           fmt::format("Failed to create shader: 0x{:x}", glGetError()));
     }
-    const char *s = source.c_str();
+    core::AutoPtr resource = res;
+    auto data = resource->read();
+    std::string str((char *)data->getData(), data->getSize());
+    const char *s = str.c_str();
     glShaderSource(shader, 1, &s, NULL);
     glCompileShader(shader);
     glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
