@@ -19,7 +19,7 @@ Mesh::Mesh(const VertexAttributeTable &attrs,
     : _material(material) {
   _vertex = new VertexArray(attrs, {data});
 }
-void Mesh::draw(core::AutoPtr<Shader> &shader) {
+void Mesh::draw(core::AutoPtr<Shader> &shader) const {
   shader->setValue("material.ambient", _material.ambient);
   shader->setValue("material.diffuse", _material.diffuse);
   shader->setValue("material.diffuse", _material.diffuse);

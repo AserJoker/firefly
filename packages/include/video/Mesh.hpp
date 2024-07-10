@@ -48,7 +48,7 @@ public:
        const Material &materal = {.shininess = 0})
       : Mesh(attrs, new VertexBuffer<T>(data), new ElementBuffer(elements),
              materal) {}
-  void draw(core::AutoPtr<Shader> &shader);
+  void draw(core::AutoPtr<Shader> &shader) const;
   const core::AutoPtr<VertexArray> getVertexArray() const;
   core::AutoPtr<VertexArray> getVertexArray();
 };

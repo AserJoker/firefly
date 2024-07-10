@@ -4,7 +4,7 @@
 #pragma once
 
 #include "BaseApplication.hpp"
-#include "Event_Quit.hpp"
+#include "Event_SDL.hpp"
 
 namespace firefly::runtime {
 class Application : public BaseApplication {
@@ -19,6 +19,6 @@ protected:
 
   void onUnInitialize() override;
 
-  virtual void onQuit(Event_Quit &);
+  virtual void onEvent(Event_SDL &);
 };
 } // namespace firefly::runtime

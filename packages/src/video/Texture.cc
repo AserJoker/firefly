@@ -30,5 +30,5 @@ Texture::Texture(core::AutoPtr<runtime::Resource> resource) : _handle(0) {
   SDL_FreeSurface(surface);
 }
 Texture::~Texture() { glDeleteTextures(1, &_handle); }
-void Texture::bind() { glBindTexture(GL_TEXTURE_2D, _handle); }
-void Texture::unbind() { glBindTexture(GL_TEXTURE_2D, 0); }
+void Texture::bind() const { glBindTexture(GL_TEXTURE_2D, _handle); }
+void Texture::unbind() const { glBindTexture(GL_TEXTURE_2D, 0); }

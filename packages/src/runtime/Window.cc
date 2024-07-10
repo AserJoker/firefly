@@ -1,5 +1,6 @@
 #include "runtime/Window.hpp"
 #include <SDL2/SDL.h>
+#include <SDL_mouse.h>
 #include <glad/glad.h>
 #include <stdexcept>
 
@@ -38,7 +39,6 @@ void Window::setTitle(const std::string &title) {
 std::string Window::getTitle() const { return SDL_GetWindowTitle(_window); }
 
 void Window::present() { SDL_GL_SwapWindow(_window); }
-
 
 void Window::setSwapInterval(int flag) {
   SDL_ASSERT(SDL_GL_SetSwapInterval(flag) >= 0);

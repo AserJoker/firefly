@@ -48,54 +48,55 @@ Shader::Shader(
 Shader::~Shader() { glDeleteProgram(_handle); }
 void Shader::use() const { glUseProgram(_handle); }
 
-void Shader::setValue(const std::string &name, const int32_t &val) {
+void Shader::setValue(const std::string &name, const int32_t &val) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniform1i(location, val);
 }
-void Shader::setValue(const std::string &name, const uint32_t &val) {
+void Shader::setValue(const std::string &name, const uint32_t &val) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniform1ui(location, val);
 }
-void Shader::setValue(const std::string &name, const float &val) {
+void Shader::setValue(const std::string &name, const float &val) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniform1f(location, val);
 }
-void Shader::setValue(const std::string &name, const glm::vec2 &val) {
+void Shader::setValue(const std::string &name, const glm::vec2 &val) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniform2fv(location, 1, &val[0]);
 }
-void Shader::setValue(const std::string &name, const float &x, const float &y) {
+void Shader::setValue(const std::string &name, const float &x,
+                      const float &y) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniform2f(location, x, y);
 }
-void Shader::setValue(const std::string &name, const glm::vec3 &val) {
+void Shader::setValue(const std::string &name, const glm::vec3 &val) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniform3fv(location, 1, &val[0]);
 }
 
 void Shader::setValue(const std::string &name, const float &x, const float &y,
-                      const float &z) {
+                      const float &z) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniform3f(location, x, y, z);
 }
-void Shader::setValue(const std::string &name, const glm::vec4 &val) {
+void Shader::setValue(const std::string &name, const glm::vec4 &val) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniform4fv(location, 1, &val[0]);
 }
 void Shader::setValue(const std::string &name, const float &x, const float &y,
-                      const float &z, const float &w) {
+                      const float &z, const float &w) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniform4f(location, x, y, z, w);
 }
-void Shader::setValue(const std::string &name, const glm::mat2 &val) {
+void Shader::setValue(const std::string &name, const glm::mat2 &val) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniformMatrix2fv(location, 1, GL_FALSE, &val[0][0]);
 }
-void Shader::setValue(const std::string &name, const glm::mat3 &val) {
+void Shader::setValue(const std::string &name, const glm::mat3 &val) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniformMatrix3fv(location, 1, GL_FALSE, &val[0][0]);
 }
-void Shader::setValue(const std::string &name, const glm::mat4 &val) {
+void Shader::setValue(const std::string &name, const glm::mat4 &val) const {
   auto location = glGetUniformLocation(_handle, name.c_str());
   glUniformMatrix4fv(location, 1, GL_FALSE, &val[0][0]);
 }

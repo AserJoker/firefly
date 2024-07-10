@@ -23,19 +23,19 @@ public:
   Shader(const std::map<ShaderType, core::AutoPtr<runtime::Resource>> &sources);
   ~Shader() override;
   void use() const;
-  void setValue(const std::string &name, const int32_t &val);
-  void setValue(const std::string &name, const uint32_t &val);
-  void setValue(const std::string &name, const float &val);
-  void setValue(const std::string &name, const glm::vec2 &val);
-  void setValue(const std::string &name, const float &x, const float &y);
-  void setValue(const std::string &name, const glm::vec3 &val);
+  void setValue(const std::string &name, const int32_t &val) const;
+  void setValue(const std::string &name, const uint32_t &val) const;
+  void setValue(const std::string &name, const float &val) const;
+  void setValue(const std::string &name, const glm::vec2 &val) const;
+  void setValue(const std::string &name, const float &x, const float &y) const;
+  void setValue(const std::string &name, const glm::vec3 &val) const;
   void setValue(const std::string &name, const float &x, const float &y,
-                const float &z);
-  void setValue(const std::string &name, const glm::vec4 &val);
+                const float &z) const;
+  void setValue(const std::string &name, const glm::vec4 &val) const;
   void setValue(const std::string &name, const float &x, const float &y,
-                const float &z, const float &w);
-  void setValue(const std::string &name, const glm::mat2 &val);
-  void setValue(const std::string &name, const glm::mat3 &val);
-  void setValue(const std::string &name, const glm::mat4 &val);
+                const float &z, const float &w) const;
+  void setValue(const std::string &name, const glm::mat2 &val) const;
+  void setValue(const std::string &name, const glm::mat3 &val) const;
+  void setValue(const std::string &name, const glm::mat4 &val) const;
 };
 } // namespace firefly::video

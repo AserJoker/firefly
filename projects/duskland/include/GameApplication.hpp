@@ -1,8 +1,12 @@
 #pragma once
 
+#include "input/Event_KeyDown.hpp"
+#include "input/Event_Mouse.hpp"
+#include "input/Event_MouseButtonDown.hpp"
 #include "runtime/Application.hpp"
 #include "runtime/Window.hpp"
 #include "video/Renderer.hpp"
+
 namespace duskland {
 using namespace firefly;
 
@@ -21,5 +25,9 @@ protected:
 
 public:
   GameApplication(int argc, char *argv[]);
+
+  void onMouse(input::Event_Mouse &e);
+  void onMouseButtonDown(input::Event_MouseButtonDown &e);
+  void onKeydown(input::Event_KeyDown &e);
 };
 } // namespace duskland

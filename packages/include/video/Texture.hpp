@@ -10,7 +10,7 @@ private:
 public:
   Texture(core::AutoPtr<runtime::Resource> source);
   ~Texture() override;
-  void bind();
-  void unbind();
+  void bind() const;
+  void unbind() const;
 };
 }; // namespace firefly::video
