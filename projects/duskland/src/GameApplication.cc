@@ -21,7 +21,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <initializer_list>
-#include <iostream>
 
 using namespace firefly;
 using namespace duskland;
@@ -154,5 +153,12 @@ void GameApplication::onMouseButtonDown(input::Event_MouseButtonDown &e) {
 void GameApplication::onKeydown(input::Event_KeyDown &e) {
   if (e.getScancode() == SDL_SCANCODE_ESCAPE) {
     mouse->releaseMouse();
+  }
+  if (e.getScancode() == SDL_SCANCODE_E) {
+    if (mouse->isCatched()) {
+      mouse->releaseMouse();
+    } else {
+      mouse->catchMouse();
+    }
   }
 }

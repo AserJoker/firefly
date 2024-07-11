@@ -16,5 +16,6 @@ public:
   const glm::vec2 &getPosition() const;
   void catchMouse();
   void releaseMouse();
+  const bool& isCatched();
 };
 }; // namespace firefly::input

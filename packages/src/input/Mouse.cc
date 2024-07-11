@@ -26,7 +26,9 @@ void Mouse::onEvent(runtime::Event_SDL &e) {
       _position += delta;
       bus->emit<Event_Mouse>(_position, delta);
       auto win = SDL_GL_GetCurrentWindow();
-      SDL_WarpMouseInWindow(win, 512, 384);
+      int w, h;
+      SDL_GetWindowSize(win, &w, &h);
+      SDL_WarpMouseInWindow(win, w / 2, h / 2);
     }
   }
   if (event.type == SDL_MOUSEBUTTONDOWN) {
@@ -42,3 +44,4 @@ void Mouse::releaseMouse() {
   _catched = false;
   SDL_SetRelativeMouseMode(SDL_FALSE);
 }
+const bool &Mouse::isCatched() { return _catched; }
