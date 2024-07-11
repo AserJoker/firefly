@@ -8,25 +8,24 @@
 #include "input/Mouse.hpp"
 #include "runtime/Application.hpp"
 #include "runtime/EventBus.hpp"
-#include "runtime/Resource_Buffer.hpp"
+#include "runtime/Resource.hpp"
 #include "runtime/Window.hpp"
+#include "video/ElementBuffer.hpp"
 #include "video/Mesh.hpp"
 #include "video/PerspectiveCamera.hpp"
 #include "video/Renderer.hpp"
 #include "video/Shader.hpp"
 #include "video/Texture.hpp"
 #include "video/VertexArray.hpp"
-#include <SDL_keycode.h>
-#include <SDL_scancode.h>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <initializer_list>
+#include <iostream>
+#include <sstream>
 
 using namespace firefly;
 using namespace duskland;
-core::AutoPtr<video::VertexArray> vertexarray;
 core::AutoPtr<video::Mesh> mesh;
 core::AutoPtr<video::Shader> shader;
 core::AutoPtr<video::Texture> texture;
@@ -35,37 +34,79 @@ core::AutoPtr<video::PerspectiveCamera> camera;
 core::AutoPtr<input::Keyboard> keyboard;
 core::AutoPtr<input::Mouse> mouse;
 struct Vertex {
-  float x, y, z, u, v;
+  glm::vec3 position;
+  glm::vec2 texcrood;
+  glm::vec3 normal;
 };
-glm::mat4 projection(1.0f), view(1.0f), model(1.0f);
-std::initializer_list<Vertex> vertices = {
-    {-0.5f, -0.5f, -0.5f, 0.0f, 0.0f}, {0.5f, -0.5f, -0.5f, 1.0f, 0.0f},
-    {0.5f, 0.5f, -0.5f, 1.0f, 1.0f},   {0.5f, 0.5f, -0.5f, 1.0f, 1.0f},
-    {-0.5f, 0.5f, -0.5f, 0.0f, 1.0f},  {-0.5f, -0.5f, -0.5f, 0.0f, 0.0f},
-
-    {-0.5f, -0.5f, 0.5f, 0.0f, 0.0f},  {0.5f, -0.5f, 0.5f, 1.0f, 0.0f},
-    {0.5f, 0.5f, 0.5f, 1.0f, 1.0f},    {0.5f, 0.5f, 0.5f, 1.0f, 1.0f},
-    {-0.5f, 0.5f, 0.5f, 0.0f, 1.0f},   {-0.5f, -0.5f, 0.5f, 0.0f, 0.0f},
-
-    {-0.5f, 0.5f, 0.5f, 1.0f, 0.0f},   {-0.5f, 0.5f, -0.5f, 1.0f, 1.0f},
-    {-0.5f, -0.5f, -0.5f, 0.0f, 1.0f}, {-0.5f, -0.5f, -0.5f, 0.0f, 1.0f},
-    {-0.5f, -0.5f, 0.5f, 0.0f, 0.0f},  {-0.5f, 0.5f, 0.5f, 1.0f, 0.0f},
-
-    {0.5f, 0.5f, 0.5f, 1.0f, 0.0f},    {0.5f, 0.5f, -0.5f, 1.0f, 1.0f},
-    {0.5f, -0.5f, -0.5f, 0.0f, 1.0f},  {0.5f, -0.5f, -0.5f, 0.0f, 1.0f},
-    {0.5f, -0.5f, 0.5f, 0.0f, 0.0f},   {0.5f, 0.5f, 0.5f, 1.0f, 0.0f},
-
-    {-0.5f, -0.5f, -0.5f, 0.0f, 1.0f}, {0.5f, -0.5f, -0.5f, 1.0f, 1.0f},
-    {0.5f, -0.5f, 0.5f, 1.0f, 0.0f},   {0.5f, -0.5f, 0.5f, 1.0f, 0.0f},
-    {-0.5f, -0.5f, 0.5f, 0.0f, 0.0f},  {-0.5f, -0.5f, -0.5f, 0.0f, 1.0f},
-
-    {-0.5f, 0.5f, -0.5f, 0.0f, 1.0f},  {0.5f, 0.5f, -0.5f, 1.0f, 1.0f},
-    {0.5f, 0.5f, 0.5f, 1.0f, 0.0f},    {0.5f, 0.5f, 0.5f, 1.0f, 0.0f},
-    {-0.5f, 0.5f, 0.5f, 0.0f, 0.0f},   {-0.5f, 0.5f, -0.5f, 0.0f, 1.0f}};
-
+glm::mat4 model(1.0f);
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv) {}
-
+core::AutoPtr<video::Mesh>
+loadObjMesh(core::AutoPtr<runtime::Resource> resource) {
+  auto buffer = resource->read();
+  std::string source((char *)buffer->getData(), buffer->getSize());
+  std::stringstream ss(source);
+  std::vector<glm::vec3> v;
+  std::vector<glm::vec2> vt;
+  std::vector<glm::vec3> vn;
+  std::vector<Vertex> vertices;
+  std::vector<video::Face> indices;
+  struct VertexMeta {
+    int v, vt, vn;
+  };
+  std::vector<VertexMeta> f;
+  while (!ss.eof()) {
+    std::string type;
+    ss >> type;
+    if (type == "v") {
+      glm::vec3 position;
+      ss >> position.x >> position.y >> position.z;
+      v.push_back(position);
+    }
+    if (type == "vt") {
+      glm::vec2 texcrood;
+      ss >> texcrood.x >> texcrood.y;
+      vt.push_back(texcrood);
+    }
+    if (type == "vn") {
+      glm::vec3 normal;
+      ss >> normal.x >> normal.y >> normal.z;
+      vn.push_back(normal);
+    }
+    if (type == "f") {
+      VertexMeta meta[3];
+      char c;
+      ss >> meta[0].v >> c >> meta[0].vn >> c >> meta[0].vt;
+      ss >> meta[1].v >> c >> meta[1].vn >> c >> meta[1].vt;
+      ss >> meta[2].v >> c >> meta[2].vn >> c >> meta[2].vt;
+      f.push_back(meta[0]);
+      f.push_back(meta[1]);
+      f.push_back(meta[2]);
+    }
+  }
+  for (int i = 0; i < f.size(); i += 3) {
+    Vertex vertex;
+    video::Face face;
+    vertex.position = v[f[i].v - 1];
+    vertex.texcrood = vt[f[i].vt - 1];
+    vertex.normal = vn[f[i].vn - 1];
+    vertices.push_back(vertex);
+    face.indices[0] = vertices.size() - 1;
+    vertex.position = v[f[i + 1].v - 1];
+    vertex.texcrood = vt[f[i + 1].vt - 1];
+    vertex.normal = vn[f[i + 1].vn - 1];
+    vertices.push_back(vertex);
+    face.indices[1] = vertices.size() - 1;
+    vertex.position = v[f[i + 2].v - 1];
+    vertex.texcrood = vt[f[i + 2].vt - 1];
+    vertex.normal = vn[f[i + 2].vn - 1];
+    vertices.push_back(vertex);
+    face.indices[2] = vertices.size() - 1;
+    indices.push_back(face);
+  }
+  return new video::Mesh(
+      {video::POSITION_XYZ, video::TEXCROOD_UV, video::NORMAL_XYZ}, vertices);
+}
 void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
   _resources->setCurrentWorkspaceDirectory(cwd().append("media").string());
@@ -82,14 +123,9 @@ void GameApplication::onInitialize() {
        {video::ShaderType::FRAGMENT,
         _resources->load("shader::fragment.glsl")}});
 
-  mesh = new video::Mesh({video::POSITION_XYZ, video::TEXCROOD_UV}, vertices);
-  auto resource = new runtime::Resource_Buffer("hello world", 11);
-  texture = new video::Texture(_resources->load("textures::wall.jpg"));
-  texture2 = new video::Texture(_resources->load("textures::container.jpg"));
-
-  projection = glm::perspective(glm::radians(45.0f), (float)1024 / (float)768,
-                                0.1f, 100.0f);
-  view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+  mesh = loadObjMesh(_resources->load("model::model.obj"));
+  texture = new video::Texture(_resources->load("texture::wall.jpg"));
+  texture2 = new video::Texture(_resources->load("texture::container.jpg"));
   _renderer->useShader(shader);
   camera = new video::PerspectiveCamera(_window);
   camera->setPosition({0, 0, -3});
@@ -123,6 +159,8 @@ void GameApplication::onMainLoop() {
   shader->setValue("projection", camera->getProjectionMatrix());
   shader->setValue("view", camera->getViewMatrix());
   shader->setValue("model", model);
+  shader->setValue("lightPos", camera->getPosition());
+  shader->setValue("viewPos", camera->getPosition());
   _renderer->setTextureUnit("texture0", 0, texture);
   _renderer->setTextureUnit("texture1", 1, texture2);
   _renderer->draw(mesh);
