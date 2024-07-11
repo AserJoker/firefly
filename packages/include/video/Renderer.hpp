@@ -14,6 +14,8 @@ private:
 
 public:
   void setCamera(const core::AutoPtr<Camera> &camera);
+  const core::AutoPtr<Camera> &getCamera() const;
+  core::AutoPtr<Camera> getCamera();
   void useShader(const core::AutoPtr<Shader> &shader);
   const core::AutoPtr<Shader> &getShader();
   void clear(const glm::vec4 &color);

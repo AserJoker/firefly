@@ -11,8 +11,8 @@
 using namespace firefly;
 using namespace firefly::input;
 Mouse::Mouse() : _captured(false) { _bus->on(this, &Mouse::onEvent); }
-void Mouse::onEvent(runtime::Event_SDL &e) {
 
+void Mouse::onEvent(runtime::Event_SDL &e) {
   auto &event = e.getEvent();
   if (event.type == SDL_MOUSEMOTION) {
     glm::vec2 delta = {event.motion.xrel, event.motion.yrel};
@@ -34,13 +34,21 @@ void Mouse::onEvent(runtime::Event_SDL &e) {
     _bus->emit<Event_MouseWheel>(_wheel, delta);
   }
 }
+
 const glm::vec2 &Mouse::getPosition() const { return _position; }
+
 void Mouse::captureMouse() {
   SDL_SetRelativeMouseMode(SDL_TRUE);
   _captured = true;
 }
+
 void Mouse::releaseMouse() {
+  auto win = SDL_GL_GetCurrentWindow();
+  int w, h;
+  SDL_GetWindowSize(win, &w, &h);
+  SDL_WarpMouseInWindow(win, w / 2, h / 2);
   _captured = false;
   SDL_SetRelativeMouseMode(SDL_FALSE);
 }
+
 const bool &Mouse::isCaptured() { return _captured; }

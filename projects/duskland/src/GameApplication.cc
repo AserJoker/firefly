@@ -23,7 +23,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <initializer_list>
-#include <iostream>
 
 using namespace firefly;
 using namespace duskland;
@@ -69,10 +68,12 @@ GameApplication::GameApplication(int argc, char *argv[])
 
 void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
+  _resources->setCurrentWorkspaceDirectory(cwd().append("media").string());
   _eventbus->on(this, &GameApplication::onMouse);
   _eventbus->on(this, &GameApplication::onKeydown);
   _eventbus->on(this, &GameApplication::onMouseButtonDown);
   _eventbus->on(this, &GameApplication::onMouseWheel);
+
   _window = new runtime::Window("duskland", 1024, 768);
   _renderer = new video::Renderer();
   _renderer->enableDepthTest();
@@ -93,6 +94,7 @@ void GameApplication::onInitialize() {
   camera = new video::PerspectiveCamera(_window);
   camera->setPosition({0, 0, -3});
   camera->setFront({0, 0, 1});
+  _renderer->setCamera(camera);
   keyboard = new input::Keyboard();
   mouse = new input::Mouse();
 }
@@ -118,18 +120,17 @@ void GameApplication::onMainLoop() {
     camera->move(0, 0.001, 0);
   }
   _renderer->clear({0.2f, 0.3f, 0.3f, 1.0f});
-  model =
-      glm::rotate(model, glm::radians(-0.001f), glm::vec3(1.0f, 1.0f, -1.0f));
-  _renderer->setTextureUnit("texture0", 0, texture);
-  _renderer->setTextureUnit("texture1", 1, texture2);
   shader->setValue("projection", camera->getProjectionMatrix());
   shader->setValue("view", camera->getViewMatrix());
   shader->setValue("model", model);
+  _renderer->setTextureUnit("texture0", 0, texture);
+  _renderer->setTextureUnit("texture1", 1, texture2);
   _renderer->draw(mesh);
   _window->present();
 }
 
 void GameApplication::onUnInitialize() { runtime::Application::onInitialize(); }
+
 void GameApplication::onMouse(input::Event_Mouse &e) {
   if (mouse->isCaptured()) {
     static float yaw = 90;
@@ -150,7 +151,9 @@ void GameApplication::onMouse(input::Event_Mouse &e) {
     camera->rotate(pitch, yaw);
   }
 }
+
 void GameApplication::onMouseButtonDown(input::Event_MouseButtonDown &e) {}
+
 void GameApplication::onKeydown(input::Event_KeyDown &e) {
   if (e.getScancode() == SDL_SCANCODE_ESCAPE) {
     mouse->releaseMouse();
@@ -163,6 +166,7 @@ void GameApplication::onKeydown(input::Event_KeyDown &e) {
     }
   }
 }
+
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
   camera->zoom(camera->getFov() - e.getDelta().y);
 }
