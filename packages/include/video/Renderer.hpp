@@ -1,6 +1,7 @@
 #pragma once
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include "video/Camera.hpp"
 #include "video/Mesh.hpp"
 #include "video/Shader.hpp"
 #include "video/Texture.hpp"
@@ -9,8 +10,10 @@ namespace firefly::video {
 class Renderer : public core::Object {
 private:
   core::AutoPtr<Shader> _shader;
+  core::AutoPtr<Camera> _camera;
 
 public:
+  void setCamera(const core::AutoPtr<Camera> &camera);
   void useShader(const core::AutoPtr<Shader> &shader);
   const core::AutoPtr<Shader> &getShader();
   void clear(const glm::vec4 &color);

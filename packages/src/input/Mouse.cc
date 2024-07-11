@@ -1,30 +1,24 @@
 #include "input/Mouse.hpp"
-#include "core/Singleton.hpp"
 #include "input/Event_Mouse.hpp"
 #include "input/Event_MouseButtonDown.hpp"
-#include "runtime/EventBus.hpp"
+#include "input/Event_MouseWheel.hpp"
 #include "runtime/Event_SDL.hpp"
 #include <SDL_events.h>
 #include <SDL_mouse.h>
 #include <SDL_video.h>
-#include <iostream>
+#include <glm/fwd.hpp>
+
 using namespace firefly;
 using namespace firefly::input;
-Mouse::Mouse() : _catched(false) {
-  auto bus = core::Singleton<runtime::EventBus>::instance();
-  bus->on(this, &Mouse::onEvent);
-}
+Mouse::Mouse() : _captured(false) { _bus->on(this, &Mouse::onEvent); }
 void Mouse::onEvent(runtime::Event_SDL &e) {
 
-  auto bus = core::Singleton<runtime::EventBus>::instance();
   auto &event = e.getEvent();
-  if (_catched) {
-    if (event.type == SDL_MOUSEMOTION) {
-      std::cout << event.motion.x << "," << event.motion.y << ","
-                << event.motion.xrel << "," << event.motion.yrel << std::endl;
-      glm::vec2 delta = {event.motion.xrel, event.motion.yrel};
-      _position += delta;
-      bus->emit<Event_Mouse>(_position, delta);
+  if (event.type == SDL_MOUSEMOTION) {
+    glm::vec2 delta = {event.motion.xrel, event.motion.yrel};
+    _position += delta;
+    _bus->emit<Event_Mouse>(_position, delta);
+    if (_captured) {
       auto win = SDL_GL_GetCurrentWindow();
       int w, h;
       SDL_GetWindowSize(win, &w, &h);
@@ -32,16 +26,21 @@ void Mouse::onEvent(runtime::Event_SDL &e) {
     }
   }
   if (event.type == SDL_MOUSEBUTTONDOWN) {
-    bus->emit<Event_MouseButtonDown>(event.button.button);
+    _bus->emit<Event_MouseButtonDown>(event.button.button);
+  }
+  if (event.type == SDL_MOUSEWHEEL) {
+    glm::vec2 delta = {event.wheel.x, event.wheel.y};
+    _wheel += delta;
+    _bus->emit<Event_MouseWheel>(_wheel, delta);
   }
 }
 const glm::vec2 &Mouse::getPosition() const { return _position; }
-void Mouse::catchMouse() {
+void Mouse::captureMouse() {
   SDL_SetRelativeMouseMode(SDL_TRUE);
-  _catched = true;
+  _captured = true;
 }
 void Mouse::releaseMouse() {
-  _catched = false;
+  _captured = false;
   SDL_SetRelativeMouseMode(SDL_FALSE);
 }
-const bool &Mouse::isCatched() { return _catched; }
+const bool &Mouse::isCaptured() { return _captured; }

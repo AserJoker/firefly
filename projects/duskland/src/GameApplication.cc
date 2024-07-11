@@ -3,9 +3,11 @@
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_Mouse.hpp"
 #include "input/Event_MouseButtonDown.hpp"
+#include "input/Event_MouseWheel.hpp"
 #include "input/Keyboard.hpp"
 #include "input/Mouse.hpp"
 #include "runtime/Application.hpp"
+#include "runtime/EventBus.hpp"
 #include "runtime/Resource_Buffer.hpp"
 #include "runtime/Window.hpp"
 #include "video/Mesh.hpp"
@@ -21,6 +23,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <initializer_list>
+#include <iostream>
 
 using namespace firefly;
 using namespace duskland;
@@ -69,6 +72,7 @@ void GameApplication::onInitialize() {
   _eventbus->on(this, &GameApplication::onMouse);
   _eventbus->on(this, &GameApplication::onKeydown);
   _eventbus->on(this, &GameApplication::onMouseButtonDown);
+  _eventbus->on(this, &GameApplication::onMouseWheel);
   _window = new runtime::Window("duskland", 1024, 768);
   _renderer = new video::Renderer();
   _renderer->enableDepthTest();
@@ -86,7 +90,7 @@ void GameApplication::onInitialize() {
                                 0.1f, 100.0f);
   view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
   _renderer->useShader(shader);
-  camera = new video::PerspectiveCamera();
+  camera = new video::PerspectiveCamera(_window);
   camera->setPosition({0, 0, -3});
   camera->setFront({0, 0, 1});
   keyboard = new input::Keyboard();
@@ -113,14 +117,13 @@ void GameApplication::onMainLoop() {
   if (keyboard->getKeyState(SDL_SCANCODE_SPACE)) {
     camera->move(0, 0.001, 0);
   }
-  view = camera->getMatrix();
   _renderer->clear({0.2f, 0.3f, 0.3f, 1.0f});
   model =
       glm::rotate(model, glm::radians(-0.001f), glm::vec3(1.0f, 1.0f, -1.0f));
   _renderer->setTextureUnit("texture0", 0, texture);
   _renderer->setTextureUnit("texture1", 1, texture2);
-  shader->setValue("projection", projection);
-  shader->setValue("view", view);
+  shader->setValue("projection", camera->getProjectionMatrix());
+  shader->setValue("view", camera->getViewMatrix());
   shader->setValue("model", model);
   _renderer->draw(mesh);
   _window->present();
@@ -128,37 +131,38 @@ void GameApplication::onMainLoop() {
 
 void GameApplication::onUnInitialize() { runtime::Application::onInitialize(); }
 void GameApplication::onMouse(input::Event_Mouse &e) {
-  static float yaw = 90;
-  static float pitch = 0;
-  float xoffset = e.getDelta().x;
-  float yoffset = -e.getDelta().y;
-  float sensitivity = 0.05;
-  xoffset *= sensitivity;
-  yoffset *= sensitivity;
-  yaw += xoffset;
-  pitch += yoffset;
-  if (pitch > 89.0f) {
-    pitch = 89.0f;
-  }
-  if (pitch < -89.0f) {
-    pitch = -89.0f;
-  }
-  camera->rotate(pitch, yaw);
-}
-void GameApplication::onMouseButtonDown(input::Event_MouseButtonDown &e) {
-  if (e.getType() == 1) {
-    mouse->catchMouse();
+  if (mouse->isCaptured()) {
+    static float yaw = 90;
+    static float pitch = 0;
+    float xoffset = e.getDelta().x;
+    float yoffset = -e.getDelta().y;
+    float sensitivity = 0.05;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+    yaw += xoffset;
+    pitch += yoffset;
+    if (pitch > 89.0f) {
+      pitch = 89.0f;
+    }
+    if (pitch < -89.0f) {
+      pitch = -89.0f;
+    }
+    camera->rotate(pitch, yaw);
   }
 }
+void GameApplication::onMouseButtonDown(input::Event_MouseButtonDown &e) {}
 void GameApplication::onKeydown(input::Event_KeyDown &e) {
   if (e.getScancode() == SDL_SCANCODE_ESCAPE) {
     mouse->releaseMouse();
   }
   if (e.getScancode() == SDL_SCANCODE_E) {
-    if (mouse->isCatched()) {
+    if (mouse->isCaptured()) {
       mouse->releaseMouse();
     } else {
-      mouse->catchMouse();
+      mouse->captureMouse();
     }
   }
+}
+void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
+  camera->zoom(camera->getFov() - e.getDelta().y);
 }

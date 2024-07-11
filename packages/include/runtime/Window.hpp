@@ -1,7 +1,9 @@
 #pragma once
 #include "core/Object.hpp"
 #include <SDL2/SDL.h>
+#include <glm/fwd.hpp>
 #include <string>
+#include <glm/glm.hpp>
 
 namespace firefly::runtime {
 class Window : public core::Object {
@@ -15,5 +17,6 @@ public:
   std::string getTitle() const;
   void present();
   void setSwapInterval(int flag);
+  glm::vec2 getSize() const;
 };
 } // namespace firefly::runtime
