@@ -18,6 +18,7 @@
 #include "video/Texture.hpp"
 #include "video/VertexArray.hpp"
 #include <glad/glad.h>
+#include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -28,8 +29,6 @@ using namespace firefly;
 using namespace duskland;
 core::AutoPtr<video::Mesh> mesh;
 core::AutoPtr<video::Shader> shader;
-core::AutoPtr<video::Texture> texture;
-core::AutoPtr<video::Texture> texture2;
 core::AutoPtr<video::PerspectiveCamera> camera;
 core::AutoPtr<input::Keyboard> keyboard;
 core::AutoPtr<input::Mouse> mouse;
@@ -124,15 +123,19 @@ void GameApplication::onInitialize() {
         _resources->load("shader::fragment.glsl")}});
 
   mesh = loadObjMesh(_resources->load("model::model.obj"));
-  texture = new video::Texture(_resources->load("texture::wall.jpg"));
-  texture2 = new video::Texture(_resources->load("texture::container.jpg"));
+  mesh->getMaterial().diffuse =
+      new video::Texture(_resources->load("texture::container2.png"));
+  mesh->getMaterial().shininess = 64.0f;
+  mesh->getMaterial().specular =
+      new video::Texture(_resources->load("texture::container2_specular.png"));
   _renderer->useShader(shader);
   camera = new video::PerspectiveCamera(_window);
-  camera->setPosition({0, 0, -3});
+  camera->setPosition({0, 0, 0});
   camera->setFront({0, 0, 1});
   _renderer->setCamera(camera);
   keyboard = new input::Keyboard();
   mouse = new input::Mouse();
+  model = glm::translate(model, glm::vec3(-0.5, -0.5, 3));
 }
 
 void GameApplication::onMainLoop() {
@@ -158,11 +161,20 @@ void GameApplication::onMainLoop() {
   _renderer->clear({0.2f, 0.3f, 0.3f, 1.0f});
   shader->setValue("projection", camera->getProjectionMatrix());
   shader->setValue("view", camera->getViewMatrix());
+  model = glm::rotate(model, glm::radians(0.01f), glm::vec3(1, 1, 1));
   shader->setValue("model", model);
-  shader->setValue("lightPos", camera->getPosition());
   shader->setValue("viewPos", camera->getPosition());
-  _renderer->setTextureUnit("texture0", 0, texture);
-  _renderer->setTextureUnit("texture1", 1, texture2);
+  auto &material = mesh->getMaterial();
+
+  _renderer->setTextureUnit("material.diffuse", 0, material.diffuse);
+  _renderer->setTextureUnit("material.specular", 1, material.specular);
+  shader->setValue("material.shininess", material.shininess);
+
+  shader->setValue("light.position", 0, 0, 0);
+  shader->setValue("light.ambient", 0.2f, 0.2f, 0.2f);
+  shader->setValue("light.diffuse", 0.8f, 0.8f, 0.8f);
+  shader->setValue("light.specular", 1.0f, 1.0f, 1.0f);
+
   _renderer->draw(mesh);
   _window->present();
 }

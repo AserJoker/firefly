@@ -20,10 +20,6 @@ Mesh::Mesh(const VertexAttributeTable &attrs,
   _vertex = new VertexArray(attrs, {data});
 }
 void Mesh::draw(core::AutoPtr<Shader> &shader) const {
-  shader->setValue("material.ambient", _material.ambient);
-  shader->setValue("material.diffuse", _material.diffuse);
-  shader->setValue("material.diffuse", _material.diffuse);
-  shader->setValue("material.shininess", _material.shininess);
   _vertex->bind();
   auto indexbuffer = _vertex->getBuffer(VBufferType::ELEMENT_ARRAY);
   if (!indexbuffer) {
@@ -41,3 +37,6 @@ const core::AutoPtr<VertexArray> Mesh::getVertexArray() const {
   return _vertex;
 };
 core::AutoPtr<VertexArray> Mesh::getVertexArray() { return _vertex; };
+
+Material &Mesh::getMaterial() { return _material; }
+const Material &Mesh::getMaterial() const { return _material; }

@@ -4,15 +4,15 @@
 #include "core/Object.hpp"
 #include "video/ElementBuffer.hpp"
 #include "video/Shader.hpp"
+#include "video/Texture.hpp"
 #include "video/VertexArray.hpp"
 #include <glm/glm.hpp>
 #include <initializer_list>
 #include <vector>
 namespace firefly::video {
 struct Material {
-  glm::vec3 ambient;
-  glm::vec3 diffuse;
-  glm::vec3 specular;
+  core::AutoPtr<Texture> diffuse;
+  core::AutoPtr<Texture> specular;
   float shininess;
 };
 class Mesh : public core::Object {
@@ -51,5 +51,7 @@ public:
   void draw(core::AutoPtr<Shader> &shader) const;
   const core::AutoPtr<VertexArray> getVertexArray() const;
   core::AutoPtr<VertexArray> getVertexArray();
+  Material &getMaterial();
+  const Material &getMaterial() const;
 };
 } // namespace firefly::video
