@@ -35,8 +35,8 @@ void Database::loadTable(core::AutoPtr<runtime::Resource> resource) {
       throw std::runtime_error("Invalid table format,table id is required");
     }
     core::AutoPtr<Table> table;
-    for (auto &tt : _tables) {
-      if (tt->getId() == (const char *)id) {
+    for (auto &[tid, tt] : _tables) {
+      if (tid == (const char *)id) {
         table = tt;
         break;
       }
@@ -264,7 +264,7 @@ void Database::initFieldTable() {
   fields.push_back(new Field("enums", "firefly.field", Field::TYPE::STRING,
                              true, false, true));
   _tableField = new Table("field", "firefly", fields);
-  _tables.push_back(_tableField);
+  _tables[_tableField->getId()] = _tableField;
 }
 void Database::initTableTable() {
   std::vector<core::AutoPtr<Field>> fields;
@@ -275,11 +275,11 @@ void Database::initTableTable() {
   fields.push_back(
       new Field("namespace", "firefly.table", Field::TYPE::STRING, true, true));
   _tableTable = new Table("table", "firefly", fields);
-  _tables.push_back(_tableTable);
+  _tables[_tableTable->getId()] = _tableTable;
 }
 void Database::print() {
-  for (auto &table : _tables) {
-    std::cout << "### " << table->getId() << std::endl;
+  for (auto &[id, table] : _tables) {
+    std::cout << "### " << id << std::endl;
     auto &fields = table->getFields();
     std::cout << "|";
     for (auto &field : fields) {
@@ -373,73 +373,67 @@ void Database::print() {
   }
 }
 void Database::reload() {
-  std::vector<core::AutoPtr<Table>> tables;
+  std::unordered_map<std::string, core::AutoPtr<Table>> tables;
   for (auto &meta : _tableTable->getRecords()) {
     auto id = meta->getStringField("id");
-    core::AutoPtr<Table> t;
-    for (auto &tt : _tables) {
-      if (tt->getId() == id) {
-        t = tt;
-        break;
-      }
-    }
-    if (!t) {
-      std::vector<core::AutoPtr<Field>> fields;
-      for (auto &fmeta : _tableField->getRecords()) {
-        if (fmeta->getStringField("namespace") == id) {
-          std::string type_s = fmeta->getEnumField("type");
-          Field::TYPE type;
-          if (type_s == "O2M") {
-            type = Field::TYPE::O2M;
-          } else if (type_s == "M2M") {
-            type = Field::TYPE::M2M;
-          } else if (type_s == "M2O") {
-            type = Field::TYPE::M2O;
-          } else if (type_s == "O2O") {
-            type = Field::TYPE::O2O;
-          } else if (type_s == "ENUM") {
-            type = Field::TYPE::ENUM;
-          } else if (type_s == "STRING") {
-            type = Field::TYPE::STRING;
-          } else if (type_s == "NUMBER") {
-            type = Field::TYPE::NUMBER;
-          } else if (type_s == "INTEGER") {
-            type = Field::TYPE::INTEGER;
-          } else if (type_s == "BOOLEAN") {
-            type = Field::TYPE::BOOLEAN;
-          }
-          if (type == Field::TYPE::O2M || type == Field::TYPE::M2M ||
-              type == Field::TYPE::M2O || type == Field::TYPE::O2O) {
-            fields.push_back(
-                new Field_Complex(fmeta->getStringField("name"),
-                                  fmeta->getStringField("namespace"),
-                                  (Field_Complex::COMPLEX_TYPE)type,
-                                  fmeta->getStringField("relationTable"),
-                                  fmeta->getStringArrayField("relationFields"),
-                                  fmeta->getStringArrayField("referenceFields"),
-                                  fmeta->getBooleanField("readonly"),
-                                  fmeta->getBooleanField("required")));
-          } else if (type == Field::TYPE::ENUM) {
-            fields.push_back(new Field_Enum(fmeta->getStringField("name"),
-                                            fmeta->getStringField("namespace"),
-                                            fmeta->getStringArrayField("enums"),
-                                            fmeta->getBooleanField("readonly"),
-                                            fmeta->getBooleanField("required"),
-                                            fmeta->getBooleanField("array")));
-          } else {
-            fields.push_back(new Field(fmeta->getStringField("name"),
-                                       fmeta->getStringField("namespace"), type,
-                                       fmeta->getBooleanField("readonly"),
-                                       fmeta->getBooleanField("required"),
-                                       fmeta->getBooleanField("array")));
-          }
+    std::vector<core::AutoPtr<Field>> fields;
+    for (auto &fmeta : _tableField->getRecords()) {
+      if (fmeta->getStringField("namespace") == id) {
+        std::string type_s = fmeta->getEnumField("type");
+        Field::TYPE type;
+        if (type_s == "O2M") {
+          type = Field::TYPE::O2M;
+        } else if (type_s == "M2M") {
+          type = Field::TYPE::M2M;
+        } else if (type_s == "M2O") {
+          type = Field::TYPE::M2O;
+        } else if (type_s == "O2O") {
+          type = Field::TYPE::O2O;
+        } else if (type_s == "ENUM") {
+          type = Field::TYPE::ENUM;
+        } else if (type_s == "STRING") {
+          type = Field::TYPE::STRING;
+        } else if (type_s == "NUMBER") {
+          type = Field::TYPE::NUMBER;
+        } else if (type_s == "INTEGER") {
+          type = Field::TYPE::INTEGER;
+        } else if (type_s == "BOOLEAN") {
+          type = Field::TYPE::BOOLEAN;
+        }
+        if (type == Field::TYPE::O2M || type == Field::TYPE::M2M ||
+            type == Field::TYPE::M2O || type == Field::TYPE::O2O) {
+          fields.push_back(new Field_Complex(
+              fmeta->getStringField("name"), fmeta->getStringField("namespace"),
+              (Field_Complex::COMPLEX_TYPE)type,
+              fmeta->getStringField("relationTable"),
+              fmeta->getStringArrayField("relationFields"),
+              fmeta->getStringArrayField("referenceFields"),
+              fmeta->getBooleanField("readonly"),
+              fmeta->getBooleanField("required")));
+        } else if (type == Field::TYPE::ENUM) {
+          fields.push_back(new Field_Enum(fmeta->getStringField("name"),
+                                          fmeta->getStringField("namespace"),
+                                          fmeta->getStringArrayField("enums"),
+                                          fmeta->getBooleanField("readonly"),
+                                          fmeta->getBooleanField("required"),
+                                          fmeta->getBooleanField("array")));
+        } else {
+          fields.push_back(new Field(fmeta->getStringField("name"),
+                                     fmeta->getStringField("namespace"), type,
+                                     fmeta->getBooleanField("readonly"),
+                                     fmeta->getBooleanField("required"),
+                                     fmeta->getBooleanField("array")));
         }
       }
-      tables.push_back(new Table(meta->getStringField("name"),
-                                 meta->getStringField("namespace"), fields));
-    } else {
-      tables.push_back(t);
     }
+    tables[id] = new Table(meta->getStringField("name"),
+                           meta->getStringField("namespace"), fields);
   }
   _tables = tables;
+}
+core::AutoPtr<Table> Database::getTable(const std::string &id) {
+  if (!_tables.contains(id)) {
+    return nullptr;
+  }
+  return _tables.at(id);
 }
