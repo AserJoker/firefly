@@ -17,6 +17,9 @@
 #include "video/Shader.hpp"
 #include "video/Texture.hpp"
 #include "video/VertexArray.hpp"
+#include <assimp/Importer.hpp>
+#include <assimp/postprocess.h>
+#include <assimp/scene.h>
 #include <glad/glad.h>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/glm.hpp>
@@ -118,16 +121,17 @@ void GameApplication::onInitialize() {
   _renderer = new video::Renderer();
   _renderer->enableDepthTest();
   shader = new video::Shader(
-      {{video::ShaderType::VERTEX, _resources->load("shader::vertex.glsl")},
+      {{video::ShaderType::VERTEX,
+        _resources->query<runtime::Text>("shader::vertex.glsl")},
        {video::ShaderType::FRAGMENT,
-        _resources->load("shader::fragment.glsl")}});
+        _resources->query<runtime::Text>("shader::fragment.glsl")}});
 
   mesh = loadObjMesh(_resources->load("model::model.obj"));
   mesh->getMaterial().diffuse =
-      new video::Texture(_resources->load("texture::container2.png"));
+      _resources->query<video::Texture>("texture::container2.png");
   mesh->getMaterial().shininess = 64.0f;
   mesh->getMaterial().specular =
-      new video::Texture(_resources->load("texture::container2_specular.png"));
+      _resources->query<video::Texture>("texture::container2_specular.png");
   _renderer->useShader(shader);
   camera = new video::PerspectiveCamera(_window);
   camera->setPosition({0, 0, 0});

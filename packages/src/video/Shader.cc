@@ -7,7 +7,7 @@
 using namespace firefly;
 using namespace firefly::video;
 Shader::Shader(
-    const std::map<ShaderType, core::AutoPtr<runtime::Resource>> &sources)
+    const std::map<ShaderType, core::AutoPtr<runtime::Text>> &sources)
     : _handle(0) {
   std::vector<uint32_t> shaders;
   _handle = glCreateProgram();
@@ -19,9 +19,7 @@ Shader::Shader(
       throw std::runtime_error(
           fmt::format("Failed to create shader: 0x{:x}", glGetError()));
     }
-    core::AutoPtr resource = res;
-    auto data = resource->read();
-    std::string str((char *)data->getData(), data->getSize());
+    auto &str = res->getString();
     const char *s = str.c_str();
     glShaderSource(shader, 1, &s, NULL);
     glCompileShader(shader);
