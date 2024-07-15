@@ -112,6 +112,7 @@ loadObjMesh(core::AutoPtr<runtime::Resource> resource) {
 void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
   _resources->setCurrentWorkspaceDirectory(cwd().append("media").string());
+
   _eventbus->on(this, &GameApplication::onMouse);
   _eventbus->on(this, &GameApplication::onKeydown);
   _eventbus->on(this, &GameApplication::onMouseButtonDown);
@@ -144,6 +145,22 @@ void GameApplication::onInitialize() {
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
+  auto indices = _resources->index("table");
+  std::vector<std::string> dataIndices;
+  for (auto &index : indices) {
+    if (index.ends_with(".table.xml") || index.ends_with(".field.xml") ||
+        index.ends_with(".field.xml")) {
+      _database->loadTable(_resources->load(index));
+    } else {
+      dataIndices.push_back(index);
+    }
+  }
+  _database->reload();
+  for (auto &index : dataIndices) {
+    _database->loadTable(_resources->load(index));
+  }
+  _database->print();
+  exit();
   if (keyboard->getKeyState(SDL_SCANCODE_A)) {
     camera->move(-0.001, 0, 0);
   }

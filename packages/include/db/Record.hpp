@@ -9,21 +9,24 @@
 namespace firefly::db {
 class Record : public core::Object {
 private:
-  std::unordered_map<std::string, std::any> _record;
   std::vector<core::AutoPtr<Field>> _fields;
-
-private:
-  const core::AutoPtr<Field> getField(const std::string &name) const;
+  std::unordered_map<std::string, std::any> _record;
 
 public:
   Record(const std::vector<core::AutoPtr<Field>> &fields,
          const std::unordered_map<std::string, std::any> &record = {});
-  void setField(const std::string &name, const std::string &data);
-  void setField(const std::string &name, const float &data);
-  void setField(const std::string &name, const bool &data);
-  void clearField(const std::string &name);
-  void getField(const std::string &name, std::string *data);
-  void getField(const std::string &name, float *data);
-  void getField(const std::string &name, bool *data);
+  const std::string getStringField(const std::string &name) const;
+  const std::string getEnumField(const std::string &name) const;
+  const int32_t getIntegerField(const std::string &name) const;
+  const double getNumberField(const std::string &name) const;
+  const bool getBooleanField(const std::string &name) const;
+  bool isNil(const std::string &name) const;
+  const std::vector<std::string>
+  getStringArrayField(const std::string &name) const;
+  const std::vector<std::string>
+  getEnumArrayField(const std::string &name) const;
+  const std::vector<int32_t> getIntegerArrayField(const std::string &name) const;
+  const std::vector<double> getNumberArrayField(const std::string &name) const;
+  const std::vector<bool> getBooleanArrayField(const std::string &name) const;
 };
-}; // namespace firefly::db
+} // namespace firefly::db

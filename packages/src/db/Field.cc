@@ -1,9 +1,11 @@
 #include "db/Field.hpp"
+#include <fmt/core.h>
 using namespace firefly::db;
-Field::Field(const std::string &name, const TYPE &type, const bool &isReadonly,
-             const bool &isRequired)
-    : _name(name), _type(type), _readonly(isReadonly), _required(isRequired) {}
-const std::string &Field::getName() const { return _name; }
+Field::Field(const std::string &name, const std::string &ns, const TYPE &type,
+             const bool &isReadonly, const bool &isRequired,
+             const bool &isArray)
+    : Entity(name, ns), _type(type), _readonly(isReadonly),
+      _required(isRequired), _array(isArray) {}
 const Field::TYPE &Field::getType() const { return _type; }
 const bool &Field::isReadonly() const { return _readonly; }
 const bool &Field::isRequired() const { return _required; }
@@ -13,6 +15,8 @@ const std::string Field::getTypeName() const {
     return "STRING";
   case TYPE::NUMBER:
     return "NUMBER";
+  case TYPE::INTEGER:
+    return "INTEGER";
   case TYPE::BOOLEAN:
     return "BOOLEAN";
   case TYPE::O2M:
@@ -28,3 +32,4 @@ const std::string Field::getTypeName() const {
   }
   return "Unknown";
 };
+const bool &Field::isArray() const { return _array; }

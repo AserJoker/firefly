@@ -1,0 +1,7 @@
+<table id="firefly.table">
+    <record>
+        <field name="id" value="firefly.demo"/>
+        <field name="name" value="demo"/>
+        <field name="namespace" value="firefly"/>
+    </record>
+</table>

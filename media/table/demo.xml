@@ -1,0 +1,6 @@
+<table id="firefly.demo">
+    <record>
+        <field name="id" value="demo_id"/>
+        <field name="data" value="demo_data"/>
+    </record>
+</table>

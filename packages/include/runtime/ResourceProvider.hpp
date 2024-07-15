@@ -2,6 +2,7 @@
 #include "Resource.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include <vector>
 #ifdef _MSVC_LANG
 #include <vcruntime_typeinfo.h>
 #else
@@ -20,6 +21,7 @@ private:
 
 public:
   core::AutoPtr<Resource> load(const std::string &name);
+  std::vector<std::string> index(const std::string &name);
   void dump(const std::string &name, core::AutoPtr<Resource> resource);
   void setCurrentWorkspaceDirectory(const std::string &cwd);
   std::string resolve(const std::string &name);

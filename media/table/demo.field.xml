@@ -1,0 +1,16 @@
+<table id="firefly.field">
+    <record>
+        <field name="id" value="firefly.demo.id"/>
+        <field name="namespace" value="firefly.demo"/>
+        <field name="name" value="id"/>
+        <field name="type" value="STRING"/>
+        <field name="required" value="true"/>
+        <field name="readonly" value="true"/>
+    </record>
+    <record>
+        <field name="id" value="firefly.demo.data"/>
+        <field name="namespace" value="firefly.demo"/>
+        <field name="name" value="data"/>
+        <field name="type" value="STRING"/>
+    </record>
+</table>

@@ -43,6 +43,38 @@ std::string ResourceProvider::resolve(const std::string &name) {
   }
   return filepath.string();
 }
+std::vector<std::string> ResourceProvider::index(const std::string &name) {
+  std::filesystem::path p = resolve(name);
+  if (!std::filesystem::is_directory(p)) {
+    return {name};
+  }
+  std::vector<std::string> indices;
+  for (auto &item : std::filesystem::recursive_directory_iterator(p)) {
+    if (!item.is_directory()) {
+      std::string name = item.path().string().substr(_cwd.length());
+      std::string part;
+      for (auto &ch : name) {
+        if (ch == '/' || ch == '\\') {
+          part += "::";
+        } else {
+          part += ch;
+        }
+      }
+      indices.push_back(part);
+    }
+  }
+  return indices;
+}
 void ResourceProvider::setCurrentWorkspaceDirectory(const std::string &cwd) {
-  _cwd = cwd;
+  _cwd.clear();
+  for (auto &c : cwd) {
+    if (c == '\\') {
+      _cwd += '/';
+    } else {
+      _cwd += c;
+    }
+  }
+  if (!_cwd.ends_with('/')) {
+    _cwd += '/';
+  }
 }
