@@ -116,120 +116,153 @@ void Database::loadTable(core::AutoPtr<runtime::Resource> resource) {
 Database::Database() {
   initFieldTable();
   initTableTable();
-  _tableTable->addRecord({
-      {"id", std::string("firefly.table")},
-      {"name", std::string("table")},
-      {"namespace", std::string("firefly")},
-  });
-  _tableTable->addRecord({
-      {"id", std::string("firefly.field")},
-      {"name", std::string("field")},
-      {"namespace", std::string("firefly")},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.id")},
-      {"name", std::string("id")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("STRING")},
-      {"readonly", true},
-      {"required", true},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.name")},
-      {"name", std::string("name")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("STRING")},
-      {"readonly", true},
-      {"required", true},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.namespace")},
-      {"name", std::string("namespace")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("STRING")},
-      {"readonly", true},
-      {"required", true},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.type")},
-      {"name", std::string("type")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("ENUM")},
-      {"enums",
-       std::string("O2M,M2O,O2O,M2M,STRING,INTEGER,NUMBER,BOOLEAN,ENUM")},
-      {"readonly", true},
-      {"required", true},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.readonly")},
-      {"name", std::string("readonly")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("BOOLEAN")},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.required")},
-      {"name", std::string("required")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("BOOLEAN")},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.array")},
-      {"name", std::string("required")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("BOOLEAN")},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.relationTable")},
-      {"name", std::string("relationTable")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("STRING")},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.relationFields")},
-      {"name", std::string("relationFields")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("STRING")},
-      {"array", true},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.referenceFields")},
-      {"name", std::string("referenceFields")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("STRING")},
-      {"array", true},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.field.enums")},
-      {"name", std::string("enums")},
-      {"namespace", std::string("firefly.field")},
-      {"type", std::string("STRING")},
-      {"array", true},
-  });
+  _tableTable->addRecord(
+      {
+          {"id", std::string("firefly.table")},
+          {"name", std::string("table")},
+          {"namespace", std::string("firefly")},
+      },
+      true);
+  _tableTable->addRecord(
+      {
+          {"id", std::string("firefly.field")},
+          {"name", std::string("field")},
+          {"namespace", std::string("firefly")},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.id")},
+          {"name", std::string("id")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("STRING")},
+          {"readonly", true},
+          {"required", true},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.name")},
+          {"name", std::string("name")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("STRING")},
+          {"readonly", true},
+          {"required", true},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.namespace")},
+          {"name", std::string("namespace")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("STRING")},
+          {"readonly", true},
+          {"required", true},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.type")},
+          {"name", std::string("type")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("ENUM")},
+          {"enums",
+           std::vector<std::string>({"O2M", "M2O", "O2O", "M2M", "STRING",
+                                     "INTEGER", "NUMBER", "BOOLEAN", "ENUM"})},
+          {"readonly", true},
+          {"required", true},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.readonly")},
+          {"name", std::string("readonly")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("BOOLEAN")},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.required")},
+          {"name", std::string("required")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("BOOLEAN")},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.array")},
+          {"name", std::string("required")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("BOOLEAN")},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.relationTable")},
+          {"name", std::string("relationTable")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("STRING")},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.relationFields")},
+          {"name", std::string("relationFields")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("STRING")},
+          {"array", true},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.referenceFields")},
+          {"name", std::string("referenceFields")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("STRING")},
+          {"array", true},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.field.enums")},
+          {"name", std::string("enums")},
+          {"namespace", std::string("firefly.field")},
+          {"type", std::string("STRING")},
+          {"array", true},
+      },
+      true);
 
-  _tableField->addRecord({
-      {"id", std::string("firefly.table.id")},
-      {"name", std::string("id")},
-      {"namespace", std::string("firefly.table")},
-      {"type", std::string("STRING")},
-      {"readonly", true},
-      {"required", true},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.table.name")},
-      {"name", std::string("name")},
-      {"namespace", std::string("firefly.table")},
-      {"type", std::string("STRING")},
-      {"readonly", true},
-      {"required", true},
-  });
-  _tableField->addRecord({
-      {"id", std::string("firefly.table.namespace")},
-      {"name", std::string("namespace")},
-      {"namespace", std::string("firefly.table")},
-      {"type", std::string("STRING")},
-      {"readonly", true},
-      {"required", true},
-  });
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.table.id")},
+          {"name", std::string("id")},
+          {"namespace", std::string("firefly.table")},
+          {"type", std::string("STRING")},
+          {"readonly", true},
+          {"required", true},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.table.name")},
+          {"name", std::string("name")},
+          {"namespace", std::string("firefly.table")},
+          {"type", std::string("STRING")},
+          {"readonly", true},
+          {"required", true},
+      },
+      true);
+  _tableField->addRecord(
+      {
+          {"id", std::string("firefly.table.namespace")},
+          {"name", std::string("namespace")},
+          {"namespace", std::string("firefly.table")},
+          {"type", std::string("STRING")},
+          {"readonly", true},
+          {"required", true},
+      },
+      true);
 }
 void Database::initFieldTable() {
   std::vector<core::AutoPtr<Field>> fields;
@@ -286,7 +319,7 @@ void Database::print() {
       std::cout << "-" << "|";
     }
     std::cout << std::endl;
-    for (auto &record : table->getRecords()) {
+    for (auto &[_, record] : table->getRecords()) {
 
       std::cout << "|";
       for (auto &[_, field] : fields) {
@@ -368,10 +401,10 @@ void Database::print() {
 }
 void Database::reload() {
   std::unordered_map<std::string, core::AutoPtr<Table>> tables;
-  for (auto &meta : _tableTable->getRecords()) {
+  for (auto &[_, meta] : _tableTable->getRecords()) {
     auto id = meta->getStringField("id");
     std::vector<core::AutoPtr<Field>> fields;
-    for (auto fmeta : _tableField->getRecords({{"namespace", id}})) {
+    for (auto [_, fmeta] : _tableField->getRecords({{"namespace", id}})) {
       std::string type_s = fmeta->getEnumField("type");
       Field::TYPE type;
       if (type_s == "O2M") {
@@ -422,8 +455,8 @@ void Database::reload() {
                            meta->getStringField("namespace"), fields);
     if (_tables.contains(id)) {
       auto &t = _tables.at(id);
-      for (auto &record : t->getRecords()) {
-        table->addRecord(record->getData());
+      for (auto &[_, record] : t->getRecords()) {
+        table->addRecord(record->getData(), record->isReadonly());
       }
     }
     tables[id] = table;

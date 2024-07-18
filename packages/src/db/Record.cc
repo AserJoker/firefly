@@ -2,20 +2,28 @@
 #include "db/Field.hpp"
 #include <any>
 #include <fmt/core.h>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 using namespace firefly;
 using namespace firefly::db;
 Record::Record(
     const std::unordered_map<std::string, core::AutoPtr<Field>> &fields,
-    const std::unordered_map<std::string, std::any> &record)
-    : _fields(fields) {
+    const std::unordered_map<std::string, std::any> &record,
+    const bool &readonly)
+    : _fields(fields), _readonly(readonly) {
   for (auto &[_, field] : fields) {
     auto name = field->getName();
     if (record.contains(name)) {
-      if (field->isArray()) {
-        if (record.at(name).type() != typeid(std::string)) {
+      switch (field->getType()) {
+      case Field::TYPE::O2M:
+      case Field::TYPE::M2O:
+      case Field::TYPE::O2O:
+      case Field::TYPE::M2M:
+        break;
+      case Field::TYPE::STRING:
+        if (field->isArray()
+                ? record.at(name).type() != typeid(std::vector<std::string>)
+                : record.at(name).type() != typeid(std::string)) {
           throw std::runtime_error(
               fmt::format("Failed to initialize field '{}' with type '{}'",
                           field->getName(), field->getTypeName()));
@@ -23,58 +31,49 @@ Record::Record(
           _record[name] = record.at(name);
           break;
         }
-      } else {
-        switch (field->getType()) {
-        case Field::TYPE::O2M:
-        case Field::TYPE::M2O:
-        case Field::TYPE::O2O:
-        case Field::TYPE::M2M:
+      case Field::TYPE::INTEGER:
+        if (field->isArray()
+                ? record.at(name).type() != typeid(std::vector<int32_t>)
+                : record.at(name).type() != typeid(int32_t)) {
+          throw std::runtime_error(
+              fmt::format("Failed to initialize field '{}' with type '{}'",
+                          field->getName(), field->getTypeName()));
+        } else {
+          _record[name] = record.at(name);
           break;
-        case Field::TYPE::STRING:
-          if (record.at(name).type() != typeid(std::string)) {
-            throw std::runtime_error(
-                fmt::format("Failed to initialize field '{}' with type '{}'",
-                            field->getName(), field->getTypeName()));
-          } else {
-            _record[name] = record.at(name);
-            break;
-          }
-        case Field::TYPE::INTEGER:
-          if (record.at(name).type() != typeid(int32_t)) {
-            throw std::runtime_error(
-                fmt::format("Failed to initialize field '{}' with type '{}'",
-                            field->getName(), field->getTypeName()));
-          } else {
-            _record[name] = record.at(name);
-            break;
-          }
-        case Field::TYPE::NUMBER:
-          if (record.at(name).type() != typeid(double)) {
-            throw std::runtime_error(
-                fmt::format("Failed to initialize field '{}' with type '{}'",
-                            field->getName(), field->getTypeName()));
-          } else {
-            _record[name] = record.at(name);
-            break;
-          }
-        case Field::TYPE::BOOLEAN:
-          if (record.at(name).type() != typeid(bool)) {
-            throw std::runtime_error(
-                fmt::format("Failed to initialize field '{}' with type '{}'",
-                            field->getName(), field->getTypeName()));
-          } else {
-            _record[name] = record.at(name);
-            break;
-          }
-        case Field::TYPE::ENUM:
-          if (record.at(name).type() != typeid(std::string)) {
-            throw std::runtime_error(
-                fmt::format("Failed to initialize field '{}' with type '{}'",
-                            field->getName(), field->getTypeName()));
-          } else {
-            _record[name] = record.at(name);
-            break;
-          }
+        }
+      case Field::TYPE::NUMBER:
+        if (field->isArray()
+                ? record.at(name).type() != typeid(std::vector<double>)
+                : record.at(name).type() != typeid(double)) {
+          throw std::runtime_error(
+              fmt::format("Failed to initialize field '{}' with type '{}'",
+                          field->getName(), field->getTypeName()));
+        } else {
+          _record[name] = record.at(name);
+          break;
+        }
+      case Field::TYPE::BOOLEAN:
+        if (field->isArray()
+                ? record.at(name).type() != typeid(std::vector<bool>)
+                : record.at(name).type() != typeid(bool)) {
+          throw std::runtime_error(
+              fmt::format("Failed to initialize field '{}' with type '{}'",
+                          field->getName(), field->getTypeName()));
+        } else {
+          _record[name] = record.at(name);
+          break;
+        }
+      case Field::TYPE::ENUM:
+        if (field->isArray()
+                ? record.at(name).type() != typeid(std::vector<std::string>)
+                : record.at(name).type() != typeid(std::string)) {
+          throw std::runtime_error(
+              fmt::format("Failed to initialize field '{}' with type '{}'",
+                          field->getName(), field->getTypeName()));
+        } else {
+          _record[name] = record.at(name);
+          break;
         }
       }
     } else if (field->isRequired()) {
@@ -83,7 +82,7 @@ Record::Record(
     }
   }
 }
-
+const bool &Record::isReadonly() const { return _readonly; }
 const bool
 Record::match(const std::unordered_map<std::string, std::any> &filter) const {
   for (auto &[key, value] : filter) {
@@ -244,27 +243,8 @@ Record::getStringArrayField(const std::string &name) const {
           fmt::format("Cannot get string field '{}',field is not array", name));
     }
     if (_record.contains(name)) {
-      auto data = std::any_cast<std::string>(_record.at(name));
-      std::vector<std::string> result;
-      std::string part;
-      bool flag = false;
-      for (auto &ch : data) {
-        if (ch == '\\') {
-          continue;
-        }
-        if (ch == '\"') {
-          flag = !flag;
-          continue;
-        }
-        if (!flag && ch == ',') {
-          result.push_back(part);
-          part.clear();
-        } else {
-          part += ch;
-        }
-      }
-      result.push_back(part);
-      return result;
+      auto &val = _record.at(name);
+      return std::any_cast<std::vector<std::string>>(val);
     } else {
       return {};
     }
@@ -285,20 +265,7 @@ Record::getEnumArrayField(const std::string &name) const {
           fmt::format("Cannot get enum field '{}',field is not array", name));
     }
     if (_record.contains(name)) {
-      auto data = std::any_cast<std::string>(_record.at(name));
-      std::vector<std::string> result;
-      std::string part;
-      bool flag;
-      for (auto &ch : data) {
-        if (flag && ch == ',') {
-          result.push_back(part);
-          part.clear();
-        } else {
-          part += ch;
-        }
-      }
-      result.push_back(part);
-      return result;
+      return std::any_cast<std::vector<std::string>>(_record.at(name));
     } else {
       return {};
     }
@@ -319,26 +286,7 @@ Record::getIntegerArrayField(const std::string &name) const {
           "Cannot get integer field '{}',field is not array", name));
     }
     if (_record.contains(name)) {
-      auto data = std::any_cast<std::string>(_record.at(name));
-      std::vector<int32_t> result;
-      std::string part;
-      bool flag;
-      for (auto &ch : data) {
-        if (flag && ch == ',') {
-          std::stringstream ss(part);
-          int32_t val;
-          ss >> val;
-          result.push_back(val);
-          part.clear();
-        } else {
-          part += ch;
-        }
-      }
-      std::stringstream ss(part);
-      int32_t val;
-      ss >> val;
-      result.push_back(val);
-      return result;
+      return std::any_cast<std::vector<int32_t>>(_record.at(name));
     } else {
       return {};
     }
@@ -359,26 +307,7 @@ Record::getNumberArrayField(const std::string &name) const {
           fmt::format("Cannot get double field '{}',field is not array", name));
     }
     if (_record.contains(name)) {
-      auto data = std::any_cast<std::string>(_record.at(name));
-      std::vector<double> result;
-      std::string part;
-      bool flag;
-      for (auto &ch : data) {
-        if (flag && ch == ',') {
-          std::stringstream ss(part);
-          double val;
-          ss >> val;
-          result.push_back(val);
-          part.clear();
-        } else {
-          part += ch;
-        }
-      }
-      std::stringstream ss(part);
-      double val;
-      ss >> val;
-      result.push_back(val);
-      return result;
+      return std::any_cast<std::vector<double>>(_record.at(name));
     } else {
       return {};
     }
@@ -399,26 +328,7 @@ Record::getBooleanArrayField(const std::string &name) const {
           "Cannot get boolean field '{}',field is not array", name));
     }
     if (_record.contains(name)) {
-      auto data = std::any_cast<std::string>(_record.at(name));
-      std::vector<bool> result;
-      std::string part;
-      bool flag;
-      for (auto &ch : data) {
-        if (flag && ch == ',') {
-          std::stringstream ss(part);
-          bool val;
-          ss >> val;
-          result.push_back(val);
-          part.clear();
-        } else {
-          part += ch;
-        }
-      }
-      std::stringstream ss(part);
-      bool val;
-      ss >> val;
-      result.push_back(val);
-      return result;
+      return std::any_cast<std::vector<bool>>(_record.at(name));
     } else {
       return {};
     }
@@ -426,6 +336,9 @@ Record::getBooleanArrayField(const std::string &name) const {
   throw std::runtime_error(fmt::format("Unknown field '{}'", name));
 }
 void Record::setField(const std::string &name, const std::string &source) {
+  if (_readonly) {
+    throw std::runtime_error("record is readonly");
+  }
   if (!_fields.contains(name)) {
     throw std::runtime_error(fmt::format("Unknown field '{}'", name));
   }
@@ -446,6 +359,9 @@ void Record::setField(const std::string &name, const std::string &source) {
   _record[name] = source;
 }
 void Record::setField(const std::string &name, const bool &source) {
+  if (_readonly) {
+    throw std::runtime_error("record is readonly");
+  }
   if (!_fields.contains(name)) {
     throw std::runtime_error(fmt::format("Unknown field '{}'", name));
   }
@@ -466,6 +382,9 @@ void Record::setField(const std::string &name, const bool &source) {
   _record[name] = source;
 }
 void Record::setField(const std::string &name, const int32_t &source) {
+  if (_readonly) {
+    throw std::runtime_error("record is readonly");
+  }
   if (!_fields.contains(name)) {
     throw std::runtime_error(fmt::format("Unknown field '{}'", name));
   }
@@ -486,6 +405,9 @@ void Record::setField(const std::string &name, const int32_t &source) {
   _record[name] = source;
 }
 void Record::setField(const std::string &name, const double &source) {
+  if (_readonly) {
+    throw std::runtime_error("record is readonly");
+  }
   if (!_fields.contains(name)) {
     throw std::runtime_error(fmt::format("Unknown field '{}'", name));
   }
@@ -507,6 +429,9 @@ void Record::setField(const std::string &name, const double &source) {
 }
 void Record::setField(const std::string &name,
                       const std::vector<std::string> &source) {
+  if (_readonly) {
+    throw std::runtime_error("record is readonly");
+  }
   if (!_fields.contains(name)) {
     throw std::runtime_error(fmt::format("Unknown field '{}'", name));
   }
@@ -524,25 +449,13 @@ void Record::setField(const std::string &name,
     throw std::runtime_error(
         fmt::format("Invalid operator,field '{}' is readonly", field->getId()));
   }
-  std::string result;
-  for (auto i = 0; i < source.size(); i++) {
-    if (i != 0) {
-      result += ",";
-    }
-    result += "\"";
-    for (auto &ch : source[i]) {
-      if (ch == '\"') {
-        result += "\\\"";
-      } else {
-        result += ch;
-      }
-    }
-    result += "\"";
-  }
   _record[name] = source;
 }
 void Record::setField(const std::string &name,
                       const std::vector<bool> &source) {
+  if (_readonly) {
+    throw std::runtime_error("record is readonly");
+  }
   if (!_fields.contains(name)) {
     throw std::runtime_error(fmt::format("Unknown field '{}'", name));
   }
@@ -560,17 +473,13 @@ void Record::setField(const std::string &name,
     throw std::runtime_error(
         fmt::format("Invalid operator,field '{}' is readonly", field->getId()));
   }
-  std::string result;
-  for (auto i = 0; i < source.size(); i++) {
-    if (i != 0) {
-      result += ",";
-    }
-    result += std::to_string(source[i]);
-  }
   _record[name] = source;
 }
 void Record::setField(const std::string &name,
                       const std::vector<int32_t> &source) {
+  if (_readonly) {
+    throw std::runtime_error("record is readonly");
+  }
   if (!_fields.contains(name)) {
     throw std::runtime_error(fmt::format("Unknown field '{}'", name));
   }
@@ -588,17 +497,13 @@ void Record::setField(const std::string &name,
     throw std::runtime_error(
         fmt::format("Invalid operator,field '{}' is readonly", field->getId()));
   }
-  std::string result;
-  for (auto i = 0; i < source.size(); i++) {
-    if (i != 0) {
-      result += ",";
-    }
-    result += std::to_string(source[i]);
-  }
   _record[name] = source;
 }
 void Record::setField(const std::string &name,
                       const std::vector<double> &source) {
+  if (_readonly) {
+    throw std::runtime_error("record is readonly");
+  }
   if (!_fields.contains(name)) {
     throw std::runtime_error(fmt::format("Unknown field '{}'", name));
   }
@@ -616,12 +521,103 @@ void Record::setField(const std::string &name,
     throw std::runtime_error(fmt::format(
         "Invalid operator,field '{}' is not array", field->getId()));
   }
-  std::string result;
-  for (auto i = 0; i < source.size(); i++) {
-    if (i != 0) {
-      result += ",";
-    }
-    result += std::to_string(source[i]);
-  }
   _record[name] = source;
+}
+const std::string Record::toString(const std::string &name) const {
+  auto field = _fields.at(name);
+  switch (field->getType()) {
+  case Field::TYPE::O2M:
+  case Field::TYPE::M2O:
+  case Field::TYPE::O2O:
+  case Field::TYPE::M2M:
+    throw std::runtime_error(fmt::format(
+        "Cannot convert complex field '{}' to string", field->getName()));
+  case Field::TYPE::STRING:
+    if (field->isArray()) {
+      auto value = getStringArrayField(name);
+      std::string result;
+      for (auto &part : value) {
+        std::string encoded;
+        encoded += "\"";
+        for (auto &ch : part) {
+          if (ch == '\"') {
+            encoded += "\\";
+          }
+          encoded += ch;
+        }
+        encoded += "\"";
+        if (result.empty()) {
+          result = encoded;
+        } else {
+          result += "," + encoded;
+        }
+      }
+      return result;
+    } else {
+      return getStringField(name);
+    }
+  case Field::TYPE::INTEGER:
+    if (field->isArray()) {
+
+      auto value = getIntegerArrayField(name);
+      std::string result;
+      for (auto &part : value) {
+        if (result.empty()) {
+          result = std::to_string(part);
+        } else {
+          result += "," + std::to_string(part);
+        }
+      }
+      return result;
+    } else {
+      return std::to_string(getIntegerField(name));
+    }
+  case Field::TYPE::NUMBER:
+    if (field->isArray()) {
+      auto value = getNumberArrayField(name);
+      std::string result;
+      for (auto &part : value) {
+        if (result.empty()) {
+          result = std::to_string(part);
+        } else {
+          result += ",";
+          result += std::to_string(part);
+        }
+      }
+      return result;
+    } else {
+      return std::to_string(getNumberField(name));
+    }
+  case Field::TYPE::BOOLEAN:
+    if (field->isArray()) {
+      auto value = getBooleanArrayField(name);
+      std::string result;
+      for (auto part : value) {
+        if (result.empty()) {
+          result = std::to_string(part);
+        } else {
+          result += "," + std::to_string(part);
+        }
+      }
+      return result;
+    } else {
+      return std::to_string(getBooleanField(name));
+    }
+  case Field::TYPE::ENUM:
+    if (field->isArray()) {
+      auto value = getEnumArrayField(name);
+      std::string result;
+      for (auto &part : value) {
+        if (result.empty()) {
+          result = part;
+        } else {
+          result += "," + part;
+        }
+      }
+      return result;
+    } else {
+      return getEnumField(name);
+    }
+  }
+  throw std::runtime_error("Unkown field type");
 }

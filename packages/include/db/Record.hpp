@@ -11,10 +11,13 @@ class Record : public core::Object {
 private:
   std::unordered_map<std::string, core::AutoPtr<Field>> _fields;
   std::unordered_map<std::string, std::any> _record;
+  bool _readonly;
 
 public:
   Record(const std::unordered_map<std::string, core::AutoPtr<Field>> &fields,
-         const std::unordered_map<std::string, std::any> &record = {});
+         const std::unordered_map<std::string, std::any> &record = {},
+         const bool &readonly = false);
+  const bool &isReadonly() const;
   const bool
   match(const std::unordered_map<std::string, std::any> &filter) const;
   const bool isNil(const std::string &name) const;
@@ -44,5 +47,6 @@ public:
   void setField(const std::string &name, const std::vector<bool> &source);
   void setField(const std::string &name, const std::vector<int32_t> &source);
   void setField(const std::string &name, const std::vector<double> &source);
+  const std::string toString(const std::string &name) const;
 };
 } // namespace firefly::db
