@@ -1,36 +1,24 @@
 #pragma once
 #include "Entity.hpp"
-#include <string>
 namespace firefly::db {
 class Field : public Entity {
 public:
-  enum class COMPLEX_TYPE { O2M, M2O, O2O, M2M };
-  enum class TYPE {
-    O2M = (int)COMPLEX_TYPE::O2M,
-    M2O = (int)COMPLEX_TYPE::M2O,
-    O2O = (int)COMPLEX_TYPE::O2O,
-    M2M = (int)COMPLEX_TYPE::M2M,
-    STRING,
-    INTEGER,
-    NUMBER,
-    BOOLEAN,
-    ENUM
+  enum TYPE { O2M, M2O, O2O, M2M, STRING, BOOLEAN, FLOAT, INTEGER, ENUM };
+  struct Attribute {
+    bool required;
+    bool readonly;
+    bool array;
   };
 
 private:
   TYPE _type;
-  bool _readonly;
-  bool _required;
-  bool _array;
+  Attribute _attribute;
 
 public:
   Field(const std::string &name, const std::string &ns, const TYPE &type,
-        const bool &isReadonly = false, const bool &isRequired = false,
-        const bool &isArray = false);
+        const Attribute attr = {});
   const TYPE &getType() const;
-  const bool &isReadonly() const;
-  const bool &isRequired() const;
-  const bool &isArray() const;
   const std::string getTypeName() const;
+  const Attribute &getAttribute() const;
 };
 }; // namespace firefly::db

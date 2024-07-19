@@ -7,16 +7,11 @@
 #include "input/Keyboard.hpp"
 #include "input/Mouse.hpp"
 #include "runtime/Application.hpp"
-#include "runtime/EventBus.hpp"
 #include "runtime/Resource.hpp"
-#include "runtime/Window.hpp"
 #include "video/ElementBuffer.hpp"
 #include "video/Mesh.hpp"
 #include "video/PerspectiveCamera.hpp"
-#include "video/Renderer.hpp"
 #include "video/Shader.hpp"
-#include "video/Texture.hpp"
-#include "video/VertexArray.hpp"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -146,21 +141,6 @@ void GameApplication::onInitialize() {
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   auto indices = _resources->index("table");
-  std::vector<std::string> dataIndices;
-  for (auto &index : indices) {
-    if (index.ends_with(".table.xml") || index.ends_with(".field.xml") ||
-        index.ends_with(".field.xml")) {
-      _database->loadTable(_resources->load(index));
-    } else {
-      dataIndices.push_back(index);
-    }
-  }
-  _database->reload();
-  for (auto &index : dataIndices) {
-    _database->loadTable(_resources->load(index));
-  }
-  _database->print();
-  exit();
   if (keyboard->getKeyState(SDL_SCANCODE_A)) {
     camera->move(-0.001, 0, 0);
   }

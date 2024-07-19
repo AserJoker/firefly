@@ -5,15 +5,15 @@
 namespace firefly::db {
 class Entity : public core::Object {
 private:
-  std::string _id;
   std::string _name;
   std::string _namespace;
+  std::string _id;
 
 public:
   Entity(const std::string &name, const std::string &ns,
          const std::string &id = "");
-  const std::string &getId() const;
   const std::string &getName() const;
   const std::string &getNamespace() const;
+  const std::string &getId() const;
 };
-} // namespace firefly::db
+}; // namespace firefly::db

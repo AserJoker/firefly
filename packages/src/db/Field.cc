@@ -1,35 +1,33 @@
 #include "db/Field.hpp"
-#include <fmt/core.h>
+#include "db/Entity.hpp"
+#include <stdexcept>
 using namespace firefly::db;
 Field::Field(const std::string &name, const std::string &ns, const TYPE &type,
-             const bool &isReadonly, const bool &isRequired,
-             const bool &isArray)
-    : Entity(name, ns), _type(type), _readonly(isReadonly),
-      _required(isRequired), _array(isArray) {}
+             const Attribute attr)
+    : Entity(name, ns), _type(type), _attribute(attr) {}
 const Field::TYPE &Field::getType() const { return _type; }
-const bool &Field::isReadonly() const { return _readonly; }
-const bool &Field::isRequired() const { return _required; }
+const Field::Attribute &Field::getAttribute() const { return _attribute; }
+
 const std::string Field::getTypeName() const {
   switch (_type) {
-  case TYPE::STRING:
-    return "STRING";
-  case TYPE::NUMBER:
-    return "NUMBER";
-  case TYPE::INTEGER:
-    return "INTEGER";
-  case TYPE::BOOLEAN:
-    return "BOOLEAN";
-  case TYPE::O2M:
+  case O2M:
     return "O2M";
-  case TYPE::M2O:
+  case M2O:
     return "M2O";
-  case TYPE::O2O:
+  case O2O:
     return "O2O";
-  case TYPE::M2M:
+  case M2M:
     return "M2M";
-  case TYPE::ENUM:
+  case STRING:
+    return "STRING";
+  case BOOLEAN:
+    return "BOOLEAN";
+  case FLOAT:
+    return "FLOAT";
+  case INTEGER:
+    return "INTEGER";
+  case ENUM:
     return "ENUM";
   }
-  return "Unknown";
-};
-const bool &Field::isArray() const { return _array; }
+  throw std::runtime_error("Unknown field type");
+}
