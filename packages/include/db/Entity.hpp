@@ -10,8 +10,9 @@ private:
   std::string _id;
 
 public:
-  Entity(const std::string &name, const std::string &ns,
-         const std::string &id = "");
+  Entity();
+  void initialize(const std::string &name, const std::string &ns,
+                  const std::string &id = "");
   const std::string &getName() const;
   const std::string &getNamespace() const;
   const std::string &getId() const;

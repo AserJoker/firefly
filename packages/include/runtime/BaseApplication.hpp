@@ -8,6 +8,7 @@
 #include "core/EventLoop.hpp"
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
+#include "db/Database.hpp"
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -29,6 +30,7 @@ protected:
   core::Injector<CmdLine, INJECTOR_CMDLINE> _cmdline;
   core::Injector<EventBus, INJECTOR_EVENTBUS> _eventbus;
   core::Injector<ResourceProvider, INJECTOR_RESOURCEPROVIDER> _resources;
+  core::Injector<db::Database, INJECTOR_DATABASE> _databse;
 
 protected:
   virtual void onInitialize();

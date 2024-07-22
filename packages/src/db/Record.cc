@@ -2,7 +2,6 @@
 #include "db/Field.hpp"
 #include <cstddef>
 #include <fmt/format.h>
-#include <format>
 #include <stdexcept>
 using namespace firefly;
 using namespace firefly::db;
@@ -136,7 +135,7 @@ void Record::setField(const std::string &name, const std::any &value) {
 
 template <Field::TYPE type, bool array> void validateField(const Field &field) {
   if (field.getType() != type || field.getAttribute().array != array) {
-    throw std::runtime_error(std::format(
+    throw std::runtime_error(fmt::format(
         "Failed to get string field '{}' with '{}'", field.getId(),
         field.getTypeName() + (field.getAttribute().array ? "(ARRAY)" : "")));
   }
@@ -164,16 +163,16 @@ Record::getIntegerArrayField(const std::string &name) const {
   validateField<Field::INTEGER, true>(field);
   return std::any_cast<std::vector<int32_t>>(_fields.at(name));
 }
-const float_t Record::getFloatField(const std::string &name) const {
+const float Record::getFloatField(const std::string &name) const {
   auto &field = _fields.at(name);
   validateField<Field::FLOAT, false>(field);
-  return std::any_cast<float_t>(_fields.at(name));
+  return std::any_cast<float>(_fields.at(name));
 }
-const std::vector<float_t>
+const std::vector<float>
 Record::getFloatArrayField(const std::string &name) const {
   auto &field = _fields.at(name);
   validateField<Field::FLOAT, true>(field);
-  return std::any_cast<std::vector<float_t>>(_fields.at(name));
+  return std::any_cast<std::vector<float>>(_fields.at(name));
 }
 const std::string Record::getEnumField(const std::string &name) const {
   auto &field = _fields.at(name);
@@ -185,4 +184,15 @@ Record::getEnumArrayField(const std::string &name) const {
   auto &field = _fields.at(name);
   validateField<Field::STRING, true>(field);
   return std::any_cast<std::vector<std::string>>(_fields.at(name));
+}
+const bool Record::getBooleanField(const std::string &name) const {
+  auto &field = _fields.at(name);
+  validateField<Field::BOOLEAN, false>(field);
+  return std::any_cast<bool>(_fields.at(name));
+}
+const std::vector<bool>
+Record::getBooleanArrayField(const std::string &name) const {
+  auto &field = _fields.at(name);
+  validateField<Field::BOOLEAN, true>(field);
+  return std::any_cast<std::vector<bool>>(_fields.at(name));
 }

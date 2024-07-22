@@ -30,10 +30,12 @@ public:
   const int32_t getIntegerField(const std::string &name) const;
   const std::vector<int32_t>
   getIntegerArrayField(const std::string &name) const;
-  const float_t getFloatField(const std::string &name) const;
-  const std::vector<float_t> getFloatArrayField(const std::string &name) const;
+  const float getFloatField(const std::string &name) const;
+  const std::vector<float> getFloatArrayField(const std::string &name) const;
   const std::string getEnumField(const std::string &name) const;
   const std::vector<std::string>
   getEnumArrayField(const std::string &name) const;
+  const bool getBooleanField(const std::string &name) const;
+  const std::vector<bool> getBooleanArrayField(const std::string &name) const;
 };
 } // namespace firefly::db

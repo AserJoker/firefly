@@ -5,3 +5,4 @@
 #define INJECTOR_LOGGER "firefly.runtime.Logger"
 #define INJECTOR_EVENTBUS "firefly.runtime.EventBus"
 #define INJECTOR_RESOURCEPROVIDER "firefly.runtime.ResourceProvider"
+#define INJECTOR_DATABASE "firefly.db.database"
