@@ -9,14 +9,183 @@
 #include <fmt/core.h>
 #include <stdexcept>
 #include <unordered_map>
+#include <vector>
 using namespace firefly;
 using namespace firefly::db;
 void Database::initialize() {
   auto provider = core::Singleton<core::Provider>::instance();
   provider->provide<Table, DB_DEFAULT_DRIVER>();
   provider->provide<Table_Table, DB_TABLE_DRIVER>();
-  _tables["firefly.field"] = new Table();
-  _tables["firefly.table"] = new Table_Table();
+  auto tableTable = new Table_Table();
+  auto tableField = new Table();
+  std::vector<Field> fields = {
+      {"id", "firefly.field", Field::STRING,
+       Field::Attribute{.required = true, .readonly = true}},
+      {"name", "firefly.field", Field::STRING,
+       Field::Attribute{.required = true, .readonly = true}},
+      {"namespace", "firefly.field", Field::STRING,
+       Field::Attribute{.required = true, .readonly = true}},
+      {"type",
+       "firefly.field",
+       Field::ENUM,
+       {"O2M", "M2O", "O2O", "M2M", "STRING", "BOOLEAN", "FLOAT", "INTEGER",
+        "ENUM"},
+       Field::Attribute{.required = true, .readonly = true}},
+      {"required", "firefly.field", Field::BOOLEAN,
+       Field::Attribute{.readonly = true}},
+      {"readonly", "firefly.field", Field::BOOLEAN,
+       Field::Attribute{.readonly = true}},
+      {"array", "firefly.field", Field::BOOLEAN,
+       Field::Attribute{.readonly = true}},
+      {"options", "firefly.field", Field::STRING,
+       Field::Attribute{.readonly = true, .array = true}},
+      {"refModel", "firefly.field", Field::STRING,
+       Field::Attribute{.readonly = true}},
+      {"relatedFields", "firefly.field", Field::STRING,
+       Field::Attribute{.readonly = true, .array = true}},
+      {"relationFields", "firefly.field", Field::STRING,
+       Field::Attribute{.readonly = true, .array = true}},
+  };
+  tableField->Initialize("field", "firefly", fields);
+  fields = {
+      {"id", "firefly.table", Field::STRING,
+       Field::Attribute{.required = true, .readonly = true}},
+      {"name", "firefly.table", Field::STRING,
+       Field::Attribute{.required = true, .readonly = true}},
+      {"namespace", "firefly.table", Field::STRING,
+       Field::Attribute{.required = true, .readonly = true}},
+      {"primaryKeys", "firefly.table", Field::STRING,
+       Field::Attribute{.required = true, .array = true}},
+      {"fields",
+       "firefly.table",
+       Field::O2M,
+       "firefly.field",
+       {"namespace"},
+       {"id"},
+       Field::Attribute{.required = true}},
+
+  };
+  tableTable->Initialize("table", "firefly", fields);
+  _tables[tableField->getId()] = tableField;
+  _tables[tableTable->getId()] = tableTable;
+  tableField->insertOne({
+      {"name", "id"},
+      {"namespace", "firefly.field"},
+      {"type", "STRING"},
+      {"required", true},
+  });
+  tableField->insertOne({
+      {"name", "name"},
+      {"namespace", "firefly.field"},
+      {"type", "STRING"},
+      {"required", true},
+  });
+  tableField->insertOne({
+      {"name", "namespace"},
+      {"namespace", "firefly.field"},
+      {"type", "STRING"},
+      {"required", true},
+  });
+  tableField->insertOne({
+      {"name", "type"},
+      {"namespace", "firefly.field"},
+      {"type", "ENUM"},
+      {"options",
+       std::vector<std::string>({"O2M", "M2O", "O2O", "M2M", "STRING",
+                                 "BOOLEAN", "FLOAT", "INTEGER", "ENUM"})},
+      {"required", true},
+  });
+  tableField->insertOne({
+      {"name", "required"},
+      {"namespace", "firefly.field"},
+      {"type", "BOOLEAN"},
+  });
+  tableField->insertOne({
+      {"name", "readonly"},
+      {"namespace", "firefly.field"},
+      {"type", "BOOLEAN"},
+  });
+  tableField->insertOne({
+      {"name", "array"},
+      {"namespace", "firefly.field"},
+      {"type", "BOOLEAN"},
+  });
+  tableField->insertOne({
+      {"name", "options"},
+      {"namespace", "firefly.field"},
+      {"type", "STRING"},
+      {"array", true},
+  });
+  tableField->insertOne({
+      {"name", "options"},
+      {"namespace", "firefly.field"},
+      {"type", "STRING"},
+      {"array", true},
+  });
+  tableField->insertOne({
+      {"name", "refModel"},
+      {"namespace", "firefly.field"},
+      {"type", "STRING"},
+  });
+  tableField->insertOne({
+      {"name", "relatedFields"},
+      {"namespace", "firefly.field"},
+      {"type", "STRING"},
+      {"array", true},
+  });
+  tableField->insertOne({
+      {"name", "relationFields"},
+      {"namespace", "firefly.field"},
+      {"type", "STRING"},
+      {"array", true},
+  });
+  tableField->insertOne({
+      {"name", "relationFields"},
+      {"namespace", "firefly.field"},
+      {"type", "STRING"},
+      {"array", true},
+  });
+  tableField->insertOne({
+      {"name", "id"},
+      {"namespace", "firefly.table"},
+      {"type", "STRING"},
+      {"required", true},
+  });
+  tableField->insertOne({
+      {"name", "name"},
+      {"namespace", "firefly.table"},
+      {"type", "STRING"},
+      {"required", true},
+  });
+  tableField->insertOne({
+      {"name", "namespace"},
+      {"namespace", "firefly.table"},
+      {"type", "STRING"},
+      {"required", true},
+  });
+  tableField->insertOne({
+      {"name", "fields"},
+      {"namespace", "firefly.table"},
+      {"type", "O2M"},
+      {"required", true},
+      {"refModel", "firefly.field"},
+      {"relatedFields", std::vector<std::string>({"id"})},
+      {"relationFields", std::vector<std::string>({"namespace"})},
+  });
+  tableTable->insertOne({
+      {"id", "firefly.table"},
+      {"name", "table"},
+      {"namespace", "firefly"},
+      {"primaryKeys", std::vector<std::string>({"id"})},
+      {"driver", "firefly.db.Table_Table"},
+  });
+  tableTable->insertOne({
+      {"id", "firefly.field"},
+      {"name", "field"},
+      {"namespace", "firefly"},
+      {"primaryKeys", std::vector<std::string>({"id"})},
+      {"driver", "firefly.db.Table"},
+  });
 }
 core::AutoPtr<Table> Database::getTable(const std::string &table) {
   if (_tables.contains(table)) {
@@ -166,7 +335,6 @@ Database::insertOne(const std::string &table,
 core::AutoPtr<Record>
 Database::updateOne(const std::string &table,
                     const std::unordered_map<std::string, std::any> &record) {
-
   auto &driver = _tables.at(table);
   return driver->updateOne(updateComplexField(table, record));
 }

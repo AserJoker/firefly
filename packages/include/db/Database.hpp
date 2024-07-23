@@ -55,6 +55,6 @@ public:
             const std::unordered_map<std::string, std::any> &filter = {},
             const Schema &schema = {});
 };
-#define DB_DEFAULT_DRIVER "firefly.db.table"
-#define DB_TABLE_DRIVER "firefly.db.table_table"
+#define DB_DEFAULT_DRIVER "firefly.db.Table"
+#define DB_TABLE_DRIVER "firefly.db.Table_Table"
 }; // namespace firefly::db

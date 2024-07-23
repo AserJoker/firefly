@@ -16,10 +16,6 @@ private:
   std::unordered_map<std::string, uint32_t> _fieldIndices;
   std::unordered_map<std::string, core::AutoPtr<Record>> _records;
 
-private:
-  std::string
-  getRecordKey(const std::unordered_map<std::string, std::any> &record);
-
 public:
   Table() = default;
   void Initialize(const std::string &name, const std::string &ns,
