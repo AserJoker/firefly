@@ -76,10 +76,16 @@ const std::string Field::getTypeName() const {
 Field::Field() {}
 Field::Field(const core::AutoPtr<Record> &record)
     : Field(record->getStringField("name"), record->getStringField("namespace"),
-            fromString(record->getEnumField("type")),
-            {record->getBooleanField(record->getStringField("required")),
-             record->getBooleanField("readonly"),
-             record->getBooleanField("array")}) {
+            fromString(record->getEnumField("type"))) {
+  if (record->hasField("required")) {
+    _attribute.required = record->getBooleanField("required");
+  }
+  if (record->hasField("readonly")) {
+    record->getBooleanField("readonly");
+  }
+  if (record->hasField("array")) {
+    record->getBooleanField("array");
+  }
   if (_type <= M2M) {
     _refModel = record->getStringField("refModel");
     _relatedFields = record->getStringArrayField("relatedFields");

@@ -7,6 +7,7 @@
 #include "db/Table.hpp"
 #include "db/Table_Table.hpp"
 #include <fmt/core.h>
+#include <iostream>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -46,7 +47,7 @@ void Database::initialize() {
       {"relationFields", "firefly.field", Field::STRING,
        Field::Attribute{.readonly = true, .array = true}},
   };
-  tableField->Initialize("field", "firefly", fields);
+  tableField->initialize("field", "firefly", fields);
   fields = {
       {"id", "firefly.table", Field::STRING,
        Field::Attribute{.required = true, .readonly = true}},
@@ -63,30 +64,35 @@ void Database::initialize() {
        {"namespace"},
        {"id"},
        Field::Attribute{.required = true}},
+      {"driver", "firefly.table", Field::STRING},
 
   };
-  tableTable->Initialize("table", "firefly", fields);
+  tableTable->initialize("table", "firefly", fields);
   _tables[tableField->getId()] = tableField;
   _tables[tableTable->getId()] = tableTable;
   tableField->insertOne({
+      {"id", "firefly.field.id"},
       {"name", "id"},
       {"namespace", "firefly.field"},
       {"type", "STRING"},
       {"required", true},
   });
   tableField->insertOne({
+      {"id", "firefly.field.name"},
       {"name", "name"},
       {"namespace", "firefly.field"},
       {"type", "STRING"},
       {"required", true},
   });
   tableField->insertOne({
+      {"id", "firefly.field.namespace"},
       {"name", "namespace"},
       {"namespace", "firefly.field"},
       {"type", "STRING"},
       {"required", true},
   });
   tableField->insertOne({
+      {"id", "firefly.field.type"},
       {"name", "type"},
       {"namespace", "firefly.field"},
       {"type", "ENUM"},
@@ -96,74 +102,73 @@ void Database::initialize() {
       {"required", true},
   });
   tableField->insertOne({
+      {"id", "firefly.field.required"},
       {"name", "required"},
       {"namespace", "firefly.field"},
       {"type", "BOOLEAN"},
   });
   tableField->insertOne({
+      {"id", "firefly.field.readonly"},
       {"name", "readonly"},
       {"namespace", "firefly.field"},
       {"type", "BOOLEAN"},
   });
   tableField->insertOne({
+      {"id", "firefly.field.array"},
       {"name", "array"},
       {"namespace", "firefly.field"},
       {"type", "BOOLEAN"},
   });
   tableField->insertOne({
+      {"id", "firefly.field.options"},
       {"name", "options"},
       {"namespace", "firefly.field"},
       {"type", "STRING"},
       {"array", true},
   });
   tableField->insertOne({
-      {"name", "options"},
-      {"namespace", "firefly.field"},
-      {"type", "STRING"},
-      {"array", true},
-  });
-  tableField->insertOne({
+      {"id", "firefly.field.refModel"},
       {"name", "refModel"},
       {"namespace", "firefly.field"},
       {"type", "STRING"},
   });
   tableField->insertOne({
+      {"id", "firefly.field.relatedFields"},
       {"name", "relatedFields"},
       {"namespace", "firefly.field"},
       {"type", "STRING"},
       {"array", true},
   });
   tableField->insertOne({
+      {"id", "firefly.field.relationFields"},
       {"name", "relationFields"},
       {"namespace", "firefly.field"},
       {"type", "STRING"},
       {"array", true},
   });
   tableField->insertOne({
-      {"name", "relationFields"},
-      {"namespace", "firefly.field"},
-      {"type", "STRING"},
-      {"array", true},
-  });
-  tableField->insertOne({
+      {"id", "firefly.table.id"},
       {"name", "id"},
       {"namespace", "firefly.table"},
       {"type", "STRING"},
       {"required", true},
   });
   tableField->insertOne({
+      {"id", "firefly.table.name"},
       {"name", "name"},
       {"namespace", "firefly.table"},
       {"type", "STRING"},
       {"required", true},
   });
   tableField->insertOne({
+      {"id", "firefly.table.namespace"},
       {"name", "namespace"},
       {"namespace", "firefly.table"},
       {"type", "STRING"},
       {"required", true},
   });
   tableField->insertOne({
+      {"id", "firefly.table.fields"},
       {"name", "fields"},
       {"namespace", "firefly.table"},
       {"type", "O2M"},
@@ -171,6 +176,12 @@ void Database::initialize() {
       {"refModel", "firefly.field"},
       {"relatedFields", std::vector<std::string>({"id"})},
       {"relationFields", std::vector<std::string>({"namespace"})},
+  });
+  tableField->insertOne({
+      {"id", "firefly.table.driver"},
+      {"name", "driver"},
+      {"namespace", "firefly.table"},
+      {"type", "STRING"},
   });
   tableTable->insertOne({
       {"id", "firefly.table"},
@@ -204,7 +215,10 @@ Database::createTable(const std::string &driver, const std::string &name,
   return table;
 }
 core::AutoPtr<Table> Database::createTable(const core::AutoPtr<Record> &meta) {
-  auto driver = meta->getStringField("driver");
+  std::string driver = DB_DEFAULT_DRIVER;
+  if (meta->hasField("driver")) {
+    driver = meta->getStringField("driver");
+  }
   auto provider = core::Singleton<core::Provider>::instance();
   auto table = provider->inject<Table>(driver, meta);
   _tables[table->getId()] = table;
@@ -373,4 +387,97 @@ Database::queryList(const std::string &table,
                                 driver->getPrimaryKeys()));
   }
   return result;
+}
+void Database::print() {
+  for (auto &[_, table] : _tables) {
+    auto &fields = table->getFields();
+    auto records = table->queryList();
+    std::cout << "#### " << table->getId() << std::endl;
+    std::cout << "|";
+    for (auto &field : fields) {
+      std::cout << field.getName() << "|";
+    }
+    std::cout << std::endl;
+    std::cout << "|";
+    for (auto i = 0; i < fields.size(); i++) {
+      std::cout << "-|";
+    }
+    std::cout << std::endl;
+    for (auto &record : records) {
+      for (auto &field : fields) {
+        if (record->hasField(field.getName())) {
+          switch (field.getType()) {
+          case Field::O2M:
+          case Field::M2O:
+          case Field::O2O:
+          case Field::M2M:
+            break;
+          case Field::STRING: {
+            if (field.getAttribute().array) {
+              auto data = record->getStringArrayField(field.getName());
+              for (auto i = 0; i < data.size(); i++) {
+                if (i != 0)
+                  std::cout << ",";
+                std::cout << data[i];
+              }
+            } else {
+              std::cout << record->getStringField(field.getName());
+            }
+          } break;
+          case Field::BOOLEAN: {
+            if (field.getAttribute().array) {
+              auto data = record->getBooleanArrayField(field.getName());
+              for (auto i = 0; i < data.size(); i++) {
+                if (i != 0)
+                  std::cout << ",";
+                std::cout << data[i];
+              }
+            } else {
+              std::cout << record->getBooleanField(field.getName());
+            }
+          } break;
+          case Field::FLOAT: {
+            if (field.getAttribute().array) {
+              auto data = record->getFloatArrayField(field.getName());
+              for (auto i = 0; i < data.size(); i++) {
+                if (i != 0)
+                  std::cout << ",";
+                std::cout << data[i];
+              }
+            } else {
+              std::cout << record->getFloatField(field.getName());
+            }
+          } break;
+          case Field::INTEGER: {
+            if (field.getAttribute().array) {
+              auto data = record->getIntegerArrayField(field.getName());
+              for (auto i = 0; i < data.size(); i++) {
+                if (i != 0)
+                  std::cout << ",";
+                std::cout << data[i];
+              }
+            } else {
+              std::cout << record->getIntegerField(field.getName());
+            }
+          } break;
+          case Field::ENUM: {
+            if (field.getAttribute().array) {
+              auto data = record->getEnumArrayField(field.getName());
+              for (auto i = 0; i < data.size(); i++) {
+                if (i != 0)
+                  std::cout << ",";
+                std::cout << data[i];
+              }
+            } else {
+              std::cout << record->getEnumField(field.getName());
+            }
+          } break;
+          }
+        }
+        std::cout << "|";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+  }
 }

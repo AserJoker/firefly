@@ -30,6 +30,9 @@ public:
       return Singleton<T>::instance().template cast<Object>();
     };
   }
+  template <class T, template_c_string name> void provide(T &&func) {
+    _constructors[name.value] = func;
+  }
 
   template <class T, class... Args>
   AutoPtr<T> inject(const std::string &name, Args &&...args) {

@@ -10,7 +10,7 @@ private:
   std::string _id;
 
 public:
-  Entity();
+  Entity() = default;
   void initialize(const std::string &name, const std::string &ns,
                   const std::string &id = "");
   const std::string &getName() const;

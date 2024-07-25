@@ -54,6 +54,7 @@ public:
   queryList(const std::string &table,
             const std::unordered_map<std::string, std::any> &filter = {},
             const Schema &schema = {});
+  void print();
 };
 #define DB_DEFAULT_DRIVER "firefly.db.Table"
 #define DB_TABLE_DRIVER "firefly.db.Table_Table"

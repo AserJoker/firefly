@@ -11,7 +11,7 @@
 #include <vector>
 using namespace firefly;
 using namespace firefly::db;
-void Table::Initialize(const std::string &name, const std::string &ns,
+void Table::initialize(const std::string &name, const std::string &ns,
                        const std::vector<Field> &fields,
                        const std::vector<std::string> &primaryKeys) {
   Entity::initialize(name, ns);
@@ -21,8 +21,8 @@ void Table::Initialize(const std::string &name, const std::string &ns,
     _fieldIndices[fields[i].getName()] = i;
   }
 }
-void Table::Initialize(const core::AutoPtr<Record> &record) {
-  Initialize(record->getStringField("name"),
+void Table::initialize(const core::AutoPtr<Record> &record) {
+  initialize(record->getStringField("name"),
              record->getStringField("namespace"), {},
              record->hasField("primaryKeys")
                  ? record->getStringArrayField("primaryKeys")

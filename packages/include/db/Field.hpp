@@ -24,14 +24,15 @@ private:
 public:
   Field();
   Field(const std::string &name, const std::string &ns, const TYPE &type,
-        const Attribute attr = {});
+        const Attribute attr = {false, false, false});
   Field(const std::string &name, const std::string &ns, const TYPE &type,
         const std::string &refModel,
         const std::vector<std::string> &relationFields,
         const std::vector<std::string> &relatedFields,
-        const Attribute attr = {});
+        const Attribute attr = {false, false, false});
   Field(const std::string &name, const std::string &ns, const TYPE &type,
-        const std::vector<std::string> &options, const Attribute attr = {});
+        const std::vector<std::string> &options,
+        const Attribute attr = {false, false, false});
   Field(const core::AutoPtr<Record> &record);
   const TYPE &getType() const;
   const std::string getTypeName() const;

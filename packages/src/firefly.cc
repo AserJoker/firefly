@@ -7,6 +7,7 @@
 #include "runtime/EventBus.hpp"
 #include "runtime/Logger.hpp"
 #include "runtime/ResourceProvider.hpp"
+#include "script/LuaScript.hpp"
 
 namespace firefly {
 void InitFirefly() {
@@ -17,5 +18,6 @@ void InitFirefly() {
   provider->provide<runtime::EventBus, INJECTOR_EVENTBUS>();
   provider->provide<runtime::ResourceProvider, INJECTOR_RESOURCEPROVIDER>();
   provider->provide<db::Database, INJECTOR_DATABASE>();
+  provider->provide<script::LuaScript, INJECTOR_SCRIPT>();
 }
 } // namespace firefly

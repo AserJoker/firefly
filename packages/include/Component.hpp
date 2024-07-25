@@ -5,4 +5,5 @@
 #define INJECTOR_LOGGER "firefly.runtime.Logger"
 #define INJECTOR_EVENTBUS "firefly.runtime.EventBus"
 #define INJECTOR_RESOURCEPROVIDER "firefly.runtime.ResourceProvider"
-#define INJECTOR_DATABASE "firefly.db.database"
+#define INJECTOR_DATABASE "firefly.db.Database"
+#define INJECTOR_SCRIPT "firefly.script.LuaScript"

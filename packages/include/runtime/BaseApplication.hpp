@@ -9,6 +9,7 @@
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
 #include "db/Database.hpp"
+#include "script/LuaScript.hpp"
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -30,7 +31,8 @@ protected:
   core::Injector<CmdLine, INJECTOR_CMDLINE> _cmdline;
   core::Injector<EventBus, INJECTOR_EVENTBUS> _eventbus;
   core::Injector<ResourceProvider, INJECTOR_RESOURCEPROVIDER> _resources;
-  core::Injector<db::Database, INJECTOR_DATABASE> _databse;
+  core::Injector<db::Database, INJECTOR_DATABASE> _database;
+  core::Injector<script::LuaScript, INJECTOR_SCRIPT> _script;
 
 protected:
   virtual void onInitialize();

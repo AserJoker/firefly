@@ -18,10 +18,10 @@ private:
 
 public:
   Table() = default;
-  void Initialize(const std::string &name, const std::string &ns,
+  void initialize(const std::string &name, const std::string &ns,
                   const std::vector<Field> &fields,
                   const std::vector<std::string> &primaryKeys = {"id"});
-  void Initialize(const core::AutoPtr<Record> &table);
+  void initialize(const core::AutoPtr<Record> &table);
   const std::vector<Field> &getFields() const;
   const Field &getField(const std::string &name) const;
   const bool hasField(const std::string &name) const;
