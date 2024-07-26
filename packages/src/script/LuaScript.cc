@@ -1,6 +1,6 @@
 #include "script/LuaScript.hpp"
 #include <fmt/core.h>
-#include <lauxlib.h>
+#include <lua.hpp>
 #include <stdexcept>
 using namespace firefly::script;
 LuaScript::LuaScript() : _state(nullptr) {
@@ -8,6 +8,7 @@ LuaScript::LuaScript() : _state(nullptr) {
   luaL_openlibs(_state);
 }
 LuaScript::~LuaScript() { lua_close(_state); }
+void LuaScript::initialize() {}
 void LuaScript::eval(const std::string &source) {
   if (luaL_dostring(_state, source.c_str())) {
     auto err = lua_tostring(_state, -1);
@@ -15,3 +16,4 @@ void LuaScript::eval(const std::string &source) {
         fmt::format("Failed to exec lua script:\n\t{}", err));
   }
 }
+lua_State *LuaScript::getLuaContext() { return _state; }
