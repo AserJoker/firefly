@@ -7,6 +7,7 @@
 #include "runtime/Application.hpp"
 #include "script/LuaModule_Event.hpp"
 #include "script/LuaModule_Log.hpp"
+#include "script/LuaValue.hpp"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -40,6 +41,9 @@ void GameApplication::onInitialize() {
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
+  _eventbus->emit<script::Event_Lua>(
+      "loop", script::LuaValue::create(_script->getLuaContext(),
+                                       std::string("hello world")));
   _window->present();
 }
 

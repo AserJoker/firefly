@@ -38,6 +38,7 @@ void LuaModule_Event::onLuaEvent(Event_Lua &e) {
     }
   }
   script->popContext();
+  lua_pop(ctx, 1);
 }
 
 int LuaModule_Event::openLib(lua_State *state) {
@@ -67,7 +68,7 @@ LuaValue::LuaValueStack
 LuaModule_Event::offEvent(lua_State *state,
                           const LuaValue::LuaValueStack &args) {
   auto type = args[0]->toString();
-  auto callback = args[0];
+  auto callback = args[1];
 
   auto global = LuaValue::getGlobal(state);
   auto native = global->getField("_NATIVE");
