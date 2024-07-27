@@ -23,8 +23,7 @@ public:
         _state, name,
         [](lua_State *state) -> int {
           core::AutoPtr<Module> module = core::Singleton<Module>::instance();
-          module->openLib(state);
-          return 1;
+          return module->openLib(state);
         },
         1);
     lua_pop(_state, 1);

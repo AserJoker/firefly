@@ -47,6 +47,7 @@ public:
   bool isEqual(const core::AutoPtr<LuaValue> &value);
   bool isLess(const core::AutoPtr<LuaValue> &value);
   bool isLessAndEqual(const core::AutoPtr<LuaValue> &value);
+  const int &getIndex() const;
 
 private:
   inline static std::vector<LuaCFunction> _functions;

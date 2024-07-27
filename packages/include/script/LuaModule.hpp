@@ -9,7 +9,7 @@ private:
 
 public:
   LuaModule();
-  void openLib(lua_State *state);
+  virtual int openLib(lua_State *state);
   void setFunc(const char *name, int (*func)(lua_State *state));
 };
 }; // namespace firefly::script

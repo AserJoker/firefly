@@ -1,1 +1,6 @@
-print(_G.add(2,3))
+require 'log'.debug('hello world')
+require 'log'.info('hello world')
+require 'log'.log('hello world')
+require 'log'.warn('hello world')
+require 'log'.error('hello world')
+require 'log'.panic('hello world')

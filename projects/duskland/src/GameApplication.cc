@@ -5,7 +5,7 @@
 #include "input/Event_MouseButtonDown.hpp"
 #include "input/Event_MouseWheel.hpp"
 #include "runtime/Application.hpp"
-#include "script/LuaValue.hpp"
+#include "script/LuaModule_Log.hpp"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -32,16 +32,7 @@ void GameApplication::onInitialize() {
   _renderer->enableDepthTest();
   _script->eval(
       "package.path = package.path..';.//media/lua/?.lua;./media/lua/?.so'");
-  auto func = script::LuaValue::create(
-      _script->getLuaContext(),
-      std::function([](lua_State *state,
-                       const std::vector<core::AutoPtr<script::LuaValue>> &args)
-                        -> std::vector<core::AutoPtr<script::LuaValue>> {
-        return {script::LuaValue::create(state, args[0]->toInteger() +
-                                                    args[1]->toInteger())};
-      }));
-  auto global = script::LuaValue::getGlobal(_script->getLuaContext());
-  global->setField("add", func);
+  _script->openLib<script::LuaModule_Log>("log");
   _script->eval("require 'init'");
 }
 

@@ -176,3 +176,4 @@ core::AutoPtr<LuaValue> LuaValue::getGlobal(lua_State *state) {
   lua_getglobal(state, "_G");
   return new LuaValue(state, lua_gettop(state));
 }
+const int32_t &LuaValue::getIndex() const { return _idx; }
