@@ -1,6 +1,7 @@
 #include "script/LuaValue.hpp"
 #include "core/AutoPtr.hpp"
 #include <lua.hpp>
+#include <unordered_map>
 using namespace firefly;
 using namespace firefly::script;
 LuaValue::LuaValue(lua_State *state) : _state(state) {
@@ -96,6 +97,10 @@ void LuaValue::setCFunction(lua_CFunction func) {
   lua_pushcfunction(_state, func);
   lua_replace(_state, _idx);
 }
+void LuaValue::setMetadata(const core::AutoPtr<LuaValue> &metadata) {
+  lua_pushvalue(_state, metadata->_idx);
+  lua_setmetatable(_state, _idx);
+}
 core::AutoPtr<LuaValue> LuaValue::create(lua_State *state,
                                          const std::string &value) {
   lua_pushstring(state, value.c_str());
@@ -114,11 +119,9 @@ core::AutoPtr<LuaValue> LuaValue::create(lua_State *state, const bool &value) {
   lua_pushboolean(state, value);
   return new LuaValue(state, lua_gettop(state));
 }
-core::AutoPtr<LuaValue> LuaValue::create(
-    lua_State *state,
-    const std::function<std::vector<core::AutoPtr<LuaValue>>(
-        lua_State *state, const std::vector<core::AutoPtr<LuaValue>> &args)>
-        value) {
+
+core::AutoPtr<LuaValue> LuaValue::create(lua_State *state,
+                                         const LuaCFunction &value) {
   LuaValue::_functions.push_back(value);
   lua_pushinteger(state, LuaValue::_functions.size() - 1);
   lua_pushcclosure(
@@ -140,11 +143,28 @@ core::AutoPtr<LuaValue> LuaValue::create(
       1);
   return new LuaValue(state, lua_gettop(state));
 }
-core::AutoPtr<LuaValue> LuaValue::createTable(lua_State *state) {
+core::AutoPtr<LuaValue> LuaValue::create(lua_State *state,
+                                         const LuaValueStack &stack) {
   lua_newtable(state);
-  return new LuaValue(state, lua_gettop(state));
+  auto idx = lua_gettop(state);
+  for (auto i = 0; i < stack.size(); i++) {
+    lua_pushvalue(state, stack[i]->_idx);
+    lua_seti(state, idx, i);
+  }
+  return new LuaValue(state, idx);
 }
-void LuaValue::setGlobal(const std::string &name) {
-  lua_pushvalue(_state, _idx);
-  lua_setglobal(_state, name.c_str());
+core::AutoPtr<LuaValue> LuaValue::create(
+    lua_State *state,
+    const std::unordered_map<std::string, core::AutoPtr<LuaValue>> &stack) {
+  lua_newtable(state);
+  auto idx = lua_gettop(state);
+  for (auto &[key, value] : stack) {
+    lua_pushvalue(state, value->_idx);
+    lua_setfield(state, idx, key.c_str());
+  }
+  return new LuaValue(state, idx);
+}
+core::AutoPtr<LuaValue> LuaValue::getGlobal(lua_State *state) {
+  lua_getglobal(state, "_G");
+  return new LuaValue(state, lua_gettop(state));
 }

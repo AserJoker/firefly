@@ -14,8 +14,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <iostream>
-#include <lua.h>
+#include <lua.hpp>
 
 using namespace firefly;
 using namespace duskland;
@@ -41,7 +40,8 @@ void GameApplication::onInitialize() {
         return {script::LuaValue::create(state, args[0]->toInteger() +
                                                     args[1]->toInteger())};
       }));
-  func->setGlobal("add");
+  auto global = script::LuaValue::getGlobal(_script->getLuaContext());
+  global->setField("add", func);
   _script->eval("require 'init'");
 }
 

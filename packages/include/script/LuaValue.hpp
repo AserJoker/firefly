@@ -2,11 +2,18 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include <functional>
+#include <lua.h>
 #include <lua.hpp>
 #include <string>
+#include <unordered_map>
 #include <vector>
 namespace firefly::script {
 class LuaValue : public core::Object {
+public:
+  using LuaValueStack = std::vector<core::AutoPtr<LuaValue>>;
+  using LuaCFunction =
+      std::function<LuaValueStack(lua_State *state, const LuaValueStack &)>;
+
 private:
   int _idx;
   lua_State *_state;
@@ -36,12 +43,14 @@ public:
   void setBoolean(const bool &value);
   void setCFunction(lua_CFunction func);
 
-  void setGlobal(const std::string &name);
+  void setMetadata(const core::AutoPtr<LuaValue> &metadata);
+
+  bool isEqual(const core::AutoPtr<LuaValue> &value) {
+    return lua_compare(_state, _idx, value->_idx, LUA_OPEQ) == 1;
+  }
 
 private:
-  inline static std::vector<std::function<std::vector<core::AutoPtr<LuaValue>>(
-      lua_State *state, const std::vector<core::AutoPtr<LuaValue>> &args)>>
-      _functions;
+  inline static std::vector<LuaCFunction> _functions;
 
 public:
   static core::AutoPtr<LuaValue> create(lua_State *state,
@@ -49,11 +58,14 @@ public:
   static core::AutoPtr<LuaValue> create(lua_State *state, const int32_t &value);
   static core::AutoPtr<LuaValue> create(lua_State *state, const float &value);
   static core::AutoPtr<LuaValue> create(lua_State *state, const bool &value);
-  static core::AutoPtr<LuaValue> create(
-      lua_State *state,
-      const std::function<std::vector<core::AutoPtr<LuaValue>>(
-          lua_State *state, const std::vector<core::AutoPtr<LuaValue>> &args)>
-          value);
-  static core::AutoPtr<LuaValue> createTable(lua_State *state);
+  static core::AutoPtr<LuaValue> create(lua_State *state,
+                                        const LuaCFunction &value);
+  static core::AutoPtr<LuaValue> create(lua_State *state,
+                                        const LuaValueStack &value);
+  static core::AutoPtr<LuaValue>
+  create(lua_State *state,
+         const std::unordered_map<std::string, core::AutoPtr<LuaValue>> &value);
+
+  static core::AutoPtr<LuaValue> getGlobal(lua_State *state);
 };
 } // namespace firefly::script
