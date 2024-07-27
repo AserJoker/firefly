@@ -119,7 +119,15 @@ core::AutoPtr<LuaValue> LuaValue::create(lua_State *state, const bool &value) {
   lua_pushboolean(state, value);
   return new LuaValue(state, lua_gettop(state));
 }
-
+bool LuaValue::isEqual(const core::AutoPtr<LuaValue> &value) {
+  return lua_compare(_state, _idx, value->_idx, LUA_OPEQ) == 1;
+}
+bool LuaValue::isLess(const core::AutoPtr<LuaValue> &value) {
+  return lua_compare(_state, _idx, value->_idx, LUA_OPLT) == 1;
+}
+bool LuaValue::isLessAndEqual(const core::AutoPtr<LuaValue> &value) {
+  return lua_compare(_state, _idx, value->_idx, LUA_OPLE) == 1;
+}
 core::AutoPtr<LuaValue> LuaValue::create(lua_State *state,
                                          const LuaCFunction &value) {
   LuaValue::_functions.push_back(value);

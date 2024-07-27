@@ -2,7 +2,6 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include <functional>
-#include <lua.h>
 #include <lua.hpp>
 #include <string>
 #include <unordered_map>
@@ -45,9 +44,9 @@ public:
 
   void setMetadata(const core::AutoPtr<LuaValue> &metadata);
 
-  bool isEqual(const core::AutoPtr<LuaValue> &value) {
-    return lua_compare(_state, _idx, value->_idx, LUA_OPEQ) == 1;
-  }
+  bool isEqual(const core::AutoPtr<LuaValue> &value);
+  bool isLess(const core::AutoPtr<LuaValue> &value);
+  bool isLessAndEqual(const core::AutoPtr<LuaValue> &value);
 
 private:
   inline static std::vector<LuaCFunction> _functions;
