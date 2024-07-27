@@ -51,8 +51,11 @@ public:
 
 private:
   inline static std::vector<LuaCFunction> _functions;
+  inline static std::unordered_map<uint32_t, core::AutoPtr<core::Object>>
+      _storages;
 
 public:
+  static core::AutoPtr<LuaValue> create(lua_State *state);
   static core::AutoPtr<LuaValue> create(lua_State *state,
                                         const std::string &value);
   static core::AutoPtr<LuaValue> create(lua_State *state, const int32_t &value);
@@ -65,7 +68,11 @@ public:
   static core::AutoPtr<LuaValue>
   create(lua_State *state,
          const std::unordered_map<std::string, core::AutoPtr<LuaValue>> &value);
+  static core::AutoPtr<LuaValue> create(lua_State *state, void *value);
 
   static core::AutoPtr<LuaValue> getGlobal(lua_State *state);
+  const uint32_t storeObject(const core::AutoPtr<core::Object> &obj);
+  core::AutoPtr<core::Object> getObject(const uint32_t &idx);
+  void deleteObject(const uint32_t &idx);
 };
 } // namespace firefly::script

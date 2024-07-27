@@ -5,6 +5,7 @@
 #include "input/Event_MouseButtonDown.hpp"
 #include "input/Event_MouseWheel.hpp"
 #include "runtime/Application.hpp"
+#include "script/LuaModule_Event.hpp"
 #include "script/LuaModule_Log.hpp"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -33,6 +34,7 @@ void GameApplication::onInitialize() {
   _script->eval(
       "package.path = package.path..';.//media/lua/?.lua;./media/lua/?.so'");
   _script->openLib<script::LuaModule_Log>("log");
+  _script->openLib<script::LuaModule_Event>("event");
   _script->eval("require 'init'");
 }
 

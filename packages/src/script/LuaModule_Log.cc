@@ -6,9 +6,6 @@
 using namespace firefly;
 using namespace firefly::script;
 int LuaModule_Log::openLib(lua_State *state) {
-  lua_newtable(state);
-  auto idx = lua_gettop(state);
-  core::AutoPtr logger = new LuaValue(state, idx);
   LuaValue::LuaCFunction debug =
       [this](lua_State *state, const LuaValue::LuaValueStack &args) -> auto {
     return this->debug(state, args);
@@ -33,14 +30,13 @@ int LuaModule_Log::openLib(lua_State *state) {
       [this](lua_State *state, const LuaValue::LuaValueStack &args) -> auto {
     return this->panic(state, args);
   };
-  logger->setField("debug", LuaValue::create(state, debug));
-  logger->setField("info", LuaValue::create(state, info));
-  logger->setField("log", LuaValue::create(state, log));
-  logger->setField("warn", LuaValue::create(state, warn));
-  logger->setField("error", LuaValue::create(state, error));
-  logger->setField("panic", LuaValue::create(state, panic));
-  lua_settop(state, idx);
-  return 1;
+  setField("debug", LuaValue::create(state, debug));
+  setField("info", LuaValue::create(state, info));
+  setField("log", LuaValue::create(state, log));
+  setField("warn", LuaValue::create(state, warn));
+  setField("error", LuaValue::create(state, error));
+  setField("panic", LuaValue::create(state, panic));
+  return LuaModule::openLib(state);
 }
 LuaValue::LuaValueStack
 LuaModule_Log::debug(lua_State *state, const LuaValue::LuaValueStack &args) {

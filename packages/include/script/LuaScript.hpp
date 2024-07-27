@@ -11,11 +11,14 @@ class LuaScript : public core::Object {
 
 private:
   lua_State *_state;
+  int32_t _stacktop;
 
 public:
   LuaScript();
   void initialize() override;
   ~LuaScript() override;
+  void pushContext();
+  void popContext();
   void eval(const std::string &source);
   lua_State *getLuaContext();
   template <class Module> void openLib(const char *name) {

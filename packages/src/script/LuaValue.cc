@@ -1,5 +1,6 @@
 #include "script/LuaValue.hpp"
 #include "core/AutoPtr.hpp"
+#include <lua.h>
 #include <lua.hpp>
 #include <unordered_map>
 using namespace firefly;
@@ -101,6 +102,10 @@ void LuaValue::setMetadata(const core::AutoPtr<LuaValue> &metadata) {
   lua_pushvalue(_state, metadata->_idx);
   lua_setmetatable(_state, _idx);
 }
+core::AutoPtr<LuaValue> LuaValue::create(lua_State *state) {
+  lua_pushnil(state);
+  return new LuaValue(state, lua_gettop(state));
+}
 core::AutoPtr<LuaValue> LuaValue::create(lua_State *state,
                                          const std::string &value) {
   lua_pushstring(state, value.c_str());
@@ -177,3 +182,21 @@ core::AutoPtr<LuaValue> LuaValue::getGlobal(lua_State *state) {
   return new LuaValue(state, lua_gettop(state));
 }
 const int32_t &LuaValue::getIndex() const { return _idx; }
+const uint32_t LuaValue::storeObject(const core::AutoPtr<core::Object> &obj) {
+  static uint32_t idx = 0;
+  LuaValue::_storages[idx] = obj;
+  return _idx++;
+}
+
+core::AutoPtr<LuaValue> LuaValue::create(lua_State *state, void *value) {
+  lua_pushlightuserdata(state, value);
+  return new LuaValue(state, lua_gettop(state));
+}
+
+core::AutoPtr<core::Object> LuaValue::getObject(const uint32_t &idx) {
+  if (_storages.contains(idx)) {
+    return _storages.at(idx);
+  }
+  return nullptr;
+}
+void LuaValue::deleteObject(const uint32_t &idx) { _storages.erase(idx); }
