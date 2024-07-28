@@ -13,6 +13,8 @@ public:
   using LuaCFunction =
       std::function<LuaValueStack(lua_State *state, const LuaValueStack &)>;
 
+  using LuaRawObject = std::unordered_map<std::string, core::AutoPtr<LuaValue>>;
+
 private:
   int _idx;
   lua_State *_state;

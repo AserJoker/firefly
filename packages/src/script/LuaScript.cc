@@ -2,8 +2,10 @@
 #include "core/AutoPtr.hpp"
 #include "script/LuaValue.hpp"
 #include <fmt/core.h>
+#include <lua.h>
 #include <lua.hpp>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 using namespace firefly::script;
 LuaScript::LuaScript() : _state(nullptr) {
@@ -14,10 +16,21 @@ LuaScript::~LuaScript() { lua_close(_state); }
 void LuaScript::initialize() {
   auto ctx = pushContext();
   auto global = LuaValue::getGlobal(_state);
-  global->setField(
-      "_NATIVE",
-      LuaValue::create(
-          _state, std::unordered_map<std::string, core::AutoPtr<LuaValue>>()));
+  createObjectChain({"_NATIVE"});
+  popContext(ctx);
+}
+void LuaScript::createObjectChain(const std::vector<std::string> &chain) {
+  auto ctx = pushContext();
+  auto global = LuaValue::getGlobal(_state);
+  auto obj = global;
+  for (auto &field : chain) {
+    auto item = obj->getField(field);
+    if (item->getType() == LUA_TNIL) {
+      item = LuaValue::create(_state, LuaValue::LuaRawObject());
+      obj->setField(field, item);
+    }
+    obj = item;
+  }
   popContext(ctx);
 }
 int LuaScript::pushContext() { return lua_gettop(_state); }

@@ -22,6 +22,7 @@ public:
   int pushContext();
   void popContext(int ctx);
   void eval(const std::string &source);
+  void createObjectChain(const std::vector<std::string> &chain);
   lua_State *getLuaContext();
   template <class Module> void openLib(const char *name) {
     luaL_requiref(

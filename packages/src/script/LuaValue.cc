@@ -1,7 +1,9 @@
 #include "script/LuaValue.hpp"
 #include "core/AutoPtr.hpp"
+#include <fmt/core.h>
 #include <lua.h>
 #include <lua.hpp>
+#include <stdexcept>
 #include <unordered_map>
 using namespace firefly;
 using namespace firefly::script;
@@ -43,7 +45,11 @@ LuaValue::call(const std::vector<core::AutoPtr<LuaValue>> &args) {
   for (auto &arg : args) {
     lua_pushvalue(_state, arg->_idx);
   }
-  lua_call(_state, args.size(), LUA_MULTRET);
+  if (lua_pcall(_state, args.size(), LUA_MULTRET, 0)) {
+    auto error = lua_tostring(_state, -1);
+    throw std::runtime_error(
+        fmt::format("Failed to call lua method:\n\t {}", error));
+  }
   auto now = lua_gettop(_state);
   std::vector<core::AutoPtr<LuaValue>> rets;
   for (auto i = top + 1; i <= now; i++) {

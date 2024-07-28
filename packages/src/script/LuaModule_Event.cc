@@ -10,13 +10,7 @@ using namespace firefly::script;
 LuaModule_Event::LuaModule_Event() {
   auto script = core::Singleton<script::LuaScript>::instance();
   auto context = script->pushContext();
-  auto ctx = script->getLuaContext();
-  auto global = LuaValue::getGlobal(ctx);
-  auto native = global->getField("_NATIVE");
-  native->setField(
-      "event",
-      LuaValue::create(
-          ctx, std::unordered_map<std::string, core::AutoPtr<LuaValue>>()));
+  script->createObjectChain({"_NATIVE", "event"});
   script->popContext(context);
   auto bus = core::Singleton<runtime::EventBus>::instance();
   bus->on(this, &LuaModule_Event::onLuaEvent);
@@ -57,7 +51,7 @@ LuaModule_Event::onEvent(lua_State *state,
   auto event = native->getField("event");
   auto callbacks = event->getField(type);
   if (callbacks->getType() == LUA_TNIL) {
-    callbacks = LuaValue::create(state, std::vector<core::AutoPtr<LuaValue>>());
+    callbacks = LuaValue::create(state, LuaValue::LuaRawObject{});
     event->setField(type, callbacks);
   }
   callbacks->setIndex(callbacks->getLength() + 1, callback);
