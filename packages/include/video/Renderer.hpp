@@ -23,8 +23,8 @@ public:
                       const core::AutoPtr<Texture> &texture);
   void enableDepthTest();
   void disableDepthTest();
-  void enableBlendTest();
-  void disableBlendTest();
+  void enableBlend();
+  void disableBlend();
   void draw(const core::AutoPtr<Mesh> &mesh);
 };
 } // namespace firefly::video

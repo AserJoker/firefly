@@ -12,16 +12,16 @@ LuaScript::LuaScript() : _state(nullptr) {
 }
 LuaScript::~LuaScript() { lua_close(_state); }
 void LuaScript::initialize() {
-  pushContext();
+  auto ctx = pushContext();
   auto global = LuaValue::getGlobal(_state);
   global->setField(
       "_NATIVE",
       LuaValue::create(
           _state, std::unordered_map<std::string, core::AutoPtr<LuaValue>>()));
-  popContext();
+  popContext(ctx);
 }
-void LuaScript::pushContext() { _stacktop = lua_gettop(_state); }
-void LuaScript::popContext() { lua_settop(_state, _stacktop); }
+int LuaScript::pushContext() { return lua_gettop(_state); }
+void LuaScript::popContext(int ctx) { lua_settop(_state, ctx); }
 void LuaScript::eval(const std::string &source) {
   if (luaL_dostring(_state, source.c_str())) {
     auto err = lua_tostring(_state, -1);

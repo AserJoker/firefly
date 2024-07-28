@@ -25,6 +25,11 @@ GameApplication::GameApplication(int argc, char *argv[])
 void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
   _resources->setCurrentWorkspaceDirectory(cwd().append("media").string());
+  _script->eval(
+      "package.path = package.path..';./media/lua/?.lua;./media/lua/?.so'");
+  _script->openLib<script::LuaModule_Log>("log");
+  _script->openLib<script::LuaModule_Event>("event");
+  _script->eval("require 'init'");
   _eventbus->on(this, &GameApplication::onMouse);
   _eventbus->on(this, &GameApplication::onKeydown);
   _eventbus->on(this, &GameApplication::onMouseButtonDown);
@@ -32,18 +37,12 @@ void GameApplication::onInitialize() {
   _window = new runtime::Window("duskland", 1024, 768);
   _renderer = new video::Renderer();
   _renderer->enableDepthTest();
-  _script->eval(
-      "package.path = package.path..';.//media/lua/?.lua;./media/lua/?.so'");
-  _script->openLib<script::LuaModule_Log>("log");
-  _script->openLib<script::LuaModule_Event>("event");
-  _script->eval("require 'init'");
+  _renderer->enableBlend();
 }
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
-  _eventbus->emit<script::Event_Lua>(
-      "loop", script::LuaValue::create(_script->getLuaContext(),
-                                       std::string("hello world")));
+  _script->emit("loop", std::string("hello world"));
   _window->present();
 }
 

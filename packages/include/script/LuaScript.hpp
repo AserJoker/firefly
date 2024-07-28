@@ -2,6 +2,9 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "core/Singleton.hpp"
+#include "runtime/EventBus.hpp"
+#include "script/Event_Lua.hpp"
+#include "script/LuaValue.hpp"
 #include <lua.hpp>
 #include <string>
 namespace firefly::script {
@@ -11,14 +14,13 @@ class LuaScript : public core::Object {
 
 private:
   lua_State *_state;
-  int32_t _stacktop;
 
 public:
   LuaScript();
   void initialize() override;
   ~LuaScript() override;
-  void pushContext();
-  void popContext();
+  int pushContext();
+  void popContext(int ctx);
   void eval(const std::string &source);
   lua_State *getLuaContext();
   template <class Module> void openLib(const char *name) {
@@ -30,6 +32,12 @@ public:
         },
         1);
     lua_pop(_state, 1);
+  }
+  template <class T> void emit(const std::string &type, T &&value) {
+    auto context = pushContext();
+    auto bus = core::Singleton<runtime::EventBus>::instance();
+    bus->emit<Event_Lua>(type, LuaValue::create(_state, value));
+    popContext(context);
   }
 };
 }; // namespace firefly::script

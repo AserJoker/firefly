@@ -38,6 +38,6 @@ void Renderer::enableDepthTest() { glEnable(GL_DEPTH_TEST); }
 
 void Renderer::disableDepthTest() { glDisable(GL_DEPTH_TEST); }
 
-void Renderer::enableBlendTest() { glEnable(GL_BLEND); }
-void Renderer::disableBlendTest() { glDisable(GL_BLEND); }
+void Renderer::enableBlend() { glEnable(GL_BLEND); }
+void Renderer::disableBlend() { glDisable(GL_BLEND); }
 void Renderer::draw(const core::AutoPtr<Mesh> &mesh) { mesh->draw(_shader); }
