@@ -5,9 +5,10 @@
 #include "input/Event_MouseButtonDown.hpp"
 #include "input/Event_MouseWheel.hpp"
 #include "runtime/Application.hpp"
+#include "script/LuaModule_Buffer.hpp"
 #include "script/LuaModule_Event.hpp"
 #include "script/LuaModule_Log.hpp"
-#include "script/LuaValue.hpp"
+#include "script/LuaModule_Media.hpp"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -22,14 +23,23 @@ using namespace firefly;
 using namespace duskland;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
-void GameApplication::onInitialize() {
-  runtime::Application::onInitialize();
-  _resources->setCurrentWorkspaceDirectory(cwd().append("media").string());
+void GameApplication::initScript() {
+  auto ctx = _script->pushContext();
   _script->eval(
       "package.path = package.path..';./media/lua/?.lua;./media/lua/?.so'");
   _script->openLib<script::LuaModule_Log>("log");
   _script->openLib<script::LuaModule_Event>("event");
+  _script->openLib<script::LuaModule_Buffer>("buffer");
+  _script->openLib<script::LuaModule_Media>("media");
+  
+  _script->popContext(ctx);
+}
+void GameApplication::onInitialize() {
+  runtime::Application::onInitialize();
+  _resources->setCurrentWorkspaceDirectory(cwd().append("media").string());
+  initScript();
   _script->eval("require 'init'");
+  _script->gc(true);
   _eventbus->on(this, &GameApplication::onMouse);
   _eventbus->on(this, &GameApplication::onKeydown);
   _eventbus->on(this, &GameApplication::onMouseButtonDown);
@@ -42,7 +52,6 @@ void GameApplication::onInitialize() {
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
-  _script->emit("loop", std::string("hello world"));
   _window->present();
 }
 

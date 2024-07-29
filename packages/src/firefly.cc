@@ -6,7 +6,7 @@
 #include "runtime/CmdLine.hpp"
 #include "runtime/EventBus.hpp"
 #include "runtime/Logger.hpp"
-#include "runtime/ResourceProvider.hpp"
+#include "runtime/Media.hpp"
 #include "script/LuaScript.hpp"
 
 namespace firefly {
@@ -16,7 +16,7 @@ void InitFirefly() {
   provider->provide<runtime::Logger, INJECTOR_LOGGER>();
   provider->provide<runtime::CmdLine, INJECTOR_CMDLINE>();
   provider->provide<runtime::EventBus, INJECTOR_EVENTBUS>();
-  provider->provide<runtime::ResourceProvider, INJECTOR_RESOURCEPROVIDER>();
+  provider->provide<runtime::Media, INJECTOR_MEDIA>();
   provider->provide<db::Database, INJECTOR_DATABASE>();
   provider->provide<script::LuaScript, INJECTOR_SCRIPT>();
 }

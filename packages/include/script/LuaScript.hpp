@@ -40,5 +40,6 @@ public:
     bus->emit<Event_Lua>(type, LuaValue::create(_state, value));
     popContext(context);
   }
+  void gc(bool full = false);
 };
 }; // namespace firefly::script

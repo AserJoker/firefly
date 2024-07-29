@@ -30,6 +30,7 @@ public:
   core::AutoPtr<LuaValue> getIndex(const int32_t &name);
   std::vector<core::AutoPtr<LuaValue>>
   call(const std::vector<core::AutoPtr<LuaValue>> &args = {});
+  lua_State *getLuaContext();
   const uint32_t getLength() const;
   const std::vector<std::string> getKeys() const;
 
@@ -42,7 +43,7 @@ public:
   void setInteger(const int32_t &value);
   void setNumber(const float &value);
   void setBoolean(const bool &value);
-  void setCFunction(lua_CFunction func);
+  void setCFunction(LuaCFunction func);
 
   void setMetadata(const core::AutoPtr<LuaValue> &metadata);
 
@@ -60,9 +61,8 @@ public:
   static core::AutoPtr<LuaValue> create(lua_State *state);
   static core::AutoPtr<LuaValue> create(lua_State *state,
                                         const std::string &value);
-  static core::AutoPtr<LuaValue> create(lua_State *state, const int32_t &value);
-  static core::AutoPtr<LuaValue> create(lua_State *state, const float &value);
-  static core::AutoPtr<LuaValue> create(lua_State *state, const bool &value);
+  static core::AutoPtr<LuaValue> create(lua_State *state, double value);
+  static core::AutoPtr<LuaValue> create(lua_State *state, bool value);
   static core::AutoPtr<LuaValue> create(lua_State *state,
                                         const LuaCFunction &value);
   static core::AutoPtr<LuaValue> create(lua_State *state,
@@ -76,5 +76,70 @@ public:
   const uint32_t storeObject(const core::AutoPtr<core::Object> &obj);
   core::AutoPtr<core::Object> getObject(const uint32_t &idx);
   void deleteObject(const uint32_t &idx);
+
+public:
+  template <int32_t... types> static bool validate(const LuaValueStack &args) {
+    return validateArg(args, 0, types...);
+  }
+  static bool validateArg(const LuaValueStack &args, int32_t index,
+                          int32_t type, auto... types) {
+    return args.size() > index && args[index]->getType() == type &&
+           validateArg(args, index + 1, types...);
+  }
+  static bool validateArg(const LuaValueStack &args, int32_t index,
+                          int32_t type) {
+    return args.size() > index && args[index]->getType() == type;
+  }
+  static constexpr std::string typeToString(int32_t type) {
+    switch (type) {
+    case LUA_TNIL:
+      return "nil";
+    case LUA_TBOOLEAN:
+      return "boolean";
+    case LUA_TLIGHTUSERDATA:
+      return "lightuserdata";
+    case LUA_TNUMBER:
+      return "number";
+    case LUA_TSTRING:
+      return "string";
+    case LUA_TTABLE:
+      return "table";
+    case LUA_TFUNCTION:
+      return "function";
+    case LUA_TUSERDATA:
+      return "userdata";
+    case LUA_TTHREAD:
+      return "thread";
+    }
+    return "unknown";
+  }
+  template <int32_t... types> static std::string stackTypesToString() {
+    std::vector parts({typeToString(types)...});
+    std::string result;
+    for (auto &part : parts) {
+      if (!result.empty()) {
+        result += ",";
+      }
+      result += part;
+    }
+    return result;
+  }
+  static std::string stackTypesToString(const LuaValue::LuaValueStack &args) {
+    std::vector<std::string> parts;
+    for (auto &arg : args) {
+      parts.push_back(arg->getTypeName());
+    }
+    std::string result;
+    for (auto &part : parts) {
+      if (!result.empty()) {
+        result += ",";
+      }
+      result += part;
+    }
+    return result;
+  }
 };
+#define LUA_CFUNC_DEFINE(name)                                                 \
+  LuaValue::LuaValueStack name(lua_State *state,                               \
+                               const LuaValue::LuaValueStack &args)
 } // namespace firefly::script

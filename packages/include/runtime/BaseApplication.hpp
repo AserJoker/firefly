@@ -4,7 +4,7 @@
 #include "Component.hpp"
 #include "EventBus.hpp"
 #include "Logger.hpp"
-#include "ResourceProvider.hpp"
+#include "Media.hpp"
 #include "core/EventLoop.hpp"
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
@@ -30,7 +30,7 @@ protected:
   core::Injector<Logger, INJECTOR_LOGGER> _logger;
   core::Injector<CmdLine, INJECTOR_CMDLINE> _cmdline;
   core::Injector<EventBus, INJECTOR_EVENTBUS> _eventbus;
-  core::Injector<ResourceProvider, INJECTOR_RESOURCEPROVIDER> _resources;
+  core::Injector<Media, INJECTOR_MEDIA> _resources;
   core::Injector<db::Database, INJECTOR_DATABASE> _database;
   core::Injector<script::LuaScript, INJECTOR_SCRIPT> _script;
 

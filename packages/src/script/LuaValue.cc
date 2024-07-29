@@ -1,9 +1,7 @@
 #include "script/LuaValue.hpp"
 #include "core/AutoPtr.hpp"
-#include <fmt/core.h>
-#include <lua.h>
+#include <exception>
 #include <lua.hpp>
-#include <stdexcept>
 #include <unordered_map>
 using namespace firefly;
 using namespace firefly::script;
@@ -45,11 +43,7 @@ LuaValue::call(const std::vector<core::AutoPtr<LuaValue>> &args) {
   for (auto &arg : args) {
     lua_pushvalue(_state, arg->_idx);
   }
-  if (lua_pcall(_state, args.size(), LUA_MULTRET, 0)) {
-    auto error = lua_tostring(_state, -1);
-    throw std::runtime_error(
-        fmt::format("Failed to call lua method:\n\t {}", error));
-  }
+  lua_call(_state, args.size(), LUA_MULTRET);
   auto now = lua_gettop(_state);
   std::vector<core::AutoPtr<LuaValue>> rets;
   for (auto i = top + 1; i <= now; i++) {
@@ -57,6 +51,7 @@ LuaValue::call(const std::vector<core::AutoPtr<LuaValue>> &args) {
   }
   return rets;
 }
+lua_State *LuaValue::getLuaContext() { return _state; }
 const uint32_t LuaValue::getLength() const {
   lua_len(_state, _idx);
   uint32_t res = lua_tointeger(_state, -1);
@@ -100,8 +95,31 @@ void LuaValue::setBoolean(const bool &value) {
   lua_pushboolean(_state, value);
   lua_replace(_state, _idx);
 }
-void LuaValue::setCFunction(lua_CFunction func) {
-  lua_pushcfunction(_state, func);
+void LuaValue::setCFunction(LuaCFunction func) {
+  LuaValue::_functions.push_back(func);
+  lua_pushinteger(_state, LuaValue::_functions.size() - 1);
+  lua_pushcclosure(
+      _state,
+      [](lua_State *state) -> int {
+        try {
+          auto idx = lua_upvalueindex(1);
+          auto index = lua_tointeger(state, idx);
+          auto &func = LuaValue::_functions[index];
+          std::vector<core::AutoPtr<LuaValue>> args;
+          for (auto i = 1; i <= lua_gettop(state); i++) {
+            args.push_back(new LuaValue(state, i));
+          }
+          auto res = func(state, args);
+          for (auto &r : res) {
+            lua_pushvalue(state, r->_idx);
+          }
+          return res.size();
+        } catch (std::exception &e) {
+          luaL_error(state, e.what());
+          return 0;
+        }
+      },
+      1);
   lua_replace(_state, _idx);
 }
 void LuaValue::setMetadata(const core::AutoPtr<LuaValue> &metadata) {
@@ -117,16 +135,11 @@ core::AutoPtr<LuaValue> LuaValue::create(lua_State *state,
   lua_pushstring(state, value.c_str());
   return new LuaValue(state, lua_gettop(state));
 }
-core::AutoPtr<LuaValue> LuaValue::create(lua_State *state,
-                                         const int32_t &value) {
-  lua_pushinteger(state, value);
-  return new LuaValue(state, lua_gettop(state));
-}
-core::AutoPtr<LuaValue> LuaValue::create(lua_State *state, const float &value) {
+core::AutoPtr<LuaValue> LuaValue::create(lua_State *state, double value) {
   lua_pushnumber(state, value);
   return new LuaValue(state, lua_gettop(state));
 }
-core::AutoPtr<LuaValue> LuaValue::create(lua_State *state, const bool &value) {
+core::AutoPtr<LuaValue> LuaValue::create(lua_State *state, bool value) {
   lua_pushboolean(state, value);
   return new LuaValue(state, lua_gettop(state));
 }
@@ -146,18 +159,23 @@ core::AutoPtr<LuaValue> LuaValue::create(lua_State *state,
   lua_pushcclosure(
       state,
       [](lua_State *state) -> int {
-        auto idx = lua_upvalueindex(1);
-        auto index = lua_tointeger(state, idx);
-        auto &func = LuaValue::_functions[index];
-        std::vector<core::AutoPtr<LuaValue>> args;
-        for (auto i = 1; i <= lua_gettop(state); i++) {
-          args.push_back(new LuaValue(state, i));
+        try {
+          auto idx = lua_upvalueindex(1);
+          auto index = lua_tointeger(state, idx);
+          auto &func = LuaValue::_functions[index];
+          std::vector<core::AutoPtr<LuaValue>> args;
+          for (auto i = 1; i <= lua_gettop(state); i++) {
+            args.push_back(new LuaValue(state, i));
+          }
+          auto res = func(state, args);
+          for (auto &r : res) {
+            lua_pushvalue(state, r->_idx);
+          }
+          return res.size();
+        } catch (std::exception &e) {
+          luaL_error(state, e.what());
+          return 0;
         }
-        auto res = func(state, args);
-        for (auto &r : res) {
-          lua_pushvalue(state, r->_idx);
-        }
-        return res.size();
       },
       1);
   return new LuaValue(state, lua_gettop(state));

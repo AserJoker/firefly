@@ -1,4 +1,4 @@
-#include "runtime/ResourceProvider.hpp"
+#include "runtime/Media.hpp"
 #include "core/AutoPtr.hpp"
 #include "runtime/Resource.hpp"
 #include "runtime/Resource_File.hpp"
@@ -7,15 +7,14 @@
 #include <stdexcept>
 using namespace firefly;
 using namespace firefly::runtime;
-core::AutoPtr<Resource> ResourceProvider::load(const std::string &name) {
+core::AutoPtr<Resource> Media::load(const std::string &name) {
   auto filepath = resolve(name);
   if (!std::filesystem::exists(filepath)) {
     throw std::runtime_error(fmt::format("Failed to load resource: {}", name));
   }
   return new Resource_File(resolve(name));
 }
-void ResourceProvider::dump(const std::string &name,
-                            core::AutoPtr<Resource> data) {
+void Media::dump(const std::string &name, core::AutoPtr<Resource> data) {
   auto filepath = resolve(name);
   core::AutoPtr res = new Resource_File(filepath);
   size_t len = 0;
@@ -28,7 +27,7 @@ void ResourceProvider::dump(const std::string &name,
     }
   }
 }
-std::string ResourceProvider::resolve(const std::string &name) {
+std::string Media::resolve(const std::string &name) {
   std::filesystem::path filepath = _cwd;
   std::string tmp = name;
   while (!tmp.empty()) {
@@ -43,7 +42,7 @@ std::string ResourceProvider::resolve(const std::string &name) {
   }
   return filepath.string();
 }
-std::vector<std::string> ResourceProvider::index(const std::string &name) {
+std::vector<std::string> Media::index(const std::string &name) {
   std::filesystem::path p = resolve(name);
   if (!std::filesystem::is_directory(p)) {
     return {name};
@@ -65,7 +64,7 @@ std::vector<std::string> ResourceProvider::index(const std::string &name) {
   }
   return indices;
 }
-void ResourceProvider::setCurrentWorkspaceDirectory(const std::string &cwd) {
+void Media::setCurrentWorkspaceDirectory(const std::string &cwd) {
   _cwd.clear();
   for (auto &c : cwd) {
     if (c == '\\') {

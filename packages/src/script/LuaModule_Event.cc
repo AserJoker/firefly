@@ -4,7 +4,6 @@
 #include "runtime/EventBus.hpp"
 #include "script/LuaScript.hpp"
 #include "script/LuaValue.hpp"
-#include <unordered_map>
 using namespace firefly;
 using namespace firefly::script;
 LuaModule_Event::LuaModule_Event() {
@@ -25,7 +24,7 @@ void LuaModule_Event::onLuaEvent(Event_Lua &e) {
   auto native = global->getField("_NATIVE");
   auto event = native->getField("event");
   auto callbacks = event->getField(type);
-  if (callbacks != nullptr) {
+  if (callbacks->getType() != LUA_TNIL) {
     for (auto i = 1; i <= callbacks->getLength(); i++) {
       auto cb = callbacks->getIndex(i);
       cb->call({arg});

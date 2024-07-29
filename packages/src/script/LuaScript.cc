@@ -6,7 +6,6 @@
 #include <lua.hpp>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 using namespace firefly::script;
 LuaScript::LuaScript() : _state(nullptr) {
   _state = luaL_newstate();
@@ -43,3 +42,10 @@ void LuaScript::eval(const std::string &source) {
   }
 }
 lua_State *LuaScript::getLuaContext() { return _state; }
+void LuaScript::gc(bool full) {
+  if (full) {
+    lua_gc(_state, LUA_GCCOLLECT);
+  } else {
+    lua_gc(_state, LUA_GCSTEP);
+  }
+}

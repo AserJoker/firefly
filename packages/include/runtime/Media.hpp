@@ -11,7 +11,7 @@
 #include <unordered_map>
 
 namespace firefly::runtime {
-class ResourceProvider : public core::Object {
+class Media : public core::Object {
   using named_resource =
       std::unordered_map<std::string, core::AutoPtr<core::Object>>;
 

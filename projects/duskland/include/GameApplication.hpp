@@ -24,6 +24,8 @@ protected:
 
   void onUnInitialize() override;
 
+  virtual void initScript();
+
 public:
   GameApplication(int argc, char *argv[]);
 

@@ -1,5 +1,2 @@
-local function onLoop(msg)
-    print(msg)
-    require 'event'.offEvent("loop", onLoop)
-end
-require 'event'.onEvent('loop', onLoop)
+local buffer = require 'media'.query('lang::zh_CN.lang')
+require 'log'.info(buffer:toString())
