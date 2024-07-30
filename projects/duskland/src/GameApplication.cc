@@ -35,16 +35,15 @@ void GameApplication::initScript() {
 }
 void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
-  _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
-  _locale->setDefaultLang("en_US");
-  _locale->setLang("zh_CN");
-  initScript();
+  _window = new runtime::Window("duskland", 1024, 768);
   _eventbus->on(this, &GameApplication::onMouse);
   _eventbus->on(this, &GameApplication::onKeydown);
   _eventbus->on(this, &GameApplication::onMouseButtonDown);
   _eventbus->on(this, &GameApplication::onMouseWheel);
-  _window = new runtime::Window("duskland", 1024, 768);
-  _renderer = new video::Renderer();
+  _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
+  _locale->setDefaultLang("en_US");
+  _locale->setLang("zh_CN");
+  initScript();
   _script->eval("require '.'");
   _mod->loadAll(cwd().append("mods").string());
   _script->gc(true);
