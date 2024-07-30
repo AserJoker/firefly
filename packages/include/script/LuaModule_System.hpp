@@ -8,6 +8,7 @@ private:
   static LUA_CFUNC_DEFINE(getWindowTitle);
   static LUA_CFUNC_DEFINE(getWindowSize);
   static LUA_CFUNC_DEFINE(setWindowSize);
+  static LUA_CFUNC_DEFINE(getMods);
 
 public:
   int openLib(lua_State *state) override;

@@ -7,7 +7,14 @@
 #include <fmt/core.h>
 using namespace firefly;
 using namespace firefly::runtime;
-
+void Locale::scan() {
+  _languages.clear();
+  auto media = core::Singleton<Media>::instance();
+  auto indices = media->scan("lang");
+  for (auto &index : indices) {
+    _languages.push_back(index.substr(6, index.length() - 11));
+  }
+}
 const std::string Locale::i18n(const std::string &key) {
   if (_locales->has(key)) {
     return _locales->get(key);
@@ -46,7 +53,11 @@ void Locale::setDefaultLang(const std::string &lang) {
   }
 }
 void Locale::reload() {
+  scan();
   setDefaultLang(_defaultLang);
   setLang(_lang);
 }
 const std::string &Locale::getLang() const { return _lang; }
+const std::vector<std::string> &Locale::getLanguages() const {
+  return _languages;
+}

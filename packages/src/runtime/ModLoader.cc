@@ -9,12 +9,12 @@
 #include <exception>
 #include <filesystem>
 #include <stdexcept>
+#include <unordered_map>
 using namespace std::filesystem;
 using namespace firefly;
 using namespace firefly::runtime;
 void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
-                     std::unordered_map<std::string, Manifest> &cache,
-                     const Manifest &manifest,
+                     Manifest &manifest,
                      const std::vector<std::string> &requirePath) {
   for (auto &[name, version] : manifest.dependences) {
     if (std::find(requirePath.begin(), requirePath.end(), name) !=
@@ -35,8 +35,8 @@ void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
     if (workflow.contains(name)) {
       dep = workflow.at(name);
       workflow.erase(name);
-    } else if (cache.contains(name)) {
-      dep = cache.at(name);
+    } else if (_mods.contains(name)) {
+      dep = _mods.at(name);
     } else {
       throw std::runtime_error(
           fmt::format("Failed to load mod '{}',dependence '{}' is not found",
@@ -49,10 +49,10 @@ void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
                       manifest.displayName, name, version.toString(),
                       dep.version.toString()));
     }
-    if (!cache.contains(name)) {
+    if (!dep.loaded) {
       auto rpath = requirePath;
       rpath.push_back(manifest.name);
-      load(workflow, cache, dep, rpath);
+      load(workflow, dep, rpath);
     }
   }
   path modPath = manifest.path;
@@ -68,9 +68,9 @@ void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
     auto script = core::Singleton<script::LuaScript>::instance();
     script->eval(fmt::format("require '{}'", manifest.name));
   }
-  cache[manifest.name] = manifest;
+  manifest.loaded = true;
 }
-void ModLoader::loadAll(const std::string &root) {
+void ModLoader::scan(const std::string &root) {
   auto logger = core::Singleton<Logger>::instance();
   _mods.clear();
   for (auto item : directory_iterator(root)) {
@@ -85,12 +85,15 @@ void ModLoader::loadAll(const std::string &root) {
       }
     }
   }
+}
+void ModLoader::loadAll(const std::string &root) {
+  scan(root);
   std::unordered_map<std::string, Manifest> workflow = _mods;
   std::unordered_map<std::string, Manifest> cache;
   while (!workflow.empty()) {
     Manifest manifest = workflow.begin()->second;
     workflow.erase(manifest.name);
-    load(workflow, cache, manifest);
+    load(workflow, manifest);
   }
   for (auto &[_, manifest] : _mods) {
     for (auto &[name, version] : manifest.runtimeDependences) {
@@ -126,6 +129,7 @@ ModLoader::Manifest ModLoader::parseManifest(const std::string &source) {
   }
   manifest.name = modPath.filename().string();
   manifest.path = source;
+  manifest.loaded = false;
   auto child = root->child;
   while (child) {
     std::string key = child->string;
@@ -194,4 +198,17 @@ ModLoader::Manifest ModLoader::parseManifest(const std::string &source) {
   }
   cJSON_free(root);
   return manifest;
+}
+
+void ModLoader::loadMod(const std::string &name) {
+  if (_mods.contains(name)) {
+    Manifest &manifest = _mods.at(name);
+    std::unordered_map<std::string, Manifest> workflow;
+    load(workflow, manifest, {name});
+  }
+}
+
+const std::unordered_map<std::string, ModLoader::Manifest> &
+ModLoader::getMods() const {
+  return _mods;
 }

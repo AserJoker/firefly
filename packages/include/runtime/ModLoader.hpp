@@ -69,6 +69,7 @@ public:
     std::string author;
     std::string email;
     std::string path;
+    bool loaded;
   };
 
 private:
@@ -77,12 +78,14 @@ private:
 private:
   Manifest parseManifest(const std::string &source);
   void load(std::unordered_map<std::string, Manifest> &workflow,
-            std::unordered_map<std::string, Manifest> &cache,
-            const Manifest &manifest,
+            Manifest &manifest,
             const std::vector<std::string> &requirePath = {});
 
 public:
   void loadAll(const std::string &root);
+  void loadMod(const std::string &name);
+  void scan(const std::string &root);
+  const std::unordered_map<std::string, Manifest> &getMods() const;
   const Manifest *getManifest(const std::string &name) const;
 };
 }; // namespace firefly::runtime

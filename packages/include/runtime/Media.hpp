@@ -22,6 +22,7 @@ private:
 public:
   core::AutoPtr<Resource> load(const std::string &name);
   std::vector<core::AutoPtr<Resource>> loadAll(const std::string &name);
+  std::vector<std::string> scan(const std::string &name);
   void addCurrentWorkspaceDirectory(const std::string &cwd);
   std::vector<std::string> resolve(const std::string &name);
   template <class T> core::AutoPtr<T> query(const std::string &name) {

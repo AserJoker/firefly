@@ -7,6 +7,7 @@
 #include "runtime/Application.hpp"
 #include "script/LuaModule_Buffer.hpp"
 #include "script/LuaModule_Event.hpp"
+#include "script/LuaModule_Locale.hpp"
 #include "script/LuaModule_Log.hpp"
 #include "script/LuaModule_Media.hpp"
 #include "script/LuaModule_System.hpp"
@@ -33,21 +34,29 @@ void GameApplication::initScript() {
   _script->openLib<script::LuaModule_Buffer>("buffer");
   _script->openLib<script::LuaModule_Media>("media");
   _script->openLib<script::LuaModule_System>("system");
+  _script->openLib<script::LuaModule_Locale>("locale");
+  _script->eval("require '.'");
   _script->popContext(ctx);
 }
-void GameApplication::onInitialize() {
-  runtime::Application::onInitialize();
+void GameApplication::initLocale() {
+  _locale->scan();
+  _locale->setDefaultLang("en_US");
+  _locale->setLang("en_US");
+  _script->gc(true);
+}
+void GameApplication::initEvent() {
   _eventbus->on(this, &GameApplication::onMouse);
   _eventbus->on(this, &GameApplication::onKeydown);
   _eventbus->on(this, &GameApplication::onMouseButtonDown);
   _eventbus->on(this, &GameApplication::onMouseWheel);
+}
+void GameApplication::onInitialize() {
+  runtime::Application::onInitialize();
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
-  _locale->setDefaultLang("en_US");
-  _locale->setLang("zh_CN");
+  initEvent();
+  initLocale();
   initScript();
-  _script->eval("require '.'");
   _mod->loadAll(cwd().append("mods").string());
-  _script->gc(true);
   _locale->reload();
   _script->emit("gameLoaded");
   getWindow()->show();

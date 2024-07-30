@@ -29,6 +29,19 @@ std::vector<core::AutoPtr<Resource>> Media::loadAll(const std::string &name) {
   }
   return result;
 }
+std::vector<std::string> Media::scan(const std::string &name) {
+  std::vector<std::string> result;
+  auto filepaths = resolve(name);
+  for (auto &part : filepaths) {
+    if (std::filesystem::exists(part)) {
+      for (auto &item : std::filesystem::directory_iterator(part)) {
+        result.push_back(
+            fmt::format("{}::{}", name, item.path().filename().string()));
+      }
+    }
+  }
+  return result;
+}
 std::vector<std::string> Media::resolve(const std::string &name) {
   std::vector<std::string> result;
   for (auto &_cwd : _cwds) {

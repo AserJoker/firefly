@@ -19,13 +19,15 @@ protected:
   void onUnInitialize() override;
 
   virtual void initScript();
-
-public:
-  GameApplication(int argc, char *argv[]);
+  virtual void initLocale();
+  virtual void initEvent();
 
   void onMouse(input::Event_Mouse &e);
   void onMouseButtonDown(input::Event_MouseButtonDown &e);
   void onKeydown(input::Event_KeyDown &e);
   void onMouseWheel(input::Event_MouseWheel &e);
+
+public:
+  GameApplication(int argc, char *argv[]);
 };
 } // namespace duskland

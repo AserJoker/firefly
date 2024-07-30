@@ -2,6 +2,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "runtime/Application.hpp"
+#include "runtime/ModLoader.hpp"
 #include "script/LuaValue.hpp"
 #include <stdexcept>
 using namespace firefly;
@@ -11,6 +12,7 @@ int LuaModule_System::openLib(lua_State *state) {
   SET_FUNC(state, getWindowTitle);
   SET_FUNC(state, setWindowSize);
   SET_FUNC(state, getWindowSize);
+  SET_FUNC(state, getMods);
   return LuaModule::openLib(state);
 }
 LUA_CFUNC_DEFINE(LuaModule_System::getWindowTitle) {
@@ -51,4 +53,46 @@ LUA_CFUNC_DEFINE(LuaModule_System::setWindowSize) {
   auto win = app->getWindow();
   win->setSize({x, y});
   return {};
+}
+LUA_CFUNC_DEFINE(LuaModule_System::getMods) {
+  auto mod = core::Singleton<runtime::ModLoader>::instance();
+  auto mods = mod->getMods();
+  auto result = LuaValue::create(state, LuaValue::LuaRawObject{});
+  auto i = 1;
+  for (auto &[_, mod] : mods) {
+    auto manifest = LuaValue::create(state, LuaValue::LuaRawObject{});
+    manifest->setField("name", LuaValue::create(state, mod.name));
+    manifest->setField("displayName", LuaValue::create(state, mod.displayName));
+    manifest->setField("version",
+                       LuaValue::create(state, mod.version.toString()));
+    manifest->setField("icon", LuaValue::create(state, mod.icon));
+    manifest->setField("preview", LuaValue::create(state, mod.preview));
+    manifest->setField("description", LuaValue::create(state, mod.description));
+    manifest->setField("author", LuaValue::create(state, mod.author));
+    manifest->setField("email", LuaValue::create(state, mod.email));
+    manifest->setField("loaded", LuaValue::create(state, mod.loaded));
+    auto dependences = LuaValue::create(state, LuaValue::LuaRawObject{});
+    auto j = 1;
+    for (auto &dep : mod.dependences) {
+      auto d = LuaValue::create(state, LuaValue::LuaRawObject{});
+      d->setField("name", LuaValue::create(state, dep.first));
+      d->setField("version", LuaValue::create(state, dep.second.toString()));
+      dependences->setIndex(j, d);
+      j++;
+    }
+    manifest->setField("dependences", dependences);
+    auto runtimeDependences = LuaValue::create(state, LuaValue::LuaRawObject{});
+    j = 0;
+    for (auto &dep : mod.runtimeDependences) {
+      auto d = LuaValue::create(state, LuaValue::LuaRawObject{});
+      d->setField("name", LuaValue::create(state, dep.first));
+      d->setField("version", LuaValue::create(state, dep.second.toString()));
+      dependences->setIndex(j, d);
+      j++;
+    }
+    manifest->setField("runtimeDependences", runtimeDependences);
+    result->setIndex(i, manifest);
+    i++;
+  }
+  return {result};
 }
