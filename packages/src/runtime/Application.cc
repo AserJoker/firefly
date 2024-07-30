@@ -2,6 +2,7 @@
 // Created by w30029682 on 2024/7/5.
 //
 #include "runtime/Application.hpp"
+#include "core/AutoPtr.hpp"
 #include "runtime/Event_SDL.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -34,14 +35,16 @@ void Application::onInitialize() {
     throw std::runtime_error(SDL_GetError());
   }
   _eventbus->on(this, &Application::onEvent);
+  _window = new runtime::Window("firefly", 800, 600);
 }
-
+core::AutoPtr<Window> Application::getWindow() { return _window; }
 void Application::onMainLoop() {
   SDL_Event event;
   if (SDL_PollEvent(&event)) {
     _eventbus->emit<Event_SDL>(event);
   }
   _loop->start([this]() -> void { this->onMainLoop(); });
+  _window->present();
 }
 
 void Application::onUnInitialize() {

@@ -5,15 +5,11 @@
 #include "input/Event_MouseButtonDown.hpp"
 #include "input/Event_MouseWheel.hpp"
 #include "runtime/Application.hpp"
-#include "runtime/Window.hpp"
 
 namespace duskland {
 using namespace firefly;
 
 class GameApplication : public runtime::Application {
-
-private:
-  core::AutoPtr<runtime::Window> _window;
 
 protected:
   void onInitialize() override;

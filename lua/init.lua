@@ -1,3 +1,2 @@
-require 'event'.onEvent('gameLoaded', function()
-    require 'log'.info('gameLoaded')
-end)
+require 'system'.setWindowTitle('duskland')
+require 'system'.setWindowSize(1024, 768)

@@ -9,6 +9,7 @@
 #include "script/LuaModule_Event.hpp"
 #include "script/LuaModule_Log.hpp"
 #include "script/LuaModule_Media.hpp"
+#include "script/LuaModule_System.hpp"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -31,11 +32,11 @@ void GameApplication::initScript() {
   _script->openLib<script::LuaModule_Event>("event");
   _script->openLib<script::LuaModule_Buffer>("buffer");
   _script->openLib<script::LuaModule_Media>("media");
+  _script->openLib<script::LuaModule_System>("system");
   _script->popContext(ctx);
 }
 void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
-  _window = new runtime::Window("duskland", 1024, 768);
   _eventbus->on(this, &GameApplication::onMouse);
   _eventbus->on(this, &GameApplication::onKeydown);
   _eventbus->on(this, &GameApplication::onMouseButtonDown);
@@ -49,11 +50,12 @@ void GameApplication::onInitialize() {
   _script->gc(true);
   _locale->reload();
   _script->emit("gameLoaded");
+  getWindow()->show();
 }
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
-  _window->present();
+  _script->emit("tick");
 }
 
 void GameApplication::onUnInitialize() {
