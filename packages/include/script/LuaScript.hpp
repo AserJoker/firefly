@@ -40,6 +40,12 @@ public:
     bus->emit<Event_Lua>(type, LuaValue::create(_state, value));
     popContext(context);
   }
+  void emit(const std::string &type) {
+    auto context = pushContext();
+    auto bus = core::Singleton<runtime::EventBus>::instance();
+    bus->emit<Event_Lua>(type, LuaValue::create(_state));
+    popContext(context);
+  }
   void gc(bool full = false);
 };
 }; // namespace firefly::script

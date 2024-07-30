@@ -24,7 +24,7 @@ int BaseApplication::run() {
     showHelp();
     return 0;
   }
-  _resources->setCurrentWorkspaceDirectory(cwd().string());
+  _media->addCurrentWorkspaceDirectory(cwd().string());
   onInitialize();
   while (!_loop->ready()) {
     _loop->nextTick();

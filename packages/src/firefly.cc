@@ -5,8 +5,10 @@
 #include "db/Database.hpp"
 #include "runtime/CmdLine.hpp"
 #include "runtime/EventBus.hpp"
+#include "runtime/Locale.hpp"
 #include "runtime/Logger.hpp"
 #include "runtime/Media.hpp"
+#include "runtime/ModLoader.hpp"
 #include "script/LuaScript.hpp"
 
 namespace firefly {
@@ -19,5 +21,7 @@ void InitFirefly() {
   provider->provide<runtime::Media, INJECTOR_MEDIA>();
   provider->provide<db::Database, INJECTOR_DATABASE>();
   provider->provide<script::LuaScript, INJECTOR_SCRIPT>();
+  provider->provide<runtime::Locale, INJECTOR_LOCALE>();
+  provider->provide<runtime::ModLoader, INJECTOR_MOD>();
 }
 } // namespace firefly

@@ -1,0 +1,16 @@
+{
+    "name": "DemoMod",
+    "version": "0.1.1",
+    "dependences": [],
+    "runtimeDependences": [
+        {
+            "name": "golem-core",
+            "version": "0.1.1"
+        }
+    ],
+    "author": "aserjoker",
+    "email": "aserjoker@outlook.com",
+    "icon": "",
+    "preview": "",
+    "description": "This is a demo mod"
+}

@@ -5,67 +5,51 @@
 #include <filesystem>
 #include <fmt/core.h>
 #include <stdexcept>
+#include <vector>
 using namespace firefly;
 using namespace firefly::runtime;
 core::AutoPtr<Resource> Media::load(const std::string &name) {
-  auto filepath = resolve(name);
-  if (!std::filesystem::exists(filepath)) {
-    throw std::runtime_error(fmt::format("Failed to load resource: {}", name));
-  }
-  return new Resource_File(resolve(name));
-}
-void Media::dump(const std::string &name, core::AutoPtr<Resource> data) {
-  auto filepath = resolve(name);
-  core::AutoPtr res = new Resource_File(filepath);
-  size_t len = 0;
-  for (;;) {
-    auto chunk = data->read(128);
-    if (chunk->getSize()) {
-      res->write(chunk);
-    } else {
-      break;
+  auto filepaths = resolve(name);
+  for (auto it = filepaths.rbegin(); it != filepaths.rend(); it++) {
+    auto filepath = *it;
+    if (std::filesystem::exists(filepath)) {
+      return new Resource_File(filepath);
     }
   }
+  throw std::runtime_error(fmt::format("Failed to load resource: {}", name));
 }
-std::string Media::resolve(const std::string &name) {
-  std::filesystem::path filepath = _cwd;
-  std::string tmp = name;
-  while (!tmp.empty()) {
-    auto pos = tmp.find_first_of("::");
-    if (pos == std::string::npos) {
-      filepath.append(tmp);
-      break;
+std::vector<core::AutoPtr<Resource>> Media::loadAll(const std::string &name) {
+  auto filepaths = resolve(name);
+  std::vector<core::AutoPtr<Resource>> result;
+  for (auto it = filepaths.begin(); it != filepaths.end(); it++) {
+    auto filepath = *it;
+    if (std::filesystem::exists(filepath)) {
+      result.push_back(new Resource_File(filepath));
     }
-    auto part = tmp.substr(0, pos);
-    tmp = tmp.substr(pos + 2);
-    filepath.append(part);
   }
-  return filepath.string();
+  return result;
 }
-std::vector<std::string> Media::index(const std::string &name) {
-  std::filesystem::path p = resolve(name);
-  if (!std::filesystem::is_directory(p)) {
-    return {name};
-  }
-  std::vector<std::string> indices;
-  for (auto &item : std::filesystem::recursive_directory_iterator(p)) {
-    if (!item.is_directory()) {
-      std::string name = item.path().string().substr(_cwd.length());
-      std::string part;
-      for (auto &ch : name) {
-        if (ch == '/' || ch == '\\') {
-          part += "::";
-        } else {
-          part += ch;
-        }
+std::vector<std::string> Media::resolve(const std::string &name) {
+  std::vector<std::string> result;
+  for (auto &_cwd : _cwds) {
+    std::filesystem::path filepath = _cwd;
+    std::string tmp = name;
+    while (!tmp.empty()) {
+      auto pos = tmp.find_first_of("::");
+      if (pos == std::string::npos) {
+        filepath.append(tmp);
+        break;
       }
-      indices.push_back(part);
+      auto part = tmp.substr(0, pos);
+      tmp = tmp.substr(pos + 2);
+      filepath.append(part);
     }
+    result.push_back(filepath.string());
   }
-  return indices;
+  return result;
 }
-void Media::setCurrentWorkspaceDirectory(const std::string &cwd) {
-  _cwd.clear();
+void Media::addCurrentWorkspaceDirectory(const std::string &cwd) {
+  std::string _cwd;
   for (auto &c : cwd) {
     if (c == '\\') {
       _cwd += '/';
@@ -76,4 +60,5 @@ void Media::setCurrentWorkspaceDirectory(const std::string &cwd) {
   if (!_cwd.ends_with('/')) {
     _cwd += '/';
   }
+  _cwds.push_back(_cwd);
 }
