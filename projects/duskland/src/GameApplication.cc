@@ -11,6 +11,7 @@
 #include "script/LuaModule_Log.hpp"
 #include "script/LuaModule_Media.hpp"
 #include "script/LuaModule_System.hpp"
+#include <SDL_timer.h>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -59,12 +60,19 @@ void GameApplication::onInitialize() {
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
   _script->emit("gameLoaded");
+  _renderer->setClearColor(0.2, 0.3, 0.3, 1.0);
   getWindow()->show();
 }
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
-  _script->emit("tick");
+  static auto time = SDL_GetTicks();
+  auto now = SDL_GetTicks();
+  if (now - time > 50) {
+    _script->emit("tick");
+  }
+  _renderer->render();
+  getWindow()->present();
 }
 
 void GameApplication::onUnInitialize() {

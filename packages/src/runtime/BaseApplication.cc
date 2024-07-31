@@ -1,5 +1,4 @@
 #include "runtime/BaseApplication.hpp"
-#include "core/Coroutine.hpp"
 #include <filesystem>
 #include <iostream>
 
@@ -13,12 +12,12 @@ BaseApplication::BaseApplication(int argc, char *argv[])
   }
   _cmdline->define("help", _cmdline->placeholder, "h",
                    "Display this information.");
-  _loop->start([this]() -> void { this->execCoTask(); });
 }
 
-BaseApplication::~BaseApplication() { core::CoContext::dispose(); }
+BaseApplication::~BaseApplication() {}
 
 int BaseApplication::run() {
+  _running = true;
   auto parsed = _cmdline->parse(_args);
   if (parsed.contains("help")) {
     showHelp();
@@ -26,16 +25,16 @@ int BaseApplication::run() {
   }
   _media->addCurrentWorkspaceDirectory(cwd().string());
   onInitialize();
-  while (!_loop->ready()) {
-    _loop->nextTick();
+  while (_running) {
+    onMainLoop();
   }
   onUnInitialize();
   return _exitcode;
 }
 
 void BaseApplication::exit(int exitcode) {
+  _running = false;
   _exitcode = exitcode;
-  _loop->stop();
 }
 
 std::filesystem::path BaseApplication::cwd() {
@@ -53,7 +52,4 @@ void BaseApplication::onInitialize() {}
 
 void BaseApplication::onUnInitialize() {}
 
-void BaseApplication::execCoTask() {
-  core::CoContext::yield();
-  _loop->start([this]() -> void { this->execCoTask(); });
-}
+void BaseApplication::onMainLoop() {}

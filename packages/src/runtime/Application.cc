@@ -14,9 +14,7 @@
 using namespace firefly;
 using namespace firefly::runtime;
 
-Application::Application(int argc, char **argv) : BaseApplication(argc, argv) {
-  _loop->start([this]() -> void { this->onMainLoop(); });
-}
+Application::Application(int argc, char **argv) : BaseApplication(argc, argv) {}
 
 void Application::onInitialize() {
   BaseApplication::onInitialize();
@@ -43,8 +41,6 @@ void Application::onMainLoop() {
   if (SDL_PollEvent(&event)) {
     _eventbus->emit<Event_SDL>(event);
   }
-  _loop->start([this]() -> void { this->onMainLoop(); });
-  _window->present();
 }
 
 void Application::onUnInitialize() {

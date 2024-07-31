@@ -20,7 +20,7 @@ public:
 protected:
   void onInitialize() override;
 
-  virtual void onMainLoop();
+  void onMainLoop() override;
 
   void onUnInitialize() override;
 
