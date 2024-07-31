@@ -1,5 +1,8 @@
 #pragma once
-#include "core/Object.hpp"
+#include "Texture.hpp"
 namespace firefly::video {
-class Texture2D : public core::Object {};
+class Texture2D : public Texture {
+public:
+  void bind(const uint32_t &idx) override;
+};
 }; // namespace firefly::video
