@@ -36,6 +36,7 @@ Shader::Shader(const std::map<ShaderType, std::string> &sources) {
     throw std::runtime_error(error);
   }
 }
+void Shader::enable() { glUseProgram(_handle); }
 Shader::~Shader() { glDeleteProgram(_handle); }
 void Shader::setUniform(const std::string &name, float value) {
   glUniform1f(glGetUniformLocation(_handle, name.c_str()), value);

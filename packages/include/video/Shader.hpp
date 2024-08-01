@@ -20,8 +20,9 @@ private:
 public:
   Shader(const std::map<ShaderType, std::string> &sources);
   ~Shader() override;
+  void enable();
   void setUniform(const std::string &name, float value);
-  void setUniform(const std::string &name, int value);
+  void setUniform(const std::string &name, int32_t value);
   void setUniform(const std::string &name, bool value);
   void setUniform(const std::string &name, const glm::vec2 &value);
   void setUniform(const std::string &name, const glm::vec3 &value);

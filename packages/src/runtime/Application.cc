@@ -33,7 +33,7 @@ void Application::onInitialize() {
     throw std::runtime_error(SDL_GetError());
   }
   _eventbus->on(this, &Application::onEvent);
-  _window = new runtime::Window("firefly", 800, 600);
+  _window = new runtime::Window("firefly", 1024, 768);
 }
 core::AutoPtr<Window> Application::getWindow() { return _window; }
 void Application::onMainLoop() {

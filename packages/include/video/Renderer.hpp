@@ -5,6 +5,7 @@
 #include "Texture.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include "runtime/Event_SDL.hpp"
 #include <string>
 #include <unordered_map>
 namespace firefly::video {
@@ -23,6 +24,8 @@ private:
   ResourceSet _default;
   ResourceSet _current;
   core::AutoPtr<Shader> _currentShader;
+
+  void onEvent(runtime::Event_SDL &event);
 
 public:
   void initialize() override;

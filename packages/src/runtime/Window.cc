@@ -22,9 +22,10 @@ Window::Window(const std::string &title, int width, int height) {
                                  SDL_GL_CONTEXT_PROFILE_CORE |
                                      SDL_GL_CONTEXT_PROFILE_COMPATIBILITY));
 #endif
-  _window = SDL_CreateWindow(
-      title.c_str(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width,
-      height, SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL | SDL_WINDOW_HIDDEN);
+  _window = SDL_CreateWindow(title.c_str(), SDL_WINDOWPOS_CENTERED,
+                             SDL_WINDOWPOS_CENTERED, width, height,
+                             SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL |
+                                 SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE);
   SDL_ASSERT(_window != nullptr);
   _ctx = SDL_GL_CreateContext(_window);
   SDL_ASSERT(_ctx != nullptr);

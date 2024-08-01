@@ -72,7 +72,7 @@ public:
     if (_object && _object != &*another) {
       dispose();
     }
-    _object = &*another;
+    _object = const_cast<T *>(&*another);
     if (_object) {
       _object->addRef();
     }
