@@ -17,5 +17,9 @@ struct Geometry {
     Point2D position;
     Size size;
   };
+  struct Rotation {
+    Point3D center;
+    float angle;
+  };
 };
 } // namespace firefly::video

@@ -8,11 +8,13 @@ class Sprite2D : public RenderObject {
 private:
   Geometry::Rect _source;
   Geometry::Rect _target;
+  Geometry::Rotation _rotation;
   std::string _texture;
   glm::mat4 _model;
   glm::mat4 _uv_model;
   float _zIndex;
   std::string _mesh;
+
   void updateModel();
   void updateUVModel();
 
@@ -24,10 +26,13 @@ public:
   const float &getZIndex() const;
   const std::string &getTexture() const;
   const std::string &getMesh() const;
+  const Geometry::Rotation &getRotation() const;
+
   void setSource(const Geometry::Rect &rc);
   void setTarget(const Geometry::Rect &rc);
   void setZIndex(const float &z);
   void setTexture(const std::string &texture);
   void setMesh(const std::string &mesh);
+  void setRotation(const Geometry::Rotation &rot);
 };
 }; // namespace firefly::video

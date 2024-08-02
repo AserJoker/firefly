@@ -14,6 +14,7 @@
 #include "video/Sprite2D.hpp"
 #include "video/Texture2D.hpp"
 #include <SDL_image.h>
+#include <SDL_render.h>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -73,6 +74,7 @@ void GameApplication::onInitialize() {
   sprite->setTexture("wall");
   sprite->setTarget({0, 0, 512, 512});
   sprite->setSource({0, 0, 512, 512});
+  sprite->setRotation({256, 256, -1, 0});
   getWindow()->show();
 }
 
@@ -83,8 +85,8 @@ void GameApplication::onMainLoop() {
   if (now - time > 50) {
     time = now;
     _script->emit("tick");
-    auto &rc = sprite->getTarget();
-    sprite->setTarget({rc.position.x + 1, rc.position.y, rc.size});
+    auto &rot = sprite->getRotation();
+    sprite->setRotation({rot.center, rot.angle + 0.1f});
   }
   _renderer->render();
   getWindow()->present();
