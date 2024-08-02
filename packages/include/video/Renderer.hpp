@@ -39,6 +39,10 @@ public:
   const core::AutoPtr<Mesh> getMesh(const std::string &name) const;
   const core::AutoPtr<Shader> getShader(const std::string &name) const;
   const core::AutoPtr<Texture> getTexture(const std::string &name) const;
+  void setMesh(const std::string &name, const core::AutoPtr<Mesh> &mesh);
+  void setShader(const std::string &name, const core::AutoPtr<Shader> &mesh);
+  void setTexture(const std::string &name, const core::AutoPtr<Texture> &mesh);
+  void clearResourceSet();
   void drawMesh(const std::string &name);
   void setResourceSet(const ResourceSet &resources);
 };

@@ -45,6 +45,7 @@ public:
     auto bus = core::Singleton<runtime::EventBus>::instance();
     bus->emit<Event_Lua>(type, LuaValue::create(_state));
     popContext(context);
+    gc();
   }
   void gc(bool full = false);
 };

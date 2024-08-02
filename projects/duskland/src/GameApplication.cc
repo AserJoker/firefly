@@ -10,9 +10,9 @@
 #include "script/LuaModule_Locale.hpp"
 #include "script/LuaModule_Log.hpp"
 #include "script/LuaModule_Media.hpp"
+#include "script/LuaModule_Scene.hpp"
 #include "script/LuaModule_System.hpp"
-#include "video/Sprite2D.hpp"
-#include "video/Texture2D.hpp"
+#include "script/LuaModule_Video.hpp"
 #include <SDL_image.h>
 #include <SDL_render.h>
 #include <assimp/Importer.hpp>
@@ -28,7 +28,6 @@
 
 using namespace firefly;
 using namespace duskland;
-core::AutoPtr<video::Sprite2D> sprite;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -40,6 +39,8 @@ void GameApplication::initScript() {
   _script->openLib<script::LuaModule_Media>("media");
   _script->openLib<script::LuaModule_System>("system");
   _script->openLib<script::LuaModule_Locale>("locale");
+  _script->openLib<script::LuaModule_Video>("video");
+  _script->openLib<script::LuaModule_Scene>("scene");
   _script->eval("require '.'");
   _script->popContext(ctx);
 }
@@ -58,23 +59,15 @@ void GameApplication::initEvent() {
 void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
+  _renderer->initDefaultResourceSet();
   initEvent();
   initLocale();
   initScript();
   _mod->loadAll(cwd().append("mods").string());
+  _script->gc(true);
   _locale->reload();
   _script->emit("gameLoaded");
-  _renderer->initDefaultResourceSet();
   _renderer->setClearColor(0.2, 0.3, 0.3, 1.0);
-  sprite = new video::Sprite2D();
-  auto tex = new video::Texture2D();
-  tex->setImage(_media->load("texture::wall.jpg")->read());
-  _renderer->setResourceSet({.textures = {{"wall", tex}}});
-  sprite->enable();
-  sprite->setTexture("wall");
-  sprite->setRect({0, 0, 512, 512});
-  sprite->setTextureRect({0, 0, 512, 512});
-  sprite->setRotation({256, 256, -1, 0});
   getWindow()->show();
 }
 
@@ -86,8 +79,6 @@ void GameApplication::onMainLoop() {
     time = now;
     _script->emit("tick");
   }
-  auto &rot = sprite->getRotation();
-  sprite->setRotation({rot.center, rot.angle + 0.001f});
   _renderer->render();
   getWindow()->present();
 }

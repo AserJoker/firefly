@@ -23,21 +23,20 @@ Sprite2D::Sprite2D() {
 
 void Sprite2D::updateModel() {
   glm::mat4 m = glm::mat4(1.0f);
-  m *= glm::mat4({1, 0, 0, -_rotation.center.x, 0, 1, 0, -_rotation.center.y, 0,
-                  0, 1, 0, 0, 0, 0, 1});
+  auto dx = _rotation.center.x - _rect.position.x;
+  auto dy = _rotation.center.y - _rect.position.y;
   float nz = _rotation.center.z / abs(_rotation.center.z);
-  m *= glm::mat4({cos(_rotation.angle), -sin(_rotation.angle) * nz, 0, 0,
-                  sin(_rotation.angle) * nz, cos(_rotation.angle), 0, 0, 0, 0,
-                  1, 0, 0, 0, 0, 1});
-
-  m *= glm::mat4({1, 0, 0, _rotation.center.x, 0, 1, 0, _rotation.center.y, 0,
-                  0, 1, 0, 0, 0, 0, 1});
-
-  _model = glm::mat4(1.0f);
-  _model = glm::scale(_model, glm::vec3(_rect.size.w, _rect.size.h, 1.0f));
-  _model = glm::translate(
-      _model, glm::vec3(_rect.position.x, _rect.position.y, _zIndex));
-  _model = glm::transpose(m) * _model;
+  m *= glm::transpose(glm::translate(glm::mat4(1.0f), glm::vec3(-dx, -dy, 0)));
+  m *=
+      glm::transpose(glm::rotate(glm::mat4(1.0f), glm::radians(_rotation.angle),
+                                 glm::vec3(0, 0, _rotation.center.z)));
+  m *= glm::transpose(glm::translate(glm::mat4(1.0f), glm::vec3(dx, dy, 0)));
+  _model =
+      glm::scale(glm::mat4(1.0f), glm::vec3(_rect.size.w, _rect.size.h, 1.0f));
+  _model = glm::transpose(glm::translate(
+               glm::mat4(1.0f),
+               glm::vec3(_rect.position.x, _rect.position.y, _zIndex))) *
+           glm::transpose(m) * _model;
 }
 void Sprite2D::updateUVModel() {
   auto renderer = core::Singleton<Renderer>::instance();
@@ -81,6 +80,11 @@ void Sprite2D::setZIndex(const float &z) {
 }
 void Sprite2D::setTexture(const std::string &texture) {
   _texture = texture;
+  auto renderer = core::Singleton<Renderer>::instance();
+  auto tex = renderer->getTexture(_texture).cast<Texture2D>();
+  _rect.size = tex->getTextureSize();
+  _textureRect.size = tex->getTextureSize();
+  updateModel();
   updateUVModel();
 }
 void Sprite2D::setMesh(const std::string &mesh) { _mesh = mesh; }

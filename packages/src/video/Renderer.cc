@@ -109,6 +109,24 @@ Renderer::getTexture(const std::string &name) const {
   }
   return nullptr;
 }
+
+void Renderer::setMesh(const std::string &name,
+                       const core::AutoPtr<Mesh> &mesh) {
+  _current.meshs[name] = mesh;
+}
+void Renderer::setShader(const std::string &name,
+                         const core::AutoPtr<Shader> &shader) {
+  _current.shaders[name] = shader;
+}
+void Renderer::setTexture(const std::string &name,
+                          const core::AutoPtr<Texture> &texture) {
+  _current.textures[name] = texture;
+}
+void Renderer::clearResourceSet() {
+  _current.meshs.clear();
+  _current.shaders.clear();
+  _current.textures.clear();
+}
 void Renderer::drawMesh(const std::string &name) {
   auto mesh = getMesh(name);
   if (mesh != nullptr) {
@@ -127,7 +145,9 @@ void Renderer::onEvent(runtime::Event_SDL &e) {
       int w, h;
       SDL_GetWindowSize(win, &w, &h);
       glViewport(0, 0, w, h);
-      _currentShader->setUniform("viewport_size", {w, h});
+      if (_currentShader != nullptr) {
+        _currentShader->setUniform("viewport_size", {w, h});
+      }
     }
   }
 }
