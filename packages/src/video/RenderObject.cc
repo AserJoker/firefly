@@ -4,6 +4,7 @@
 using namespace firefly;
 using namespace firefly::video;
 RenderObject::RenderObject() { _shader = "sprite_2d"; }
+RenderObject::~RenderObject() { disable(); }
 void RenderObject::enable() {
   core::AutoPtr renderer = core::Singleton<Renderer>::instance();
   renderer->_robjects[getIdentity()] = this;

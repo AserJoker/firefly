@@ -7,6 +7,7 @@ private:
 
 public:
   RenderObject();
+  ~RenderObject() override;
   virtual void draw() = 0;
   const std::string &getShader() const;
   void setShader(const std::string &shader);

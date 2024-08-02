@@ -6,8 +6,8 @@
 namespace firefly::video {
 class Sprite2D : public RenderObject {
 private:
-  Geometry::Rect _source;
-  Geometry::Rect _target;
+  Geometry::Rect _textureRect;
+  Geometry::Rect _rect;
   Geometry::Rotation _rotation;
   std::string _texture;
   glm::mat4 _model;
@@ -21,15 +21,15 @@ private:
 public:
   Sprite2D();
   void draw() override;
-  const Geometry::Rect &getSource() const;
-  const Geometry::Rect &getTarget() const;
+  const Geometry::Rect &getTextureRect() const;
+  const Geometry::Rect &getRect() const;
   const float &getZIndex() const;
   const std::string &getTexture() const;
   const std::string &getMesh() const;
   const Geometry::Rotation &getRotation() const;
 
-  void setSource(const Geometry::Rect &rc);
-  void setTarget(const Geometry::Rect &rc);
+  void setTextureRect(const Geometry::Rect &rc);
+  void setRect(const Geometry::Rect &rc);
   void setZIndex(const float &z);
   void setTexture(const std::string &texture);
   void setMesh(const std::string &mesh);

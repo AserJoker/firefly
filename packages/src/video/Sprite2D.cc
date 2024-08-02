@@ -12,8 +12,8 @@ Sprite2D::Sprite2D() {
   Geometry::Size size = {2, 2};
   _texture = "no_texture";
   _zIndex = .0f;
-  _source = {0, 0, size.w, size.h};
-  _target = {0, 0, size.w * 50, size.h * 50};
+  _textureRect = {0, 0, size.w, size.h};
+  _rect = {0, 0, size.w * 50, size.h * 50};
   _rotation.angle = 0;
   _rotation.center = {0, 0, 1};
   _mesh = "rect";
@@ -34,9 +34,9 @@ void Sprite2D::updateModel() {
                   0, 1, 0, 0, 0, 0, 1});
 
   _model = glm::mat4(1.0f);
-  _model = glm::scale(_model, glm::vec3(_target.size.w, _target.size.h, 1.0f));
+  _model = glm::scale(_model, glm::vec3(_rect.size.w, _rect.size.h, 1.0f));
   _model = glm::translate(
-      _model, glm::vec3(_target.position.x, _target.position.y, _zIndex));
+      _model, glm::vec3(_rect.position.x, _rect.position.y, _zIndex));
   _model = glm::transpose(m) * _model;
 }
 void Sprite2D::updateUVModel() {
@@ -45,10 +45,11 @@ void Sprite2D::updateUVModel() {
   auto size = tex->getTextureSize();
   _uv_model = glm::mat4(1.0f);
   _uv_model =
-      glm::translate(_uv_model, glm::vec3(_source.position.x / size.w,
-                                          _source.position.y / size.h, 0));
-  _uv_model = glm::scale(_uv_model, glm::vec3(_source.size.w / size.w,
-                                              _source.size.h / size.h, 1.0f));
+      glm::translate(_uv_model, glm::vec3(_textureRect.position.x / size.w,
+                                          _textureRect.position.y / size.h, 0));
+  _uv_model =
+      glm::scale(_uv_model, glm::vec3(_textureRect.size.w / size.w,
+                                      _textureRect.size.h / size.h, 1.0f));
 }
 void Sprite2D::draw() {
   auto renderer = core::Singleton<Renderer>::instance();
@@ -59,19 +60,19 @@ void Sprite2D::draw() {
   shader->setUniform("model", _model);
   renderer->drawMesh(_mesh);
 }
-const Geometry::Rect &Sprite2D::getSource() const { return _source; }
-const Geometry::Rect &Sprite2D::getTarget() const { return _target; }
+const Geometry::Rect &Sprite2D::getTextureRect() const { return _textureRect; }
+const Geometry::Rect &Sprite2D::getRect() const { return _rect; }
 const float &Sprite2D::getZIndex() const { return _zIndex; }
 const std::string &Sprite2D::getTexture() const { return _texture; }
 const std::string &Sprite2D::getMesh() const { return _mesh; }
 
 const Geometry::Rotation &Sprite2D::getRotation() const { return _rotation; }
-void Sprite2D::setSource(const Geometry::Rect &rc) {
-  _source = rc;
+void Sprite2D::setTextureRect(const Geometry::Rect &rc) {
+  _textureRect = rc;
   updateUVModel();
 }
-void Sprite2D::setTarget(const Geometry::Rect &rc) {
-  _target = rc;
+void Sprite2D::setRect(const Geometry::Rect &rc) {
+  _rect = rc;
   updateModel();
 }
 void Sprite2D::setZIndex(const float &z) {

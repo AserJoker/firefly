@@ -72,8 +72,8 @@ void GameApplication::onInitialize() {
   _renderer->setResourceSet({.textures = {{"wall", tex}}});
   sprite->enable();
   sprite->setTexture("wall");
-  sprite->setTarget({0, 0, 512, 512});
-  sprite->setSource({0, 0, 512, 512});
+  sprite->setRect({0, 0, 512, 512});
+  sprite->setTextureRect({0, 0, 512, 512});
   sprite->setRotation({256, 256, -1, 0});
   getWindow()->show();
 }
@@ -85,9 +85,9 @@ void GameApplication::onMainLoop() {
   if (now - time > 50) {
     time = now;
     _script->emit("tick");
-    auto &rot = sprite->getRotation();
-    sprite->setRotation({rot.center, rot.angle + 0.1f});
   }
+  auto &rot = sprite->getRotation();
+  sprite->setRotation({rot.center, rot.angle + 0.001f});
   _renderer->render();
   getWindow()->present();
 }
