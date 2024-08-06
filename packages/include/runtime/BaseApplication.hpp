@@ -10,7 +10,6 @@
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
 #include "db/Database.hpp"
-#include "script/LuaScript.hpp"
 #include "video/Renderer.hpp"
 #include <filesystem>
 #include <string>
@@ -32,7 +31,6 @@ protected:
   core::Injector<EventBus, INJECTOR_EVENTBUS> _eventbus;
   core::Injector<Media, INJECTOR_MEDIA> _media;
   core::Injector<db::Database, INJECTOR_DATABASE> _database;
-  core::Injector<script::LuaScript, INJECTOR_SCRIPT> _script;
   core::Injector<runtime::Locale, INJECTOR_LOCALE> _locale;
   core::Injector<ModLoader, INJECTOR_MOD> _mod;
   core::Injector<video::Renderer, INJECTOR_RENDERER> _renderer;

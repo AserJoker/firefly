@@ -1,20 +1,10 @@
 #include "GameApplication.hpp"
-#include "core/AutoPtr.hpp"
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_Mouse.hpp"
 #include "input/Event_MouseButtonDown.hpp"
 #include "input/Event_MouseWheel.hpp"
 #include "runtime/Application.hpp"
-#include "script/LuaModule_Buffer.hpp"
-#include "script/LuaModule_Event.hpp"
-#include "script/LuaModule_Locale.hpp"
-#include "script/LuaModule_Log.hpp"
-#include "script/LuaModule_Media.hpp"
-#include "script/LuaModule_Scene.hpp"
-#include "script/LuaModule_System.hpp"
-#include "script/LuaModule_Video.hpp"
 #include <SDL_image.h>
-#include <SDL_render.h>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -30,25 +20,11 @@ using namespace firefly;
 using namespace duskland;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
-void GameApplication::initScript() {
-  auto ctx = _script->pushContext();
-  _script->eval("package.path = package.path .. ';./mods/?/lua/init.lua'");
-  _script->openLib<script::LuaModule_Log>("log");
-  _script->openLib<script::LuaModule_Event>("event");
-  _script->openLib<script::LuaModule_Buffer>("buffer");
-  _script->openLib<script::LuaModule_Media>("media");
-  _script->openLib<script::LuaModule_System>("system");
-  _script->openLib<script::LuaModule_Locale>("locale");
-  _script->openLib<script::LuaModule_Video>("video");
-  _script->openLib<script::LuaModule_Scene>("scene");
-  _script->eval("require '.'");
-  _script->popContext(ctx);
-}
+void GameApplication::initScript() {}
 void GameApplication::initLocale() {
   _locale->scan();
   _locale->setDefaultLang("en_US");
   _locale->setLang("en_US");
-  _script->gc(true);
 }
 void GameApplication::initEvent() {
   _eventbus->on(this, &GameApplication::onMouse);
@@ -64,9 +40,7 @@ void GameApplication::onInitialize() {
   initLocale();
   initScript();
   _mod->loadAll(cwd().append("mods").string());
-  _script->gc(true);
   _locale->reload();
-  _script->emit("gameLoaded");
   _renderer->setClearColor(0.2, 0.3, 0.3, 1.0);
   getWindow()->show();
 }
@@ -77,7 +51,6 @@ void GameApplication::onMainLoop() {
   auto now = SDL_GetTicks();
   if (now - time > 50) {
     time = now;
-    _script->emit("tick");
   }
   _renderer->render();
   getWindow()->present();

@@ -8,7 +8,6 @@
 #include "runtime/Logger.hpp"
 #include "runtime/Media.hpp"
 #include "runtime/ModLoader.hpp"
-#include "script/LuaScript.hpp"
 #include "video/Renderer.hpp"
 
 namespace firefly {
@@ -19,7 +18,6 @@ void InitFirefly() {
   provider->provide<runtime::EventBus, INJECTOR_EVENTBUS>();
   provider->provide<runtime::Media, INJECTOR_MEDIA>();
   provider->provide<db::Database, INJECTOR_DATABASE>();
-  provider->provide<script::LuaScript, INJECTOR_SCRIPT>();
   provider->provide<runtime::Locale, INJECTOR_LOCALE>();
   provider->provide<runtime::ModLoader, INJECTOR_MOD>();
   provider->provide<video::Renderer, INJECTOR_RENDERER>();
