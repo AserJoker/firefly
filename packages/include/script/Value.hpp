@@ -4,6 +4,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include <functional>
+#include <vector>
 namespace firefly::script {
 
 class Value : public core::Object {
@@ -17,20 +18,24 @@ public:
 
 public:
   Value(Atom *atom);
-  Atom::Type getType();
-  double toNumber();
-  int64_t toInteger();
-  bool toBoolean();
-  std::string toString();
-  core::AutoPtr<Value> setNumber(const double &value);
-  core::AutoPtr<Value> setInteger(const int64_t &value);
-  core::AutoPtr<Value> setBoolean(const bool &value);
-  core::AutoPtr<Value> setString(const std::string &value);
-  core::AutoPtr<Value> setNil();
-  core::AutoPtr<Value> setObject();
-  core::AutoPtr<Value> setArray();
-  core::AutoPtr<Value> setFunction(const FunctionHandle &func);
-
+  Atom::Type getType(core::AutoPtr<Context> ctx);
+  double toNumber(core::AutoPtr<Context> ctx);
+  int64_t toInteger(core::AutoPtr<Context> ctx);
+  bool toBoolean(core::AutoPtr<Context> ctx);
+  std::string toString(core::AutoPtr<Context> ctx);
+  core::AutoPtr<Value> setNumber(core::AutoPtr<Context> ctx,
+                                 const double &value);
+  core::AutoPtr<Value> setInteger(core::AutoPtr<Context> ctx,
+                                  const int64_t &value);
+  core::AutoPtr<Value> setBoolean(core::AutoPtr<Context> ctx,
+                                  const bool &value);
+  core::AutoPtr<Value> setString(core::AutoPtr<Context> ctx,
+                                 const std::string &value);
+  core::AutoPtr<Value> setNil(core::AutoPtr<Context> ctx);
+  core::AutoPtr<Value> setObject(core::AutoPtr<Context> ctx);
+  core::AutoPtr<Value> setArray(core::AutoPtr<Context> ctx);
+  core::AutoPtr<Value> setFunction(core::AutoPtr<Context> ctx,
+                                   const FunctionHandle &func);
   Stack call(core::AutoPtr<Context> ctx, Stack args);
 
   core::AutoPtr<Value> setField(core::AutoPtr<Context> ctx,
@@ -38,6 +43,9 @@ public:
                                 core::AutoPtr<Value> field);
   core::AutoPtr<Value> getField(core::AutoPtr<Context> ctx,
                                 const std::string &name);
+
+  std::vector<std::string> getKeys(core::AutoPtr<Context> ctx);
+
   core::AutoPtr<Value> setIndex(core::AutoPtr<Context> ctx,
                                 const uint32_t &name,
                                 core::AutoPtr<Value> field);
@@ -59,7 +67,8 @@ public:
 
   core::AutoPtr<Value> getMetadata(core::AutoPtr<Context> ctx);
   core::AutoPtr<Value> setMetadata(core::AutoPtr<Value> value);
-  core::AutoPtr<Value> arithmetic(core::AutoPtr<Value> another, int operation);
+  core::AutoPtr<Value> arithmetic(core::AutoPtr<Context> ctx,
+                                  core::AutoPtr<Value> another, int operation);
   Atom *getAtom();
 };
 } // namespace firefly::script

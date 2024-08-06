@@ -29,6 +29,11 @@ struct Atom {
     _metadata = nullptr;
     _marked = false;
     _disposed = false;
+    std::cout << "Atom():0x" << std::hex << (ptrdiff_t)this << std::endl;
+  }
+  ~Atom() {
+    std::cout << "~Atom()" << fmt::format("0x{:x}", (ptrdiff_t)this)
+              << std::endl;
   }
 };
 }; // namespace firefly::script

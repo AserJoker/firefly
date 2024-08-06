@@ -2,7 +2,6 @@
 #include "core/AutoPtr.hpp"
 #include "firefly.hpp"
 #include "script/Context.hpp"
-#include "script/Runtime.hpp"
 #include "script/Value.hpp"
 #include <SDL2/SDL.h>
 #include <exception>
@@ -16,28 +15,29 @@ struct Lua_trait {
 
 int main(int argc, char *argv[]) {
   InitFirefly();
-  core::AutoPtr runtime = new script::AdapterRuntime<Lua_trait>();
-  core::AutoPtr ctx = new script::Context(runtime);
-  auto meta = ctx->createValue()->setObject();
-  meta->setField(
-      ctx, "gc",
-      ctx->createValue()->setFunction(
-          [](core::AutoPtr<script::Context> ctx,
-             script::Value::Stack args) -> script::Value::Stack {
-            std::cout << "gc" << std::endl;
-            ctx->getGlobal()->setField(ctx, "data", args[0]);
-            args[0]
-                ->getField(ctx, "print")
-                ->call(ctx, {ctx->createValue()->setString("Hello world")});
-            return {};
-          }));
+  core::AutoPtr ctx = new script::Context();
+  auto meta = ctx->createValue()->setObject(ctx);
+  meta->setField(ctx, "gc",
+                 ctx->createValue()->setFunction(
+                     ctx,
+                     [](core::AutoPtr<script::Context> ctx,
+                        script::Value::Stack args) -> script::Value::Stack {
+                       std::cout << "gc" << std::endl;
+                       ctx->getGlobal()->setField(ctx, "data", args[0]);
+                       args[0]
+                           ->getField(ctx, "print")
+                           ->call(ctx, {ctx->createValue()->setString(
+                                           ctx, "Hello world")});
+                       return {};
+                     }));
   auto scope = ctx->pushScope();
-  auto data = ctx->createValue()->setMetadata(meta)->setObject()->setField(
+  auto data = ctx->createValue()->setMetadata(meta)->setObject(ctx)->setField(
       ctx, "print",
       ctx->createValue()->setFunction(
+          ctx,
           [](core::AutoPtr<script::Context> ctx,
              script::Value::Stack args) -> script::Value::Stack {
-            std::cout << args[0]->toString() << std::endl;
+            std::cout << args[0]->toString(ctx) << std::endl;
             return {};
           }));
   ctx->popScope(scope);

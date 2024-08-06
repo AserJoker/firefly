@@ -1,5 +1,4 @@
 #pragma once
-#include "Runtime.hpp"
 #include "Scope.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
@@ -7,20 +6,35 @@
 namespace firefly::script {
 class Value;
 class Context : public core::Object {
+  class Bridge : public core::Object {
+  public:
+    virtual std::vector<core::AutoPtr<Value>>
+    eval(core::AutoPtr<Context> ctx, const std::string &filename,
+         const std::string &source) = 0;
+    virtual void setGlobal(core::AutoPtr<Context> ctx, const std::string &name,
+                           core::AutoPtr<Value> value) = 0;
+    virtual core::AutoPtr<Value> getGlobal(core::AutoPtr<Context> ctx,
+                                           const std::string &name,
+                                           core::AutoPtr<Value> value) = 0;
+    virtual void registerModule(
+        core::AutoPtr<Context> ctx, const std::string &name,
+        std::unordered_map<std::string, core::AutoPtr<Value>> exports) = 0;
+  };
 
 private:
-  core::AutoPtr<Runtime> _runtime;
   core::AutoPtr<Scope> _root;
   core::AutoPtr<Scope> _current;
+  core::AutoPtr<Bridge> _bridge;
 
   static bool checkAlived(Atom *atom,
                           const std::unordered_map<ptrdiff_t, Atom *> &alived);
 
 public:
-  Context(core::AutoPtr<Runtime> rt, core::AutoPtr<Scope> scope = nullptr);
+  Context(core::AutoPtr<Bridge> bridge = nullptr,
+          core::AutoPtr<Scope> scope = nullptr);
   ~Context() override;
-  core::AutoPtr<Runtime> getRuntime();
   core::AutoPtr<Value> getGlobal();
+  core::AutoPtr<Bridge> getBridge();
   core::AutoPtr<Value> eval(const std::string &filename,
                             const std::string &source);
   core::AutoPtr<Value> createValue(Atom *atom = nullptr);

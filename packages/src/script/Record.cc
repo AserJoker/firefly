@@ -1,6 +1,7 @@
 #include "script/Record.hpp"
 #include "script/Atom.hpp"
 #include "script/Value.hpp"
+#include <vector>
 using namespace firefly;
 using namespace firefly::script;
 Record::Record(Atom *atom) : _self(atom) {}
@@ -39,4 +40,11 @@ void Record::removeField(core::AutoPtr<Context> ctx, const std::string &name) {
 }
 uint32_t Record::getLength(core::AutoPtr<Context> ctx) {
   return _fields.size();
+}
+std::vector<std::string> Record::getKeys() {
+  std::vector<std::string> keys;
+  for (auto &[k, _] : _fields) {
+    keys.push_back(k);
+  }
+  return keys;
 }

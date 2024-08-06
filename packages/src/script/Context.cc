@@ -9,8 +9,8 @@
 #include <vector>
 using namespace firefly;
 using namespace firefly::script;
-Context::Context(core::AutoPtr<Runtime> rt, core::AutoPtr<Scope> scope)
-    : _runtime(rt), _root(scope) {
+Context::Context(core::AutoPtr<Bridge> bridge, core::AutoPtr<Scope> scope)
+    : _bridge(bridge), _root(scope) {
   if (_root == nullptr) {
     _root = new Scope();
   }
@@ -18,18 +18,17 @@ Context::Context(core::AutoPtr<Runtime> rt, core::AutoPtr<Scope> scope)
 }
 Context::~Context() {
   if (_root != nullptr) {
-    core::AutoPtr<Context> ctx = new Context(_runtime, _root);
+    core::AutoPtr<Context> ctx = new Context(_bridge, _root);
     gc(ctx, _root->getRoot());
     ctx->_root = nullptr;
   }
 }
-core::AutoPtr<Runtime> Context::getRuntime() { return _runtime; }
+core::AutoPtr<Context::Bridge> Context::getBridge() { return _bridge; }
 core::AutoPtr<Value> Context::getGlobal() {
   return new Value(_root->getRoot());
 }
 core::AutoPtr<Value> Context::eval(const std::string &filename,
                                    const std::string &source) {
-  _runtime->eval(filename, source);
   return nullptr;
 }
 core::AutoPtr<Value> Context::createValue(Atom *at) {
@@ -120,7 +119,7 @@ void Context::gc(core::AutoPtr<Context> ctx, Atom *atom) {
     if (item->_metadata) {
       auto metadata = ctx->createValue(item->_metadata);
       auto gc = metadata->getField(ctx, "gc");
-      if (gc->getType() != Atom::Type::NIL) {
+      if (gc->getType(ctx) != Atom::Type::NIL) {
         gc->call(ctx, {new Value(item)});
       }
     }

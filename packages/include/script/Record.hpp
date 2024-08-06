@@ -6,6 +6,7 @@
 #include "script/Atom.hpp"
 #include <string>
 #include <unordered_map>
+#include <vector>
 namespace firefly::script {
 class Record : public core::Object {
 private:
@@ -22,5 +23,6 @@ public:
   bool hasField(const std::string &name) { return _fields.contains(name); }
   void removeField(core::AutoPtr<Context> ctx, const std::string &name);
   uint32_t getLength(core::AutoPtr<Context> ctx);
+  std::vector<std::string> getKeys();
 };
 } // namespace firefly::script

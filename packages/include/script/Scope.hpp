@@ -12,6 +12,7 @@ private:
 
 public:
   Scope(Scope *parent = nullptr);
+  Scope(Atom *atom);
   ~Scope() override;
   Atom *getRoot();
   Scope *getParent();

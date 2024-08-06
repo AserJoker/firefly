@@ -15,6 +15,7 @@ Scope::Scope(Scope *parent) : _parent(parent), _root(0) {
     parent->_root->_children.push_back(_root);
   }
 }
+Scope::Scope(Atom *atom) : _parent(nullptr), _root(atom) {}
 Scope::~Scope() {}
 
 Atom *Scope::getRoot() { return _root; }
