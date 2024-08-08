@@ -10,13 +10,12 @@ public:
   class Bridge : public core::Object {
   public:
     virtual std::vector<core::AutoPtr<Value>>
-    eval(core::AutoPtr<Context> ctx, const std::string &filename,
-         const std::string &source) = 0;
+    eval(const std::string &filename, const std::string &source) = 0;
 
-    virtual core::AutoPtr<Value> getGlobal(core::AutoPtr<Context> ctx) = 0;
+    virtual core::AutoPtr<Value> getGlobal() = 0;
 
     virtual void registerModule(
-        core::AutoPtr<Context> ctx, const std::string &name,
+        const std::string &name,
         std::unordered_map<std::string, core::AutoPtr<Value>> exports) = 0;
   };
 
@@ -34,6 +33,7 @@ public:
   void dispose() override;
   void setBridge(core::AutoPtr<Bridge> bridge);
   core::AutoPtr<Value> getGlobal();
+  core::AutoPtr<Value> getNativeGlobal();
   core::AutoPtr<Bridge> getBridge();
   core::AutoPtr<Value> eval(const std::string &filename,
                             const std::string &source);

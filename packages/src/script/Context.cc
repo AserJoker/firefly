@@ -15,9 +15,7 @@ Context::Context() {
 }
 Context::~Context() {}
 void Context::dispose() {
-  if (_bridge != nullptr) {
-    _bridge->dispose();
-  }
+  _bridge = nullptr;
   gc(this, _root->getRoot());
   _root = nullptr;
 }
@@ -31,9 +29,12 @@ void Context::setBridge(core::AutoPtr<Bridge> bridge) {
 core::AutoPtr<Context::Bridge> Context::getBridge() { return _bridge; }
 core::AutoPtr<Value> Context::getGlobal() {
   if (_bridge != nullptr) {
-    return _bridge->getGlobal(this);
+    return _bridge->getGlobal();
   }
-  return new Value(_root->getRoot());
+  return getNativeGlobal();
+}
+core::AutoPtr<Value> Context::getNativeGlobal() {
+  return createValue(_root->getRoot());
 }
 core::AutoPtr<Value> Context::eval(const std::string &filename,
                                    const std::string &source) {
