@@ -1,20 +1,11 @@
 #pragma once
+#include <algorithm>
 #include <any>
 #include <fmt/core.h>
-#include <iostream>
 #include <vector>
 namespace firefly::script {
 struct Atom {
-  enum class Type {
-    NIL = 0,
-    NUMBER = 1,
-    INTEGER = 2,
-    BOOLEAN = 3,
-    STRING = 4,
-    OBJECT = 5,
-    ARRAY = 6,
-    FUNCTION = 7
-  };
+  enum class Type { NIL = 0, NUMBER, BOOLEAN, STRING, OBJECT, ARRAY, FUNCTION };
 
   std::vector<Atom *> _parent;
   std::vector<Atom *> _children;
@@ -29,11 +20,16 @@ struct Atom {
     _metadata = nullptr;
     _marked = false;
     _disposed = false;
-    std::cout << "Atom():0x" << std::hex << (ptrdiff_t)this << std::endl;
   }
-  ~Atom() {
-    std::cout << "~Atom()" << fmt::format("0x{:x}", (ptrdiff_t)this)
-              << std::endl;
+  void addParent(Atom *parent) {
+    parent->_children.push_back(this);
+    _parent.push_back(parent);
+  }
+  void removeParent(Atom *parent) {
+    auto it = std::find(_parent.begin(), _parent.end(), parent);
+    _parent.erase(it);
+    it = std::find(parent->_children.begin(), parent->_children.end(), this);
+    parent->_children.erase(it);
   }
 };
 }; // namespace firefly::script

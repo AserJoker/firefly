@@ -12,13 +12,9 @@ void Record::setField(core::AutoPtr<Context> ctx, const std::string &name,
     if (_fields[name] == field->getAtom()) {
       return;
     }
-    _fields[name]->_parent.erase(std::find(
-        _fields[name]->_parent.begin(), _fields[name]->_parent.end(), _self));
-    _self->_children.erase(std::find(_self->_children.begin(),
-                                     _self->_children.end(), _fields[name]));
+    _fields[name]->removeParent(_self);
   }
-  field->getAtom()->_parent.push_back(_self);
-  _self->_children.push_back(field->getAtom());
+  field->getAtom()->addParent(_self);
   _fields[name] = field->getAtom();
 }
 core::AutoPtr<Value> Record::getField(core::AutoPtr<Context> ctx,
@@ -31,10 +27,7 @@ core::AutoPtr<Value> Record::getField(core::AutoPtr<Context> ctx,
 }
 void Record::removeField(core::AutoPtr<Context> ctx, const std::string &name) {
   if (_fields.contains(name)) {
-    _fields[name]->_parent.erase(std::find(
-        _fields[name]->_parent.begin(), _fields[name]->_parent.end(), _self));
-    _self->_children.erase(std::find(_self->_children.begin(),
-                                     _self->_children.end(), _fields[name]));
+    _fields[name]->removeParent(_self);
     _fields.erase(name);
   }
 }

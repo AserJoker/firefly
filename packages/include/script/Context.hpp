@@ -6,16 +6,15 @@
 namespace firefly::script {
 class Value;
 class Context : public core::Object {
+public:
   class Bridge : public core::Object {
   public:
     virtual std::vector<core::AutoPtr<Value>>
     eval(core::AutoPtr<Context> ctx, const std::string &filename,
          const std::string &source) = 0;
-    virtual void setGlobal(core::AutoPtr<Context> ctx, const std::string &name,
-                           core::AutoPtr<Value> value) = 0;
-    virtual core::AutoPtr<Value> getGlobal(core::AutoPtr<Context> ctx,
-                                           const std::string &name,
-                                           core::AutoPtr<Value> value) = 0;
+
+    virtual core::AutoPtr<Value> getGlobal(core::AutoPtr<Context> ctx) = 0;
+
     virtual void registerModule(
         core::AutoPtr<Context> ctx, const std::string &name,
         std::unordered_map<std::string, core::AutoPtr<Value>> exports) = 0;
@@ -30,9 +29,10 @@ private:
                           const std::unordered_map<ptrdiff_t, Atom *> &alived);
 
 public:
-  Context(core::AutoPtr<Bridge> bridge = nullptr,
-          core::AutoPtr<Scope> scope = nullptr);
+  Context();
   ~Context() override;
+  void dispose() override;
+  void setBridge(core::AutoPtr<Bridge> bridge);
   core::AutoPtr<Value> getGlobal();
   core::AutoPtr<Bridge> getBridge();
   core::AutoPtr<Value> eval(const std::string &filename,
@@ -43,5 +43,7 @@ public:
   core::AutoPtr<Scope> getCurrentScope();
   core::AutoPtr<Scope> getRootScope();
   static void gc(core::AutoPtr<Context> ctx, Atom *atom);
+  void store(const std::string &name, core::AutoPtr<Value> value);
+  core::AutoPtr<Value> query(const std::string &name);
 };
 }; // namespace firefly::script

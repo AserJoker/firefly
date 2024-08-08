@@ -24,3 +24,12 @@ void Scope::removeChild(core::AutoPtr<Scope> scope) {
   std::erase(_children, scope);
 }
 std::vector<core::AutoPtr<Scope>> &Scope::getChildren() { return _children; }
+void Scope::store(const std::string &name, core::AutoPtr<Value> value) {
+  _storage[name] = value;
+}
+core::AutoPtr<Value> Scope::load(const std::string &name) {
+  if (_storage.contains(name)) {
+    return _storage.at(name);
+  }
+  return nullptr;
+}

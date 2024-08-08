@@ -22,6 +22,7 @@ public:
   Object() : _ref(0){};
 
   virtual void initialize() {}
+  virtual void dispose() {};
 
   virtual ~Object() = default;
 };

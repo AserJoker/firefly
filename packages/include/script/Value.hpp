@@ -8,6 +8,64 @@
 namespace firefly::script {
 
 class Value : public core::Object {
+public:
+  enum class Operation {
+    CONNECT,
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    MOD,
+    EQ,
+    NE,
+    GT,
+    GE,
+    LT,
+    LE,
+    AND,
+    OR,
+    XOR,
+    NOT,
+    SHR,
+    SHL,
+  };
+
+private:
+  core::AutoPtr<Value> optAdd(core::AutoPtr<Context> ctx,
+                              core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optConnect(core::AutoPtr<Context> ctx,
+                                  core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optSub(core::AutoPtr<Context> ctx,
+                              core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optMul(core::AutoPtr<Context> ctx,
+                              core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optDiv(core::AutoPtr<Context> ctx,
+                              core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optMod(core::AutoPtr<Context> ctx,
+                              core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optAnd(core::AutoPtr<Context> ctx,
+                              core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optOr(core::AutoPtr<Context> ctx,
+                             core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optXor(core::AutoPtr<Context> ctx,
+                              core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optEq(core::AutoPtr<Context> ctx,
+                             core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optNe(core::AutoPtr<Context> ctx,
+                             core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optGt(core::AutoPtr<Context> ctx,
+                             core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optGe(core::AutoPtr<Context> ctx,
+                             core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optLt(core::AutoPtr<Context> ctx,
+                             core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optLe(core::AutoPtr<Context> ctx,
+                             core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optShl(core::AutoPtr<Context> ctx,
+                              core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optShr(core::AutoPtr<Context> ctx,
+                              core::AutoPtr<Value> another);
+  core::AutoPtr<Value> optNot(core::AutoPtr<Context> ctx);
 
 private:
   Atom *_atom;
@@ -19,14 +77,12 @@ public:
 public:
   Value(Atom *atom);
   Atom::Type getType(core::AutoPtr<Context> ctx);
+  std::string getTypeName(core::AutoPtr<Context> ctx);
   double toNumber(core::AutoPtr<Context> ctx);
-  int64_t toInteger(core::AutoPtr<Context> ctx);
   bool toBoolean(core::AutoPtr<Context> ctx);
   std::string toString(core::AutoPtr<Context> ctx);
   core::AutoPtr<Value> setNumber(core::AutoPtr<Context> ctx,
                                  const double &value);
-  core::AutoPtr<Value> setInteger(core::AutoPtr<Context> ctx,
-                                  const int64_t &value);
   core::AutoPtr<Value> setBoolean(core::AutoPtr<Context> ctx,
                                   const bool &value);
   core::AutoPtr<Value> setString(core::AutoPtr<Context> ctx,
@@ -68,7 +124,8 @@ public:
   core::AutoPtr<Value> getMetadata(core::AutoPtr<Context> ctx);
   core::AutoPtr<Value> setMetadata(core::AutoPtr<Value> value);
   core::AutoPtr<Value> arithmetic(core::AutoPtr<Context> ctx,
-                                  core::AutoPtr<Value> another, int operation);
+                                  core::AutoPtr<Value> another,
+                                  Operation operation);
   Atom *getAtom();
 };
 } // namespace firefly::script

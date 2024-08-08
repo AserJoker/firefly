@@ -11,8 +11,12 @@ private:
   void dispose() {
     if (_object) {
       if (!_object->subRef()) {
-        delete _object;
-        _object = nullptr;
+        _object->addRef();
+        _object->dispose();
+        if (!_object->subRef()) {
+          delete _object;
+          _object = nullptr;
+        }
       }
     }
   }

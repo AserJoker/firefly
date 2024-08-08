@@ -12,7 +12,7 @@ private:
 
 public:
   Array(Atom *self);
-  uint32_t getLength();
+  uint32_t getLength(core::AutoPtr<Context> ctx);
   core::AutoPtr<Value> getIndex(core::AutoPtr<Context> ctx, uint32_t index);
   void setIndex(core::AutoPtr<Context> ctx, int index,
                 core::AutoPtr<Value> item);

@@ -9,22 +9,30 @@
 #include <vector>
 using namespace firefly;
 using namespace firefly::script;
-Context::Context(core::AutoPtr<Bridge> bridge, core::AutoPtr<Scope> scope)
-    : _bridge(bridge), _root(scope) {
-  if (_root == nullptr) {
-    _root = new Scope();
-  }
+Context::Context() {
+  _root = new Scope();
   _current = _root;
 }
-Context::~Context() {
-  if (_root != nullptr) {
-    core::AutoPtr<Context> ctx = new Context(_bridge, _root);
-    gc(ctx, _root->getRoot());
-    ctx->_root = nullptr;
+Context::~Context() {}
+void Context::dispose() {
+  if (_bridge != nullptr) {
+    _bridge->dispose();
+  }
+  gc(this, _root->getRoot());
+  _root = nullptr;
+}
+
+void Context::setBridge(core::AutoPtr<Bridge> bridge) {
+  if (_bridge != nullptr && _bridge != bridge) {
+    _bridge->dispose();
+    _bridge = bridge;
   }
 }
 core::AutoPtr<Context::Bridge> Context::getBridge() { return _bridge; }
 core::AutoPtr<Value> Context::getGlobal() {
+  if (_bridge != nullptr) {
+    return _bridge->getGlobal(this);
+  }
   return new Value(_root->getRoot());
 }
 core::AutoPtr<Value> Context::eval(const std::string &filename,
@@ -151,4 +159,19 @@ void Context::gc(core::AutoPtr<Context> ctx, Atom *atom) {
       delete item;
     }
   }
+}
+void Context::store(const std::string &name, core::AutoPtr<Value> value) {
+  _current->store(name, value);
+}
+core::AutoPtr<Value> Context::query(const std::string &name) {
+  auto current = _current;
+  core::AutoPtr<Value> value = nullptr;
+  while (!value && current != nullptr) {
+    value = current->load(name);
+    current = current->getParent();
+  }
+  if (value == nullptr) {
+    return createValue();
+  }
+  return value;
 }

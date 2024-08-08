@@ -3,6 +3,7 @@
 #include "Field.hpp"
 #include "Record.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Object.hpp"
 #include <any>
 #include <string>
 #include <unordered_map>
@@ -18,6 +19,7 @@ private:
 
 public:
   Table() = default;
+  using core::Object::initialize;
   void initialize(const std::string &name, const std::string &ns,
                   const std::vector<Field> &fields,
                   const std::vector<std::string> &primaryKeys = {"id"});
