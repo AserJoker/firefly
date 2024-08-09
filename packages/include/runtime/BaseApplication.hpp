@@ -10,6 +10,7 @@
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
 #include "db/Database.hpp"
+#include "script/Script.hpp"
 #include "video/Renderer.hpp"
 #include <filesystem>
 #include <string>
@@ -34,6 +35,7 @@ protected:
   core::Injector<runtime::Locale, INJECTOR_LOCALE> _locale;
   core::Injector<ModLoader, INJECTOR_MOD> _mod;
   core::Injector<video::Renderer, INJECTOR_RENDERER> _renderer;
+  core::Injector<script::Script, INJECTOR_SCRIPT> _script;
 
 protected:
   virtual void onInitialize();

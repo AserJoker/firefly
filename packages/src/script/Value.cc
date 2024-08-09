@@ -11,7 +11,7 @@
 using namespace firefly;
 using namespace firefly::script;
 Value::Value(Atom *atom) : _atom(atom) {}
-Atom::Type Value::getType(core::AutoPtr<Context> ctx) {
+Atom::Type Value::getType(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto valueOf = metadata->getField(ctx, "typeof");
@@ -23,7 +23,7 @@ Atom::Type Value::getType(core::AutoPtr<Context> ctx) {
   return _atom->_type;
 }
 
-std::string Value::getTypeName(core::AutoPtr<Context> ctx) {
+std::string Value::getTypeName(core::AutoPtr<Script> ctx) {
   switch (getType(ctx)) {
   case Atom::Type::NIL:
     return "Nil";
@@ -42,7 +42,7 @@ std::string Value::getTypeName(core::AutoPtr<Context> ctx) {
   }
   return "Unknown";
 }
-double Value::toNumber(core::AutoPtr<Context> ctx) {
+double Value::toNumber(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto valueOf = metadata->getField(ctx, "valueOf");
@@ -58,7 +58,7 @@ double Value::toNumber(core::AutoPtr<Context> ctx) {
   }
   return 0;
 }
-bool Value::toBoolean(core::AutoPtr<Context> ctx) {
+bool Value::toBoolean(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto valueOf = metadata->getField(ctx, "valueOf");
@@ -74,7 +74,7 @@ bool Value::toBoolean(core::AutoPtr<Context> ctx) {
   }
   return false;
 }
-std::string Value::toString(core::AutoPtr<Context> ctx) {
+std::string Value::toString(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto valueOf = metadata->getField(ctx, "valueOf");
@@ -90,7 +90,7 @@ std::string Value::toString(core::AutoPtr<Context> ctx) {
   }
   return "";
 }
-core::AutoPtr<Value> Value::setNumber(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::setNumber(core::AutoPtr<Script> ctx,
                                       const double &value) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -104,7 +104,7 @@ core::AutoPtr<Value> Value::setNumber(core::AutoPtr<Context> ctx,
   _atom->_value = double(value);
   return this;
 }
-core::AutoPtr<Value> Value::setBoolean(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::setBoolean(core::AutoPtr<Script> ctx,
                                        const bool &value) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -118,7 +118,7 @@ core::AutoPtr<Value> Value::setBoolean(core::AutoPtr<Context> ctx,
   _atom->_value = bool(value);
   return this;
 }
-core::AutoPtr<Value> Value::setString(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::setString(core::AutoPtr<Script> ctx,
                                       const std::string &value) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -132,7 +132,7 @@ core::AutoPtr<Value> Value::setString(core::AutoPtr<Context> ctx,
   _atom->_value = std::string(value);
   return this;
 }
-core::AutoPtr<Value> Value::setNil(core::AutoPtr<Context> ctx) {
+core::AutoPtr<Value> Value::setNil(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
@@ -144,7 +144,7 @@ core::AutoPtr<Value> Value::setNil(core::AutoPtr<Context> ctx) {
   _atom->_value = nullptr;
   return this;
 }
-core::AutoPtr<Value> Value::setObject(core::AutoPtr<Context> ctx) {
+core::AutoPtr<Value> Value::setObject(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
@@ -156,7 +156,7 @@ core::AutoPtr<Value> Value::setObject(core::AutoPtr<Context> ctx) {
   _atom->_value = core::AutoPtr(new Record(_atom));
   return this;
 }
-core::AutoPtr<Value> Value::setArray(core::AutoPtr<Context> ctx) {
+core::AutoPtr<Value> Value::setArray(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
@@ -168,7 +168,7 @@ core::AutoPtr<Value> Value::setArray(core::AutoPtr<Context> ctx) {
   _atom->_value = core::AutoPtr(new Array(_atom));
   return this;
 }
-core::AutoPtr<Value> Value::setFunction(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::setFunction(core::AutoPtr<Script> ctx,
                                         const FunctionHandle &func) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -182,7 +182,7 @@ core::AutoPtr<Value> Value::setFunction(core::AutoPtr<Context> ctx,
   _atom->_value = FunctionHandle(func);
   return this;
 }
-std::vector<std::string> Value::getKeys(core::AutoPtr<Context> ctx) {
+std::vector<std::string> Value::getKeys(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto keys = metadata->getField(ctx, "keys");
@@ -198,7 +198,7 @@ std::vector<std::string> Value::getKeys(core::AutoPtr<Context> ctx) {
   return std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getKeys();
 }
 
-Value::Stack Value::call(core::AutoPtr<Context> ctx, Value::Stack args) {
+Value::Stack Value::call(core::AutoPtr<Script> ctx, Value::Stack args) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto call = metadata->getField(ctx, "call");
@@ -228,7 +228,7 @@ Value::Stack Value::call(core::AutoPtr<Context> ctx, Value::Stack args) {
   return result;
 }
 
-core::AutoPtr<Value> Value::setField(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::setField(core::AutoPtr<Script> ctx,
                                      const std::string &name,
                                      core::AutoPtr<Value> field) {
   if (_atom->_metadata) {
@@ -244,7 +244,7 @@ core::AutoPtr<Value> Value::setField(core::AutoPtr<Context> ctx,
       ->setField(ctx, name, field);
   return this;
 }
-core::AutoPtr<Value> Value::getField(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::getField(core::AutoPtr<Script> ctx,
                                      const std::string &name) {
 
   if (_atom->_metadata) {
@@ -259,7 +259,7 @@ core::AutoPtr<Value> Value::getField(core::AutoPtr<Context> ctx,
       std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getField(ctx, name);
   return res;
 }
-core::AutoPtr<Value> Value::setIndex(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::setIndex(core::AutoPtr<Script> ctx,
                                      const uint32_t &name,
                                      core::AutoPtr<Value> field) {
   if (_atom->_metadata) {
@@ -275,7 +275,7 @@ core::AutoPtr<Value> Value::setIndex(core::AutoPtr<Context> ctx,
       ->setIndex(ctx, name, field);
   return this;
 }
-core::AutoPtr<Value> Value::getIndex(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::getIndex(core::AutoPtr<Script> ctx,
                                      const uint32_t &name) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -289,7 +289,7 @@ core::AutoPtr<Value> Value::getIndex(core::AutoPtr<Context> ctx,
       std::any_cast<core::AutoPtr<Array>>(_atom->_value)->getIndex(ctx, name);
   return res;
 }
-uint32_t Value::getLength(core::AutoPtr<Context> ctx) {
+uint32_t Value::getLength(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto length = metadata->getField(ctx, "length");
@@ -305,7 +305,7 @@ uint32_t Value::getLength(core::AutoPtr<Context> ctx) {
   }
   return 0;
 }
-core::AutoPtr<Value> Value::getMetadata(core::AutoPtr<Context> ctx) {
+core::AutoPtr<Value> Value::getMetadata(core::AutoPtr<Script> ctx) {
   return ctx->createValue(_atom->_metadata);
 }
 core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Value> value) {
@@ -332,36 +332,36 @@ core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Value> value) {
   return this;
 }
 
-core::AutoPtr<Value> Value::setRawField(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::setRawField(core::AutoPtr<Script> ctx,
                                         const std::string &name,
                                         core::AutoPtr<Value> field) {
   std::any_cast<core::AutoPtr<Record>>(_atom->_value)
       ->setField(ctx, name, field);
   return this;
 }
-core::AutoPtr<Value> Value::getRawField(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::getRawField(core::AutoPtr<Script> ctx,
                                         const std::string &name) {
   return std::any_cast<core::AutoPtr<Record>>(_atom->_value)
       ->getField(ctx, name);
 }
-core::AutoPtr<Value> Value::setRawIndex(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::setRawIndex(core::AutoPtr<Script> ctx,
                                         const uint32_t &name,
                                         core::AutoPtr<Value> field) {
   std::any_cast<core::AutoPtr<Array>>(_atom->_value)
       ->setIndex(ctx, name, field);
   return this;
 }
-core::AutoPtr<Value> Value::getRawIndex(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::getRawIndex(core::AutoPtr<Script> ctx,
                                         const uint32_t &name) {
   auto res =
       std::any_cast<core::AutoPtr<Array>>(_atom->_value)->getIndex(ctx, name);
   return res;
 }
-uint32_t Value::getRawLength(core::AutoPtr<Context> ctx) {
+uint32_t Value::getRawLength(core::AutoPtr<Script> ctx) {
   return std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getLength(ctx);
 }
 
-core::AutoPtr<Value> Value::arithmetic(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::arithmetic(core::AutoPtr<Script> ctx,
                                        core::AutoPtr<Value> another,
                                        Operation operation) {
   switch (operation) {
@@ -405,7 +405,7 @@ core::AutoPtr<Value> Value::arithmetic(core::AutoPtr<Context> ctx,
   return nullptr;
 }
 
-core::AutoPtr<Value> Value::optConnect(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optConnect(core::AutoPtr<Script> ctx,
                                        core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -424,7 +424,7 @@ core::AutoPtr<Value> Value::optConnect(core::AutoPtr<Context> ctx,
   auto target = another->toString(ctx);
   return ctx->createValue()->setString(ctx, source + target);
 }
-core::AutoPtr<Value> Value::optAdd(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optAdd(core::AutoPtr<Script> ctx,
                                    core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -443,7 +443,7 @@ core::AutoPtr<Value> Value::optAdd(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, left + right);
 }
-core::AutoPtr<Value> Value::optSub(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optSub(core::AutoPtr<Script> ctx,
                                    core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -462,7 +462,7 @@ core::AutoPtr<Value> Value::optSub(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, left - right);
 }
-core::AutoPtr<Value> Value::optMul(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optMul(core::AutoPtr<Script> ctx,
                                    core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -481,7 +481,7 @@ core::AutoPtr<Value> Value::optMul(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, left * right);
 }
-core::AutoPtr<Value> Value::optDiv(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optDiv(core::AutoPtr<Script> ctx,
                                    core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -500,7 +500,7 @@ core::AutoPtr<Value> Value::optDiv(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, left / right);
 }
-core::AutoPtr<Value> Value::optMod(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optMod(core::AutoPtr<Script> ctx,
                                    core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -523,7 +523,7 @@ core::AutoPtr<Value> Value::optMod(core::AutoPtr<Context> ctx,
   }
   return ctx->createValue()->setNumber(ctx, res);
 }
-core::AutoPtr<Value> Value::optAnd(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optAnd(core::AutoPtr<Script> ctx,
                                    core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -542,7 +542,7 @@ core::AutoPtr<Value> Value::optAnd(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, (uint32_t)left & (uint32_t)right);
 }
-core::AutoPtr<Value> Value::optOr(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optOr(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -561,7 +561,7 @@ core::AutoPtr<Value> Value::optOr(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, (uint32_t)left | (uint32_t)right);
 }
-core::AutoPtr<Value> Value::optXor(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optXor(core::AutoPtr<Script> ctx,
                                    core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -580,7 +580,7 @@ core::AutoPtr<Value> Value::optXor(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, (uint32_t)left ^ (uint32_t)right);
 }
-core::AutoPtr<Value> Value::optEq(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optEq(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -608,7 +608,7 @@ core::AutoPtr<Value> Value::optEq(core::AutoPtr<Context> ctx,
     return ctx->createValue()->setBoolean(ctx, _atom == another->_atom);
   }
 }
-core::AutoPtr<Value> Value::optNe(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optNe(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -637,7 +637,7 @@ core::AutoPtr<Value> Value::optNe(core::AutoPtr<Context> ctx,
     return ctx->createValue()->setBoolean(ctx, _atom != another->_atom);
   }
 }
-core::AutoPtr<Value> Value::optGt(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optGt(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -656,7 +656,7 @@ core::AutoPtr<Value> Value::optGt(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, left > right);
 }
-core::AutoPtr<Value> Value::optGe(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optGe(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -675,7 +675,7 @@ core::AutoPtr<Value> Value::optGe(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, left >= right);
 }
-core::AutoPtr<Value> Value::optLt(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optLt(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -694,7 +694,7 @@ core::AutoPtr<Value> Value::optLt(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, left < right);
 }
-core::AutoPtr<Value> Value::optLe(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optLe(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -713,7 +713,7 @@ core::AutoPtr<Value> Value::optLe(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, left <= right);
 }
-core::AutoPtr<Value> Value::optShl(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optShl(core::AutoPtr<Script> ctx,
                                    core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -732,7 +732,7 @@ core::AutoPtr<Value> Value::optShl(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, (uint32_t)left << (uint32_t)right);
 }
-core::AutoPtr<Value> Value::optShr(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Value::optShr(core::AutoPtr<Script> ctx,
                                    core::AutoPtr<Value> another) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
@@ -751,7 +751,7 @@ core::AutoPtr<Value> Value::optShr(core::AutoPtr<Context> ctx,
   auto right = toNumber(ctx);
   return ctx->createValue()->setNumber(ctx, (uint32_t)left >> (uint32_t)right);
 }
-core::AutoPtr<Value> Value::optNot(core::AutoPtr<Context> ctx) {
+core::AutoPtr<Value> Value::optNot(core::AutoPtr<Script> ctx) {
 
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);

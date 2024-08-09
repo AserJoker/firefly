@@ -1,12 +1,12 @@
 #include "script/Array.hpp"
 #include "core/AutoPtr.hpp"
 #include "script/Atom.hpp"
-#include "script/Context.hpp"
+#include "script/Script.hpp"
 #include "script/Value.hpp"
 using namespace firefly;
 using namespace firefly::script;
 Array::Array(Atom *atom) : _self(atom) {}
-void Array::setIndex(core::AutoPtr<Context> ctx, int index,
+void Array::setIndex(core::AutoPtr<Script> ctx, int index,
                      core::AutoPtr<Value> value) {
   if (value->getType(ctx) != Atom::Type::NIL) {
     auto atom = value->getAtom();
@@ -28,7 +28,7 @@ void Array::setIndex(core::AutoPtr<Context> ctx, int index,
     _items.pop_back();
   }
 }
-core::AutoPtr<Value> Array::getIndex(core::AutoPtr<Context> ctx,
+core::AutoPtr<Value> Array::getIndex(core::AutoPtr<Script> ctx,
                                      uint32_t index) {
   if (index >= _items.size()) {
     return ctx->createValue();
@@ -40,4 +40,4 @@ core::AutoPtr<Value> Array::getIndex(core::AutoPtr<Context> ctx,
     }
   }
 }
-uint32_t Array::getLength(core::AutoPtr<Context> ctx) { return _items.size(); }
+uint32_t Array::getLength(core::AutoPtr<Script> ctx) { return _items.size(); }

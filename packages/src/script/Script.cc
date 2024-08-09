@@ -1,4 +1,4 @@
-#include "script/Context.hpp"
+#include "script/Script.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "script/Atom.hpp"
@@ -8,34 +8,38 @@
 #include <queue>
 #include <unordered_map>
 #include <vector>
+
 using namespace firefly;
 using namespace firefly::script;
-Context::Context() {
+Script::Script() {
   _root = new Scope();
   _current = _root;
   _bridge = core::Singleton<Bridge>::instance();
 }
-Context::~Context() {}
-void Context::dispose() {
+Script::~Script() {}
+void Script::dispose() {
   _bridge = nullptr;
   gc(this, _root->getRoot());
   _root = nullptr;
 }
-core::AutoPtr<Context::Bridge> Context::getBridge() { return _bridge; }
-core::AutoPtr<Value> Context::getGlobal() {
+core::AutoPtr<Script::Bridge> Script::getBridge() { return _bridge; }
+core::AutoPtr<Value> Script::getGlobal() {
   if (_bridge != nullptr) {
     return _bridge->getGlobal();
   }
   return getNativeGlobal();
 }
-core::AutoPtr<Value> Context::getNativeGlobal() {
+core::AutoPtr<Value> Script::getNativeGlobal() {
   return createValue(_root->getRoot());
 }
-core::AutoPtr<Value> Context::eval(const std::string &filename,
-                                   const std::string &source) {
-  return nullptr;
+Value::Stack Script::eval(const std::string &filename,
+                          const std::string &source) {
+  if (_bridge != nullptr) {
+    return _bridge->eval(filename, source);
+  }
+  return {};
 }
-core::AutoPtr<Value> Context::createValue(Atom *at) {
+core::AutoPtr<Value> Script::createValue(Atom *at) {
   Atom *atom = at;
   auto parent = _current->getRoot();
   if (!atom) {
@@ -48,12 +52,12 @@ core::AutoPtr<Value> Context::createValue(Atom *at) {
   }
   return new Value(atom);
 }
-core::AutoPtr<Scope> Context::pushScope() {
+core::AutoPtr<Scope> Script::pushScope() {
   core::AutoPtr<Scope> current = _current;
   _current = new Scope(&*current);
   return current;
 }
-void Context::popScope(core::AutoPtr<Scope> scope) {
+void Script::popScope(core::AutoPtr<Scope> scope) {
   _current = scope;
   for (auto &sco : _current->getChildren()) {
     auto atom = sco->getRoot();
@@ -61,10 +65,10 @@ void Context::popScope(core::AutoPtr<Scope> scope) {
   }
   _current->getChildren().clear();
 }
-core::AutoPtr<Scope> Context::getCurrentScope() { return _current; }
-core::AutoPtr<Scope> Context::getRootScope() { return _root; }
-bool Context::checkAlived(Atom *atom,
-                          const std::unordered_map<ptrdiff_t, Atom *> &alived) {
+core::AutoPtr<Scope> Script::getCurrentScope() { return _current; }
+core::AutoPtr<Scope> Script::getRootScope() { return _root; }
+bool Script::checkAlived(Atom *atom,
+                         const std::unordered_map<ptrdiff_t, Atom *> &alived) {
   if (atom->_disposed) {
     return false;
   }
@@ -87,7 +91,7 @@ bool Context::checkAlived(Atom *atom,
   }
   return false;
 }
-void Context::gc(core::AutoPtr<Context> ctx, Atom *atom) {
+void Script::gc(core::AutoPtr<Script> ctx, Atom *atom) {
   static int level = 0;
   level++;
   atom->_disposed = true;
@@ -156,10 +160,10 @@ void Context::gc(core::AutoPtr<Context> ctx, Atom *atom) {
     }
   }
 }
-void Context::store(const std::string &name, core::AutoPtr<Value> value) {
+void Script::store(const std::string &name, core::AutoPtr<Value> value) {
   _current->store(name, value);
 }
-core::AutoPtr<Value> Context::query(const std::string &name) {
+core::AutoPtr<Value> Script::query(const std::string &name) {
   auto current = _current;
   core::AutoPtr<Value> value = nullptr;
   while (!value && current != nullptr) {
@@ -172,7 +176,7 @@ core::AutoPtr<Value> Context::query(const std::string &name) {
   return value;
 }
 
-void Context::registerModule(
+void Script::registerModule(
     const std::string &name,
     std::unordered_map<std::string, core::AutoPtr<Value>> exports) {
   if (_bridge != nullptr) {

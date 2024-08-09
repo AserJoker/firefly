@@ -1,5 +1,5 @@
 #pragma once
-#include "Context.hpp"
+#include "Script.hpp"
 #include "Value.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
@@ -9,11 +9,11 @@
 #include <stdexcept>
 #include <unordered_map>
 namespace firefly::script {
-class LuaBridge : public Context::Bridge {
+class LuaBridge : public Script::Bridge {
 
 private:
   static int luaFuncCall(lua_State *state) {
-    auto ctx = core::Singleton<Context>::instance();
+    auto ctx = core::Singleton<Script>::instance();
     auto bridge = ctx->getBridge().cast<LuaBridge>();
     if (!bridge) {
       return 0;
@@ -24,8 +24,8 @@ private:
     auto obj = lua_gettop(state);
     lua_getfield(state, obj, "$handle");
     auto handle = lua_tonumber(state, -1);
-    if (core::Singleton<Context>::isInitialized()) {
-      auto ctx = core::Singleton<Context>::instance();
+    if (core::Singleton<Script>::isInitialized()) {
+      auto ctx = core::Singleton<Script>::instance();
       ctx->getNativeGlobal()
           ->getField(ctx, "$functions")
           ->setIndex(ctx, handle, ctx->createValue());
@@ -36,8 +36,8 @@ private:
     auto obj = lua_gettop(state);
     lua_getfield(state, obj, "$handle");
     auto handle = lua_tonumber(state, -1);
-    if (core::Singleton<Context>::isInitialized()) {
-      auto ctx = core::Singleton<Context>::instance();
+    if (core::Singleton<Script>::isInitialized()) {
+      auto ctx = core::Singleton<Script>::instance();
       ctx->getNativeGlobal()
           ->getField(ctx, "$objects")
           ->setIndex(ctx, handle, ctx->createValue());
@@ -49,7 +49,7 @@ private:
     auto key_idx = 2;
     lua_getfield(state, obj_idx, "$handle");
     auto handle = lua_tonumber(state, -1);
-    auto ctx = core::Singleton<Context>::instance();
+    auto ctx = core::Singleton<Script>::instance();
     auto bridge = ctx->getBridge().cast<LuaBridge>();
     auto self = ctx->getNativeGlobal()
                     ->getField(ctx, "$objects")
@@ -69,7 +69,7 @@ private:
     auto value_idx = 3;
     lua_getfield(state, obj_idx, "$handle");
     auto handle = lua_tonumber(state, -1);
-    auto ctx = core::Singleton<Context>::instance();
+    auto ctx = core::Singleton<Script>::instance();
     auto bridge = ctx->getBridge().cast<LuaBridge>();
     auto self = ctx->getNativeGlobal()
                     ->getField(ctx, "$objects")
@@ -82,7 +82,7 @@ private:
     }
     return 0;
   }
-  static Value::Stack funcGC(core::AutoPtr<Context> ctx, Value::Stack args) {
+  static Value::Stack funcGC(core::AutoPtr<Script> ctx, Value::Stack args) {
     auto bridge = ctx->getBridge().cast<LuaBridge>();
     if (!bridge) {
       return {};
@@ -98,7 +98,7 @@ private:
     lua_settop(state, top);
     return {};
   }
-  static Value::Stack funcCall(core::AutoPtr<Context> ctx, Value::Stack args) {
+  static Value::Stack funcCall(core::AutoPtr<Script> ctx, Value::Stack args) {
     auto bridge = ctx->getBridge().cast<LuaBridge>();
     if (!bridge) {
       return {};
@@ -125,7 +125,7 @@ private:
     lua_settop(state, top);
     return result;
   }
-  static Value::Stack objectGC(core::AutoPtr<Context> ctx, Value::Stack args) {
+  static Value::Stack objectGC(core::AutoPtr<Script> ctx, Value::Stack args) {
     auto bridge = ctx->getBridge().cast<LuaBridge>();
     if (!bridge) {
       return {};
@@ -141,7 +141,7 @@ private:
     lua_settop(state, top);
     return {};
   }
-  static Value::Stack objectGet(core::AutoPtr<Context> ctx, Value::Stack args) {
+  static Value::Stack objectGet(core::AutoPtr<Script> ctx, Value::Stack args) {
     auto bridge = ctx->getBridge().cast<LuaBridge>();
     if (!bridge) {
       return {};
@@ -164,7 +164,7 @@ private:
     lua_settop(state, top);
     return {result};
   }
-  static Value::Stack objectSet(core::AutoPtr<Context> ctx, Value::Stack args) {
+  static Value::Stack objectSet(core::AutoPtr<Script> ctx, Value::Stack args) {
     auto bridge = ctx->getBridge().cast<LuaBridge>();
     if (!bridge) {
       return {};
@@ -197,7 +197,7 @@ private:
     lua_getfield(state, 1, "$handle");
     auto handle = lua_tonumber(_state, -1);
     lua_settop(state, argc);
-    auto ctx = core::Singleton<Context>::instance();
+    auto ctx = core::Singleton<Script>::instance();
     auto func = ctx->getNativeGlobal()
                     ->getField(ctx, "$functions")
                     ->getIndex(ctx, handle);
@@ -212,7 +212,7 @@ private:
     return result.size();
   }
   core::AutoPtr<Value> getObjectMetadata() {
-    auto ctx = core::Singleton<Context>::instance();
+    auto ctx = core::Singleton<Script>::instance();
     auto meta = ctx->createValue()->setObject(ctx);
     meta->setField(ctx, "gc", ctx->createValue()->setFunction(ctx, &objectGC));
     meta->setField(ctx, "get",
@@ -222,7 +222,7 @@ private:
     return meta;
   }
   core::AutoPtr<Value> getFunctionMetadata() {
-    auto ctx = core::Singleton<Context>::instance();
+    auto ctx = core::Singleton<Script>::instance();
     auto meta = ctx->createValue()->setObject(ctx);
     meta->setField(ctx, "gc", ctx->createValue()->setFunction(ctx, &funcGC));
     meta->setField(ctx, "call",
@@ -231,7 +231,7 @@ private:
         ctx, "typeOf",
         ctx->createValue()->setFunction(
             ctx,
-            [](core::AutoPtr<Context> ctx, Value::Stack args) -> Value::Stack {
+            [](core::AutoPtr<Script> ctx, Value::Stack args) -> Value::Stack {
               return {ctx->createValue()->setNumber(
                   ctx, (uint32_t)script::Atom::Type::FUNCTION)};
             }));
@@ -240,7 +240,7 @@ private:
 
   core::AutoPtr<Value> load(lua_State *state, int index) {
     auto top = lua_gettop(state);
-    auto ctx = core::Singleton<Context>::instance();
+    auto ctx = core::Singleton<Script>::instance();
     auto value = ctx->createValue();
     auto type = lua_type(state, index);
     switch (type) {
@@ -286,7 +286,7 @@ private:
     return value;
   }
   void dump(lua_State *state, core::AutoPtr<Value> value) {
-    auto ctx = core::Singleton<Context>::instance();
+    auto ctx = core::Singleton<Script>::instance();
     auto objects = ctx->getNativeGlobal()->getField(ctx, "$objects");
     auto functions = ctx->getNativeGlobal()->getField(ctx, "$functions");
     if (objects->getType(ctx) == Atom::Type::NIL) {
@@ -407,7 +407,7 @@ public:
   void registerModule(
       const std::string &name,
       std::unordered_map<std::string, core::AutoPtr<Value>> exports) override {
-    auto ctx = core::Singleton<Context>::instance();
+    auto ctx = core::Singleton<Script>::instance();
     auto obj = ctx->createValue()->setObject(ctx);
     for (auto &[key, value] : exports) {
       obj->setField(ctx, key, value);

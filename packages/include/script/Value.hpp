@@ -1,6 +1,6 @@
 #pragma once
 #include "Atom.hpp"
-#include "Context.hpp"
+#include "Script.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include <functional>
@@ -31,99 +31,97 @@ public:
   };
 
 private:
-  core::AutoPtr<Value> optAdd(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optAdd(core::AutoPtr<Script> ctx,
                               core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optConnect(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optConnect(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optSub(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optSub(core::AutoPtr<Script> ctx,
                               core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optMul(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optMul(core::AutoPtr<Script> ctx,
                               core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optDiv(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optDiv(core::AutoPtr<Script> ctx,
                               core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optMod(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optMod(core::AutoPtr<Script> ctx,
                               core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optAnd(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optAnd(core::AutoPtr<Script> ctx,
                               core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optOr(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optOr(core::AutoPtr<Script> ctx,
                              core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optXor(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optXor(core::AutoPtr<Script> ctx,
                               core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optEq(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optEq(core::AutoPtr<Script> ctx,
                              core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optNe(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optNe(core::AutoPtr<Script> ctx,
                              core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optGt(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optGt(core::AutoPtr<Script> ctx,
                              core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optGe(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optGe(core::AutoPtr<Script> ctx,
                              core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optLt(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optLt(core::AutoPtr<Script> ctx,
                              core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optLe(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optLe(core::AutoPtr<Script> ctx,
                              core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optShl(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optShl(core::AutoPtr<Script> ctx,
                               core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optShr(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> optShr(core::AutoPtr<Script> ctx,
                               core::AutoPtr<Value> another);
-  core::AutoPtr<Value> optNot(core::AutoPtr<Context> ctx);
+  core::AutoPtr<Value> optNot(core::AutoPtr<Script> ctx);
 
 private:
   Atom *_atom;
 
 public:
   using Stack = std::vector<core::AutoPtr<Value>>;
-  using FunctionHandle = std::function<Stack(core::AutoPtr<Context>, Stack)>;
+  using FunctionHandle = std::function<Stack(core::AutoPtr<Script>, Stack)>;
 
 public:
   Value(Atom *atom);
-  Atom::Type getType(core::AutoPtr<Context> ctx);
-  std::string getTypeName(core::AutoPtr<Context> ctx);
-  double toNumber(core::AutoPtr<Context> ctx);
-  bool toBoolean(core::AutoPtr<Context> ctx);
-  std::string toString(core::AutoPtr<Context> ctx);
-  core::AutoPtr<Value> setNumber(core::AutoPtr<Context> ctx,
+  Atom::Type getType(core::AutoPtr<Script> ctx);
+  std::string getTypeName(core::AutoPtr<Script> ctx);
+  double toNumber(core::AutoPtr<Script> ctx);
+  bool toBoolean(core::AutoPtr<Script> ctx);
+  std::string toString(core::AutoPtr<Script> ctx);
+  core::AutoPtr<Value> setNumber(core::AutoPtr<Script> ctx,
                                  const double &value);
-  core::AutoPtr<Value> setBoolean(core::AutoPtr<Context> ctx,
-                                  const bool &value);
-  core::AutoPtr<Value> setString(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> setBoolean(core::AutoPtr<Script> ctx, const bool &value);
+  core::AutoPtr<Value> setString(core::AutoPtr<Script> ctx,
                                  const std::string &value);
-  core::AutoPtr<Value> setNil(core::AutoPtr<Context> ctx);
-  core::AutoPtr<Value> setObject(core::AutoPtr<Context> ctx);
-  core::AutoPtr<Value> setArray(core::AutoPtr<Context> ctx);
-  core::AutoPtr<Value> setFunction(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> setNil(core::AutoPtr<Script> ctx);
+  core::AutoPtr<Value> setObject(core::AutoPtr<Script> ctx);
+  core::AutoPtr<Value> setArray(core::AutoPtr<Script> ctx);
+  core::AutoPtr<Value> setFunction(core::AutoPtr<Script> ctx,
                                    const FunctionHandle &func);
-  Stack call(core::AutoPtr<Context> ctx, Stack args);
+  Stack call(core::AutoPtr<Script> ctx, Stack args);
 
-  core::AutoPtr<Value> setField(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> setField(core::AutoPtr<Script> ctx,
                                 const std::string &name,
                                 core::AutoPtr<Value> field);
-  core::AutoPtr<Value> getField(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> getField(core::AutoPtr<Script> ctx,
                                 const std::string &name);
 
-  std::vector<std::string> getKeys(core::AutoPtr<Context> ctx);
+  std::vector<std::string> getKeys(core::AutoPtr<Script> ctx);
 
-  core::AutoPtr<Value> setIndex(core::AutoPtr<Context> ctx,
-                                const uint32_t &name,
+  core::AutoPtr<Value> setIndex(core::AutoPtr<Script> ctx, const uint32_t &name,
                                 core::AutoPtr<Value> field);
-  core::AutoPtr<Value> getIndex(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> getIndex(core::AutoPtr<Script> ctx,
                                 const uint32_t &name);
-  uint32_t getLength(core::AutoPtr<Context> ctx);
+  uint32_t getLength(core::AutoPtr<Script> ctx);
 
-  core::AutoPtr<Value> setRawField(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> setRawField(core::AutoPtr<Script> ctx,
                                    const std::string &name,
                                    core::AutoPtr<Value> field);
-  core::AutoPtr<Value> getRawField(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> getRawField(core::AutoPtr<Script> ctx,
                                    const std::string &name);
-  core::AutoPtr<Value> setRawIndex(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> setRawIndex(core::AutoPtr<Script> ctx,
                                    const uint32_t &name,
                                    core::AutoPtr<Value> field);
-  core::AutoPtr<Value> getRawIndex(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> getRawIndex(core::AutoPtr<Script> ctx,
                                    const uint32_t &name);
-  uint32_t getRawLength(core::AutoPtr<Context> ctx);
+  uint32_t getRawLength(core::AutoPtr<Script> ctx);
 
-  core::AutoPtr<Value> getMetadata(core::AutoPtr<Context> ctx);
+  core::AutoPtr<Value> getMetadata(core::AutoPtr<Script> ctx);
   core::AutoPtr<Value> setMetadata(core::AutoPtr<Value> value);
-  core::AutoPtr<Value> arithmetic(core::AutoPtr<Context> ctx,
+  core::AutoPtr<Value> arithmetic(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another,
                                   Operation operation);
   Atom *getAtom();

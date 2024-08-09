@@ -1,5 +1,5 @@
 #pragma once
-#include "Context.hpp"
+#include "Script.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "script/Atom.hpp"
@@ -12,9 +12,9 @@ private:
 
 public:
   Array(Atom *self);
-  uint32_t getLength(core::AutoPtr<Context> ctx);
-  core::AutoPtr<Value> getIndex(core::AutoPtr<Context> ctx, uint32_t index);
-  void setIndex(core::AutoPtr<Context> ctx, int index,
+  uint32_t getLength(core::AutoPtr<Script> ctx);
+  core::AutoPtr<Value> getIndex(core::AutoPtr<Script> ctx, uint32_t index);
+  void setIndex(core::AutoPtr<Script> ctx, int index,
                 core::AutoPtr<Value> item);
 };
 }; // namespace firefly::script

@@ -5,7 +5,7 @@
 #include <unordered_map>
 namespace firefly::script {
 class Value;
-class Context : public core::Object {
+class Script : public core::Object {
 public:
   class Bridge : public core::Object {
   public:
@@ -28,20 +28,20 @@ private:
                           const std::unordered_map<ptrdiff_t, Atom *> &alived);
 
 public:
-  Context();
-  ~Context() override;
+  Script();
+  ~Script() override;
   void dispose() override;
   core::AutoPtr<Value> getGlobal();
   core::AutoPtr<Value> getNativeGlobal();
   core::AutoPtr<Bridge> getBridge();
-  core::AutoPtr<Value> eval(const std::string &filename,
-                            const std::string &source);
+  std::vector<core::AutoPtr<Value>> eval(const std::string &filename,
+                                         const std::string &source);
   core::AutoPtr<Value> createValue(Atom *atom = nullptr);
   core::AutoPtr<Scope> pushScope();
   void popScope(core::AutoPtr<Scope> scope);
   core::AutoPtr<Scope> getCurrentScope();
   core::AutoPtr<Scope> getRootScope();
-  static void gc(core::AutoPtr<Context> ctx, Atom *atom);
+  static void gc(core::AutoPtr<Script> ctx, Atom *atom);
   void store(const std::string &name, core::AutoPtr<Value> value);
   core::AutoPtr<Value> query(const std::string &name);
   void
