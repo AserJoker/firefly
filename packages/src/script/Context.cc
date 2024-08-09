@@ -1,5 +1,6 @@
 #include "script/Context.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Singleton.hpp"
 #include "script/Atom.hpp"
 #include "script/Scope.hpp"
 #include "script/Value.hpp"
@@ -12,19 +13,13 @@ using namespace firefly::script;
 Context::Context() {
   _root = new Scope();
   _current = _root;
+  _bridge = core::Singleton<Bridge>::instance();
 }
 Context::~Context() {}
 void Context::dispose() {
   _bridge = nullptr;
   gc(this, _root->getRoot());
   _root = nullptr;
-}
-
-void Context::setBridge(core::AutoPtr<Bridge> bridge) {
-  if (_bridge != nullptr && _bridge != bridge) {
-    _bridge->dispose();
-    _bridge = bridge;
-  }
 }
 core::AutoPtr<Context::Bridge> Context::getBridge() { return _bridge; }
 core::AutoPtr<Value> Context::getGlobal() {
@@ -175,4 +170,12 @@ core::AutoPtr<Value> Context::query(const std::string &name) {
     return createValue();
   }
   return value;
+}
+
+void Context::registerModule(
+    const std::string &name,
+    std::unordered_map<std::string, core::AutoPtr<Value>> exports) {
+  if (_bridge != nullptr) {
+    _bridge->registerModule(name, exports);
+  }
 }

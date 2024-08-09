@@ -1,5 +1,8 @@
-local obj = _G.p({
-    data = 123
-})
-
-print(tostring(obj['$handle']))
+for k, v in pairs(_G['$objects']) do
+    print(tostring(k) .. ":" .. tostring(v))
+end
+for k, v in pairs(_G['$functions']) do
+    print(tostring(k) .. ":" .. tostring(v))
+end
+local native = require('native');
+native.print()

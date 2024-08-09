@@ -25,7 +25,7 @@ void Array::setIndex(core::AutoPtr<Context> ctx, int index,
     }
   }
   while (*_items.rbegin() == nullptr) {
-    _items.erase(_items.rbegin().base());
+    _items.pop_back();
   }
 }
 core::AutoPtr<Value> Array::getIndex(core::AutoPtr<Context> ctx,

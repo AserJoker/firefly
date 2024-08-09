@@ -309,6 +309,9 @@ core::AutoPtr<Value> Value::getMetadata(core::AutoPtr<Context> ctx) {
   return ctx->createValue(_atom->_metadata);
 }
 core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Value> value) {
+  if (_atom->_metadata == value->getAtom()) {
+    return this;
+  }
   auto metadata = value->getAtom();
   std::unordered_map<ptrdiff_t, Atom *> cache;
   while (metadata) {
@@ -318,7 +321,14 @@ core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Value> value) {
     cache[(ptrdiff_t)metadata] = metadata;
     metadata = metadata->_metadata;
   }
-  _atom->_metadata = value->getAtom();
+  metadata = value->getAtom();
+  if (_atom->_metadata) {
+    _atom->_metadata->removeParent(_atom);
+  }
+  _atom->_metadata = metadata;
+  if (metadata) {
+    metadata->addParent(_atom);
+  }
   return this;
 }
 

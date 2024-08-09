@@ -31,7 +31,6 @@ public:
   Context();
   ~Context() override;
   void dispose() override;
-  void setBridge(core::AutoPtr<Bridge> bridge);
   core::AutoPtr<Value> getGlobal();
   core::AutoPtr<Value> getNativeGlobal();
   core::AutoPtr<Bridge> getBridge();
@@ -45,5 +44,8 @@ public:
   static void gc(core::AutoPtr<Context> ctx, Atom *atom);
   void store(const std::string &name, core::AutoPtr<Value> value);
   core::AutoPtr<Value> query(const std::string &name);
+  void
+  registerModule(const std::string &name,
+                 std::unordered_map<std::string, core::AutoPtr<Value>> exports);
 };
 }; // namespace firefly::script
