@@ -32,6 +32,7 @@ public:
   Script();
   ~Script() override;
   void dispose() override;
+  void setBridge(core::AutoPtr<Bridge> bridge);
   core::AutoPtr<Value> getGlobal();
   core::AutoPtr<Value> getNativeGlobal();
   core::AutoPtr<Bridge> getBridge();

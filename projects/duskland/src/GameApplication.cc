@@ -4,6 +4,7 @@
 #include "input/Event_MouseButtonDown.hpp"
 #include "input/Event_MouseWheel.hpp"
 #include "runtime/Application.hpp"
+#include "script/bridge/LuaBridge.hpp"
 #include <SDL_image.h>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -22,6 +23,7 @@ using namespace duskland;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
+  _script->setBridge(new script::LuaBridge());
   _script->eval(
       "package.path = package.path..';./mods/?/lua/init.lua;./lua/?/init.lua'");
   _script->eval("require('duskland')");

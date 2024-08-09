@@ -22,6 +22,16 @@ void Script::dispose() {
   gc(this, _root->getRoot());
   _root = nullptr;
 }
+
+void Script::setBridge(core::AutoPtr<Bridge> bridge) {
+  if (_bridge != nullptr && _bridge != bridge) {
+    _bridge->dispose();
+  }
+  _bridge = bridge;
+  getNativeGlobal()->setField(this, "$objects", createValue()->setArray(this));
+  getNativeGlobal()->setField(this, "$functions",
+                              createValue()->setArray(this));
+}
 core::AutoPtr<Script::Bridge> Script::getBridge() { return _bridge; }
 core::AutoPtr<Value> Script::getGlobal() {
   if (_bridge != nullptr) {
