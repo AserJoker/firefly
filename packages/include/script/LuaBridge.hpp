@@ -373,19 +373,13 @@ public:
     }
   }
 
-  Value::Stack eval(const std::string &filename,
-                    const std::string &source) override {
+  Value::Stack eval(const std::string &source) override {
     auto top = lua_gettop(_state);
-    int ret = 0;
-    if (source.empty()) {
-      ret = luaL_dofile(_state, filename.c_str());
-    } else {
-      ret = luaL_dostring(_state, source.c_str());
-    }
+    int ret = luaL_dostring(_state, source.c_str());
     if (ret) {
       auto error = lua_tostring(_state, -1);
       throw std::runtime_error(
-          fmt::format("Failed to exec script '{}':\n\t{}", filename, error));
+          fmt::format("Failed to exec script :\n\t{}", error));
     }
     auto current = lua_gettop(_state);
     Value::Stack result;

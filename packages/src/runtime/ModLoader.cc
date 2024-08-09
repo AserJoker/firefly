@@ -4,12 +4,13 @@
 #include "runtime/Logger.hpp"
 #include "runtime/Media.hpp"
 #include "runtime/Resource_File.hpp"
+#include "script/Script.hpp"
+#include <algorithm>
 #include <cjson/cJSON.h>
 #include <exception>
 #include <filesystem>
 #include <stdexcept>
 #include <unordered_map>
-#include <algorithm>
 using namespace std::filesystem;
 using namespace firefly;
 using namespace firefly::runtime;
@@ -65,8 +66,8 @@ void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
     media->addCurrentWorkspaceDirectory(mediaPath.string());
   }
   if (exists(luaPath)) {
-    // auto script = core::Singleton<script::LuaScript>::instance();
-    // script->eval(fmt::format("require '{}'", manifest.name));
+    auto script = core::Singleton<script::Script>::instance();
+    script->eval(fmt::format("require '{}'", manifest.name));
   }
   manifest.loaded = true;
 }

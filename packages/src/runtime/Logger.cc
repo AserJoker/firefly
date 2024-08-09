@@ -44,7 +44,7 @@ void Logger::print(LEVEL level, const std::string &msg) {
     break;
   case LEVEL::PANIC:
     slevel = "PANIC";
-    style = fmt::fg(fmt::color::white) | fmt::bg(fmt::color::red);
+    style = fmt::fg(fmt::color::red);
     break;
   }
   write(fmt::format(style, "{} [{}]:{}", std::chrono::system_clock::now(),

@@ -14,7 +14,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <iostream>
 #include <lua.hpp>
 #include <script/Value.hpp>
 
@@ -22,7 +21,11 @@ using namespace firefly;
 using namespace duskland;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
-void GameApplication::initScript() {}
+void GameApplication::initScript() {
+  _script->eval(
+      "package.path = package.path..';./mods/?/lua/init.lua;./lua/?/init.lua'");
+  _script->eval("require('duskland')");
+}
 void GameApplication::initLocale() {
   _locale->scan();
   _locale->setDefaultLang("en_US");
@@ -45,19 +48,6 @@ void GameApplication::onInitialize() {
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
   _renderer->setClearColor(0.2, 0.3, 0.3, 1.0);
-
-  auto scope = _script->pushScope();
-  _script->registerModule(
-      "native",
-      {{"print", _script->createValue()->setFunction(
-                     _script,
-                     [](core::AutoPtr<script::Script> ctx,
-                        script::Value::Stack args) -> script::Value::Stack {
-                       std::cout << "hello world" << std::endl;
-                       return {};
-                     })}});
-  _script->popScope(scope);
-  _script->eval("init.lua", "");
   getWindow()->show();
 }
 

@@ -1,11 +1,11 @@
 #pragma once
 #include "Atom.hpp"
-#include "Script.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include <functional>
 #include <vector>
 namespace firefly::script {
+class Script;
 
 class Value : public core::Object {
 public:

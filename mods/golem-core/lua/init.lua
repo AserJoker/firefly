@@ -1,6 +1,6 @@
-require 'log'.info('golem init')
+print('golem init')
 return {
     info = function(msg)
-        require 'log'.info('golem: ' .. tostring(msg))
+        require 'duskland.api'.info('golem: ' .. msg)
     end
 }

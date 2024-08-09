@@ -1,1 +1,1 @@
-require 'golem-core'.info('demo loaded')
+require 'golem-core'.info("hello world")

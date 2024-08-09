@@ -1,5 +1,6 @@
 #pragma once
 #include "Scope.hpp"
+#include "Value.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include <unordered_map>
@@ -10,7 +11,7 @@ public:
   class Bridge : public core::Object {
   public:
     virtual std::vector<core::AutoPtr<Value>>
-    eval(const std::string &filename, const std::string &source) = 0;
+    eval(const std::string &source) = 0;
 
     virtual core::AutoPtr<Value> getGlobal() = 0;
 
@@ -34,8 +35,7 @@ public:
   core::AutoPtr<Value> getGlobal();
   core::AutoPtr<Value> getNativeGlobal();
   core::AutoPtr<Bridge> getBridge();
-  std::vector<core::AutoPtr<Value>> eval(const std::string &filename,
-                                         const std::string &source);
+  std::vector<core::AutoPtr<Value>> eval(const std::string &source);
   core::AutoPtr<Value> createValue(Atom *atom = nullptr);
   core::AutoPtr<Scope> pushScope();
   void popScope(core::AutoPtr<Scope> scope);

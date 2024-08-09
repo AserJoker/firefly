@@ -32,10 +32,9 @@ core::AutoPtr<Value> Script::getGlobal() {
 core::AutoPtr<Value> Script::getNativeGlobal() {
   return createValue(_root->getRoot());
 }
-Value::Stack Script::eval(const std::string &filename,
-                          const std::string &source) {
+Value::Stack Script::eval(const std::string &source) {
   if (_bridge != nullptr) {
-    return _bridge->eval(filename, source);
+    return _bridge->eval(source);
   }
   return {};
 }
