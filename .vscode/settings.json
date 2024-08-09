@@ -1,0 +1,6 @@
+{
+    "Lua.workspace.library": [
+        "${workspaceFolder}/lua/definition",
+        "${workspaceFolder}/mods/*/definition"
+    ]
+}
