@@ -21,6 +21,7 @@ private:
 public:
   static core::AutoPtr<Value> create(core::AutoPtr<Script> ctx,
                                      core::AutoPtr<core::Buffer> buffer);
+  static void initialize(core::AutoPtr<Script> ctx);
 };
 
 } // namespace firefly::script

@@ -350,24 +350,16 @@ core::AutoPtr<Value> LuaBridge::load(lua_State *state, int index) {
     }
   } break;
   case LUA_TFUNCTION: {
-    lua_getfield(state, index, "$handle");
-    if (lua_type(state, -1) == LUA_TNUMBER) {
-      uint32_t handle = lua_tonumber(state, -1);
-      value = ctx->getNativeGlobal()
-                  ->getField(ctx, "$functions")
-                  ->getIndex(ctx, handle);
-    } else {
-      static int func_idx = 0;
-      value->setObject(ctx);
-      value->setRawField(ctx, "$handle",
-                         ctx->createValue()->setNumber(ctx, func_idx));
-      value->setMetadata(getFunctionMetadata());
-      lua_getglobal(state, "$functions");
-      auto objects = lua_gettop(state);
-      lua_pushvalue(state, index);
-      lua_seti(state, objects, func_idx);
-      func_idx++;
-    }
+    static int func_idx = 0;
+    value->setObject(ctx);
+    value->setRawField(ctx, "$handle",
+                       ctx->createValue()->setNumber(ctx, func_idx));
+    value->setMetadata(getFunctionMetadata());
+    lua_getglobal(state, "$functions");
+    auto objects = lua_gettop(state);
+    lua_pushvalue(state, index);
+    lua_seti(state, objects, func_idx);
+    func_idx++;
   } break;
   default:
     break;

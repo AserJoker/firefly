@@ -9,6 +9,7 @@ private:
   static FUNC_DEF(read);
 
 public:
+  static void initialize(core::AutoPtr<Script> ctx);
   static core::AutoPtr<Value> create(core::AutoPtr<Script> ctx,
                                      core::AutoPtr<runtime::Resource> resource);
 };

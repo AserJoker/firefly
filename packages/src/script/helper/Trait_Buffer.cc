@@ -133,29 +133,42 @@ FUNC_DEF(Trait_Buffer::toString) {
       std::string((char *)buffer->getData(), buffer->getSize());
   return {ctx->createValue()->setString(ctx, result)};
 }
+
+void Trait_Buffer::initialize(core::AutoPtr<Script> ctx) {
+  auto global = ctx->getNativeGlobal();
+  auto Buffer =
+      ctx->createValue()
+          ->setObject(ctx)
+          ->setField(ctx, "getLength",
+                     ctx->createValue()->setFunction(ctx, getLength))
+          ->setField(ctx, "readUint8",
+                     ctx->createValue()->setFunction(ctx, readUint8))
+          ->setField(ctx, "readUint16",
+                     ctx->createValue()->setFunction(ctx, readUint16))
+          ->setField(ctx, "readUint32",
+                     ctx->createValue()->setFunction(ctx, readUint32))
+          ->setField(ctx, "writeUint8",
+                     ctx->createValue()->setFunction(ctx, writeUint8))
+          ->setField(ctx, "writeUint16",
+                     ctx->createValue()->setFunction(ctx, writeUint16))
+          ->setField(ctx, "writeUint32",
+                     ctx->createValue()->setFunction(ctx, writeUint32))
+          ->setField(ctx, "toUint8Array",
+                     ctx->createValue()->setFunction(ctx, toUint8Array))
+          ->setField(ctx, "toUint32Array",
+                     ctx->createValue()->setFunction(ctx, toUint32Array))
+          ->setField(ctx, "toString",
+                     ctx->createValue()->setFunction(ctx, toString));
+  global->setField(ctx, "Buffer", Buffer);
+}
+
 core::AutoPtr<Value> Trait_Buffer::create(core::AutoPtr<Script> ctx,
                                           core::AutoPtr<core::Buffer> buffer) {
-  return ctx->createValue()
-      ->setObject(ctx)
-      ->setOpaque(buffer)
-      ->setField(ctx, "getLength",
-                 ctx->createValue()->setFunction(ctx, getLength))
-      ->setField(ctx, "readUint8",
-                 ctx->createValue()->setFunction(ctx, readUint8))
-      ->setField(ctx, "readUint16",
-                 ctx->createValue()->setFunction(ctx, readUint16))
-      ->setField(ctx, "readUint32",
-                 ctx->createValue()->setFunction(ctx, readUint32))
-      ->setField(ctx, "writeUint8",
-                 ctx->createValue()->setFunction(ctx, writeUint8))
-      ->setField(ctx, "writeUint16",
-                 ctx->createValue()->setFunction(ctx, writeUint16))
-      ->setField(ctx, "writeUint32",
-                 ctx->createValue()->setFunction(ctx, writeUint32))
-      ->setField(ctx, "toUint8Array",
-                 ctx->createValue()->setFunction(ctx, toUint8Array))
-      ->setField(ctx, "toUint32Array",
-                 ctx->createValue()->setFunction(ctx, toUint32Array))
-      ->setField(ctx, "toString",
-                 ctx->createValue()->setFunction(ctx, toString));
+  auto global = ctx->getNativeGlobal();
+  auto Buffer = global->getField(ctx, "Buffer");
+  auto instance = ctx->createValue()->setObject(ctx)->setOpaque(buffer);
+  for (auto &field : Buffer->getKeys(ctx)) {
+    instance->setField(ctx, field, Buffer->getField(ctx, field));
+  }
+  return instance;
 }
