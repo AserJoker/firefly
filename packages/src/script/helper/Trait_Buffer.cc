@@ -1,0 +1,161 @@
+#include "script/helper/Trait_Buffer.hpp"
+#include "core/AutoPtr.hpp"
+#include "core/Buffer.hpp"
+#include "script/Value.hpp"
+#include <stdexcept>
+using namespace firefly;
+using namespace firefly::script;
+FUNC_DEF(Trait_Buffer::getLength) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  return {ctx->createValue()->setNumber(ctx, buffer->getSize())};
+}
+FUNC_DEF(Trait_Buffer::readUint8) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  uint32_t offset = args[1]->toNumber(ctx);
+  uint8_t *buf = (uint8_t *)buffer->getData();
+  if (offset + 1 < buffer->getSize()) {
+    return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
+  }
+  throw std::runtime_error("Failed to read uint8,out of range");
+}
+FUNC_DEF(Trait_Buffer::readUint16) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  uint32_t offset = args[1]->toNumber(ctx);
+  uint16_t *buf = (uint16_t *)buffer->getData();
+  if ((offset + 1) * 2 < buffer->getSize()) {
+    return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
+  }
+  throw std::runtime_error("Failed to read uint16,out of range");
+}
+FUNC_DEF(Trait_Buffer::readUint32) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  uint32_t offset = args[1]->toNumber(ctx);
+  uint32_t *buf = (uint32_t *)buffer->getData();
+  if ((offset + 1) * 4 < buffer->getSize()) {
+    return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
+  }
+  throw std::runtime_error("Failed to read uint32,out of range");
+}
+FUNC_DEF(Trait_Buffer::writeUint8) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  uint32_t offset = args[1]->toNumber(ctx);
+  auto value = args[2]->toNumber(ctx);
+  if (value >= 0xff || value <= 0) {
+    throw std::runtime_error(
+        fmt::format("Failed to write uint8,{} is not uint8", value));
+  }
+  uint8_t *buf = (uint8_t *)buffer->getData();
+  if (offset + 1 < buffer->getSize()) {
+    buf[offset] = (uint8_t)value;
+    return {};
+  }
+  throw std::runtime_error("Failed to write uint8,out of range");
+}
+FUNC_DEF(Trait_Buffer::writeUint16) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  uint32_t offset = args[1]->toNumber(ctx);
+  auto value = args[2]->toNumber(ctx);
+  if (value >= 0xffff || value <= 0) {
+    throw std::runtime_error(
+        fmt::format("Failed to write uint8,{} is not uint8", value));
+  }
+  uint16_t *buf = (uint16_t *)buffer->getData();
+  if ((offset + 1) * 2 < buffer->getSize()) {
+    buf[offset] = (uint16_t)value;
+    return {};
+  }
+  throw std::runtime_error("Failed to write uint16,out of range");
+}
+FUNC_DEF(Trait_Buffer::writeUint32) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  uint32_t offset = args[1]->toNumber(ctx);
+  auto value = args[2]->toNumber(ctx);
+  if (value >= 0xffffffff || value <= 0) {
+    throw std::runtime_error(
+        fmt::format("Failed to write uint32,{} is not uint32", value));
+  }
+  uint32_t *buf = (uint32_t *)buffer->getData();
+  if ((offset + 1) * 4 < buffer->getSize()) {
+    buf[offset] = (uint32_t)value;
+    return {};
+  }
+  throw std::runtime_error("Failed to write uint32,out of range");
+}
+FUNC_DEF(Trait_Buffer::toUint8Array) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  uint8_t *buf = (uint8_t *)buffer->getData();
+  auto result = ctx->createValue()->setArray(ctx);
+  for (auto i = 0; i < buffer->getSize(); i++) {
+    result->setIndex(ctx, i, ctx->createValue()->setNumber(ctx, buf[i]));
+  }
+  return {result};
+}
+FUNC_DEF(Trait_Buffer::toUint16Array) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  if (buffer->getSize() % 2 != 0) {
+    throw std::runtime_error(
+        "Failed to convert buffer to uint16 array,size is not aligned");
+  }
+  uint16_t *buf = (uint16_t *)buffer->getData();
+  auto result = ctx->createValue()->setArray(ctx);
+  for (auto i = 0; i < buffer->getSize() / 2; i++) {
+    result->setIndex(ctx, i, ctx->createValue()->setNumber(ctx, buf[i]));
+  }
+  return {result};
+}
+FUNC_DEF(Trait_Buffer::toUint32Array) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  if (buffer->getSize() % 4 != 0) {
+    throw std::runtime_error(
+        "Failed to convert buffer to uint32 array,size is not aligned");
+  }
+  uint32_t *buf = (uint32_t *)buffer->getData();
+  auto result = ctx->createValue()->setArray(ctx);
+  for (auto i = 0; i < buffer->getSize() / 4; i++) {
+    result->setIndex(ctx, i, ctx->createValue()->setNumber(ctx, buf[i]));
+  }
+  return {result};
+}
+FUNC_DEF(Trait_Buffer::toString) {
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  std::string result =
+      std::string((char *)buffer->getData(), buffer->getSize());
+  return {ctx->createValue()->setString(ctx, result)};
+}
+core::AutoPtr<Value> Trait_Buffer::create(core::AutoPtr<Script> ctx,
+                                          core::AutoPtr<core::Buffer> buffer) {
+  return ctx->createValue()
+      ->setObject(ctx)
+      ->setOpaque(buffer)
+      ->setField(ctx, "getLength",
+                 ctx->createValue()->setFunction(ctx, getLength))
+      ->setField(ctx, "readUint8",
+                 ctx->createValue()->setFunction(ctx, readUint8))
+      ->setField(ctx, "readUint16",
+                 ctx->createValue()->setFunction(ctx, readUint16))
+      ->setField(ctx, "readUint32",
+                 ctx->createValue()->setFunction(ctx, readUint32))
+      ->setField(ctx, "writeUint8",
+                 ctx->createValue()->setFunction(ctx, writeUint8))
+      ->setField(ctx, "writeUint16",
+                 ctx->createValue()->setFunction(ctx, writeUint16))
+      ->setField(ctx, "writeUint32",
+                 ctx->createValue()->setFunction(ctx, writeUint32))
+      ->setField(ctx, "toUint8Array",
+                 ctx->createValue()->setFunction(ctx, toUint8Array))
+      ->setField(ctx, "toUint32Array",
+                 ctx->createValue()->setFunction(ctx, toUint32Array))
+      ->setField(ctx, "toString",
+                 ctx->createValue()->setFunction(ctx, toString));
+}

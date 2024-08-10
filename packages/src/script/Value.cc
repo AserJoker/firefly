@@ -3,6 +3,7 @@
 #include "script/Array.hpp"
 #include "script/Atom.hpp"
 #include "script/Record.hpp"
+#include "script/Script.hpp"
 #include <any>
 #include <fmt/core.h>
 #include <stdexcept>
@@ -768,3 +769,8 @@ core::AutoPtr<Value> Value::optNot(core::AutoPtr<Script> ctx) {
 }
 
 Atom *Value::getAtom() { return _atom; }
+core::AutoPtr<Value> Value::setOpaque(core::AutoPtr<core::Object> obj) {
+  _atom->_opaque = obj;
+  return this;
+}
+core::AutoPtr<core::Object> Value::getOpaque() { return _atom->_opaque; }

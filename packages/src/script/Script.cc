@@ -185,10 +185,14 @@ core::AutoPtr<Value> Script::query(const std::string &name) {
   return value;
 }
 
-void Script::registerModule(
-    const std::string &name,
-    std::unordered_map<std::string, core::AutoPtr<Value>> exports) {
+void Script::registerModule(const std::string &name,
+                            core::AutoPtr<Value> exports) {
   if (_bridge != nullptr) {
     _bridge->registerModule(name, exports);
+  }
+}
+void Script::gc() {
+  if (_bridge != nullptr) {
+    _bridge->gc();
   }
 }

@@ -2,15 +2,22 @@
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "firefly.hpp"
-#include "script/Script.hpp"
-#include "script/bridge/LuaBridge.hpp"
 #include <SDL2/SDL.h>
+#include <clocale>
 #include <exception>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 using namespace duskland;
 using namespace firefly;
 
 int main(int argc, char *argv[]) {
+  setlocale(LC_ALL, NULL);
+#ifdef _WIN32
+  SetConsoleOutputCP(CP_UTF8);
+  setvbuf(stdout, nullptr, _IOFBF, 1000);
+#endif
   InitFirefly();
   try {
     core::Singleton<runtime::Application>::initialize<GameApplication>(argc,

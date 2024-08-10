@@ -1,4 +1,6 @@
 #pragma once
+#include "core/AutoPtr.hpp"
+#include "core/Object.hpp"
 #include <algorithm>
 #include <any>
 #include <fmt/core.h>
@@ -9,6 +11,7 @@ struct Atom {
 
   std::vector<Atom *> _parent;
   std::vector<Atom *> _children;
+  core::AutoPtr<core::Object> _opaque;
   Atom *_metadata;
   std::any _value;
   Type _type;

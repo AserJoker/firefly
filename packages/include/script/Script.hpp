@@ -15,9 +15,9 @@ public:
 
     virtual core::AutoPtr<Value> getGlobal() = 0;
 
-    virtual void registerModule(
-        const std::string &name,
-        std::unordered_map<std::string, core::AutoPtr<Value>> exports) = 0;
+    virtual void registerModule(const std::string &name,
+                                core::AutoPtr<Value> exports) = 0;
+    virtual void gc() = 0;
   };
 
 private:
@@ -42,11 +42,13 @@ public:
   void popScope(core::AutoPtr<Scope> scope);
   core::AutoPtr<Scope> getCurrentScope();
   core::AutoPtr<Scope> getRootScope();
-  static void gc(core::AutoPtr<Script> ctx, Atom *atom);
   void store(const std::string &name, core::AutoPtr<Value> value);
   core::AutoPtr<Value> query(const std::string &name);
-  void
-  registerModule(const std::string &name,
-                 std::unordered_map<std::string, core::AutoPtr<Value>> exports);
+  void registerModule(const std::string &name, core::AutoPtr<Value> exports);
+  void gc();
+
+  static void gc(core::AutoPtr<Script> ctx, Atom *atom);
 };
+#define FUNC_DEF(name)                                                         \
+  Value::Stack name(core::AutoPtr<Script> ctx, Value::Stack args)
 }; // namespace firefly::script

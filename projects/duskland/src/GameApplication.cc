@@ -4,7 +4,12 @@
 #include "input/Event_MouseButtonDown.hpp"
 #include "input/Event_MouseWheel.hpp"
 #include "runtime/Application.hpp"
+#include "script/Value.hpp"
 #include "script/bridge/LuaBridge.hpp"
+#include "script/lib/Module_Event.hpp"
+#include "script/lib/Module_Locale.hpp"
+#include "script/lib/Module_Log.hpp"
+#include "script/lib/Module_Media.hpp"
 #include <SDL_image.h>
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -16,7 +21,6 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <lua.hpp>
-#include <script/Value.hpp>
 
 using namespace firefly;
 using namespace duskland;
@@ -26,6 +30,10 @@ void GameApplication::initScript() {
   _script->setBridge(new script::LuaBridge());
   _script->eval(
       "package.path = package.path..';./mods/?/lua/init.lua;./lua/?/init.lua'");
+  script::Module_Log::open(_script);
+  script::Module_Locale::open(_script);
+  script::Module_Event::open(_script);
+  script::Module_Media::open(_script);
   _script->eval("require('duskland')");
 }
 void GameApplication::initLocale() {
@@ -50,6 +58,7 @@ void GameApplication::onInitialize() {
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
   _renderer->setClearColor(0.2, 0.3, 0.3, 1.0);
+  script::Module_Event::emit(_script, "gameLoaded");
   getWindow()->show();
 }
 
@@ -59,6 +68,7 @@ void GameApplication::onMainLoop() {
   auto now = SDL_GetTicks();
   if (now - time > 50) {
     time = now;
+    script::Module_Event::emit(_script, "tick");
   }
   _renderer->render();
   getWindow()->present();
