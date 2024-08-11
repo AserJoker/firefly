@@ -55,7 +55,6 @@ void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
   auto res = _media->load("texture::wall.jpg");
-  _renderer->initDefaultResourceSet();
   initEvent();
   initLocale();
   initScript();
