@@ -9,7 +9,6 @@
 #include "ModLoader.hpp"
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
-#include "db/Database.hpp"
 #include "script/Script.hpp"
 #include "video/Renderer.hpp"
 #include <filesystem>
@@ -33,7 +32,6 @@ protected:
   core::Injector<Media, INJECTOR_MEDIA> _media;
   core::Injector<Locale, INJECTOR_LOCALE> _locale;
   core::Injector<ModLoader, INJECTOR_MOD> _mod;
-  core::Injector<db::Database, INJECTOR_DATABASE> _database;
   core::Injector<video::Renderer, INJECTOR_RENDERER> _renderer;
   core::Injector<script::Script, INJECTOR_SCRIPT> _script;
 

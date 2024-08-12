@@ -1,7 +1,6 @@
 #include "firefly.hpp"
 #include "Component.hpp"
 #include "core/Provider.hpp"
-#include "db/Database.hpp"
 #include "runtime/CmdLine.hpp"
 #include "runtime/EventBus.hpp"
 #include "runtime/Locale.hpp"
@@ -18,7 +17,6 @@ void InitFirefly() {
   provider->provide<runtime::CmdLine, INJECTOR_CMDLINE>();
   provider->provide<runtime::EventBus, INJECTOR_EVENTBUS>();
   provider->provide<runtime::Media, INJECTOR_MEDIA>();
-  provider->provide<db::Database, INJECTOR_DATABASE>();
   provider->provide<runtime::Locale, INJECTOR_LOCALE>();
   provider->provide<runtime::ModLoader, INJECTOR_MOD>();
   provider->provide<video::Renderer, INJECTOR_RENDERER>();
