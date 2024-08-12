@@ -289,10 +289,6 @@ Database::resolveSchema(const Schema &schema,
           items.push_back(resolveSchema(next, nextDriver, nextValue));
         }
         result[key] = items;
-      } else if (field.getType() == Field::M2M) {
-        // TODO:
-      } else if (field.getType() == Field::O2O) {
-        // TODO:
       }
     }
   }
@@ -307,7 +303,7 @@ std::unordered_map<std::string, std::any> Database::updateComplexField(
   for (auto &[key, value] : record) {
     if (driver->hasField(key)) {
       auto &field = driver->getField(key);
-      if (field.getType() <= Field::M2M) {
+      if (field.getType() <= Field::M2O) {
         if (field.getType() == Field::M2O) {
           auto next =
               std::any_cast<std::unordered_map<std::string, std::any>>(value);
@@ -328,10 +324,6 @@ std::unordered_map<std::string, std::any> Database::updateComplexField(
             }
             insertOrUpdateOne(field.getRefModel(), item);
           }
-        } else if (field.getType() == Field::O2O) {
-          // TODO: relation field
-        } else if (field.getType() == Field::M2M) {
-          // TODO: relation field
         }
       } else {
         r[key] = value;
@@ -409,8 +401,6 @@ void Database::print() {
           switch (field.getType()) {
           case Field::O2M:
           case Field::M2O:
-          case Field::O2O:
-          case Field::M2M:
             break;
           case Field::STRING: {
             if (field.getAttribute().array) {

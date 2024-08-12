@@ -51,4 +51,10 @@ public:
 };
 #define FUNC_DEF(name)                                                         \
   Value::Stack name(core::AutoPtr<Script> ctx, Value::Stack args)
+#define createNumber(ctx, value) ctx->createValue()->setNumber(ctx, value)
+#define createString(ctx, value) ctx->createValue()->setString(ctx, value)
+#define createBoolean(ctx, value) ctx->createValue()->setBoolean(ctx, value)
+#define createFunction(ctx, value) ctx->createValue()->setFunction(ctx, value)
+#define setFunctionField(ctx, func)                                            \
+  setField(ctx, #func, ctx->createValue()->setFunction(ctx, func))
 }; // namespace firefly::script

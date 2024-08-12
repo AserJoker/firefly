@@ -31,9 +31,9 @@ protected:
   core::Injector<CmdLine, INJECTOR_CMDLINE> _cmdline;
   core::Injector<EventBus, INJECTOR_EVENTBUS> _eventbus;
   core::Injector<Media, INJECTOR_MEDIA> _media;
-  core::Injector<db::Database, INJECTOR_DATABASE> _database;
-  core::Injector<runtime::Locale, INJECTOR_LOCALE> _locale;
+  core::Injector<Locale, INJECTOR_LOCALE> _locale;
   core::Injector<ModLoader, INJECTOR_MOD> _mod;
+  core::Injector<db::Database, INJECTOR_DATABASE> _database;
   core::Injector<video::Renderer, INJECTOR_RENDERER> _renderer;
   core::Injector<script::Script, INJECTOR_SCRIPT> _script;
 

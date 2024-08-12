@@ -6,7 +6,7 @@ namespace firefly::db {
 class Record;
 class Field : public Entity {
 public:
-  enum TYPE { O2M, M2O, O2O, M2M, STRING, BOOLEAN, FLOAT, INTEGER, ENUM };
+  enum TYPE { O2M, M2O, STRING, BOOLEAN, FLOAT, INTEGER, ENUM };
   struct Attribute {
     bool required;
     bool readonly;

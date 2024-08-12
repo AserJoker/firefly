@@ -1,12 +1,15 @@
 #include "input/Mouse.hpp"
-#include "input/Event_Mouse.hpp"
-#include "input/Event_MouseButtonDown.hpp"
+#include "input/Event_Click.hpp"
+#include "input/Event_MouseDown.hpp"
+#include "input/Event_MouseMotion.hpp"
+#include "input/Event_MouseUp.hpp"
 #include "input/Event_MouseWheel.hpp"
 #include "runtime/Event_SDL.hpp"
 #include <SDL_events.h>
 #include <SDL_mouse.h>
 #include <SDL_video.h>
 #include <glm/fwd.hpp>
+
 
 using namespace firefly;
 using namespace firefly::input;
@@ -17,7 +20,7 @@ void Mouse::onEvent(runtime::Event_SDL &e) {
   if (event.type == SDL_MOUSEMOTION) {
     glm::vec2 delta = {event.motion.xrel, event.motion.yrel};
     _position += delta;
-    _bus->emit<Event_Mouse>(_position, delta);
+    _bus->emit<Event_MouseMotion>(_position, delta);
     if (_captured) {
       auto win = SDL_GL_GetCurrentWindow();
       int w, h;
@@ -26,7 +29,11 @@ void Mouse::onEvent(runtime::Event_SDL &e) {
     }
   }
   if (event.type == SDL_MOUSEBUTTONDOWN) {
-    _bus->emit<Event_MouseButtonDown>(event.button.button);
+    _bus->emit<Event_MouseDown>(event.button.button);
+  }
+  if (event.type == SDL_MOUSEBUTTONUP) {
+    _bus->emit<Event_MouseUp>(event.button.button);
+    _bus->emit<Event_Click>(event.button.button);
   }
   if (event.type == SDL_MOUSEWHEEL) {
     glm::vec2 delta = {event.wheel.x, event.wheel.y};

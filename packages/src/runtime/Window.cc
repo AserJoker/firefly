@@ -57,3 +57,11 @@ void Window::setSize(const glm::vec2 &size) {
 }
 void Window::hide() { SDL_HideWindow(_window); }
 void Window::show() { SDL_ShowWindow(_window); }
+const glm::vec2 Window::getWindowPosition() const {
+  int x, y;
+  SDL_GetWindowPosition(_window, &x, &y);
+  return {x, y};
+}
+void Window::setWindowPosition(const glm::vec2 &pos) {
+  SDL_SetWindowSize(_window, pos.x, pos.y);
+}

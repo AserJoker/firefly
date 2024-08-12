@@ -9,10 +9,6 @@ static Field::TYPE fromString(const std::string &name) {
     return Field::O2M;
   } else if (name == "M2O") {
     return Field::M2O;
-  } else if (name == "O2O") {
-    return Field::O2O;
-  } else if (name == "M2M") {
-    return Field::M2M;
   } else if (name == "STRING") {
     return Field::STRING;
   } else if (name == "BOOLEAN") {
@@ -56,10 +52,6 @@ const std::string Field::getTypeName() const {
     return "O2M";
   case M2O:
     return "M2O";
-  case O2O:
-    return "O2O";
-  case M2M:
-    return "M2M";
   case STRING:
     return "STRING";
   case BOOLEAN:
@@ -86,7 +78,7 @@ Field::Field(const core::AutoPtr<Record> &record)
   if (record->hasField("array")) {
     record->getBooleanField("array");
   }
-  if (_type <= M2M) {
+  if (_type <= M2O) {
     _refModel = record->getStringField("refModel");
     _relatedFields = record->getStringArrayField("relatedFields");
     _relationFields = record->getStringArrayField("relationFields");

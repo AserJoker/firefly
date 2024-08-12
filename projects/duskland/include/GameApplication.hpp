@@ -1,15 +1,23 @@
 #pragma once
 
+#include "core/AutoPtr.hpp"
+#include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
-#include "input/Event_Mouse.hpp"
-#include "input/Event_MouseButtonDown.hpp"
+#include "input/Event_KeyUp.hpp"
+#include "input/Event_MouseDown.hpp"
+#include "input/Event_MouseMotion.hpp"
 #include "input/Event_MouseWheel.hpp"
+#include "input/Keyboard.hpp"
+#include "input/Mouse.hpp"
 #include "runtime/Application.hpp"
 
 namespace duskland {
 using namespace firefly;
 
 class GameApplication : public runtime::Application {
+private:
+  core::AutoPtr<input::Mouse> _mouse;
+  core::AutoPtr<input::Keyboard> _keyboard;
 
 protected:
   void onInitialize() override;
@@ -22,10 +30,12 @@ protected:
   virtual void initLocale();
   virtual void initEvent();
 
-  void onMouse(input::Event_Mouse &e);
-  void onMouseButtonDown(input::Event_MouseButtonDown &e);
-  void onKeydown(input::Event_KeyDown &e);
+  void onMouseMotion(input::Event_MouseMotion &e);
+  void onMouseDown(input::Event_MouseDown &e);
   void onMouseWheel(input::Event_MouseWheel &e);
+  void onClick(input::Event_Click &e);
+  void onKeyDown(input::Event_KeyDown &e);
+  void onKeyUp(input::Event_KeyUp &e);
 
 public:
   GameApplication(int argc, char *argv[]);

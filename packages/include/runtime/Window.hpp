@@ -17,6 +17,8 @@ public:
   const std::string getTitle() const;
   const glm::vec2 getSize() const;
   void setSize(const glm::vec2 &size);
+  const glm::vec2 getWindowPosition() const;
+  void setWindowPosition(const glm::vec2 &pos);
   void present();
   void setSwapInterval(int flag);
   void hide();

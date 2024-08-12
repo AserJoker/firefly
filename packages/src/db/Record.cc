@@ -17,8 +17,6 @@ const std::string Record::getKey() const {
     switch (field.getType()) {
     case Field::O2M:
     case Field::M2O:
-    case Field::O2O:
-    case Field::M2M:
       continue;
     case Field::STRING:
       part = std::any_cast<std::string>(getField(name));
@@ -116,8 +114,6 @@ void Record::setField(const std::string &name, const std::any &raw) {
   switch (field.getType()) {
   case Field::O2M:
   case Field::M2O:
-  case Field::O2O:
-  case Field::M2M:
     throw std::runtime_error(
         fmt::format("Cannot set complex field '{}'", field.getTypeName()));
   case Field::STRING:
