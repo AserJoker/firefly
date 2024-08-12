@@ -76,7 +76,7 @@ public:
     if (_object && _object != &*another) {
       dispose();
     }
-    _object = const_cast<T *>(&*another);
+    _object = const_cast<K *>(&*another);
     if (_object) {
       _object->addRef();
     }
