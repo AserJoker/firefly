@@ -1,16 +1,25 @@
 #include "database/Database.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Singleton.hpp"
 #include "database/Field.hpp"
 #include "database/Metadata.hpp"
+#include "database/Record.hpp"
+#include "database/Value.hpp"
 #include "database/driver/Driver_Table.hpp"
+#include "libxml/parser.h"
+#include "runtime/Media.hpp"
+#include <cinttypes>
+#include <libxml/tree.h>
+#include <libxml/xmlstring.h>
 #include <stdexcept>
+#include <unordered_map>
 using namespace firefly;
 using namespace firefly::database;
 
 void Database::initialize() {
   Table::setDriver<Driver_Table>(Driver_Table::DRIVER_NAME);
   core::AutoPtr metaTable = new Metadata(
-      "table", "metadata",
+      "table", "firefly",
       {
           Field(Field::TYPE::STRING, "id", "firefly.table", true, true),
           Field(Field::TYPE::STRING, "name", "firefly.table", true, true),
@@ -21,7 +30,7 @@ void Database::initialize() {
       },
       {"id"}, Driver_Table::DRIVER_NAME);
   core::AutoPtr metaField = new Metadata(
-      "field", "metadata",
+      "field", "firefly",
       {
           Field(Field::TYPE::STRING, "id", "firefly.field", true, true),
           Field(Field::TYPE::STRING, "name", "firefly.field", true, true),
@@ -206,4 +215,162 @@ const core::AutoPtr<Table> Database::getTable(const std::string &name) const {
 const std::unordered_map<std::string, core::AutoPtr<Table>> &
 Database::getTables() const {
   return _tables;
+}
+void Database::load() {
+  auto media = core::Singleton<runtime::Media>::instance();
+  auto items = media->scan("table");
+  std::vector<std::string> fields;
+  std::vector<std::string> tables;
+  std::vector<std::string> records;
+  for (auto &item : items) {
+    if (item.ends_with(".field.xml")) {
+      fields.push_back(item);
+    } else if (item.ends_with(".table.xml")) {
+      tables.push_back(item);
+    } else {
+      records.push_back(item);
+    }
+  }
+  for (auto &item : fields) {
+    auto data = media->load(item)->read();
+    loadFromXML(data);
+  }
+  for (auto &item : tables) {
+    auto data = media->load(item)->read();
+    loadFromXML(data);
+  }
+  for (auto &item : records) {
+    auto data = media->load(item)->read();
+    loadFromXML(data);
+  }
+}
+
+void Database::loadFromXML(const core::AutoPtr<core::Buffer> &buffer) {
+  std::string source((char *)buffer->getData(), buffer->getSize());
+  auto doc = xmlParseMemory((const char *)buffer->getData(), buffer->getSize());
+  auto root = xmlDocGetRootElement(doc);
+  std::string tableName = (const char *)xmlGetProp(root, (xmlChar *)"id");
+  auto table = getTable(tableName);
+  auto meta = table->getMetadata();
+  auto record = root->children;
+  while (record != nullptr) {
+    if (xmlStrcmp(record->name, (const xmlChar *)"record") == 0) {
+      std::unordered_map<std::string, core::AutoPtr<Value>> query;
+      auto field = record->children;
+      while (field != nullptr) {
+        if (xmlStrcmp(field->name, (const xmlChar *)"field") == 0) {
+          std::string name =
+              (const char *)xmlGetProp(field, (const xmlChar *)"name");
+          auto metaField = meta->getField(name);
+          std::string value =
+              (const char *)xmlGetProp(field, (const xmlChar *)"value");
+          if (value != "nil") {
+            if (metaField.isArray()) {
+              switch (metaField.getType()) {
+              case Field::TYPE::STRING: {
+                std::vector<std::string> val;
+                std::string item;
+                for (auto &c : value) {
+                  if (c == ',') {
+                    if (!item.empty()) {
+                      val.push_back(item);
+                    }
+                    item.clear();
+                  } else {
+                    item += c;
+                  }
+                }
+                if (!item.empty()) {
+                  val.push_back(item);
+                }
+                query[name] = new Value(val);
+              } break;
+              case Field::TYPE::INTEGER: {
+                char *end = 0;
+                std::vector<int32_t> val;
+                std::string item;
+                for (auto &c : value) {
+                  if (c == ',') {
+                    if (!item.empty()) {
+                      val.push_back(strtoimax(item.c_str(), &end, 10));
+                    }
+                    item.clear();
+                  } else {
+                    item += c;
+                  }
+                }
+                if (!item.empty()) {
+                  val.push_back(strtoimax(item.c_str(), &end, 10));
+                }
+                query[name] = new Value(val);
+              } break;
+              case Field::TYPE::NUMBER: {
+                char *end = 0;
+                std::vector<double> val;
+                std::string item;
+                for (auto &c : value) {
+                  if (c == ',') {
+                    if (!item.empty()) {
+                      val.push_back(strtod(item.c_str(), &end));
+                    }
+                    item.clear();
+                  } else {
+                    item += c;
+                  }
+                }
+                if (!item.empty()) {
+                  val.push_back(strtod(item.c_str(), &end));
+                }
+                query[name] = new Value(val);
+              } break;
+              case Field::TYPE::BOOLEAN: {
+                char *end = 0;
+                std::vector<double> val;
+                std::string item;
+                for (auto &c : value) {
+                  if (c == ',') {
+                    if (!item.empty()) {
+                      val.push_back(item == "true");
+                    }
+                    item.clear();
+                  } else {
+                    item += c;
+                  }
+                }
+                if (!item.empty()) {
+                  val.push_back(item == "true");
+                }
+                query[name] = new Value(val);
+              } break;
+              }
+            } else {
+              switch (metaField.getType()) {
+              case Field::TYPE::STRING:
+                query[name] = new Value(value);
+                break;
+              case Field::TYPE::INTEGER: {
+                char *end = 0;
+                query[name] = new Value(strtoimax(value.c_str(), &end, 10));
+              } break;
+              case Field::TYPE::NUMBER: {
+                char *end = 0;
+                query[name] = new Value(strtod(value.c_str(), &end));
+              } break;
+              case Field::TYPE::BOOLEAN:
+                query[name] = new Value(value == "true");
+                break;
+              }
+            }
+          } else {
+            query[name] = new Value();
+          }
+        }
+        field = field->next;
+      }
+      core::AutoPtr r = new Record(table->getMetadata(), query);
+      table->insertOrUpdateOne(r);
+    }
+    record = record->next;
+  }
+  xmlFreeDoc(doc);
 }

@@ -1,4 +1,5 @@
 #include "database/Record.hpp"
+#include <stdexcept>
 using namespace firefly;
 using namespace firefly::database;
 
@@ -18,6 +19,10 @@ const std::string Record::getKey() const {
   for (auto &key : _metadata->getPrimaryKeys()) {
     if (!result.empty()) {
       result += ",";
+    }
+    if (!_data.contains(key)) {
+      throw std::runtime_error(fmt::format(
+          "Failed to get record key, primary key '{}' is undefined", key));
     }
     result += _data.at(key)->toString();
   }
@@ -50,8 +55,10 @@ const bool Record::match(const core::AutoPtr<Record> record) const {
 void Record::merge(const core::AutoPtr<Record> another) {
   for (auto &field : _metadata->getFields()) {
     if (another->hasField(field.getName())) {
-      if (!_data[field.getName()]->isEqual(
-              another->getField(field.getName()))) {
+      if (another->getField(field.getName())->isNil()) {
+        _data.erase(field.getName());
+      } else if (!_data[field.getName()]->isEqual(
+                     another->getField(field.getName()))) {
         _data[field.getName()] = another->getField(field.getName());
       }
     }

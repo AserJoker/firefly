@@ -6,7 +6,12 @@ Metadata::Metadata(const std::string &name, const std::string &ns,
                    const std::vector<std::string> &primaryKeys,
                    const std::string &driver)
     : _name(name), _namespace(ns), _fields(fields), _primaryKeys(primaryKeys),
-      _driver(driver) {}
+      _driver(driver) {
+  auto i = 0;
+  for (auto &field : _fields) {
+    _indices[field.getName()] = i++;
+  }
+}
 
 const std::string &Metadata::getName() const { return _name; }
 const std::string &Metadata::getNamespace() const { return _namespace; }

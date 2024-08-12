@@ -42,6 +42,16 @@ Table::queryList(core::AutoPtr<Record> query) {
   return result;
 }
 core::AutoPtr<Record> Table::insertOne(core::AutoPtr<Record> query) {
+  for (auto &field : getMetadata()->getFields()) {
+    if (field.isRequired()) {
+      if (!query->hasField(field.getName()) ||
+          query->getField(field.getName())->isNil()) {
+        throw std::runtime_error(fmt::format(
+            "Faield to insert record to '{}.{}',field '{}' is required",
+            _metadata->getNamespace(), _metadata->getName(), field.getName()));
+      }
+    }
+  }
   auto key = query->getKey();
   if (_indices.contains(key)) {
     throw std::runtime_error("Duplicate primary key");
@@ -51,6 +61,24 @@ core::AutoPtr<Record> Table::insertOne(core::AutoPtr<Record> query) {
   return query;
 }
 core::AutoPtr<Record> Table::updateOne(core::AutoPtr<Record> query) {
+  for (auto &field : getMetadata()->getFields()) {
+    if (field.isRequired()) {
+      if (query->getField(field.getName())->isNil()) {
+        throw std::runtime_error(fmt::format(
+            "Faield to update record to '{}.{}',field '{}' is required",
+            _metadata->getNamespace(), _metadata->getName(), field.getName()));
+      }
+    }
+    if (field.isReadonly()) {
+      if (query->hasField(field.getName())) {
+        throw std::runtime_error(fmt::format(
+            "Faield to update record to '{}.{}',field '{}' is readonly,now "
+            "give value '{}'",
+            _metadata->getNamespace(), _metadata->getName(), field.getName(),
+            query->getField(field.getName())->toString()));
+      }
+    }
+  }
   auto key = query->getKey();
   if (_indices.contains(key)) {
     auto &record = _records[_indices[key]];
@@ -72,6 +100,14 @@ core::AutoPtr<Record> Table::deleteOne(core::AutoPtr<Record> query) {
     return record;
   }
   return nullptr;
+}
+
+core::AutoPtr<Record> Table::insertOrUpdateOne(core::AutoPtr<Record> query) {
+  auto key = query->getKey();
+  if (_indices.contains(key)) {
+    return updateOne(query);
+  }
+  return insertOne(query);
 }
 core::AutoPtr<Table> Table::create(const std::string &name,
                                    const core::AutoPtr<Metadata> &metadata) {

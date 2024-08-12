@@ -77,6 +77,7 @@ void GameApplication::onInitialize() {
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
   _renderer->setClearColor(0.2, 0.3, 0.3, 1.0);
+  _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
   for (auto &[name, table] : _database->getTables()) {
     std::cout << "## " << name << std::endl;

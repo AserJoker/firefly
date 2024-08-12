@@ -89,9 +89,18 @@ Field Driver_Table::createField(core::AutoPtr<Record> record) {
       createFieldType(record->getField("type")->getStringValue());
   std::string name = record->getField("name")->getStringValue();
   std::string ns = record->getField("namespace")->getStringValue();
-  bool required = record->getField("required")->getBooleanValue();
-  bool readonly = record->getField("readonly")->getBooleanValue();
-  bool array = record->getField("array")->getBooleanValue();
+  bool required = false;
+  if (record->hasField("required")) {
+    required = record->getField("required")->getBooleanValue();
+  }
+  bool readonly = false;
+  if (record->hasField("readonly")) {
+    readonly = record->getField("readonly")->getBooleanValue();
+  }
+  bool array = false;
+  if (record->hasField("array")) {
+    array = record->getField("array")->getBooleanValue();
+  }
   return Field(type, name, ns, required, readonly, array);
 }
 

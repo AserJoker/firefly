@@ -25,6 +25,7 @@ public:
   virtual core::AutoPtr<Record> insertOne(core::AutoPtr<Record> query);
   virtual core::AutoPtr<Record> updateOne(core::AutoPtr<Record> query);
   virtual core::AutoPtr<Record> deleteOne(core::AutoPtr<Record> query);
+  core::AutoPtr<Record> insertOrUpdateOne(core::AutoPtr<Record> query);
 
 private:
   static std::unordered_map<std::string, std::function<core::AutoPtr<Table>(
