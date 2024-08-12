@@ -1,5 +1,6 @@
 #include "script/bridge/LuaBridge.hpp"
 #include "core/Singleton.hpp"
+#include "script/Atom.hpp"
 #include "script/Value.hpp"
 #include <lua.h>
 using namespace firefly;
@@ -83,6 +84,50 @@ int LuaBridge::luaObjectLen(lua_State *state) {
       ctx->getNativeGlobal()->getField(ctx, "$objects")->getIndex(ctx, handle);
   lua_pushnumber(state, self->getLength(ctx));
   return 1;
+}
+int LuaBridge::luaObjectNext(lua_State *state) {
+  auto obj_idx = 1;
+  lua_getfield(state, obj_idx, "$handle");
+  auto handle = lua_tonumber(state, -1);
+  auto ctx = core::Singleton<Script>::instance();
+  auto bridge = ctx->getBridge().cast<LuaBridge>();
+  auto self =
+      ctx->getNativeGlobal()->getField(ctx, "$objects")->getIndex(ctx, handle);
+  if (self->getType(ctx) == Atom::Type::ARRAY) {
+    return 0;
+  }
+  auto keys = self->getKeys(ctx);
+  if (lua_type(state, 2) == LUA_TNIL) {
+    if (keys.size()) {
+      lua_pushstring(state, keys[0].c_str());
+      bridge->dump(state, self->getField(ctx, keys[0]));
+      return 2;
+    } else {
+      return 0;
+    }
+  } else if (lua_type(state, 2) == LUA_TSTRING) {
+    auto key = lua_tostring(state, 2);
+    auto it = std::find(keys.begin(), keys.end(), key);
+    if (it == keys.end()) {
+      return 0;
+    } else {
+      it++;
+      if (it == keys.end()) {
+        return 0;
+      }
+      lua_pushstring(state, it->c_str());
+      bridge->dump(state, self->getField(ctx, *it));
+      return 2;
+    }
+  } else {
+    return 0;
+  }
+}
+int LuaBridge::luaObjectPairs(lua_State *state) {
+  lua_pushcfunction(state, luaObjectNext);
+  lua_pushvalue(state, 1);
+  lua_pushnil(state);
+  return 3;
 }
 Value::Stack LuaBridge::funcGC(core::AutoPtr<Script> ctx, Value::Stack args) {
   auto bridge = ctx->getBridge().cast<LuaBridge>();
@@ -200,7 +245,6 @@ Value::Stack LuaBridge::objectKeys(core::AutoPtr<Script> ctx,
   }
   auto state = bridge->_state;
   auto self = args[0];
-  auto key = args[1];
   uint32_t handle = self->getRawField(ctx, "$handle")->toNumber(ctx);
   auto top = lua_gettop(state);
   lua_getglobal(state, "$objects");
@@ -403,6 +447,8 @@ void LuaBridge::dump(lua_State *state, core::AutoPtr<Value> value) {
     lua_setfield(state, meta, "__index");
     lua_pushcfunction(state, luaObjectSet);
     lua_setfield(state, meta, "__newindex");
+    lua_pushcfunction(state, luaObjectPairs);
+    lua_setfield(state, meta, "__pairs");
     lua_pushcfunction(state, luaObjectGC);
     lua_setfield(state, meta, "__gc");
     lua_settop(state, meta);

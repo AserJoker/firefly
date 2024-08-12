@@ -15,6 +15,8 @@ private:
   static int luaObjectGet(lua_State *state);
   static int luaObjectSet(lua_State *state);
   static int luaObjectLen(lua_State *state);
+  static int luaObjectPairs(lua_State *state);
+  static int luaObjectNext(lua_State *state);
   static Value::Stack funcGC(core::AutoPtr<Script> ctx, Value::Stack args);
   static Value::Stack funcCall(core::AutoPtr<Script> ctx, Value::Stack args);
   static Value::Stack objectGC(core::AutoPtr<Script> ctx, Value::Stack args);

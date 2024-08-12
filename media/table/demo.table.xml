@@ -3,5 +3,6 @@
         <field name="id" value="firefly.demo"/>
         <field name="name" value="demo"/>
         <field name="namespace" value="firefly"/>
+        <field name="primaryKeys" value="id"/>
     </record>
 </table>

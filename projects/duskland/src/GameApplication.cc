@@ -13,6 +13,7 @@
 #include "script/bridge/LuaBridge.hpp"
 #include "script/helper/Trait_Buffer.hpp"
 #include "script/helper/Trait_Resource.hpp"
+#include "script/lib/Module_Database.hpp"
 #include "script/lib/Module_Event.hpp"
 #include "script/lib/Module_Input.hpp"
 #include "script/lib/Module_Locale.hpp"
@@ -31,7 +32,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <iostream>
 #include <lua.hpp>
 
 using namespace firefly;
@@ -50,6 +50,7 @@ void GameApplication::initScript() {
   script::Module_Media::open(_script);
   script::Module_Runtime::open(_script);
   script::Module_Input::open(_script);
+  script::Module_Database::open(_script);
   _script->eval("require('duskland')");
 }
 void GameApplication::initLocale() {
@@ -79,32 +80,6 @@ void GameApplication::onInitialize() {
   _renderer->setClearColor(0.2, 0.3, 0.3, 1.0);
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  for (auto &[name, table] : _database->getTables()) {
-    std::cout << "## " << name << std::endl;
-    std::string line = "|";
-    for (auto &field : table->getMetadata()->getFields()) {
-      line += field.getName();
-      line += "|";
-    }
-    std::cout << line << std::endl;
-    line = "|";
-    for (auto &field : table->getMetadata()->getFields()) {
-      line += "-|";
-    }
-    std::cout << line << std::endl;
-    for (auto i = 0; i < table->getLength(); i++) {
-      line = "|";
-      auto &record = table->getRecord(i);
-      for (auto &field : table->getMetadata()->getFields()) {
-        if (record->hasField(field.getName())) {
-          line += record->getField(field.getName())->toString();
-        }
-        line += "|";
-      }
-      std::cout << line << std::endl;
-    }
-    std::cout << std::endl;
-  }
   getWindow()->show();
 }
 
