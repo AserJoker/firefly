@@ -930,13 +930,19 @@ static core::AutoPtr<Value> parseJSONItem(core::AutoPtr<Script> ctx,
   } else if (cJSON_IsString(root)) {
     result->setString(ctx, root->valuestring);
   }
-  cJSON_Delete(root);
   return result;
 }
 core::AutoPtr<Value> Value::parseJSON(core::AutoPtr<Script> ctx,
                                       const std::string &source) {
   auto root = cJSON_Parse(source.c_str());
-  return parseJSONItem(ctx, root);
+  auto error = cJSON_GetErrorPtr();
+  if (error != 0) {
+    cJSON_Delete(root);
+    throw std::runtime_error(error);
+  }
+  auto res = parseJSONItem(ctx, root);
+  cJSON_Delete(root);
+  return res;
 }
 static core::AutoPtr<Value> parseYAMLItem(core::AutoPtr<Script> ctx,
                                           YAML::Node root) {

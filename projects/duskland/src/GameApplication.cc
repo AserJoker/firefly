@@ -12,6 +12,7 @@
 #include "script/Value.hpp"
 #include "script/bridge/LuaBridge.hpp"
 #include "script/helper/Trait_Buffer.hpp"
+#include "script/helper/Trait_Properties.hpp"
 #include "script/helper/Trait_Resource.hpp"
 #include "script/lib/Module_Database.hpp"
 #include "script/lib/Module_Event.hpp"
@@ -45,6 +46,7 @@ void GameApplication::initScript() {
       "package.path = package.path..';./mods/?/lua/init.lua;./lua/?/init.lua'");
   script::Trait_Buffer::initialize(_script);
   script::Trait_Resource::initialize(_script);
+  script::Trait_Properties::initialize(_script);
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);
   script::Module_Event::open(_script);

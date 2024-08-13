@@ -25,9 +25,11 @@ private:
   const std::string encode(const std::string &source) const;
   const std::string decode(const std::string &source) const;
   void mergeField(Item &a, const Item &b);
+  const std::string storeField(const std::string key, const Item &item) const;
 
 public:
   Properties(const core::AutoPtr<Buffer> &buffer = 0);
+  const std::string store() const;
   const std::string get(const std::string &key) const;
   void set(const std::string &key, const std::string &value);
   const std::vector<std::string> keys(const std::string &key = "") const;

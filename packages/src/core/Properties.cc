@@ -6,38 +6,54 @@
 using namespace firefly;
 using namespace firefly::core;
 Properties::Properties(const core::AutoPtr<Buffer> &buffer) : _root(PObject{}) {
-  std::string key;
-  std::string value;
-  std::string *iterator = &key;
-  const char *data = (const char *)buffer->getData();
-  bool inValue = false;
-  for (auto i = 0;; i++) {
-    if (data[i] == '\"') {
-      inValue = !inValue;
-      continue;
-    }
-    if (!inValue) {
-      if (i == buffer->getSize() || data[i] == '\n' || data[i] == '\r') {
-        if (!key.empty() || !value.empty()) {
-          set(key, value);
-          key.clear();
-          value.clear();
-          iterator = &key;
+  if (buffer != nullptr) {
+    std::string key;
+    std::string value;
+    std::string *iterator = &key;
+    const char *data = (const char *)buffer->getData();
+    bool inValue = false;
+    for (auto i = 0;; i++) {
+      if (data[i] == '\"') {
+        inValue = !inValue;
+        continue;
+      }
+      if (!inValue) {
+        if (data[i] == '#' || data[i] == '!') {
+          if (!key.empty() || !value.empty()) {
+            set(key, value);
+            key.clear();
+            value.clear();
+            iterator = &key;
+          }
+          for (;;) {
+            i++;
+            if (i == buffer->getSize() || data[i] == '\n' || data[i] == '\r') {
+              break;
+            }
+          }
         }
+        if (i == buffer->getSize() || data[i] == '\n' || data[i] == '\r') {
+          if (!key.empty() || !value.empty()) {
+            set(key, value);
+            key.clear();
+            value.clear();
+            iterator = &key;
+          }
+          if (i == buffer->getSize()) {
+            break;
+          }
+        } else if (data[i] == '=' || data[i] == ':') {
+          iterator = &value;
+        } else if (data[i] == ' ' || data[i] == '\t') {
+        } else {
+          (*iterator) += data[i];
+        }
+      } else {
         if (i == buffer->getSize()) {
           break;
         }
-      } else if (data[i] == '=') {
-        iterator = &value;
-      } else if (data[i] == ' ' || data[i] == '\t') {
-      } else {
         (*iterator) += data[i];
       }
-    } else {
-      if (i == buffer->getSize()) {
-        break;
-      }
-      (*iterator) += data[i];
     }
   }
 }
@@ -88,12 +104,12 @@ const std::vector<std::string> Properties::parse(const std::string &key) const {
   std::vector<std::string> result;
   std::string part;
   for (auto &c : key) {
-    if (c == '.') {
+    if (c == '.' || c == '[') {
       if (!part.empty()) {
         result.push_back(part);
         part.clear();
       }
-    } else {
+    } else if (c != ']') {
       part += c;
     }
   }
@@ -234,4 +250,29 @@ void Properties::mergeField(Item &a, const Item &b) {
 }
 void Properties::merge(const core::AutoPtr<Properties> &prop) {
   mergeField(_root, prop->_root);
+}
+const std::string Properties::storeField(const std::string key,
+                                         const Item &item) const {
+  if (!item.isObject) {
+    return fmt::format("{}=\"{}\"", key, decode(item.value));
+  } else {
+    std::string result;
+    for (auto &[k, v] : item.children) {
+      if (!result.empty()) {
+        result += '\n';
+      }
+      result += storeField(key + "." + k, v);
+    }
+    return result;
+  }
+}
+const std::string Properties::store() const {
+  std::string result;
+  for (auto &[k, v] : _root.children) {
+    if (!result.empty()) {
+      result += '\n';
+    }
+    result += storeField(k, v);
+  }
+  return result;
 }

@@ -55,4 +55,8 @@ function Resource:read(size) end
 --- @param name string
 --- @return Resource
 local function query(name) end
-return {query = query}
+
+--- @overload fun(size:integer):Buffer
+--- @overload fun(str:string):Buffer
+local function createBuffer(...) end
+return {query = query, createBuffer = createBuffer}
