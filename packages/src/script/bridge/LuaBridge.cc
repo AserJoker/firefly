@@ -257,7 +257,7 @@ Value::Stack LuaBridge::objectKeys(core::AutoPtr<Script> ctx,
   while (lua_next(state, obj) != 0) {
     if (lua_type(state, -2) == LUA_TSTRING) {
       result->setIndex(
-          ctx, index,
+          ctx, index++,
           ctx->createValue()->setString(ctx, lua_tostring(state, -2)));
     }
     lua_pop(state, 1);
@@ -374,6 +374,7 @@ core::AutoPtr<Value> LuaBridge::load(lua_State *state, int index) {
     value->setString(ctx, lua_tostring(state, index));
     break;
   case LUA_TTABLE: {
+
     lua_getfield(state, index, "$handle");
     if (lua_type(state, -1) == LUA_TNUMBER) {
       uint32_t handle = lua_tonumber(state, -1);
@@ -439,6 +440,10 @@ void LuaBridge::dump(lua_State *state, core::AutoPtr<Value> value) {
     auto obj = lua_gettop(_state);
     lua_pushnumber(state, obj_idx);
     lua_setfield(state, obj, "$handle");
+    if (value->getType(ctx) == Atom::Type::ARRAY) {
+      lua_pushboolean(state, true);
+      lua_setfield(state, obj, "$array");
+    }
     lua_newtable(state);
     auto meta = lua_gettop(state);
     lua_pushcfunction(state, luaObjectLen);

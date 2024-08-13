@@ -50,6 +50,9 @@ const bool Record::match(const core::AutoPtr<Record> record) const {
       }
     }
   }
+  if (record->_data.empty()) {
+    return true;
+  }
   return true;
 }
 void Record::merge(const core::AutoPtr<Record> another) {

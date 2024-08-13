@@ -5,10 +5,17 @@
 #include "script/Record.hpp"
 #include "script/Script.hpp"
 #include <any>
+#include <cjson/cJSON.h>
 #include <fmt/core.h>
+#include <sstream>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <vector>
+#include <yaml-cpp/node/type.h>
+#include <yaml-cpp/parser.h>
+#include <yaml-cpp/yaml.h>
+
 using namespace firefly;
 using namespace firefly::script;
 Value::Value(Atom *atom) : _atom(atom) {}
@@ -196,6 +203,9 @@ std::vector<std::string> Value::getKeys(core::AutoPtr<Script> ctx) {
       return result;
     }
   }
+  if (_atom->_type != Atom::Type::OBJECT) {
+    throw std::runtime_error("cannot get keys without object");
+  }
   return std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getKeys();
 }
 
@@ -210,6 +220,9 @@ Value::Stack Value::call(core::AutoPtr<Script> ctx, Value::Stack args) {
       }
       return call->call(ctx, stack);
     }
+  }
+  if (_atom->_type != Atom::Type::FUNCTION) {
+    throw std::runtime_error("cannot call without function");
   }
   auto func = std::any_cast<FunctionHandle>(_atom->_value);
   auto current = ctx->pushScope();
@@ -241,6 +254,9 @@ core::AutoPtr<Value> Value::setField(core::AutoPtr<Script> ctx,
       return this;
     }
   }
+  if (_atom->_type != Atom::Type::OBJECT) {
+    throw std::runtime_error("cannot set field without object");
+  }
   std::any_cast<core::AutoPtr<Record>>(_atom->_value)
       ->setField(ctx, name, field);
   return this;
@@ -255,6 +271,9 @@ core::AutoPtr<Value> Value::getField(core::AutoPtr<Script> ctx,
       return getter->call(ctx,
                           {this, ctx->createValue()->setString(ctx, name)})[0];
     }
+  }
+  if (_atom->_type != Atom::Type::OBJECT) {
+    throw std::runtime_error("cannot get field without object");
   }
   auto res =
       std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getField(ctx, name);
@@ -272,8 +291,13 @@ core::AutoPtr<Value> Value::setIndex(core::AutoPtr<Script> ctx,
       return this;
     }
   }
-  std::any_cast<core::AutoPtr<Array>>(_atom->_value)
-      ->setIndex(ctx, name, field);
+  if (getType(ctx) == Atom::Type::OBJECT) {
+    std::any_cast<core::AutoPtr<Record>>(_atom->_value)
+        ->setField(ctx, std::to_string(name), field);
+  } else {
+    std::any_cast<core::AutoPtr<Array>>(_atom->_value)
+        ->setIndex(ctx, name, field);
+  }
   return this;
 }
 core::AutoPtr<Value> Value::getIndex(core::AutoPtr<Script> ctx,
@@ -286,9 +310,14 @@ core::AutoPtr<Value> Value::getIndex(core::AutoPtr<Script> ctx,
                           {this, ctx->createValue()->setNumber(ctx, name)})[0];
     }
   }
-  auto res =
-      std::any_cast<core::AutoPtr<Array>>(_atom->_value)->getIndex(ctx, name);
-  return res;
+
+  if (getType(ctx) == Atom::Type::OBJECT) {
+    return std::any_cast<core::AutoPtr<Record>>(_atom->_value)
+        ->getField(ctx, std::to_string(name));
+  } else {
+    return std::any_cast<core::AutoPtr<Array>>(_atom->_value)
+        ->getIndex(ctx, name);
+  }
 }
 uint32_t Value::getLength(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
@@ -336,30 +365,49 @@ core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Value> value) {
 core::AutoPtr<Value> Value::setRawField(core::AutoPtr<Script> ctx,
                                         const std::string &name,
                                         core::AutoPtr<Value> field) {
+  if (_atom->_type != Atom::Type::OBJECT) {
+    throw std::runtime_error("cannot set raw field without object");
+  }
   std::any_cast<core::AutoPtr<Record>>(_atom->_value)
       ->setField(ctx, name, field);
   return this;
 }
 core::AutoPtr<Value> Value::getRawField(core::AutoPtr<Script> ctx,
                                         const std::string &name) {
+  if (_atom->_type != Atom::Type::OBJECT) {
+    throw std::runtime_error("cannot get raw field without object");
+  }
   return std::any_cast<core::AutoPtr<Record>>(_atom->_value)
       ->getField(ctx, name);
 }
 core::AutoPtr<Value> Value::setRawIndex(core::AutoPtr<Script> ctx,
                                         const uint32_t &name,
                                         core::AutoPtr<Value> field) {
+  if (_atom->_type != Atom::Type::ARRAY) {
+    throw std::runtime_error("cannot set raw index without array");
+  }
   std::any_cast<core::AutoPtr<Array>>(_atom->_value)
       ->setIndex(ctx, name, field);
   return this;
 }
 core::AutoPtr<Value> Value::getRawIndex(core::AutoPtr<Script> ctx,
                                         const uint32_t &name) {
+
+  if (_atom->_type != Atom::Type::ARRAY) {
+    throw std::runtime_error("cannot get raw index without array");
+  }
   auto res =
       std::any_cast<core::AutoPtr<Array>>(_atom->_value)->getIndex(ctx, name);
   return res;
 }
 uint32_t Value::getRawLength(core::AutoPtr<Script> ctx) {
-  return std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getLength(ctx);
+  if (_atom->_type == Atom::Type::OBJECT) {
+    return std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getLength(ctx);
+  } else if (_atom->_type == Atom::Type::ARRAY) {
+    return std::any_cast<core::AutoPtr<Array>>(_atom->_value)->getLength(ctx);
+  } else {
+    throw std::runtime_error("cannot get raw length without object or array");
+  }
 }
 
 core::AutoPtr<Value> Value::arithmetic(core::AutoPtr<Script> ctx,
@@ -774,3 +822,157 @@ core::AutoPtr<Value> Value::setOpaque(core::AutoPtr<core::Object> obj) {
   return this;
 }
 core::AutoPtr<core::Object> Value::getOpaque() { return _atom->_opaque; }
+
+static cJSON *toJSONItem(core::AutoPtr<Script> ctx,
+                         core::AutoPtr<Value> value) {
+  cJSON *root = nullptr;
+  switch (value->getType(ctx)) {
+  case Atom::Type::NIL:
+    root = cJSON_CreateNull();
+    break;
+  case Atom::Type::NUMBER:
+    root = cJSON_CreateNumber(value->toNumber(ctx));
+    break;
+  case Atom::Type::BOOLEAN:
+    root = cJSON_CreateBool(value->toBoolean(ctx));
+    break;
+  case Atom::Type::STRING:
+    root = cJSON_CreateString(value->toString(ctx).c_str());
+    break;
+  case Atom::Type::OBJECT:
+    root = cJSON_CreateObject();
+    for (auto &key : value->getKeys(ctx)) {
+      cJSON_AddItemToObject(root, key.c_str(),
+                            toJSONItem(ctx, value->getField(ctx, key)));
+    }
+    break;
+  case Atom::Type::ARRAY: {
+    root = cJSON_CreateArray();
+    auto length = value->getLength(ctx);
+    for (auto i = 0; i < length; i++) {
+      cJSON_AddItemToArray(root, toJSONItem(ctx, value->getIndex(ctx, i)));
+    }
+  } break;
+  case Atom::Type::FUNCTION:
+    root = cJSON_CreateNull();
+    break;
+  }
+  return root;
+}
+static YAML::Node toYAMLItem(core::AutoPtr<Script> ctx,
+                             core::AutoPtr<Value> value) {
+  YAML::Node node;
+  switch (value->getType(ctx)) {
+  case Atom::Type::NIL:
+    break;
+  case Atom::Type::NUMBER:
+    node = value->toNumber(ctx);
+    break;
+  case Atom::Type::BOOLEAN:
+    node = value->toBoolean(ctx);
+    break;
+  case Atom::Type::STRING:
+    node = value->toString(ctx);
+    break;
+  case Atom::Type::OBJECT:
+    for (auto &key : value->getKeys(ctx)) {
+      node[key] = toYAMLItem(ctx, value->getField(ctx, key));
+    }
+    break;
+  case Atom::Type::ARRAY: {
+    auto length = value->getLength(ctx);
+    for (auto i = 0; i < length; i++) {
+      node.push_back(toYAMLItem(ctx, value->getIndex(ctx, i)));
+    }
+  } break;
+  case Atom::Type::FUNCTION:
+    break;
+  }
+  return node;
+}
+std::string Value::toJSON(core::AutoPtr<Script> ctx) {
+  auto json = toJSONItem(ctx, this);
+  std::string result = cJSON_Print(json);
+  cJSON_Delete(json);
+  return result;
+}
+std::string Value::toYAML(core::AutoPtr<Script> ctx) {
+  auto node = toYAMLItem(ctx, this);
+  std::stringstream ss;
+  ss << node;
+  return ss.str();
+}
+static core::AutoPtr<Value> parseJSONItem(core::AutoPtr<Script> ctx,
+                                          cJSON *root) {
+  if (!root) {
+    throw std::runtime_error(cJSON_GetErrorPtr());
+  }
+  auto result = ctx->createValue();
+  if (cJSON_IsObject(root)) {
+    result->setObject(ctx);
+    auto child = root->child;
+    while (child != nullptr) {
+      result->setField(ctx, child->string, parseJSONItem(ctx, child));
+      child = child->next;
+    }
+  } else if (cJSON_IsArray(root)) {
+    result->setArray(ctx);
+    auto child = root->child;
+    auto index = 0;
+    while (child != nullptr) {
+      result->setIndex(ctx, index++, parseJSONItem(ctx, child));
+      child = child->next;
+    }
+  } else if (cJSON_IsBool(root)) {
+    result->setBoolean(ctx, root->valueint != 0);
+  } else if (cJSON_IsNumber(root)) {
+    result->setNumber(ctx, root->valuedouble);
+  } else if (cJSON_IsString(root)) {
+    result->setString(ctx, root->valuestring);
+  }
+  cJSON_Delete(root);
+  return result;
+}
+core::AutoPtr<Value> Value::parseJSON(core::AutoPtr<Script> ctx,
+                                      const std::string &source) {
+  auto root = cJSON_Parse(source.c_str());
+  return parseJSONItem(ctx, root);
+}
+static core::AutoPtr<Value> parseYAMLItem(core::AutoPtr<Script> ctx,
+                                          YAML::Node root) {
+  if (root.Type() == YAML::NodeType::Scalar) {
+    if (root.IsNull()) {
+      return ctx->createValue();
+    } else if (root.Tag() == "?") {
+      auto s = root.Scalar();
+      if (s[0] >= '0' && s[0] <= '9') {
+        return ctx->createValue()->setNumber(ctx, root.as<float>());
+      } else {
+        return ctx->createValue()->setString(ctx, root.as<std::string>());
+      }
+    } else {
+      return ctx->createValue()->setString(ctx, root.as<std::string>());
+    }
+  } else if (root.Type() == YAML::NodeType::Map) {
+    auto obj = ctx->createValue()->setObject(ctx);
+    for (auto it = root.begin(); it != root.end(); it++) {
+      auto key = it->first;
+      auto value = it->second;
+      obj->setField(ctx, key.as<std::string>(), parseYAMLItem(ctx, value));
+    }
+    return obj;
+  } else if (root.IsSequence()) {
+    auto arr = ctx->createValue()->setArray(ctx);
+    auto index = 0;
+    for (auto it = root.begin(); it != root.end(); it++) {
+      arr->setIndex(ctx, index++, parseYAMLItem(ctx, it->as<YAML::Node>()));
+    }
+    return arr;
+  }
+  return ctx->createValue();
+}
+core::AutoPtr<Value> Value::parseYAML(core::AutoPtr<Script> ctx,
+                                      const std::string &source) {
+  auto root = YAML::Load(source);
+  return parseYAMLItem(ctx, root);
+}

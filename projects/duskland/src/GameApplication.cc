@@ -20,6 +20,7 @@
 #include "script/lib/Module_Log.hpp"
 #include "script/lib/Module_Media.hpp"
 #include "script/lib/Module_Runtime.hpp"
+#include "script/lib/Module_Serialization.hpp"
 #include <SDL_image.h>
 #include <SDL_keycode.h>
 #include <SDL_scancode.h>
@@ -51,6 +52,7 @@ void GameApplication::initScript() {
   script::Module_Runtime::open(_script);
   script::Module_Input::open(_script);
   script::Module_Database::open(_script);
+  script::Module_Serialization::open(_script);
   _script->eval("require('duskland')");
 }
 void GameApplication::initLocale() {

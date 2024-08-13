@@ -127,5 +127,11 @@ public:
                                   core::AutoPtr<Value> another,
                                   Operation operation);
   Atom *getAtom();
+  std::string toJSON(core::AutoPtr<Script> ctx);
+  std::string toYAML(core::AutoPtr<Script> ctx);
+  static core::AutoPtr<Value> parseJSON(core::AutoPtr<Script> ctx,
+                                        const std::string &source);
+  static core::AutoPtr<Value> parseYAML(core::AutoPtr<Script> ctx,
+                                        const std::string &source);
 };
 } // namespace firefly::script
