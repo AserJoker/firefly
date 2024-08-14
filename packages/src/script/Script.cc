@@ -136,7 +136,7 @@ void Script::gc(core::AutoPtr<Script> ctx, Atom *atom) {
     if (item->_metadata) {
       auto metadata = ctx->createValue(item->_metadata);
       auto gc = metadata->getField(ctx, "gc");
-      if (gc->getType(ctx) != Atom::Type::NIL) {
+      if (gc->getType(ctx) != Atom::TYPE::NIL) {
         gc->call(ctx, {new Value(item)});
       }
     }

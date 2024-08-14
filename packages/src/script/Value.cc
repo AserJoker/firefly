@@ -1,5 +1,8 @@
 #include "script/Value.hpp"
 #include "core/AutoPtr.hpp"
+#include "exception/JSONException.hpp"
+#include "exception/ScriptException.hpp"
+#include "exception/ValidateException.hpp"
 #include "script/Array.hpp"
 #include "script/Atom.hpp"
 #include "script/Record.hpp"
@@ -8,7 +11,6 @@
 #include <cjson/cJSON.h>
 #include <fmt/core.h>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -19,13 +21,13 @@
 using namespace firefly;
 using namespace firefly::script;
 Value::Value(Atom *atom) : _atom(atom) {}
-Atom::Type Value::getType(core::AutoPtr<Script> ctx) {
+Atom::TYPE Value::getType(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto valueOf = metadata->getField(ctx, "typeof");
-    if (valueOf->getType(ctx) != Atom::Type::NIL) {
+    if (valueOf->getType(ctx) != Atom::TYPE::NIL) {
       auto value = valueOf->call(ctx, {this})[0];
-      return (Atom::Type)value->toNumber(ctx);
+      return (Atom::TYPE)value->toNumber(ctx);
     }
   }
   return _atom->_type;
@@ -33,19 +35,19 @@ Atom::Type Value::getType(core::AutoPtr<Script> ctx) {
 
 std::string Value::getTypeName(core::AutoPtr<Script> ctx) {
   switch (getType(ctx)) {
-  case Atom::Type::NIL:
+  case Atom::TYPE::NIL:
     return "Nil";
-  case Atom::Type::NUMBER:
+  case Atom::TYPE::NUMBER:
     return "Number";
-  case Atom::Type::BOOLEAN:
+  case Atom::TYPE::BOOLEAN:
     return "Boolean";
-  case Atom::Type::STRING:
+  case Atom::TYPE::STRING:
     return "String";
-  case Atom::Type::OBJECT:
+  case Atom::TYPE::OBJECT:
     return "Object";
-  case Atom::Type::ARRAY:
+  case Atom::TYPE::ARRAY:
     return "Array";
-  case Atom::Type::FUNCTION:
+  case Atom::TYPE::FUNCTION:
     return "Function";
   }
   return "Unknown";
@@ -54,14 +56,14 @@ double Value::toNumber(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto valueOf = metadata->getField(ctx, "valueOf");
-    if (valueOf->getType(ctx) != Atom::Type::NIL) {
+    if (valueOf->getType(ctx) != Atom::TYPE::NIL) {
       auto value = valueOf->call(ctx, {this})[0];
       if (value != this) {
         return value->toNumber(ctx);
       }
     }
   }
-  if (getType(ctx) == Atom::Type::NUMBER) {
+  if (getType(ctx) == Atom::TYPE::NUMBER) {
     return std::any_cast<double>(_atom->_value);
   }
   return 0;
@@ -70,14 +72,14 @@ bool Value::toBoolean(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto valueOf = metadata->getField(ctx, "valueOf");
-    if (valueOf->getType(ctx) != Atom::Type::NIL) {
+    if (valueOf->getType(ctx) != Atom::TYPE::NIL) {
       auto value = valueOf->call(ctx, {this})[0];
       if (value != this) {
         return value->toBoolean(ctx);
       }
     }
   }
-  if (getType(ctx) == Atom::Type::BOOLEAN) {
+  if (getType(ctx) == Atom::TYPE::BOOLEAN) {
     return std::any_cast<bool>(_atom->_value);
   }
   return false;
@@ -86,14 +88,14 @@ std::string Value::toString(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto valueOf = metadata->getField(ctx, "valueOf");
-    if (valueOf->getType(ctx) != Atom::Type::NIL) {
+    if (valueOf->getType(ctx) != Atom::TYPE::NIL) {
       auto value = valueOf->call(ctx, {this})[0];
       if (value != this) {
         return value->toString(ctx);
       }
     }
   }
-  if (getType(ctx) == Atom::Type::STRING) {
+  if (getType(ctx) == Atom::TYPE::STRING) {
     return std::any_cast<std::string>(_atom->_value);
   }
   return "";
@@ -103,12 +105,12 @@ core::AutoPtr<Value> Value::setNumber(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
-    if (ofValue->getType(ctx) != Atom::Type::NIL) {
+    if (ofValue->getType(ctx) != Atom::TYPE::NIL) {
       return ofValue->call(
           ctx, {this, ctx->createValue()->setNumber(ctx, value)})[0];
     }
   }
-  _atom->_type = Atom::Type::NUMBER;
+  _atom->_type = Atom::TYPE::NUMBER;
   _atom->_value = double(value);
   return this;
 }
@@ -117,12 +119,12 @@ core::AutoPtr<Value> Value::setBoolean(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
-    if (ofValue->getType(ctx) != Atom::Type::NIL) {
+    if (ofValue->getType(ctx) != Atom::TYPE::NIL) {
       return ofValue->call(
           ctx, {this, ctx->createValue()->setBoolean(ctx, value)})[0];
     }
   }
-  _atom->_type = Atom::Type::BOOLEAN;
+  _atom->_type = Atom::TYPE::BOOLEAN;
   _atom->_value = bool(value);
   return this;
 }
@@ -131,12 +133,12 @@ core::AutoPtr<Value> Value::setString(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
-    if (ofValue->getType(ctx) != Atom::Type::NIL) {
+    if (ofValue->getType(ctx) != Atom::TYPE::NIL) {
       return ofValue->call(
           ctx, {this, ctx->createValue()->setString(ctx, value)})[0];
     }
   }
-  _atom->_type = Atom::Type::STRING;
+  _atom->_type = Atom::TYPE::STRING;
   _atom->_value = std::string(value);
   return this;
 }
@@ -144,11 +146,11 @@ core::AutoPtr<Value> Value::setNil(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
-    if (ofValue->getType(ctx) != Atom::Type::NIL) {
+    if (ofValue->getType(ctx) != Atom::TYPE::NIL) {
       return ofValue->call(ctx, {this, ctx->createValue()})[0];
     }
   }
-  _atom->_type = Atom::Type::NIL;
+  _atom->_type = Atom::TYPE::NIL;
   _atom->_value = nullptr;
   return this;
 }
@@ -156,11 +158,11 @@ core::AutoPtr<Value> Value::setObject(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
-    if (ofValue->getType(ctx) != Atom::Type::NIL) {
+    if (ofValue->getType(ctx) != Atom::TYPE::NIL) {
       return ofValue->call(ctx, {this, ctx->createValue()->setObject(ctx)})[0];
     }
   }
-  _atom->_type = Atom::Type::OBJECT;
+  _atom->_type = Atom::TYPE::OBJECT;
   _atom->_value = core::AutoPtr(new Record(_atom));
   return this;
 }
@@ -168,11 +170,11 @@ core::AutoPtr<Value> Value::setArray(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
-    if (ofValue->getType(ctx) != Atom::Type::NIL) {
+    if (ofValue->getType(ctx) != Atom::TYPE::NIL) {
       return ofValue->call(ctx, {this, ctx->createValue()->setArray(ctx)})[0];
     }
   }
-  _atom->_type = Atom::Type::ARRAY;
+  _atom->_type = Atom::TYPE::ARRAY;
   _atom->_value = core::AutoPtr(new Array(_atom));
   return this;
 }
@@ -181,12 +183,12 @@ core::AutoPtr<Value> Value::setFunction(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
-    if (ofValue->getType(ctx) != Atom::Type::NIL) {
+    if (ofValue->getType(ctx) != Atom::TYPE::NIL) {
       return ofValue->call(
           ctx, {this, ctx->createValue()->setFunction(ctx, func)})[0];
     }
   }
-  _atom->_type = Atom::Type::FUNCTION;
+  _atom->_type = Atom::TYPE::FUNCTION;
   _atom->_value = FunctionHandle(func);
   return this;
 }
@@ -194,7 +196,7 @@ std::vector<std::string> Value::getKeys(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto keys = metadata->getField(ctx, "keys");
-    if (keys->getType(ctx) != Atom::Type::NIL) {
+    if (keys->getType(ctx) != Atom::TYPE::NIL) {
       std::vector<std::string> result;
       auto res = keys->call(ctx, {this})[0];
       for (auto i = 0; i < res->getLength(ctx); i++) {
@@ -203,8 +205,8 @@ std::vector<std::string> Value::getKeys(core::AutoPtr<Script> ctx) {
       return result;
     }
   }
-  if (_atom->_type != Atom::Type::OBJECT) {
-    throw std::runtime_error("cannot get keys without object");
+  if (_atom->_type != Atom::TYPE::OBJECT) {
+    throw exception::ScriptException("cannot get keys without object");
   }
   return std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getKeys();
 }
@@ -213,7 +215,7 @@ Value::Stack Value::call(core::AutoPtr<Script> ctx, Value::Stack args) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto call = metadata->getField(ctx, "call");
-    if (call->getType(ctx) != Atom::Type::NIL) {
+    if (call->getType(ctx) != Atom::TYPE::NIL) {
       Value::Stack stack = {this};
       for (auto &arg : args) {
         stack.push_back(arg);
@@ -221,8 +223,8 @@ Value::Stack Value::call(core::AutoPtr<Script> ctx, Value::Stack args) {
       return call->call(ctx, stack);
     }
   }
-  if (_atom->_type != Atom::Type::FUNCTION) {
-    throw std::runtime_error("cannot call without function");
+  if (_atom->_type != Atom::TYPE::FUNCTION) {
+    throw exception::ScriptException("cannot call without function");
   }
   auto func = std::any_cast<FunctionHandle>(_atom->_value);
   auto current = ctx->pushScope();
@@ -248,14 +250,14 @@ core::AutoPtr<Value> Value::setField(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto setter = metadata->getField(ctx, "set");
-    if (setter->getType(ctx) != Atom::Type::NIL) {
+    if (setter->getType(ctx) != Atom::TYPE::NIL) {
       setter->call(ctx,
                    {this, ctx->createValue()->setString(ctx, name), field});
       return this;
     }
   }
-  if (_atom->_type != Atom::Type::OBJECT) {
-    throw std::runtime_error("cannot set field without object");
+  if (_atom->_type != Atom::TYPE::OBJECT) {
+    throw exception::ScriptException("cannot set field without object");
   }
   std::any_cast<core::AutoPtr<Record>>(_atom->_value)
       ->setField(ctx, name, field);
@@ -267,13 +269,13 @@ core::AutoPtr<Value> Value::getField(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto getter = metadata->getField(ctx, "get");
-    if (getter->getType(ctx) != Atom::Type::NIL) {
+    if (getter->getType(ctx) != Atom::TYPE::NIL) {
       return getter->call(ctx,
                           {this, ctx->createValue()->setString(ctx, name)})[0];
     }
   }
-  if (_atom->_type != Atom::Type::OBJECT) {
-    throw std::runtime_error("cannot get field without object");
+  if (_atom->_type != Atom::TYPE::OBJECT) {
+    throw exception::ScriptException("cannot get field without object");
   }
   auto res =
       std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getField(ctx, name);
@@ -285,13 +287,13 @@ core::AutoPtr<Value> Value::setIndex(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto setter = metadata->getField(ctx, "set");
-    if (setter->getType(ctx) != Atom::Type::NIL) {
+    if (setter->getType(ctx) != Atom::TYPE::NIL) {
       setter->call(ctx,
                    {this, ctx->createValue()->setNumber(ctx, name), field});
       return this;
     }
   }
-  if (getType(ctx) == Atom::Type::OBJECT) {
+  if (getType(ctx) == Atom::TYPE::OBJECT) {
     std::any_cast<core::AutoPtr<Record>>(_atom->_value)
         ->setField(ctx, std::to_string(name), field);
   } else {
@@ -305,13 +307,13 @@ core::AutoPtr<Value> Value::getIndex(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto getter = metadata->getField(ctx, "get");
-    if (getter->getType(ctx) != Atom::Type::NIL) {
+    if (getter->getType(ctx) != Atom::TYPE::NIL) {
       return getter->call(ctx,
                           {this, ctx->createValue()->setNumber(ctx, name)})[0];
     }
   }
 
-  if (getType(ctx) == Atom::Type::OBJECT) {
+  if (getType(ctx) == Atom::TYPE::OBJECT) {
     return std::any_cast<core::AutoPtr<Record>>(_atom->_value)
         ->getField(ctx, std::to_string(name));
   } else {
@@ -323,14 +325,14 @@ uint32_t Value::getLength(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto length = metadata->getField(ctx, "length");
-    if (length->getType(ctx) != Atom::Type::NIL) {
+    if (length->getType(ctx) != Atom::TYPE::NIL) {
       return length->call(ctx, {this})[0]->toNumber(ctx);
     }
   }
-  if (getType(ctx) == Atom::Type::OBJECT) {
+  if (getType(ctx) == Atom::TYPE::OBJECT) {
     return std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getLength(ctx);
   }
-  if (getType(ctx) == Atom::Type::ARRAY) {
+  if (getType(ctx) == Atom::TYPE::ARRAY) {
     return std::any_cast<core::AutoPtr<Array>>(_atom->_value)->getLength(ctx);
   }
   return 0;
@@ -346,7 +348,8 @@ core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Value> value) {
   std::unordered_map<ptrdiff_t, Atom *> cache;
   while (metadata) {
     if (cache.contains((ptrdiff_t)metadata)) {
-      throw std::runtime_error("Failed to set metadata: cycle metadata");
+      throw exception::ScriptException(
+          "Failed to set metadata: cycle metadata");
     }
     cache[(ptrdiff_t)metadata] = metadata;
     metadata = metadata->_metadata;
@@ -365,8 +368,8 @@ core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Value> value) {
 core::AutoPtr<Value> Value::setRawField(core::AutoPtr<Script> ctx,
                                         const std::string &name,
                                         core::AutoPtr<Value> field) {
-  if (_atom->_type != Atom::Type::OBJECT) {
-    throw std::runtime_error("cannot set raw field without object");
+  if (_atom->_type != Atom::TYPE::OBJECT) {
+    throw exception::ScriptException("cannot set raw field without object");
   }
   std::any_cast<core::AutoPtr<Record>>(_atom->_value)
       ->setField(ctx, name, field);
@@ -374,8 +377,8 @@ core::AutoPtr<Value> Value::setRawField(core::AutoPtr<Script> ctx,
 }
 core::AutoPtr<Value> Value::getRawField(core::AutoPtr<Script> ctx,
                                         const std::string &name) {
-  if (_atom->_type != Atom::Type::OBJECT) {
-    throw std::runtime_error("cannot get raw field without object");
+  if (_atom->_type != Atom::TYPE::OBJECT) {
+    throw exception::ScriptException("cannot get raw field without object");
   }
   return std::any_cast<core::AutoPtr<Record>>(_atom->_value)
       ->getField(ctx, name);
@@ -383,8 +386,8 @@ core::AutoPtr<Value> Value::getRawField(core::AutoPtr<Script> ctx,
 core::AutoPtr<Value> Value::setRawIndex(core::AutoPtr<Script> ctx,
                                         const uint32_t &name,
                                         core::AutoPtr<Value> field) {
-  if (_atom->_type != Atom::Type::ARRAY) {
-    throw std::runtime_error("cannot set raw index without array");
+  if (_atom->_type != Atom::TYPE::ARRAY) {
+    throw exception::ScriptException("cannot set raw index without array");
   }
   std::any_cast<core::AutoPtr<Array>>(_atom->_value)
       ->setIndex(ctx, name, field);
@@ -393,62 +396,63 @@ core::AutoPtr<Value> Value::setRawIndex(core::AutoPtr<Script> ctx,
 core::AutoPtr<Value> Value::getRawIndex(core::AutoPtr<Script> ctx,
                                         const uint32_t &name) {
 
-  if (_atom->_type != Atom::Type::ARRAY) {
-    throw std::runtime_error("cannot get raw index without array");
+  if (_atom->_type != Atom::TYPE::ARRAY) {
+    throw exception::ScriptException("cannot get raw index without array");
   }
   auto res =
       std::any_cast<core::AutoPtr<Array>>(_atom->_value)->getIndex(ctx, name);
   return res;
 }
 uint32_t Value::getRawLength(core::AutoPtr<Script> ctx) {
-  if (_atom->_type == Atom::Type::OBJECT) {
+  if (_atom->_type == Atom::TYPE::OBJECT) {
     return std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getLength(ctx);
-  } else if (_atom->_type == Atom::Type::ARRAY) {
+  } else if (_atom->_type == Atom::TYPE::ARRAY) {
     return std::any_cast<core::AutoPtr<Array>>(_atom->_value)->getLength(ctx);
   } else {
-    throw std::runtime_error("cannot get raw length without object or array");
+    throw exception::ScriptException(
+        "cannot get raw length without object or array");
   }
 }
 
 core::AutoPtr<Value> Value::arithmetic(core::AutoPtr<Script> ctx,
                                        core::AutoPtr<Value> another,
-                                       Operation operation) {
-  switch (operation) {
-  case Operation::CONNECT:
+                                       OPERATION OPERATION) {
+  switch (OPERATION) {
+  case OPERATION::CONNECT:
     return optConnect(ctx, another);
-  case Operation::ADD:
+  case OPERATION::ADD:
     return optAdd(ctx, another);
-  case Operation::SUB:
+  case OPERATION::SUB:
     return optSub(ctx, another);
-  case Operation::MUL:
+  case OPERATION::MUL:
     return optMul(ctx, another);
-  case Operation::DIV:
+  case OPERATION::DIV:
     return optDiv(ctx, another);
-  case Operation::MOD:
+  case OPERATION::MOD:
     return optMod(ctx, another);
-  case Operation::EQ:
+  case OPERATION::EQ:
     return optEq(ctx, another);
-  case Operation::NE:
+  case OPERATION::NE:
     return optNe(ctx, another);
-  case Operation::GT:
+  case OPERATION::GT:
     return optGt(ctx, another);
-  case Operation::GE:
+  case OPERATION::GE:
     return optGe(ctx, another);
-  case Operation::LT:
+  case OPERATION::LT:
     return optLt(ctx, another);
-  case Operation::LE:
+  case OPERATION::LE:
     return optLe(ctx, another);
-  case Operation::AND:
+  case OPERATION::AND:
     return optAnd(ctx, another);
-  case Operation::OR:
+  case OPERATION::OR:
     return optOr(ctx, another);
-  case Operation::XOR:
+  case OPERATION::XOR:
     return optXor(ctx, another);
-  case Operation::NOT:
+  case OPERATION::NOT:
     return optNot(ctx);
-  case Operation::SHR:
+  case OPERATION::SHR:
     return optShr(ctx, another);
-  case Operation::SHL:
+  case OPERATION::SHL:
     return optShl(ctx, another);
   }
   return nullptr;
@@ -459,13 +463,13 @@ core::AutoPtr<Value> Value::optConnect(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "connect");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::STRING ||
-      another->getType(ctx) != Atom::Type::STRING) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::STRING ||
+      another->getType(ctx) != Atom::TYPE::STRING) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform connect between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -478,13 +482,13 @@ core::AutoPtr<Value> Value::optAdd(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "add");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -497,13 +501,13 @@ core::AutoPtr<Value> Value::optSub(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "subtract");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -516,13 +520,13 @@ core::AutoPtr<Value> Value::optMul(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "times");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -535,13 +539,13 @@ core::AutoPtr<Value> Value::optDiv(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "over");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -554,13 +558,13 @@ core::AutoPtr<Value> Value::optMod(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "module");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -577,13 +581,13 @@ core::AutoPtr<Value> Value::optAnd(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "and");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -596,13 +600,13 @@ core::AutoPtr<Value> Value::optOr(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "or");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -615,13 +619,13 @@ core::AutoPtr<Value> Value::optXor(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "xor");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -634,7 +638,7 @@ core::AutoPtr<Value> Value::optEq(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "equal");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
@@ -642,15 +646,15 @@ core::AutoPtr<Value> Value::optEq(core::AutoPtr<Script> ctx,
     return ctx->createValue()->setBoolean(ctx, false);
   }
   switch (getType(ctx)) {
-  case Atom::Type::NIL:
+  case Atom::TYPE::NIL:
     return ctx->createValue()->setBoolean(ctx, true);
-  case Atom::Type::NUMBER:
+  case Atom::TYPE::NUMBER:
     return ctx->createValue()->setBoolean(ctx, toNumber(ctx) ==
                                                    another->toNumber(ctx));
-  case Atom::Type::BOOLEAN:
+  case Atom::TYPE::BOOLEAN:
     return ctx->createValue()->setBoolean(ctx, toBoolean(ctx) ==
                                                    another->toBoolean(ctx));
-  case Atom::Type::STRING:
+  case Atom::TYPE::STRING:
     return ctx->createValue()->setBoolean(ctx, toString(ctx) ==
                                                    another->toString(ctx));
   default:
@@ -662,7 +666,7 @@ core::AutoPtr<Value> Value::optNe(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "notEqual");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
@@ -671,15 +675,15 @@ core::AutoPtr<Value> Value::optNe(core::AutoPtr<Script> ctx,
   }
 
   switch (getType(ctx)) {
-  case Atom::Type::NIL:
+  case Atom::TYPE::NIL:
     return ctx->createValue()->setBoolean(ctx, false);
-  case Atom::Type::NUMBER:
+  case Atom::TYPE::NUMBER:
     return ctx->createValue()->setBoolean(ctx, toNumber(ctx) !=
                                                    another->toNumber(ctx));
-  case Atom::Type::BOOLEAN:
+  case Atom::TYPE::BOOLEAN:
     return ctx->createValue()->setBoolean(ctx, toBoolean(ctx) !=
                                                    another->toBoolean(ctx));
-  case Atom::Type::STRING:
+  case Atom::TYPE::STRING:
     return ctx->createValue()->setBoolean(ctx, toString(ctx) !=
                                                    another->toString(ctx));
   default:
@@ -691,13 +695,13 @@ core::AutoPtr<Value> Value::optGt(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "greaterThan");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -710,13 +714,13 @@ core::AutoPtr<Value> Value::optGe(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "greaterAndEqual");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -729,13 +733,13 @@ core::AutoPtr<Value> Value::optLt(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "lessThan");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -748,13 +752,13 @@ core::AutoPtr<Value> Value::optLe(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "lessAndEqual");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -767,13 +771,13 @@ core::AutoPtr<Value> Value::optShl(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "leftShifting");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -786,13 +790,13 @@ core::AutoPtr<Value> Value::optShr(core::AutoPtr<Script> ctx,
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "rightShifting");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this, another})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER ||
-      another->getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER ||
+      another->getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic between a '{}' value and a '{}' value",
         getTypeName(ctx), another->getTypeName(ctx)));
   }
@@ -805,12 +809,12 @@ core::AutoPtr<Value> Value::optNot(core::AutoPtr<Script> ctx) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto opt = metadata->getField(ctx, "inversion");
-    if (opt->getType(ctx) != Atom::Type::NIL) {
+    if (opt->getType(ctx) != Atom::TYPE::NIL) {
       return opt->call(ctx, {this})[0];
     }
   }
-  if (getType(ctx) != Atom::Type::NUMBER) {
-    throw std::runtime_error(fmt::format(
+  if (getType(ctx) != Atom::TYPE::NUMBER) {
+    throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic on a '{}' value ", getTypeName(ctx)));
   }
   return ctx->createValue()->setNumber(ctx, ~(uint32_t)toNumber(ctx));
@@ -827,33 +831,33 @@ static cJSON *toJSONItem(core::AutoPtr<Script> ctx,
                          core::AutoPtr<Value> value) {
   cJSON *root = nullptr;
   switch (value->getType(ctx)) {
-  case Atom::Type::NIL:
+  case Atom::TYPE::NIL:
     root = cJSON_CreateNull();
     break;
-  case Atom::Type::NUMBER:
+  case Atom::TYPE::NUMBER:
     root = cJSON_CreateNumber(value->toNumber(ctx));
     break;
-  case Atom::Type::BOOLEAN:
+  case Atom::TYPE::BOOLEAN:
     root = cJSON_CreateBool(value->toBoolean(ctx));
     break;
-  case Atom::Type::STRING:
+  case Atom::TYPE::STRING:
     root = cJSON_CreateString(value->toString(ctx).c_str());
     break;
-  case Atom::Type::OBJECT:
+  case Atom::TYPE::OBJECT:
     root = cJSON_CreateObject();
     for (auto &key : value->getKeys(ctx)) {
       cJSON_AddItemToObject(root, key.c_str(),
                             toJSONItem(ctx, value->getField(ctx, key)));
     }
     break;
-  case Atom::Type::ARRAY: {
+  case Atom::TYPE::ARRAY: {
     root = cJSON_CreateArray();
     auto length = value->getLength(ctx);
     for (auto i = 0; i < length; i++) {
       cJSON_AddItemToArray(root, toJSONItem(ctx, value->getIndex(ctx, i)));
     }
   } break;
-  case Atom::Type::FUNCTION:
+  case Atom::TYPE::FUNCTION:
     root = cJSON_CreateNull();
     break;
   }
@@ -863,29 +867,29 @@ static YAML::Node toYAMLItem(core::AutoPtr<Script> ctx,
                              core::AutoPtr<Value> value) {
   YAML::Node node;
   switch (value->getType(ctx)) {
-  case Atom::Type::NIL:
+  case Atom::TYPE::NIL:
     break;
-  case Atom::Type::NUMBER:
+  case Atom::TYPE::NUMBER:
     node = value->toNumber(ctx);
     break;
-  case Atom::Type::BOOLEAN:
+  case Atom::TYPE::BOOLEAN:
     node = value->toBoolean(ctx);
     break;
-  case Atom::Type::STRING:
+  case Atom::TYPE::STRING:
     node = value->toString(ctx);
     break;
-  case Atom::Type::OBJECT:
+  case Atom::TYPE::OBJECT:
     for (auto &key : value->getKeys(ctx)) {
       node[key] = toYAMLItem(ctx, value->getField(ctx, key));
     }
     break;
-  case Atom::Type::ARRAY: {
+  case Atom::TYPE::ARRAY: {
     auto length = value->getLength(ctx);
     for (auto i = 0; i < length; i++) {
       node.push_back(toYAMLItem(ctx, value->getIndex(ctx, i)));
     }
   } break;
-  case Atom::Type::FUNCTION:
+  case Atom::TYPE::FUNCTION:
     break;
   }
   return node;
@@ -904,9 +908,6 @@ std::string Value::toYAML(core::AutoPtr<Script> ctx) {
 }
 static core::AutoPtr<Value> parseJSONItem(core::AutoPtr<Script> ctx,
                                           cJSON *root) {
-  if (!root) {
-    throw std::runtime_error(cJSON_GetErrorPtr());
-  }
   auto result = ctx->createValue();
   if (cJSON_IsObject(root)) {
     result->setObject(ctx);
@@ -938,7 +939,7 @@ core::AutoPtr<Value> Value::parseJSON(core::AutoPtr<Script> ctx,
   auto error = cJSON_GetErrorPtr();
   if (error != 0) {
     cJSON_Delete(root);
-    throw std::runtime_error(error);
+    throw exception::JSONException(error);
   }
   auto res = parseJSONItem(ctx, root);
   cJSON_Delete(root);

@@ -1,15 +1,14 @@
 #include "runtime/Window.hpp"
+#include "exception/OpenGLException.hpp"
+#include "exception/SDLException.hpp"
 #include <SDL2/SDL.h>
-#include <SDL_mouse.h>
-#include <SDL_video.h>
 #include <glad/glad.h>
-#include <stdexcept>
 
 using namespace firefly;
 using namespace firefly::runtime;
 #define SDL_ASSERT(expr)                                                       \
   if (!(expr))                                                                 \
-  throw std::runtime_error(SDL_GetError())
+  throw exception::SDLException(SDL_GetError())
 
 Window::Window(const std::string &title, int width, int height) {
   SDL_ASSERT(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4) == 0);
@@ -30,7 +29,7 @@ Window::Window(const std::string &title, int width, int height) {
   _ctx = SDL_GL_CreateContext(_window);
   SDL_ASSERT(_ctx != nullptr);
   if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
-    throw std::runtime_error("Failed to initialize glad");
+    throw exception::OpenGLException("Failed to initialize glad");
   }
 }
 

@@ -1,5 +1,4 @@
 #pragma once
-#include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "runtime/Event_SDL.hpp"
 namespace firefly::video {

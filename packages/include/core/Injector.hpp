@@ -4,18 +4,21 @@
 
 #pragma once
 
-#include"AutoPtr.hpp"
+#include "AutoPtr.hpp"
 #include "Provider.hpp"
+#include "exception/InjectorException.hpp"
 #include <fmt/format.h>
 
 namespace firefly::core {
-    template<class T, template_c_string name>
-    class Injector : public AutoPtr<T> {
-    public:
-        Injector() : AutoPtr<T>(Singleton<Provider>::instance()->template inject<T>(name.value)) {
-            if (!*this) {
-                throw std::runtime_error(fmt::format("Uninitialized injector: '{}'", name.value));
-            }
-        }
-    };
-}
+template <class T, template_c_string name> class Injector : public AutoPtr<T> {
+public:
+  Injector()
+      : AutoPtr<T>(
+            Singleton<Provider>::instance()->template inject<T>(name.value)) {
+    if (!*this) {
+      throw exception::InjectorException(
+          fmt::format("'{}' is not initialized", name.value));
+    }
+  }
+};
+} // namespace firefly::core

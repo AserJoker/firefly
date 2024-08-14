@@ -1,7 +1,7 @@
 #pragma once
 
+#include "exception/NullpointerException.hpp"
 #include <cstddef>
-#include <stdexcept>
 
 namespace firefly::core {
 template <class T> class AutoPtr {
@@ -45,14 +45,14 @@ public:
 
   T &operator*() {
     if (!_object) {
-      throw std::runtime_error("Null pointer exception");
+      throw exception::NullpointerException();
     }
     return *_object;
   }
 
   T *operator->() {
     if (!_object) {
-      throw std::runtime_error("Null pointer exception");
+      throw exception::NullpointerException();
     }
     return _object;
   }

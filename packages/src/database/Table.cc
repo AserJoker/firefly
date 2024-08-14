@@ -1,6 +1,6 @@
 #include "database/Table.hpp"
+#include "exception/ValidateException.hpp"
 #include <fmt/core.h>
-#include <stdexcept>
 using namespace firefly;
 using namespace firefly::database;
 
@@ -46,7 +46,7 @@ core::AutoPtr<Record> Table::insertOne(core::AutoPtr<Record> query) {
     if (field.isRequired()) {
       if (!query->hasField(field.getName()) ||
           query->getField(field.getName())->isNil()) {
-        throw std::runtime_error(fmt::format(
+        throw exception::ValidateException(fmt::format(
             "Faield to insert record to '{}.{}',field '{}' is required",
             _metadata->getNamespace(), _metadata->getName(), field.getName()));
       }
@@ -54,7 +54,8 @@ core::AutoPtr<Record> Table::insertOne(core::AutoPtr<Record> query) {
   }
   auto key = query->getKey();
   if (_indices.contains(key)) {
-    throw std::runtime_error("Duplicate primary key");
+    throw exception::ValidateException(
+        fmt::format("Duplicate primary key: '{}'", key));
   }
   _records.push_back(query);
   _indices[key] = _records.size() - 1;
@@ -64,14 +65,14 @@ core::AutoPtr<Record> Table::updateOne(core::AutoPtr<Record> query) {
   for (auto &field : getMetadata()->getFields()) {
     if (field.isRequired()) {
       if (query->getField(field.getName())->isNil()) {
-        throw std::runtime_error(fmt::format(
+        throw exception::ValidateException(fmt::format(
             "Faield to update record to '{}.{}',field '{}' is required",
             _metadata->getNamespace(), _metadata->getName(), field.getName()));
       }
     }
     if (field.isReadonly()) {
       if (query->hasField(field.getName())) {
-        throw std::runtime_error(fmt::format(
+        throw exception::ValidateException(fmt::format(
             "Faield to update record to '{}.{}',field '{}' is readonly,now "
             "give value '{}'",
             _metadata->getNamespace(), _metadata->getName(), field.getName(),
@@ -85,7 +86,7 @@ core::AutoPtr<Record> Table::updateOne(core::AutoPtr<Record> query) {
     record->merge(query);
     return record;
   }
-  throw std::runtime_error("Failed to match record");
+  throw exception::ValidateException("Failed to match record");
 }
 core::AutoPtr<Record> Table::deleteOne(core::AutoPtr<Record> query) {
   auto key = query->getKey();
@@ -112,7 +113,8 @@ core::AutoPtr<Record> Table::insertOrUpdateOne(core::AutoPtr<Record> query) {
 core::AutoPtr<Table> Table::create(const std::string &name,
                                    const core::AutoPtr<Metadata> &metadata) {
   if (!_drivers.contains(name)) {
-    throw std::runtime_error(fmt::format("Unknown driver named '{}'", name));
+    throw exception::ValidateException(
+        fmt::format("Unknown driver named '{}'", name));
   }
   return _drivers.at(name)(metadata);
 }

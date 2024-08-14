@@ -7,7 +7,7 @@ using namespace firefly;
 using namespace firefly::script;
 Scope::Scope(Scope *parent) : _parent(parent), _root(0) {
   _root = new Atom();
-  _root->_type = Atom::Type::OBJECT;
+  _root->_type = Atom::TYPE::OBJECT;
   _root->_value = core::AutoPtr(new Record(_root));
   if (_parent) {
     parent->_children.push_back(this);

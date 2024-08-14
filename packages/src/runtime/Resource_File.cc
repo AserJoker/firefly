@@ -1,10 +1,10 @@
 #include "runtime/Resource_File.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Buffer.hpp"
+#include "exception/FileException.hpp"
 #include <filesystem>
 #include <fmt/core.h>
 #include <fstream>
-#include <stdexcept>
 using namespace firefly;
 using namespace firefly::runtime;
 Resource_File::Resource_File(const std::string &filepath) {
@@ -16,7 +16,8 @@ Resource_File::Resource_File(const std::string &filepath) {
   _file.open(filepath,
              std::ios::binary | std::ios::app | std::ios::in | std::ios::out);
   if (!_file.is_open()) {
-    throw std::runtime_error(fmt::format("Failed to open file: {}", filepath));
+    throw exception::FileException(
+        fmt::format("Failed to open file: {}", filepath));
   }
 }
 Resource_File::~Resource_File() { _file.close(); }

@@ -19,7 +19,7 @@ FUNC_DEF(Module_Media::query) {
   return {Trait_Resource::create(ctx, resource)};
 }
 FUNC_DEF(Module_Media::createBuffer) {
-  if (args[0]->getType(ctx) == Atom::Type::NUMBER) {
+  if (args[0]->getType(ctx) == Atom::TYPE::NUMBER) {
     return {Trait_Buffer::create(
         ctx, new core::Buffer((uint32_t)args[0]->toNumber(ctx)))};
   } else {

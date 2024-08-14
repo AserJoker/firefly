@@ -7,17 +7,11 @@
 #include "AutoPtr.hpp"
 #include "Object.hpp"
 #include "Singleton.hpp"
+#include "core/TemplateCString.hpp"
 #include <functional>
 #include <string>
 #include <unordered_map>
 
-template <size_t N> struct template_c_string {
-  constexpr template_c_string(const char (&str)[N]) {
-    std::copy_n(str, N, value);
-  }
-
-  char value[N]{};
-};
 namespace firefly::core {
 class Provider : public Object {
 private:

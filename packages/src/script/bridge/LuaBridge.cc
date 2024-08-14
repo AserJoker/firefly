@@ -1,8 +1,10 @@
 #include "script/bridge/LuaBridge.hpp"
 #include "core/Singleton.hpp"
+#include "exception/LuaException.hpp"
 #include "script/Atom.hpp"
 #include "script/Value.hpp"
 #include <lua.h>
+
 using namespace firefly;
 using namespace firefly::script;
 
@@ -93,7 +95,7 @@ int LuaBridge::luaObjectNext(lua_State *state) {
   auto bridge = ctx->getBridge().cast<LuaBridge>();
   auto self =
       ctx->getNativeGlobal()->getField(ctx, "$objects")->getIndex(ctx, handle);
-  if (self->getType(ctx) == Atom::Type::ARRAY) {
+  if (self->getType(ctx) == Atom::TYPE::ARRAY) {
     return 0;
   }
   auto keys = self->getKeys(ctx);
@@ -162,7 +164,7 @@ Value::Stack LuaBridge::funcCall(core::AutoPtr<Script> ctx, Value::Stack args) {
   }
   auto current = lua_gettop(state);
   if (lua_pcall(state, args.size() - 1, LUA_MULTRET, 0)) {
-    throw std::runtime_error(lua_tostring(state, -1));
+    throw exception::LuaException(lua_tostring(state, -1));
   }
   auto end = lua_gettop(state);
   Value::Stack result;
@@ -203,7 +205,7 @@ Value::Stack LuaBridge::objectGet(core::AutoPtr<Script> ctx,
   auto objects = lua_gettop(state);
   lua_geti(state, objects, handle);
   auto obj = lua_gettop(state);
-  if (key->getType(ctx) == Atom::Type::STRING) {
+  if (key->getType(ctx) == Atom::TYPE::STRING) {
     lua_getfield(state, obj, key->toString(ctx).c_str());
   } else {
     lua_geti(state, obj, key->toNumber(ctx) + 1);
@@ -229,7 +231,7 @@ Value::Stack LuaBridge::objectSet(core::AutoPtr<Script> ctx,
   lua_geti(state, objects, handle);
   auto obj = lua_gettop(state);
   bridge->dump(state, value);
-  if (key->getType(ctx) == Atom::Type::STRING) {
+  if (key->getType(ctx) == Atom::TYPE::STRING) {
     lua_setfield(state, obj, key->toString(ctx).c_str());
   } else {
     lua_seti(state, obj, key->toNumber(ctx) + 1);
@@ -284,7 +286,7 @@ Value::Stack LuaBridge::eval(const std::string &source) {
   int ret = luaL_dostring(_state, source.c_str());
   if (ret) {
     auto error = lua_tostring(_state, -1);
-    throw std::runtime_error(
+    throw exception::LuaException(
         fmt::format("Failed to exec script :\n\t{}", error));
   }
   auto current = lua_gettop(_state);
@@ -352,7 +354,7 @@ core::AutoPtr<Value> LuaBridge::getFunctionMetadata() {
           ctx,
           [](core::AutoPtr<Script> ctx, Value::Stack args) -> Value::Stack {
             return {ctx->createValue()->setNumber(
-                ctx, (uint32_t)script::Atom::Type::FUNCTION)};
+                ctx, (uint32_t)script::Atom::TYPE::FUNCTION)};
           }));
   return meta;
 }
@@ -418,20 +420,20 @@ void LuaBridge::dump(lua_State *state, core::AutoPtr<Value> value) {
   auto functions = ctx->getNativeGlobal()->getField(ctx, "$functions");
 
   switch (value->getType(ctx)) {
-  case Atom::Type::NIL:
+  case Atom::TYPE::NIL:
     lua_pushnil(state);
     break;
-  case Atom::Type::NUMBER:
+  case Atom::TYPE::NUMBER:
     lua_pushnumber(state, value->toNumber(ctx));
     break;
-  case Atom::Type::BOOLEAN:
+  case Atom::TYPE::BOOLEAN:
     lua_pushboolean(state, value->toBoolean(ctx));
     break;
-  case Atom::Type::STRING:
+  case Atom::TYPE::STRING:
     lua_pushstring(state, value->toString(ctx).c_str());
     break;
-  case Atom::Type::OBJECT:
-  case Atom::Type::ARRAY: {
+  case Atom::TYPE::OBJECT:
+  case Atom::TYPE::ARRAY: {
     static uint32_t obj_idx = 0;
     ctx->getNativeGlobal()
         ->getField(ctx, "$objects")
@@ -440,7 +442,7 @@ void LuaBridge::dump(lua_State *state, core::AutoPtr<Value> value) {
     auto obj = lua_gettop(_state);
     lua_pushnumber(state, obj_idx);
     lua_setfield(state, obj, "$handle");
-    if (value->getType(ctx) == Atom::Type::ARRAY) {
+    if (value->getType(ctx) == Atom::TYPE::ARRAY) {
       lua_pushboolean(state, true);
       lua_setfield(state, obj, "$array");
     }
@@ -460,7 +462,7 @@ void LuaBridge::dump(lua_State *state, core::AutoPtr<Value> value) {
     lua_setmetatable(_state, obj);
     obj_idx++;
   } break;
-  case Atom::Type::FUNCTION: {
+  case Atom::TYPE::FUNCTION: {
     static int func_idx = 0;
     ctx->getNativeGlobal()
         ->getField(ctx, "$functions")

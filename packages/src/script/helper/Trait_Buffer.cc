@@ -1,8 +1,8 @@
 #include "script/helper/Trait_Buffer.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Buffer.hpp"
+#include "exception/ValidateException.hpp"
 #include "script/Value.hpp"
-#include <stdexcept>
 using namespace firefly;
 using namespace firefly::script;
 FUNC_DEF(Trait_Buffer::getLength) {
@@ -18,7 +18,7 @@ FUNC_DEF(Trait_Buffer::readUint8) {
   if (offset + 1 < buffer->getSize()) {
     return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
   }
-  throw std::runtime_error("Failed to read uint8,out of range");
+  throw exception::ValidateException("Failed to read uint8,out of range");
 }
 FUNC_DEF(Trait_Buffer::readUint16) {
   auto self = args[0];
@@ -28,7 +28,7 @@ FUNC_DEF(Trait_Buffer::readUint16) {
   if ((offset + 1) * 2 < buffer->getSize()) {
     return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
   }
-  throw std::runtime_error("Failed to read uint16,out of range");
+  throw exception::ValidateException("Failed to read uint16,out of range");
 }
 FUNC_DEF(Trait_Buffer::readUint32) {
   auto self = args[0];
@@ -38,7 +38,7 @@ FUNC_DEF(Trait_Buffer::readUint32) {
   if ((offset + 1) * 4 < buffer->getSize()) {
     return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
   }
-  throw std::runtime_error("Failed to read uint32,out of range");
+  throw exception::ValidateException("Failed to read uint32,out of range");
 }
 FUNC_DEF(Trait_Buffer::writeUint8) {
   auto self = args[0];
@@ -46,7 +46,7 @@ FUNC_DEF(Trait_Buffer::writeUint8) {
   uint32_t offset = args[1]->toNumber(ctx);
   auto value = args[2]->toNumber(ctx);
   if (value >= 0xff || value <= 0) {
-    throw std::runtime_error(
+    throw exception::ValidateException(
         fmt::format("Failed to write uint8,{} is not uint8", value));
   }
   uint8_t *buf = (uint8_t *)buffer->getData();
@@ -54,7 +54,7 @@ FUNC_DEF(Trait_Buffer::writeUint8) {
     buf[offset] = (uint8_t)value;
     return {};
   }
-  throw std::runtime_error("Failed to write uint8,out of range");
+  throw exception::ValidateException("Failed to write uint8,out of range");
 }
 FUNC_DEF(Trait_Buffer::writeUint16) {
   auto self = args[0];
@@ -62,7 +62,7 @@ FUNC_DEF(Trait_Buffer::writeUint16) {
   uint32_t offset = args[1]->toNumber(ctx);
   auto value = args[2]->toNumber(ctx);
   if (value >= 0xffff || value <= 0) {
-    throw std::runtime_error(
+    throw exception::ValidateException(
         fmt::format("Failed to write uint8,{} is not uint8", value));
   }
   uint16_t *buf = (uint16_t *)buffer->getData();
@@ -70,7 +70,7 @@ FUNC_DEF(Trait_Buffer::writeUint16) {
     buf[offset] = (uint16_t)value;
     return {};
   }
-  throw std::runtime_error("Failed to write uint16,out of range");
+  throw exception::ValidateException("Failed to write uint16,out of range");
 }
 FUNC_DEF(Trait_Buffer::writeUint32) {
   auto self = args[0];
@@ -78,7 +78,7 @@ FUNC_DEF(Trait_Buffer::writeUint32) {
   uint32_t offset = args[1]->toNumber(ctx);
   auto value = args[2]->toNumber(ctx);
   if (value >= 0xffffffff || value <= 0) {
-    throw std::runtime_error(
+    throw exception::ValidateException(
         fmt::format("Failed to write uint32,{} is not uint32", value));
   }
   uint32_t *buf = (uint32_t *)buffer->getData();
@@ -86,7 +86,7 @@ FUNC_DEF(Trait_Buffer::writeUint32) {
     buf[offset] = (uint32_t)value;
     return {};
   }
-  throw std::runtime_error("Failed to write uint32,out of range");
+  throw exception::ValidateException("Failed to write uint32,out of range");
 }
 FUNC_DEF(Trait_Buffer::toUint8Array) {
   auto self = args[0];
@@ -102,7 +102,7 @@ FUNC_DEF(Trait_Buffer::toUint16Array) {
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   if (buffer->getSize() % 2 != 0) {
-    throw std::runtime_error(
+    throw exception::ValidateException(
         "Failed to convert buffer to uint16 array,size is not aligned");
   }
   uint16_t *buf = (uint16_t *)buffer->getData();
@@ -116,7 +116,7 @@ FUNC_DEF(Trait_Buffer::toUint32Array) {
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   if (buffer->getSize() % 4 != 0) {
-    throw std::runtime_error(
+    throw exception::ValidateException(
         "Failed to convert buffer to uint32 array,size is not aligned");
   }
   uint32_t *buf = (uint32_t *)buffer->getData();

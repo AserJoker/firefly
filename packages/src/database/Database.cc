@@ -6,12 +6,12 @@
 #include "database/Record.hpp"
 #include "database/Value.hpp"
 #include "database/driver/Driver_Table.hpp"
+#include "exception/ValidateException.hpp"
 #include "libxml/parser.h"
 #include "runtime/Media.hpp"
 #include <cinttypes>
 #include <libxml/tree.h>
 #include <libxml/xmlstring.h>
-#include <stdexcept>
 #include <unordered_map>
 using namespace firefly;
 using namespace firefly::database;
@@ -196,7 +196,8 @@ void Database::updateTable(core::AutoPtr<Metadata> metadata) {
   if (_tables.contains(key)) {
     _tables[key] = Table::create(metadata->getDriver(), metadata);
   } else {
-    throw std::runtime_error(fmt::format("Unknown table named '{}'", key));
+    throw exception::ValidateException(
+        fmt::format("Unknown table named '{}'", key));
   }
 }
 core::AutoPtr<Table> Database::getTable(const std::string &name) {

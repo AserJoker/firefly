@@ -1,5 +1,5 @@
 #include "database/Record.hpp"
-#include <stdexcept>
+#include "exception/ValidateException.hpp"
 using namespace firefly;
 using namespace firefly::database;
 
@@ -21,7 +21,7 @@ const std::string Record::getKey() const {
       result += ",";
     }
     if (!_data.contains(key)) {
-      throw std::runtime_error(fmt::format(
+      throw exception::ValidateException(fmt::format(
           "Failed to get record key, primary key '{}' is undefined", key));
     }
     result += _data.at(key)->toString();

@@ -8,7 +8,7 @@ using namespace firefly::script;
 Array::Array(Atom *atom) : _self(atom) {}
 void Array::setIndex(core::AutoPtr<Script> ctx, int index,
                      core::AutoPtr<Value> value) {
-  if (value->getType(ctx) != Atom::Type::NIL) {
+  if (value->getType(ctx) != Atom::TYPE::NIL) {
     auto atom = value->getAtom();
     atom->addParent(_self);
     while (index >= _items.size()) {

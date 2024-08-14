@@ -1,10 +1,10 @@
 #include "runtime/Media.hpp"
 #include "core/AutoPtr.hpp"
+#include "exception/MediaNotExistException.hpp"
 #include "runtime/Resource.hpp"
 #include "runtime/Resource_File.hpp"
 #include <filesystem>
 #include <fmt/core.h>
-#include <stdexcept>
 #include <vector>
 using namespace firefly;
 using namespace firefly::runtime;
@@ -16,7 +16,8 @@ core::AutoPtr<Resource> Media::load(const std::string &name) {
       return new Resource_File(filepath);
     }
   }
-  throw std::runtime_error(fmt::format("Failed to load resource: {}", name));
+  throw exception::MediaNotExistException(
+      fmt::format("Failed to load resource: {}", name));
 }
 std::vector<core::AutoPtr<Resource>> Media::loadAll(const std::string &name) {
   auto filepaths = resolve(name);

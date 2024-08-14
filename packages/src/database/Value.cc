@@ -1,8 +1,8 @@
 #include "database/Value.hpp"
+#include "exception/ValidateException.hpp"
 #include <any>
 #include <cstddef>
 #include <fmt/core.h>
-#include <stdexcept>
 #include <vector>
 using namespace firefly;
 using namespace firefly::database;
@@ -116,50 +116,50 @@ const std::string Value::toString() const {
 
 const std::string Value::getStringValue() const {
   if (_value.type() != typeid(std::string)) {
-    throw std::runtime_error("Failed to read string value");
+    throw exception::ValidateException("Failed to read string value");
   }
   return std::any_cast<std::string>(_value);
 }
 const int32_t Value::getIntegerValue() const {
   if (_value.type() != typeid(int32_t)) {
-    throw std::runtime_error("Failed to read integer value");
+    throw exception::ValidateException("Failed to read integer value");
   }
   return std::any_cast<int32_t>(_value);
 }
 const double Value::getNumberValue() const {
   if (_value.type() != typeid(double)) {
-    throw std::runtime_error("Failed to read number value");
+    throw exception::ValidateException("Failed to read number value");
   }
   return std::any_cast<double>(_value);
 }
 const bool Value::getBooleanValue() const {
   if (_value.type() != typeid(bool)) {
-    throw std::runtime_error("Failed to read boolean value");
+    throw exception::ValidateException("Failed to read boolean value");
   }
   return std::any_cast<bool>(_value);
 }
 
 const std::vector<std::string> Value::getStringArrayValue() const {
   if (_value.type() != typeid(std::vector<std::string>)) {
-    throw std::runtime_error("Failed to read string array value");
+    throw exception::ValidateException("Failed to read string array value");
   }
   return std::any_cast<std::vector<std::string>>(_value);
 }
 const std::vector<int32_t> Value::getIntegerArrayValue() const {
   if (_value.type() != typeid(std::vector<int32_t>)) {
-    throw std::runtime_error("Failed to read integer array value");
+    throw exception::ValidateException("Failed to read integer array value");
   }
   return std::any_cast<std::vector<int32_t>>(_value);
 }
 const std::vector<double> Value::getNumberArrayValue() const {
   if (_value.type() != typeid(std::vector<double>)) {
-    throw std::runtime_error("Failed to read number array value");
+    throw exception::ValidateException("Failed to read number array value");
   }
   return std::any_cast<std::vector<double>>(_value);
 }
 const std::vector<bool> Value::getBooleanArrayValue() const {
   if (_value.type() != typeid(std::vector<bool>)) {
-    throw std::runtime_error("Failed to read boolean array value");
+    throw exception::ValidateException("Failed to read boolean array value");
   }
   return std::any_cast<std::vector<bool>>(_value);
 }

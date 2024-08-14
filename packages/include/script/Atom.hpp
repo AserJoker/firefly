@@ -7,18 +7,18 @@
 #include <vector>
 namespace firefly::script {
 struct Atom {
-  enum class Type { NIL = 0, NUMBER, BOOLEAN, STRING, OBJECT, ARRAY, FUNCTION };
+  enum class TYPE { NIL = 0, NUMBER, BOOLEAN, STRING, OBJECT, ARRAY, FUNCTION };
 
   std::vector<Atom *> _parent;
   std::vector<Atom *> _children;
   core::AutoPtr<core::Object> _opaque;
   Atom *_metadata;
   std::any _value;
-  Type _type;
+  TYPE _type;
   bool _marked;
   bool _disposed;
   Atom() {
-    _type = Type::NIL;
+    _type = TYPE::NIL;
     _value = nullptr;
     _metadata = nullptr;
     _marked = false;

@@ -4,7 +4,8 @@
 #include "database/Database.hpp"
 #include "database/Field.hpp"
 #include "database/Metadata.hpp"
-#include <stdexcept>
+#include "exception/ReadonlyException.hpp"
+#include "exception/ValidateException.hpp"
 #include <unordered_map>
 #include <vector>
 using namespace firefly;
@@ -51,7 +52,8 @@ core::AutoPtr<Record> Driver_Table::updateOne(core::AutoPtr<Record> query) {
     auto db = core::Singleton<Database>::instance();
     db->updateTable(metadata);
   } else {
-    throw std::runtime_error("Cannot update inner table");
+    throw exception::ReadonlyException(
+        fmt::format("Cannot update inner table:{}", query->getKey()));
   }
   return result;
 }
@@ -65,7 +67,8 @@ core::AutoPtr<Record> Driver_Table::deleteOne(core::AutoPtr<Record> query) {
         fmt::format("{}.{}", metadata->getName(), metadata->getNamespace());
     db->deleteTable(name);
   } else {
-    throw std::runtime_error("Cannot delete inner table");
+    throw exception::ReadonlyException(
+        fmt::format("Cannot delete inner table:{}", query->getKey()));
   }
   return result;
 }
@@ -82,7 +85,8 @@ Field::TYPE createFieldType(const std::string &source) {
   if (source == "NUMBER") {
     return Field::TYPE::NUMBER;
   }
-  throw std::runtime_error(fmt::format("Unknown field type '{}'", source));
+  throw exception::ValidateException(
+      fmt::format("Unknown field type '{}'", source));
 }
 Field Driver_Table::createField(core::AutoPtr<Record> record) {
   Field::TYPE type =

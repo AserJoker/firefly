@@ -18,12 +18,12 @@ FUNC_DEF(Module_Event::on) {
   Atom *atom = callback->getAtom();
   auto global = ctx->getNativeGlobal();
   auto events = global->getField(ctx, "$events");
-  if (events->getField(ctx, event)->getType(ctx) == Atom::Type::NIL) {
+  if (events->getField(ctx, event)->getType(ctx) == Atom::TYPE::NIL) {
     events->setField(ctx, event, ctx->createValue()->setArray(ctx));
   }
   auto callbacks = events->getField(ctx, event);
   auto i = 0;
-  while (callbacks->getIndex(ctx, i)->getType(ctx) != Atom::Type::NIL) {
+  while (callbacks->getIndex(ctx, i)->getType(ctx) != Atom::TYPE::NIL) {
     i++;
   }
   callbacks->setIndex(ctx, i, callback);
@@ -32,7 +32,7 @@ FUNC_DEF(Module_Event::on) {
         auto global = ctx->getNativeGlobal();
         auto events = global->getField(ctx, "$events");
         auto callbacks = events->getField(ctx, event);
-        if (callbacks->getType(ctx) == Atom::Type::NIL) {
+        if (callbacks->getType(ctx) == Atom::TYPE::NIL) {
           return {};
         }
         callbacks->setIndex(ctx, i, ctx->createValue());
@@ -57,11 +57,11 @@ void Module_Event::emit(core::AutoPtr<Script> ctx, const std::string &event,
   auto global = ctx->getNativeGlobal();
   auto events = global->getField(ctx, "$events");
   auto callbacks = events->getField(ctx, event);
-  if (callbacks->getType(ctx) != Atom::Type::NIL) {
+  if (callbacks->getType(ctx) != Atom::TYPE::NIL) {
     auto length = callbacks->getLength(ctx);
     for (auto i = 0; i < length; i++) {
       auto callback = callbacks->getIndex(ctx, i);
-      if (callback->getType(ctx) != Atom::Type::NIL) {
+      if (callback->getType(ctx) != Atom::TYPE::NIL) {
         Value::Stack args;
         if (arg != nullptr) {
           args.push_back(arg);

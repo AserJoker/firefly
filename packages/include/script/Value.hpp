@@ -9,7 +9,7 @@ class Script;
 
 class Value : public core::Object {
 public:
-  enum class Operation {
+  enum class OPERATION {
     CONNECT,
     ADD,
     SUB,
@@ -76,7 +76,7 @@ public:
 
 public:
   Value(Atom *atom);
-  Atom::Type getType(core::AutoPtr<Script> ctx);
+  Atom::TYPE getType(core::AutoPtr<Script> ctx);
   std::string getTypeName(core::AutoPtr<Script> ctx);
   double toNumber(core::AutoPtr<Script> ctx);
   bool toBoolean(core::AutoPtr<Script> ctx);
@@ -125,7 +125,7 @@ public:
   core::AutoPtr<core::Object> getOpaque();
   core::AutoPtr<Value> arithmetic(core::AutoPtr<Script> ctx,
                                   core::AutoPtr<Value> another,
-                                  Operation operation);
+                                  OPERATION operation);
   Atom *getAtom();
   std::string toJSON(core::AutoPtr<Script> ctx);
   std::string toYAML(core::AutoPtr<Script> ctx);
