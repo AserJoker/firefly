@@ -4,6 +4,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include <unordered_map>
+
 namespace firefly::script {
 class Value;
 class Script : public core::Object {
@@ -57,4 +58,11 @@ public:
 #define createFunction(ctx, value) ctx->createValue()->setFunction(ctx, value)
 #define setFunctionField(ctx, func)                                            \
   setField(ctx, #func, ctx->createValue()->setFunction(ctx, func))
+#define VALIDATE_ARGS(func, s)                                                 \
+  if (args.size() < s) {                                                       \
+    throw exception::ValidateException(                                        \
+        fmt::format("Failed to call '{}',this function requires {} "           \
+                    "argument(s) but instead it is receiving {}",              \
+                    #func, s, args.size()));                                   \
+  }
 }; // namespace firefly::script

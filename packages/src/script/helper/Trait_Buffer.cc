@@ -6,11 +6,13 @@
 using namespace firefly;
 using namespace firefly::script;
 FUNC_DEF(Trait_Buffer::getLength) {
+  VALIDATE_ARGS(getLength, 1);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   return {ctx->createValue()->setNumber(ctx, buffer->getSize())};
 }
 FUNC_DEF(Trait_Buffer::readUint8) {
+  VALIDATE_ARGS(readUint8, 2);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   uint32_t offset = args[1]->toNumber(ctx);
@@ -21,6 +23,7 @@ FUNC_DEF(Trait_Buffer::readUint8) {
   throw exception::ValidateException("Failed to read uint8,out of range");
 }
 FUNC_DEF(Trait_Buffer::readUint16) {
+  VALIDATE_ARGS(readUint16, 2);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   uint32_t offset = args[1]->toNumber(ctx);
@@ -31,6 +34,7 @@ FUNC_DEF(Trait_Buffer::readUint16) {
   throw exception::ValidateException("Failed to read uint16,out of range");
 }
 FUNC_DEF(Trait_Buffer::readUint32) {
+  VALIDATE_ARGS(readUint32, 2);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   uint32_t offset = args[1]->toNumber(ctx);
@@ -41,6 +45,7 @@ FUNC_DEF(Trait_Buffer::readUint32) {
   throw exception::ValidateException("Failed to read uint32,out of range");
 }
 FUNC_DEF(Trait_Buffer::writeUint8) {
+  VALIDATE_ARGS(writeUint8, 3);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   uint32_t offset = args[1]->toNumber(ctx);
@@ -57,6 +62,7 @@ FUNC_DEF(Trait_Buffer::writeUint8) {
   throw exception::ValidateException("Failed to write uint8,out of range");
 }
 FUNC_DEF(Trait_Buffer::writeUint16) {
+  VALIDATE_ARGS(writeUint16, 3);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   uint32_t offset = args[1]->toNumber(ctx);
@@ -73,6 +79,7 @@ FUNC_DEF(Trait_Buffer::writeUint16) {
   throw exception::ValidateException("Failed to write uint16,out of range");
 }
 FUNC_DEF(Trait_Buffer::writeUint32) {
+  VALIDATE_ARGS(writeUint32, 3);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   uint32_t offset = args[1]->toNumber(ctx);
@@ -89,6 +96,7 @@ FUNC_DEF(Trait_Buffer::writeUint32) {
   throw exception::ValidateException("Failed to write uint32,out of range");
 }
 FUNC_DEF(Trait_Buffer::toUint8Array) {
+  VALIDATE_ARGS(toUint8Array, 1);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   uint8_t *buf = (uint8_t *)buffer->getData();
@@ -99,6 +107,7 @@ FUNC_DEF(Trait_Buffer::toUint8Array) {
   return {result};
 }
 FUNC_DEF(Trait_Buffer::toUint16Array) {
+  VALIDATE_ARGS(toUint16Array, 1);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   if (buffer->getSize() % 2 != 0) {
@@ -113,6 +122,7 @@ FUNC_DEF(Trait_Buffer::toUint16Array) {
   return {result};
 }
 FUNC_DEF(Trait_Buffer::toUint32Array) {
+  VALIDATE_ARGS(toUint32Array, 1);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   if (buffer->getSize() % 4 != 0) {
@@ -127,6 +137,7 @@ FUNC_DEF(Trait_Buffer::toUint32Array) {
   return {result};
 }
 FUNC_DEF(Trait_Buffer::toString) {
+  VALIDATE_ARGS(toString, 1);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
   std::string result =

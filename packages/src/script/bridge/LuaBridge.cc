@@ -4,6 +4,7 @@
 #include "script/Atom.hpp"
 #include "script/Value.hpp"
 #include <lua.h>
+#include <stdexcept>
 
 using namespace firefly;
 using namespace firefly::script;
@@ -14,7 +15,13 @@ int LuaBridge::luaFuncCall(lua_State *state) {
   if (!bridge) {
     return 0;
   }
-  return bridge->call(state);
+  try {
+    return bridge->call(state);
+  } catch (std::runtime_error &e) {
+    lua_pushstring(state, e.what());
+    lua_error(state);
+    return 1;
+  }
 }
 int LuaBridge::luaFuncGC(lua_State *state) {
   auto obj = lua_gettop(state);

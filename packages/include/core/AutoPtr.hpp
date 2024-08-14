@@ -57,9 +57,19 @@ public:
     return _object;
   }
 
-  const T &operator*() const { return *_object; }
+  const T &operator*() const {
+    if (!_object) {
+      throw exception::NullpointerException();
+    }
+    return *_object;
+  }
 
-  const T *operator->() const { return _object; }
+  const T *operator->() const {
+    if (!_object) {
+      throw exception::NullpointerException();
+    }
+    return _object;
+  }
 
   template <class K> AutoPtr<T> &operator=(K *object) {
     if (_object && _object != object) {
