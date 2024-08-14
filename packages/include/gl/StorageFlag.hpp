@@ -1,7 +1,7 @@
 #pragma once
 #include <glad/glad.h>
 namespace firefly::gl {
-enum class STORAGE_FLAG {
+enum STORAGE_FLAG {
   DYNAMIC_STORAGE_BIT = GL_DYNAMIC_STORAGE_BIT,
   MAP_READ_BIT = GL_MAP_READ_BIT,
   MAP_WRITE_BIT = GL_MAP_WRITE_BIT,

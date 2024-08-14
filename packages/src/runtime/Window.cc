@@ -1,5 +1,5 @@
 #include "runtime/Window.hpp"
-#include "exception/OpenGLException.hpp"
+#include "exception/GLADException.hpp"
 #include "exception/SDLException.hpp"
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
@@ -29,7 +29,7 @@ Window::Window(const std::string &title, int width, int height) {
   _ctx = SDL_GL_CreateContext(_window);
   SDL_ASSERT(_ctx != nullptr);
   if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
-    throw exception::OpenGLException("Failed to initialize glad");
+    throw exception::GLADException("Failed to initialize glad");
   }
 }
 

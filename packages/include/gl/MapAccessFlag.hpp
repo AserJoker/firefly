@@ -1,7 +1,7 @@
 #pragma once
 #include <glad/glad.h>
 namespace firefly::gl {
-enum class MAP_ACCESS_FLAG {
+enum MAP_ACCESS_FLAG {
   READ_BIT = GL_MAP_READ_BIT,
   WRITE_BIT = GL_MAP_WRITE_BIT,
   PERSISTENT_BIT = GL_MAP_PERSISTENT_BIT,
