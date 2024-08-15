@@ -84,6 +84,7 @@ void *VertexArray::getAttribPointer(uint32_t index) {
 void VertexArray::bindVertexBuffer(uint32_t bindingindex,
                                    core::AutoPtr<Buffer> buffer,
                                    uint32_t offset, size_t length) {
+  CHECK_VERSION(4, 3, "Failed to bind vertex buffer");
   VertexArray::bind(this);
   glBindVertexBuffer(bindingindex, buffer->getHandle(), offset, length);
   CHECK_OPENGL("Failed to bind vertex buffer");
