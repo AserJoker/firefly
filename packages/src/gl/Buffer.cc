@@ -1,10 +1,13 @@
 #include "gl/Buffer.hpp"
+#include "exception/OpenGLVersionException.hpp"
 #include "gl/BufferTraget.hpp"
 #include "gl/BufferUsage.hpp"
+#include "gl/Device.hpp"
 #include "gl/OpenGLException.hpp"
 #include <glad/glad.h>
 using namespace firefly;
 using namespace firefly::gl;
+using exception::OpenGLVersionException;
 Buffer::Buffer(uint32_t handle) : _handle(handle), _autoDelete(false) {
   if (_handle == 0) {
     glGenBuffers(1, &_handle);
@@ -17,16 +20,18 @@ Buffer::~Buffer() {
   }
 }
 
-void Buffer::realloc(size_t size, void *data, BUFFER_USAGE usage) {
+void Buffer::setData(size_t size, void *data, BUFFER_USAGE usage) {
   Buffer::bind(BUFFER_TARGET::ARRAY, this);
   glBufferData(GL_ARRAY_BUFFER, size, data, (GLenum)usage);
   CHECK_OPENGL("Failed to create buffer");
   Buffer::unbind(BUFFER_TARGET::ARRAY);
 }
-void Buffer::storage(size_t size, void *data, uint32_t flag) {
+void Buffer::storageData(size_t size, void *data, uint32_t flag) {
+  CHECK_VERSION(4, 4, "Failed to create storage data");
+  Device::checkVersion(4, 4);
   Buffer::bind(BUFFER_TARGET::ARRAY, this);
   glBufferStorage(GL_ARRAY_BUFFER, size, data, flag);
-  CHECK_OPENGL("Failed to create storage");
+  CHECK_OPENGL("Failed to create storage data");
   Buffer::unbind(BUFFER_TARGET::ARRAY);
 }
 
@@ -45,6 +50,7 @@ void Buffer::read(int64_t offset, size_t size, void *output) {
 
 void Buffer::copy(core::AutoPtr<Buffer> target, int64_t srcOffset,
                   int64_t offset, size_t size) {
+  CHECK_VERSION(3, 1, "Failed to copy buffer data");
   Buffer::bind(BUFFER_TARGET::COPY_READ, this);
   Buffer::bind(BUFFER_TARGET::COPY_WRITE, target);
   glCopyBufferSubData(GL_COPY_READ_BUFFER, GL_COPY_WRITE_BUFFER, srcOffset,
@@ -58,15 +64,16 @@ void Buffer::map(size_t *size, void **output, ACCESS_TYPE access) {
   *size = getSize();
   Buffer::bind(BUFFER_TARGET::ARRAY, this);
   *output = glMapBuffer(GL_ARRAY_BUFFER, (GLenum)access);
-  CHECK_OPENGL("Failed to lock buffer");
+  CHECK_OPENGL("Failed to map buffer");
   Buffer::unbind(BUFFER_TARGET::ARRAY);
 }
 void Buffer::mapRange(size_t *size, void **output, int64_t offset,
                       size_t length, uint32_t access) {
+  CHECK_VERSION(3, 0, "Failed to map range buffer");
   *size = getSize();
   Buffer::bind(BUFFER_TARGET::ARRAY, this);
   *output = glMapBufferRange(GL_ARRAY_BUFFER, offset, length, (GLenum)access);
-  CHECK_OPENGL("Failed to lock buffer range");
+  CHECK_OPENGL("Failed to map buffer range");
   Buffer::unbind(BUFFER_TARGET::ARRAY);
 }
 
@@ -78,6 +85,7 @@ void Buffer::unmap() {
 }
 
 void Buffer::flush(int64_t offset, size_t length) {
+  CHECK_VERSION(3, 0, "Failed to flush buffer");
   Buffer::bind(BUFFER_TARGET::ARRAY, this);
   glFlushMappedBufferRange(GL_ARRAY_BUFFER, offset, length);
   CHECK_OPENGL("Failed to flush buffer");
@@ -85,15 +93,17 @@ void Buffer::flush(int64_t offset, size_t length) {
 }
 
 void Buffer::invalidate() {
+  CHECK_VERSION(4, 3, "Failed to invalidate buffer");
   Buffer::bind(BUFFER_TARGET::ARRAY, this);
   glInvalidateBufferData(GL_ARRAY_BUFFER);
-  CHECK_OPENGL("Failed to flush buffer");
+  CHECK_OPENGL("Failed to invalidate buffer");
   Buffer::unbind(BUFFER_TARGET::ARRAY);
 }
 void Buffer::invalidate(int64_t offset, size_t length) {
+  CHECK_VERSION(4, 3, "Failed to invalidate buffer");
   Buffer::bind(BUFFER_TARGET::ARRAY, this);
   glInvalidateBufferSubData(GL_ARRAY_BUFFER, offset, length);
-  CHECK_OPENGL("Failed to flush buffer");
+  CHECK_OPENGL("Failed to invalidate buffer");
   Buffer::unbind(BUFFER_TARGET::ARRAY);
 }
 
@@ -178,6 +188,9 @@ void *Buffer::getMappedPointer() {
   Buffer::unbind(BUFFER_TARGET::ARRAY);
   return data;
 }
+
+uint32_t Buffer::getHandle() { return _handle; }
+
 void Buffer::bind(BUFFER_TARGET target, core::AutoPtr<Buffer> buffer) {
   glBindBuffer((GLenum)target, buffer->_handle);
   CHECK_OPENGL("Failed to bind buffer");
@@ -191,12 +204,14 @@ void Buffer::unbind(BUFFER_TARGET target) {
 void Buffer::bindRange(BUFFER_TARGET target, uint32_t index,
                        core::AutoPtr<Buffer> buffer, uint32_t offset,
                        uint32_t size) {
+  CHECK_VERSION(3, 0, "Failed to bind buffer range");
   glBindBufferRange((GLenum)target, index, buffer->_handle, offset, size);
   CHECK_OPENGL("Failed to bind buffer range");
 }
 
 void Buffer::bindBase(BUFFER_TARGET target, uint32_t index,
                       core::AutoPtr<Buffer> buffer) {
+  CHECK_VERSION(3, 0, "Failed to bind buffer base");
   glBindBufferBase((GLenum)target, index, buffer->_handle);
   CHECK_OPENGL("Failed to bind buffer base");
 }

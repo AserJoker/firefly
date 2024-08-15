@@ -1,6 +1,11 @@
 #include "core/AutoPtr.hpp"
+#include "core/Singleton.hpp"
 #include "gl/Buffer.hpp"
 #include "gl/BufferTraget.hpp"
+#include "gl/Device.hpp"
+#include "gl/ElementType.hpp"
+#include "gl/PrimitiveType.hpp"
+#include "gl/VertexArray.hpp"
 #include <glad/glad.h>
 #include <glfw/glfw3.h>
 
@@ -33,8 +38,8 @@ int main() {
   // glfw: initialize and configure
   // ------------------------------
   glfwInit();
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -114,26 +119,29 @@ int main() {
       0, 1, 3, // first Triangle
       1, 2, 3  // second Triangle
   };
-  unsigned int VAO;
-  glGenVertexArrays(1, &VAO);
+  //   unsigned int VAO;
+  //   glGenVertexArrays(1, &VAO);
   // bind the Vertex Array Object first, then bind and set vertex buffer(s), and
   // then configure vertex attributes(s).
-  glBindVertexArray(VAO);
-
+  core::AutoPtr vao = new gl::VertexArray();
   core::AutoPtr vbo = new gl::Buffer();
   core::AutoPtr ebo = new gl::Buffer();
-  vbo->realloc(sizeof(vertices), vertices);
-  ebo->realloc(sizeof(indices), indices);
+  core::AutoPtr device = core::Singleton<gl::Device>::instance();
+  vbo->setData(sizeof(vertices), vertices);
+  ebo->setData(sizeof(indices), indices);
 
-  gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, vbo);
-  gl::Buffer::bind(gl::BUFFER_TARGET::ELEMENT_ARRAY, ebo);
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
-  glEnableVertexAttribArray(0);
+  //   vao->addBuffer(gl::BUFFER_TARGET::ARRAY, vbo);
+  vao->addBuffer(gl::BUFFER_TARGET::ELEMENT_ARRAY, ebo);
 
+  //   vao->setAttribPointer(0, 3, gl::COMPOMENT_TYPE::FLOAT, sizeof(float) * 3,
+  //                         false, 0);
+  vao->bindVertexBuffer(0, vbo, 0, sizeof(float) * 3);
+  vao->enable(0);
+  vao->setAttribFormat(0, 3, gl::COMPOMENT_TYPE::FLOAT, false, 0);
+  vao->setAttribBinding(0, 0);
   // note that this is allowed, the call to glVertexAttribPointer registered VBO
   // as the vertex attribute's bound vertex buffer object so afterwards we can
   // safely unbind
-  glBindBuffer(GL_ARRAY_BUFFER, 0);
 
   // remember: do NOT unbind the EBO while a VAO is active as the bound element
   // buffer object IS stored in the VAO; keep the EBO bound.
@@ -143,7 +151,6 @@ int main() {
   // modify this VAO, but this rarely happens. Modifying other VAOs requires a
   // call to glBindVertexArray anyways so we generally don't unbind VAOs (nor
   // VBOs) when it's not directly necessary.
-  glBindVertexArray(0);
 
   // uncomment this call to draw in wireframe polygons.
   // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -162,11 +169,13 @@ int main() {
 
     // draw our first triangle
     glUseProgram(shaderProgram);
-    glBindVertexArray(
-        VAO); // seeing as we only have a single VAO there's no need to bind it
-              // every time, but we'll do so to keep things a bit more organized
-    // glDrawArrays(GL_TRIANGLES, 0, 6);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    gl::VertexArray::bind(vao);
+    // seeing as we only have a single VAO there's no need to bind it
+    // every time, but we'll do so to keep things a bit more organized
+    // glDrawArrays(GL_TRIANGLES, 0, 3);
+    // glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    device->drawElements(gl::PRIMITIVE_TYPE::TRIANGLES, 6,
+                         gl::ELEMENT_TYPE::UINT, 0);
     // glBindVertexArray(0); // no need to unbind it every time
 
     // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved
@@ -178,7 +187,6 @@ int main() {
 
   // optional: de-allocate all resources once they've outlived their purpose:
   // ------------------------------------------------------------------------
-  glDeleteVertexArrays(1, &VAO);
   glDeleteProgram(shaderProgram);
 
   // glfw: terminate, clearing all previously allocated GLFW resources.

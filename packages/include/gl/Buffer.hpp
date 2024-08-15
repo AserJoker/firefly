@@ -17,10 +17,10 @@ public:
   Buffer(uint32_t handle = 0);
   ~Buffer() override;
 
-  void realloc(size_t size, void *data = 0,
+  void setData(size_t size, void *data = 0,
                BUFFER_USAGE usage = BUFFER_USAGE::STATIC_DRAW);
 
-  void storage(size_t size, void *data = 0,
+  void storageData(size_t size, void *data = 0,
                uint32_t flag = STORAGE_FLAG::MAP_READ_BIT |
                                STORAGE_FLAG::MAP_WRITE_BIT |
                                STORAGE_FLAG::DYNAMIC_STORAGE_BIT |
@@ -66,6 +66,8 @@ public:
   BUFFER_USAGE getUsage();
 
   void *getMappedPointer();
+
+  uint32_t getHandle();
 
 public:
   static void bind(BUFFER_TARGET target, core::AutoPtr<Buffer> buffer);
