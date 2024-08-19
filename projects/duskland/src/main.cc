@@ -5,6 +5,7 @@
 #include <SDL2/SDL.h>
 #include <clocale>
 #include <exception>
+#include <iostream>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -18,14 +19,16 @@ int main(int argc, char *argv[]) {
   SetConsoleOutputCP(CP_UTF8);
   setvbuf(stdout, nullptr, _IOFBF, 1000);
 #endif
-  InitFirefly();
   try {
+    InitFirefly();
     core::Singleton<runtime::Application>::initialize<GameApplication>(argc,
                                                                        argv);
     return core::Singleton<runtime::Application>::instance()->run();
   } catch (std::exception &e) {
     auto &theLogger = core::Singleton<runtime::Logger>::instance();
     theLogger->panic("{}", e.what());
+  } catch (...) {
+    std::cerr << "Unknown error" << std::endl;
   }
   return 0;
 }

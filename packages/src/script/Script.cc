@@ -18,9 +18,12 @@ Script::Script() {
 }
 Script::~Script() {}
 void Script::dispose() {
-  _bridge = nullptr;
-  gc(this, _root->getRoot());
-  _root = nullptr;
+  if (_bridge != nullptr) {
+    _bridge->dispose();
+    _bridge = nullptr;
+    gc(this, _root->getRoot());
+    _root = nullptr;
+  }
 }
 
 void Script::setBridge(core::AutoPtr<Bridge> bridge) {

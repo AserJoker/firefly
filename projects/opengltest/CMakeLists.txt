@@ -1,7 +1,0 @@
-include_directories(${FF_INCLUDE_DIR})
-include_directories(./include)
-file(GLOB SOURCES src/*.cc)
-add_executable(${FF_PROJECT_NAME} ${SOURCES})
-target_link_libraries(${FF_PROJECT_NAME} PUBLIC firefly)
-find_package(glfw3 CONFIG REQUIRED)
-target_link_libraries(${FF_PROJECT_NAME} PRIVATE glfw)

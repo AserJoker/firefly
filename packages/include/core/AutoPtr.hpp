@@ -30,14 +30,19 @@ public:
 
   virtual ~AutoPtr() { dispose(); }
 
-  AutoPtr(const AutoPtr<T> &another) : _object(const_cast<T *>(&*another)) {
+  AutoPtr(const AutoPtr<T> &another) : _object(nullptr) {
+    if (another != nullptr) {
+      _object = const_cast<T *>(&(*another));
+    }
     if (_object) {
       _object->addRef();
     }
   }
 
-  template <class K>
-  AutoPtr(const AutoPtr<K> &another) : _object(const_cast<K *>(&*another)) {
+  template <class K> AutoPtr(const AutoPtr<K> &another) : _object(nullptr) {
+    if (another != nullptr) {
+      _object = const_cast<K *>(&*another);
+    }
     if (_object) {
       _object->addRef();
     }

@@ -100,6 +100,7 @@ void GameApplication::onMainLoop() {
 }
 
 void GameApplication::onUnInitialize() {
+  _script->dispose();
   runtime::Application::onUnInitialize();
 }
 
