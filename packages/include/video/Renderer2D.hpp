@@ -17,9 +17,11 @@ private:
   core::AutoPtr<Shader> _shader2D;
 
 public:
+  Renderer2D();
   void draw(const core::AutoPtr<Texture> &texture, const glm::vec4 &source,
-            const glm::vec4 &target, const glm::vec2 center, float angle);
-  
+            const glm::vec4 &target, const glm::vec2 center, float angle,
+            uint32_t zindex);
+
   void setViewport(float left, float right, float top, float bottom,
                    float near = -1, float far = 1);
 };
