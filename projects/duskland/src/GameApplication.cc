@@ -14,6 +14,7 @@
 #include "script/helper/Trait_Buffer.hpp"
 #include "script/helper/Trait_Properties.hpp"
 #include "script/helper/Trait_Resource.hpp"
+#include "script/lib/Module_Array.hpp"
 #include "script/lib/Module_Database.hpp"
 #include "script/lib/Module_Event.hpp"
 #include "script/lib/Module_Input.hpp"
@@ -55,6 +56,7 @@ void GameApplication::initScript() {
   script::Module_Input::open(_script);
   script::Module_Database::open(_script);
   script::Module_Serialization::open(_script);
+  script::Module_Array::open(_script);
   _script->eval("require('duskland')");
 }
 void GameApplication::initLocale() {

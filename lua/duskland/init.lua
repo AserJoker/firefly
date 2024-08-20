@@ -9,4 +9,11 @@ require'event'.on('gameLoaded', function()
     local locale = require 'locale'
     locale.setLang(config:getKey("options.locale"))
     runtime.setWindowTitle(locale.i18n("duskland.system.title"))
+    local obj = {
+        arr = require'array'.createArray({1, 2, 3}),
+        str = "Hello world",
+        num = 123
+    }
+    local str = require'serialization'.JSON.stringify(obj)
+    print(str)
 end)

@@ -23,6 +23,7 @@ private:
   static Value::Stack objectGet(core::AutoPtr<Script> ctx, Value::Stack args);
   static Value::Stack objectSet(core::AutoPtr<Script> ctx, Value::Stack args);
   static Value::Stack objectKeys(core::AutoPtr<Script> ctx, Value::Stack args);
+  static Value::Stack objectLen(core::AutoPtr<Script> ctx, Value::Stack args);
 
 private:
   lua_State *_state;

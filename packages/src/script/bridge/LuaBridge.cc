@@ -1,7 +1,9 @@
 #include "script/bridge/LuaBridge.hpp"
+#include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "exception/LuaException.hpp"
 #include "script/Atom.hpp"
+#include "script/Script.hpp"
 #include "script/Value.hpp"
 #include <lua.h>
 #include <stdexcept>
@@ -274,6 +276,25 @@ Value::Stack LuaBridge::objectKeys(core::AutoPtr<Script> ctx,
   lua_settop(state, top);
   return {result};
 }
+Value::Stack LuaBridge::objectLen(core::AutoPtr<Script> ctx,
+                                  Value::Stack args) {
+  auto bridge = ctx->getBridge().cast<LuaBridge>();
+  if (!bridge) {
+    return {};
+  }
+  auto state = bridge->_state;
+  auto self = args[0];
+  uint32_t handle = self->getRawField(ctx, "$handle")->toNumber(ctx);
+  auto top = lua_gettop(state);
+  lua_getglobal(state, "$objects");
+  auto objects = lua_gettop(state);
+  lua_geti(state, objects, handle);
+  auto obj = lua_gettop(state);
+  lua_len(state, obj);
+  auto result = ctx->createValue()->setNumber(ctx, lua_tonumber(state, -1));
+  lua_settop(state, top);
+  return {result};
+}
 LuaBridge::LuaBridge() {
   _state = luaL_newstate();
   luaL_openlibs(_state);
@@ -348,6 +369,8 @@ core::AutoPtr<Value> LuaBridge::getObjectMetadata() {
   meta->setField(ctx, "set", ctx->createValue()->setFunction(ctx, &objectSet));
   meta->setField(ctx, "keys",
                  ctx->createValue()->setFunction(ctx, &objectKeys));
+  meta->setField(ctx, "length",
+                 ctx->createValue()->setFunction(ctx, &objectLen));
   return meta;
 }
 core::AutoPtr<Value> LuaBridge::getFunctionMetadata() {
