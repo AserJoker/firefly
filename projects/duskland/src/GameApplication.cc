@@ -23,6 +23,7 @@
 #include "script/lib/Module_Media.hpp"
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
+#include "video/Renderer2D.hpp"
 #include <SDL_image.h>
 #include <SDL_keycode.h>
 #include <SDL_scancode.h>
@@ -76,6 +77,8 @@ void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
   _mouse = core::Singleton<input::Mouse>::instance();
   _keyboard = core::Singleton<input::Keyboard>::instance();
+  _renderer2d = new video::Renderer2D();
+  _renderer2d->setViewport(0, 1024, 0, 768);
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
   auto res = _media->load("texture::wall.jpg");
   initEvent();
@@ -83,8 +86,8 @@ void GameApplication::onInitialize() {
   initScript();
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
-  _renderer->setClearColor(0.2, 0.3, 0.3, 1.0);
   _database->load();
+  _video->setClearColor(0.2, 0.3, 0.2, 1.0);
   script::Module_Event::emit(_script, "gameLoaded");
   getWindow()->show();
 }
@@ -92,12 +95,12 @@ void GameApplication::onInitialize() {
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   static auto time = SDL_GetTicks();
+  _video->clear();
   auto now = SDL_GetTicks();
   if (now - time > 50) {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
-  _renderer->render();
   getWindow()->present();
 }
 
