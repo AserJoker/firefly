@@ -9,15 +9,14 @@ using namespace firefly::video;
 void Renderer2D::draw(const core::AutoPtr<Texture> &texture,
                       const glm::vec4 &source, const glm::vec4 &target,
                       const glm::vec2 center, float angle) {
-  glm::mat4 view(1.0);
-  view = glm::scale(view, {target[2] / source[2], target[3] / source[3], 0});
-  view = glm::translate(view, {target.x - source.x, target.y - source.y, 0});
-
+  glm::mat4 model(1.0);
+  model = glm::scale(model, {target[2] / source[2], target[3] / source[3], 0});
+  model = glm::translate(model, {target.x - source.x, target.y - source.y, 0});
   _shader2D->set("projection", _projection);
-  _shader2D->set("view", view);
+  _shader2D->set("model", model);
   _device->setTexture(texture);
   _device->setShader(_shader2D);
-  _device->draw(GL_TRIANGLES, _mesh2D);
+  _mesh2D->draw();
 }
 
 void Renderer2D::setViewport(float left, float right, float top, float bottom,
