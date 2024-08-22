@@ -10,7 +10,7 @@
 #include "input/Keyboard.hpp"
 #include "input/Mouse.hpp"
 #include "runtime/Application.hpp"
-#include "video/Renderer2D.hpp"
+#include "video/Renderer.hpp"
 
 namespace duskland {
 using namespace firefly;
@@ -19,7 +19,7 @@ class GameApplication : public runtime::Application {
 private:
   core::AutoPtr<input::Mouse> _mouse;
   core::AutoPtr<input::Keyboard> _keyboard;
-  core::AutoPtr<video::Renderer2D> _renderer2d;
+  core::AutoPtr<video::Renderer> _renderer;
 
 protected:
   void onInitialize() override;

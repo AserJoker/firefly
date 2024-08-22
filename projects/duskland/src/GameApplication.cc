@@ -1,5 +1,7 @@
 #include "GameApplication.hpp"
+#include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
+#include "gl/BufferUsage.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_MouseDown.hpp"
@@ -23,23 +25,20 @@
 #include "script/lib/Module_Media.hpp"
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
-#include "video/Renderer2D.hpp"
+#include "video/Attribute.hpp"
+#include "video/Geometry.hpp"
+#include "video/Renderer.hpp"
+#include "video/Shader.hpp"
 #include <SDL_image.h>
-#include <SDL_keycode.h>
-#include <SDL_scancode.h>
-#include <assimp/Importer.hpp>
-#include <assimp/postprocess.h>
-#include <assimp/scene.h>
+#include <SDL_video.h>
 #include <fmt/core.h>
 #include <glad/glad.h>
-#include <glm/ext/matrix_transform.hpp>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <lua.hpp>
 
 using namespace firefly;
 using namespace duskland;
+core::AutoPtr<video::Shader> _shader;
+core::AutoPtr<video::Geometry> _geometry;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -77,17 +76,38 @@ void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
   _mouse = core::Singleton<input::Mouse>::instance();
   _keyboard = core::Singleton<input::Keyboard>::instance();
-  _renderer2d = new video::Renderer2D();
-  _renderer2d->setViewport(0, 1024, 0, 768);
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
-  auto res = _media->load("texture::wall.jpg");
+  _renderer = new video::Renderer();
   initEvent();
   initLocale();
   initScript();
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
   _database->load();
-  _video->setClearColor(0.2, 0.3, 0.2, 1.0);
+  _video->setClearColor(0.2, 0.3, 0.3, 1.0);
+  auto vertex = _media->load("shader::sprite_2d::vertex.glsl")->read();
+  auto fragment = _media->load("shader::sprite_2d::fragment.glsl")->read();
+  _geometry = new video::Geometry();
+  _geometry->setAttribute(
+      "color",
+      new video::Attribute(
+          std::vector<glm::vec3>(
+              {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}),
+          gl::BUFFER_USAGE::STATIC_DRAW));
+  _geometry->setAttribute(
+      "position",
+      new video::Attribute(
+          std::vector<glm::vec3>(
+              {{-0.5f, -0.5f, 0.0f}, {0.5f, -0.5f, 0.0f}, {0.0f, 0.5f, 0.0f}}),
+          gl::BUFFER_USAGE::STATIC_DRAW));
+  _geometry->getIndices()->write(0, {0, 1, 2});
+  _shader = new video::Shader({
+      {GL_VERTEX_SHADER,
+       std::string((char *)vertex->getData(), vertex->getSize())},
+      {GL_FRAGMENT_SHADER,
+       std::string((char *)fragment->getData(), fragment->getSize())},
+  });
+  _renderer->setShader(_shader);
   script::Module_Event::emit(_script, "gameLoaded");
   getWindow()->show();
 }
@@ -101,6 +121,7 @@ void GameApplication::onMainLoop() {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
+  _renderer->render(_geometry);
   getWindow()->present();
 }
 
@@ -135,6 +156,7 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
   script::Module_Event::emit(_script, "mouseDown",
                              createNumber(_script, e.getType()));
+  _geometry->getAttribute("position")->write(0, {-1, -1, 0});
 }
 
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {

@@ -14,5 +14,6 @@ public:
   void set(const std::string &name, const glm::mat3 &value);
   void set(const std::string &name, const glm::mat4 &value);
   const void use() const;
+  const uint32_t &getHandle() const;
 };
 }; // namespace firefly::video

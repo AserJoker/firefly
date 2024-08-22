@@ -1,7 +1,7 @@
 #include "core/Buffer.hpp"
 #include <cstring>
 using namespace firefly::core;
-Buffer::Buffer(const uint32_t &size, void *data) : _size(size), _data(0) {
+Buffer::Buffer(const uint32_t &size, const void *data) : _size(size), _data(0) {
   if (size) {
     _data = ::operator new(size);
     if (data) {
@@ -16,7 +16,8 @@ Buffer::~Buffer() {
 }
 const void *Buffer::getData() const { return _data; }
 const uint32_t &Buffer::getSize() const { return _size; }
-void Buffer::setData(const uint32_t &offset, const uint32_t &size, void *data) {
+void Buffer::setData(const uint32_t &offset, const uint32_t &size,
+                     const void *data) {
   if (offset + size > _size) {
     void *buf = ::operator new(offset + size);
     std::memcpy(buf, _data, _size);
