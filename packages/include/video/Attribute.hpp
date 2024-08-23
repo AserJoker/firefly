@@ -45,7 +45,7 @@ public:
   const std::vector<char> &getData() const;
   std::vector<char> &getData();
 
-  void write(const uint32_t &index, const std::vector<char> &data);
+  void write(const uint32_t &index, const void *data, const uint32_t &size);
   void *read(const uint32_t &index);
 
   const AttributeUpdateRangeList &getUpdateRangeList() const;

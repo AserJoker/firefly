@@ -54,22 +54,45 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
     }
     obj.ibuffer.version = indices->getVersion();
   }
-  auto buffers = obj.buffers;
-  obj.buffers.clear();
-  for (auto &[_, attr] : geometry->getAttributes()) {
-    if (!buffers.contains(attr->getIdentity())) {
-      RenderBuffer buf;
-      buf.size = attr->getData().size();
-      buf.version = attr->getVersion();
-      glGenBuffers(1, &buf.buffer);
-      glBindBuffer(GL_ARRAY_BUFFER, buf.buffer);
-      glBufferData(GL_ARRAY_BUFFER,
-                   attr->getData().size() * attr->getDataTypeSize(),
-                   attr->getData().data(), (GLenum)attr->getUsage());
-      attr->clearUpdateRangeList();
-      buffers[attr->getIdentity()] = buf;
+  if (obj.version != geometry->getVersion()) {
+    auto buffers = obj.buffers;
+    obj.buffers.clear();
+    for (auto &[_, attr] : geometry->getAttributes()) {
+      if (!buffers.contains(attr->getIdentity())) {
+        RenderBuffer buf;
+        buf.size = attr->getData().size();
+        buf.version = attr->getVersion();
+        glGenBuffers(1, &buf.buffer);
+        glBindBuffer(GL_ARRAY_BUFFER, buf.buffer);
+        glBufferData(GL_ARRAY_BUFFER,
+                     attr->getData().size() * attr->getDataTypeSize(),
+                     attr->getData().data(), (GLenum)attr->getUsage());
+        attr->clearUpdateRangeList();
+        obj.buffers[attr->getIdentity()] = buf;
+      } else {
+        auto &buf = buffers.at(attr->getIdentity());
+        obj.buffers[attr->getIdentity()] = buf;
+        buf.buffer = 0;
+      }
     }
-    auto &buf = buffers[attr->getIdentity()];
+    for (auto &[_, buf] : buffers) {
+      if (buf.buffer != 0) {
+        glDeleteBuffers(1, &buf.buffer);
+        buf.buffer = 0;
+      }
+    }
+    glBindVertexArray(obj.vao);
+    for (auto &[index, attr] : geometry->getAttributes()) {
+      glBindBuffer(GL_ARRAY_BUFFER, obj.buffers[attr->getIdentity()].buffer);
+      glVertexAttribPointer(index, attr->getItemSize(),
+                            (GLenum)attr->getDataType(), attr->isNormalized(),
+                            attr->getItemSize() * attr->getDataTypeSize(), 0);
+      glEnableVertexAttribArray(index);
+    }
+    obj.version = geometry->getVersion();
+  }
+  for (auto &[_, attr] : geometry->getAttributes()) {
+    auto &buf = obj.buffers[attr->getIdentity()];
     if (buf.version != attr->getVersion()) {
       glBindBuffer(GL_ARRAY_BUFFER, buf.buffer);
       if (buf.size != attr->getData().size()) {
@@ -89,25 +112,6 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
       attr->clearUpdateRangeList();
       buf.version = attr->getVersion();
     }
-    obj.buffers[attr->getIdentity()] = buf;
-    buf.buffer = 0;
-  }
-  for (auto &[_, buf] : buffers) {
-    if (buf.buffer != 0) {
-      glDeleteBuffers(1, &buf.buffer);
-      buf.buffer = 0;
-    }
-  }
-  if (obj.version != geometry->getVersion()) {
-    glBindVertexArray(obj.vao);
-    for (auto &[index, attr] : geometry->getAttributes()) {
-      glBindBuffer(GL_ARRAY_BUFFER, obj.buffers[attr->getIdentity()].buffer);
-      glVertexAttribPointer(index, attr->getItemSize(),
-                            (GLenum)attr->getDataType(), attr->isNormalized(),
-                            attr->getItemSize() * attr->getDataTypeSize(), 0);
-      glEnableVertexAttribArray(index);
-    }
-    obj.version = geometry->getVersion();
   }
 }
 

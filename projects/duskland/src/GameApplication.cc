@@ -154,7 +154,8 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
   script::Module_Event::emit(_script, "mouseDown",
                              createNumber(_script, e.getType()));
-  _geometry = nullptr;
+  glm::vec3 data = {-1, -1, 0};
+  _geometry->getAttribute(0)->write(0, &data[0], 1);
 }
 
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {

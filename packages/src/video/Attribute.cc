@@ -109,14 +109,17 @@ const gl::DATA_TYPE &Attribute::getDataType() const { return _dataType; }
 const std::vector<char> &Attribute::getData() const { return _data; }
 std::vector<char> &Attribute::getData() { return _data; }
 
-void Attribute::write(const uint32_t &offset, const std::vector<char> &data) {
-  if (offset + data.size() > _data.size()) {
-    _data.resize(offset + data.size());
+void Attribute::write(const uint32_t &offset, const void *data,
+                      const uint32_t &count) {
+  auto start = offset * _itemSize * getDataTypeSize();
+  auto size = count * _itemSize * getDataTypeSize();
+  if (start + size > _data.size()) {
+    _data.resize(start + size);
   }
-  for (auto i = 0; i < data.size(); i++) {
-    _data[i + offset] = data[i];
+  for (auto i = 0; i < size; i++) {
+    _data[i + start] = ((char *)data)[i];
   }
-  addUpdateRange(offset, data.size() / (_itemSize * getDataTypeSize()));
+  addUpdateRange(offset, count);
 }
 void *Attribute::read(const uint32_t &index) {
   if (index >= _count) {
