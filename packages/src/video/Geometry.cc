@@ -3,7 +3,8 @@
 #include "video/AttributeIndex.hpp"
 using namespace firefly;
 using namespace firefly::video;
-Geometry::Geometry() : _needUpdate(true) { _indices = new AttributeIndex(); }
+Geometry::Geometry() : _version(0) { _indices = new AttributeIndex(); }
+
 const core::AutoPtr<AttributeIndex> &Geometry::getIndices() const {
   return _indices;
 }
@@ -15,33 +16,33 @@ const GeometryAttributes &Geometry::getAttributes() const {
 GeometryAttributes &Geometry::getAttributes() { return _attributes; }
 
 const core::AutoPtr<Attribute>
-Geometry::getAttribute(const std::string &name) const {
+Geometry::getAttribute(const uint32_t &name) const {
   if (_attributes.contains(name)) {
     return _attributes.at(name);
   }
   return nullptr;
 }
 
-core::AutoPtr<Attribute> Geometry::getAttribute(const std::string &name) {
+core::AutoPtr<Attribute> Geometry::getAttribute(const uint32_t &name) {
   if (_attributes.contains(name)) {
     return _attributes.at(name);
   }
   return nullptr;
 }
 
-void Geometry::setAttribute(const std::string &name,
+void Geometry::setAttribute(const uint32_t &name,
                             const core::AutoPtr<Attribute> &attribute) {
   _attributes[name] = attribute;
-  _needUpdate = true;
+  _version++;
 }
 
-const bool Geometry::hasAttribute(const std::string &name) const {
+const bool Geometry::hasAttribute(const uint32_t &name) const {
   return _attributes.contains(name);
 }
 
-void Geometry::removeAttribute(const std::string &name) {
+void Geometry::removeAttribute(const uint32_t &name) {
   _attributes.erase(name);
-  _needUpdate = true;
+  _version++;
 }
 
 core::AutoPtr<Geometry> Geometry::clone() {
@@ -61,5 +62,4 @@ void Geometry::setRenderRange(const uint32_t &start, const uint32_t &count) {
   _renderRanges.push_back({start, count});
 }
 
-const bool Geometry::isNeedUpdate() const { return _needUpdate; }
-void Geometry::setNeedUpdate(const bool &value) { _needUpdate = value; }
+const uint32_t &Geometry::getVersion() const { return _version; }

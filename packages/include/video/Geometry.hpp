@@ -7,7 +7,7 @@
 #include <vector>
 namespace firefly::video {
 using GeometryAttributes =
-    std::unordered_map<std::string, core::AutoPtr<Attribute>>;
+    std::unordered_map<uint32_t, core::AutoPtr<Attribute>>;
 using GeometryRenderRange = std::pair<uint32_t, uint32_t>;
 
 class Geometry : public core::Object {
@@ -15,7 +15,7 @@ private:
   GeometryAttributes _attributes;
   core::AutoPtr<AttributeIndex> _indices;
   std::vector<GeometryRenderRange> _renderRanges;
-  bool _needUpdate;
+  uint32_t _version;
 
 public:
   Geometry();
@@ -25,16 +25,16 @@ public:
   const GeometryAttributes &getAttributes() const;
   GeometryAttributes &getAttributes();
 
-  const core::AutoPtr<Attribute> getAttribute(const std::string &name) const;
+  const core::AutoPtr<Attribute> getAttribute(const uint32_t &name) const;
 
-  core::AutoPtr<Attribute> getAttribute(const std::string &name);
+  core::AutoPtr<Attribute> getAttribute(const uint32_t &name);
 
-  void setAttribute(const std::string &name,
+  void setAttribute(const uint32_t &name,
                     const core::AutoPtr<Attribute> &attribute);
 
-  const bool hasAttribute(const std::string &name) const;
+  const bool hasAttribute(const uint32_t &name) const;
 
-  void removeAttribute(const std::string &name);
+  void removeAttribute(const uint32_t &name);
 
   core::AutoPtr<Geometry> clone();
 
@@ -42,7 +42,6 @@ public:
 
   void setRenderRange(const uint32_t &start, const uint32_t &count);
 
-  const bool isNeedUpdate() const;
-  void setNeedUpdate(const bool& value);
+  const uint32_t &getVersion() const;
 };
 } // namespace firefly::video

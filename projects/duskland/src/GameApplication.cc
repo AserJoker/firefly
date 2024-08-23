@@ -89,17 +89,15 @@ void GameApplication::onInitialize() {
   auto fragment = _media->load("shader::sprite_2d::fragment.glsl")->read();
   _geometry = new video::Geometry();
   _geometry->setAttribute(
-      "color",
-      new video::Attribute(
-          std::vector<glm::vec3>(
-              {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}),
-          gl::BUFFER_USAGE::STATIC_DRAW));
+      0, new video::Attribute(std::vector<glm::vec3>({{-0.5f, -0.5f, 0.0f},
+                                                      {0.5f, -0.5f, 0.0f},
+                                                      {0.0f, 0.5f, 0.0f}}),
+                              gl::BUFFER_USAGE::STATIC_DRAW));
   _geometry->setAttribute(
-      "position",
-      new video::Attribute(
-          std::vector<glm::vec3>(
-              {{-0.5f, -0.5f, 0.0f}, {0.5f, -0.5f, 0.0f}, {0.0f, 0.5f, 0.0f}}),
-          gl::BUFFER_USAGE::STATIC_DRAW));
+      1, new video::Attribute(
+             std::vector<glm::vec3>(
+                 {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}),
+             gl::BUFFER_USAGE::STATIC_DRAW));
   _geometry->getIndices()->write(0, {0, 1, 2});
   _shader = new video::Shader({
       {GL_VERTEX_SHADER,
@@ -121,7 +119,7 @@ void GameApplication::onMainLoop() {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
-  _renderer->render(_geometry);
+  _renderer->renderGeometry(_geometry);
   getWindow()->present();
 }
 
@@ -156,7 +154,7 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
   script::Module_Event::emit(_script, "mouseDown",
                              createNumber(_script, e.getType()));
-  _geometry->getAttribute("position")->write(0, {-1, -1, 0});
+  _geometry = nullptr;
 }
 
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {

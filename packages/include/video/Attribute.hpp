@@ -18,6 +18,7 @@ private:
   gl::DATA_TYPE _dataType;
   bool _normalized;
   uint32_t _count;
+  uint32_t _version;
 
   AttributeUpdateRangeList _updateList;
 
@@ -51,5 +52,6 @@ public:
   void clearUpdateRangeList();
 
   core::AutoPtr<Attribute> clone() const;
+  const uint32_t &getVersion() const;
 };
 } // namespace firefly::video

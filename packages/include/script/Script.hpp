@@ -19,6 +19,7 @@ public:
     virtual void registerModule(const std::string &name,
                                 core::AutoPtr<Value> exports) = 0;
     virtual void gc() = 0;
+    virtual void dispose() {};
   };
 
 private:
@@ -32,7 +33,7 @@ private:
 public:
   Script();
   ~Script() override;
-  void dispose() override;
+  void dispose();
   void setBridge(core::AutoPtr<Bridge> bridge);
   core::AutoPtr<Value> getGlobal();
   core::AutoPtr<Value> getNativeGlobal();
