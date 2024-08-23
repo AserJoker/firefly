@@ -63,7 +63,8 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
       buf.version = attr->getVersion();
       glGenBuffers(1, &buf.buffer);
       glBindBuffer(GL_ARRAY_BUFFER, buf.buffer);
-      glBufferData(GL_ARRAY_BUFFER, attr->getData().size() * sizeof(float),
+      glBufferData(GL_ARRAY_BUFFER,
+                   attr->getData().size() * attr->getDataTypeSize(),
                    attr->getData().data(), (GLenum)attr->getUsage());
       attr->clearUpdateRangeList();
       buffers[attr->getIdentity()] = buf;
@@ -72,15 +73,17 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
     if (buf.version != attr->getVersion()) {
       glBindBuffer(GL_ARRAY_BUFFER, buf.buffer);
       if (buf.size != attr->getData().size()) {
-        glBufferData(GL_ARRAY_BUFFER, attr->getData().size() * sizeof(float),
+        glBufferData(GL_ARRAY_BUFFER,
+                     attr->getData().size() * attr->getDataTypeSize(),
                      attr->getData().data(), (GLenum)attr->getUsage());
         buf.size = attr->getData().size();
       } else {
         for (auto &[start, count] : attr->getUpdateRangeList()) {
           glBufferSubData(GL_ARRAY_BUFFER,
-                          start * attr->getItemSize() * sizeof(float),
-                          count * attr->getItemSize() * sizeof(float),
-                          attr->getData().data() + start);
+                          start * attr->getItemSize() * attr->getDataTypeSize(),
+                          count * attr->getItemSize() * attr->getDataTypeSize(),
+                          attr->getData().data() +
+                              start * attr->getDataTypeSize());
         }
       }
       attr->clearUpdateRangeList();
@@ -101,7 +104,7 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
       glBindBuffer(GL_ARRAY_BUFFER, obj.buffers[attr->getIdentity()].buffer);
       glVertexAttribPointer(index, attr->getItemSize(),
                             (GLenum)attr->getDataType(), attr->isNormalized(),
-                            attr->getItemSize() * sizeof(float), 0);
+                            attr->getItemSize() * attr->getDataTypeSize(), 0);
       glEnableVertexAttribArray(index);
     }
     obj.version = geometry->getVersion();

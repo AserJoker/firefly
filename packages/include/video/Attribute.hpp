@@ -12,7 +12,7 @@ using AttributeRange = std::pair<uint32_t, uint32_t>;
 using AttributeUpdateRangeList = std::vector<AttributeRange>;
 class Attribute : public core::Object {
 private:
-  std::vector<float> _data;
+  std::vector<char> _data;
   uint32_t _itemSize;
   gl::BUFFER_USAGE _usage;
   gl::DATA_TYPE _dataType;
@@ -25,7 +25,7 @@ private:
   void addUpdateRange(const uint32_t &start, const uint32_t &count);
 
 public:
-  Attribute(const std::vector<float> &data, const uint32_t &itemSize,
+  Attribute(const std::vector<char> &data, const uint32_t &itemSize,
             const gl::BUFFER_USAGE &usage, const gl::DATA_TYPE &dataType,
             const bool &normalized = false);
 
@@ -37,15 +37,15 @@ public:
 
   Attribute(const std::vector<glm::vec4> &data, const gl::BUFFER_USAGE &usage,
             const bool &normalized = false);
-
+  const uint32_t getDataTypeSize() const;
   const uint32_t &getItemSize() const;
   const bool &isNormalized() const;
   const gl::BUFFER_USAGE &getUsage() const;
   const gl::DATA_TYPE &getDataType() const;
-  const std::vector<float> &getData() const;
-  std::vector<float> &getData();
+  const std::vector<char> &getData() const;
+  std::vector<char> &getData();
 
-  void write(const uint32_t &index, const std::vector<float> &data);
+  void write(const uint32_t &index, const std::vector<char> &data);
   void *read(const uint32_t &index);
 
   const AttributeUpdateRangeList &getUpdateRangeList() const;
