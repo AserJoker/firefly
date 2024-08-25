@@ -1,8 +1,11 @@
 #pragma once
 
+#include "AutoPtr.hpp"
+#include "core/AutoPtr.hpp"
 #include <cstdint>
 #include <fmt/core.h>
 #include <functional>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -11,11 +14,9 @@ class Object {
 private:
   uint32_t _ref;
   std::string _identity;
+  uint32_t _version;
 
-  std::vector<std::function<void(const std::string &identity)>> _defers;
-
-private:
-  static std::unordered_map<std::string, Object *> _objects;
+  std::unordered_map<std::string, core::AutoPtr<Object>> _metadata;
 
 public:
   inline const uint32_t &addRef() { return ++_ref; }
@@ -26,25 +27,17 @@ public:
 
   inline const std::string getIdentity() const { return _identity; }
 
-  Object() : _ref(0) {
+  Object() : _ref(0), _version(0) {
     _identity = fmt::format("[0x{:x}]", (ptrdiff_t)this);
-    Object::_objects[_identity] = this;
   };
 
   virtual void initialize() {}
+  virtual ~Object(){};
+  void setVersion(const uint32_t &version);
+  const uint32_t &getVersion() const;
 
-  void defer(const std::function<void(const std::string &identity)> &callback) {
-    _defers.push_back(callback);
-  }
-
-  virtual ~Object() {
-    Object::_objects.erase(_identity);
-    for (auto &cb : _defers) {
-      cb(_identity);
-    }
-  };
-
-public:
-  static Object *select(const std::string &id);
+  void setMetadata(const std::string &name, const core::AutoPtr<Object> &data);
+  core::AutoPtr<Object> getMetadata(const std::string &name);
+  const core::AutoPtr<Object> getMetadata(const std::string &name) const;
 };
 } // namespace firefly::core

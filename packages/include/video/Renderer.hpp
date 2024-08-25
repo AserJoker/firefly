@@ -7,22 +7,8 @@
 namespace firefly::video {
 class Object3D;
 class Renderer : public core::Object {
-private:
-  struct RenderBuffer {
-    uint32_t buffer;
-    uint32_t version;
-    uint32_t size;
-  };
-
-  struct RenderObject {
-    uint32_t version;
-    uint32_t vao;
-    RenderBuffer ibuffer;
-    std::unordered_map<std::string, RenderBuffer> buffers;
-  };
 
 private:
-  std::unordered_map<std::string, RenderObject> _vaos;
   core::AutoPtr<Shader> _shader;
 
 private:

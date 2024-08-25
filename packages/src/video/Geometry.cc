@@ -3,7 +3,7 @@
 #include "video/AttributeIndex.hpp"
 using namespace firefly;
 using namespace firefly::video;
-Geometry::Geometry() : _version(0) { _indices = new AttributeIndex(); }
+Geometry::Geometry() { _indices = new AttributeIndex(); }
 
 const core::AutoPtr<AttributeIndex> &Geometry::getIndices() const {
   return _indices;
@@ -33,7 +33,7 @@ core::AutoPtr<Attribute> Geometry::getAttribute(const uint32_t &name) {
 void Geometry::setAttribute(const uint32_t &name,
                             const core::AutoPtr<Attribute> &attribute) {
   _attributes[name] = attribute;
-  _version++;
+  setVersion(getVersion() + 1);
 }
 
 const bool Geometry::hasAttribute(const uint32_t &name) const {
@@ -42,7 +42,7 @@ const bool Geometry::hasAttribute(const uint32_t &name) const {
 
 void Geometry::removeAttribute(const uint32_t &name) {
   _attributes.erase(name);
-  _version++;
+  setVersion(getVersion() + 1);
 }
 
 core::AutoPtr<Geometry> Geometry::clone() {
@@ -61,5 +61,3 @@ const std::vector<GeometryRenderRange> &Geometry::getRenderRanges() const {
 void Geometry::setRenderRange(const uint32_t &start, const uint32_t &count) {
   _renderRanges.push_back({start, count});
 }
-
-const uint32_t &Geometry::getVersion() const { return _version; }

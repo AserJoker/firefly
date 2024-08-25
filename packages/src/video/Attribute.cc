@@ -9,7 +9,7 @@ Attribute::Attribute(const std::vector<char> &data, const uint32_t &itemSize,
                      const gl::BUFFER_USAGE &usage,
                      const gl::DATA_TYPE &dataType, const bool &normalized)
     : _data(data), _itemSize(itemSize), _usage(usage), _dataType(dataType),
-      _normalized(normalized), _version(0) {
+      _normalized(normalized) {
   _count = _data.size() / (_itemSize * getDataTypeSize());
   addUpdateRange(0, _count);
 }
@@ -68,7 +68,7 @@ void Attribute::addUpdateRange(const uint32_t &start, const uint32_t &count) {
     }
   }
   _updateList.push_back({start, count});
-  _version++;
+  setVersion(getVersion() + 1);
 }
 
 const uint32_t Attribute::getDataTypeSize() const {
@@ -137,4 +137,3 @@ void Attribute::clearUpdateRangeList() { _updateList.clear(); }
 core::AutoPtr<Attribute> Attribute::clone() const {
   return new Attribute(_data, _itemSize, _usage, _dataType, _normalized);
 }
-const uint32_t &Attribute::getVersion() const { return _version; }

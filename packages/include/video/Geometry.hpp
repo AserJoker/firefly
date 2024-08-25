@@ -15,7 +15,6 @@ private:
   GeometryAttributes _attributes;
   core::AutoPtr<AttributeIndex> _indices;
   std::vector<GeometryRenderRange> _renderRanges;
-  uint32_t _version;
 
 public:
   Geometry();
@@ -41,7 +40,5 @@ public:
   const std::vector<GeometryRenderRange> &getRenderRanges() const;
 
   void setRenderRange(const uint32_t &start, const uint32_t &count);
-
-  const uint32_t &getVersion() const;
 };
 } // namespace firefly::video

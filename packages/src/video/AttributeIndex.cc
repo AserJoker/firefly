@@ -3,7 +3,7 @@
 using namespace firefly;
 using namespace firefly::video;
 
-AttributeIndex::AttributeIndex() : _version(0) {}
+AttributeIndex::AttributeIndex() {}
 
 const std::vector<uint32_t> &AttributeIndex::getData() const { return _data; }
 
@@ -25,7 +25,7 @@ void AttributeIndex::addUpdateRange(const uint32_t &start,
     }
   }
   _updateList.push_back({start, count});
-  _version++;
+  setVersion(getVersion() + 1);
 }
 
 void AttributeIndex::write(const uint32_t &offset,
@@ -49,7 +49,6 @@ core::AutoPtr<AttributeIndex> AttributeIndex::clone() const {
   return attri;
 }
 
-const uint32_t &AttributeIndex::getVersion() const { return _version; }
 const std::vector<std::pair<uint32_t, uint32_t>> &
 AttributeIndex::getUpdateRangeList() const {
   return _updateList;
