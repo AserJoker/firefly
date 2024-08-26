@@ -17,5 +17,3 @@ const core::AutoPtr<Object> Object::getMetadata(const std::string &name) const {
   }
   return nullptr;
 };
-void Object::setVersion(const uint32_t &version) { _version = version; }
-const uint32_t &Object::getVersion() const { return _version; }

@@ -2,18 +2,14 @@
 #include "gl/BufferUsage.hpp"
 using namespace firefly;
 using namespace firefly::gl;
-Buffer::Buffer(BUFFER_USAGE usage, const uint32_t &handle, const uint32_t &size)
-    : _usage(usage), _handle(handle), _size(size) {
+Buffer::Buffer(BUFFER_USAGE usage, const uint32_t &handle)
+    : _usage(usage), _handle(handle), _size(0) {
   if (!_handle) {
     glGenBuffers(1, &_handle);
-    if (size) {
-      glBindBuffer(GL_ARRAY_BUFFER, _handle);
-      glBufferData(GL_ARRAY_BUFFER, size, 0, (GLenum)usage);
-    }
   }
 }
 
-void Buffer::write(const uint32_t &size, void *data) {
+void Buffer::setData(const uint32_t &size, void *data) {
   glBindBuffer(GL_ARRAY_BUFFER, _handle);
   glBufferData(GL_ARRAY_BUFFER, size, data, (GLenum)_usage);
 }

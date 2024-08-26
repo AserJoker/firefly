@@ -8,7 +8,7 @@ using namespace firefly;
 using namespace firefly::video;
 Texture2D::Texture2D(const core::AutoPtr<core::Buffer> &image,
                      const uint32_t &handle)
-    : Texture(handle) {
+    : Texture(handle) { 
   auto img =
       IMG_Load_RW(SDL_RWFromConstMem(image->getData(), image->getSize()), 0);
   auto formattedImg =

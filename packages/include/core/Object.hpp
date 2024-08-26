@@ -4,10 +4,8 @@
 #include "core/AutoPtr.hpp"
 #include <cstdint>
 #include <fmt/core.h>
-#include <functional>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 namespace firefly::core {
 class Object {
@@ -32,9 +30,12 @@ public:
   };
 
   virtual void initialize() {}
-  virtual ~Object(){};
-  void setVersion(const uint32_t &version);
-  const uint32_t &getVersion() const;
+  virtual ~Object() = default;
+
+  constexpr inline void setVersion(const uint32_t &version) {
+    _version = version;
+  }
+  constexpr inline const uint32_t &getVersion() const { return _version; }
 
   void setMetadata(const std::string &name, const core::AutoPtr<Object> &data);
   core::AutoPtr<Object> getMetadata(const std::string &name);

@@ -12,10 +12,9 @@ private:
   uint32_t _version;
 
 public:
-  Buffer(BUFFER_USAGE usage, const uint32_t &handle = 0,
-         const uint32_t &size = 0);
+  Buffer(BUFFER_USAGE usage, const uint32_t &handle = 0);
   ~Buffer() override;
-  void write(const uint32_t &size, void *data);
+  void setData(const uint32_t &size, void *data);
   void write(const uint32_t &offset, const uint32_t &size, void *data);
 
 public:

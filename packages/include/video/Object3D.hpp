@@ -1,9 +1,9 @@
 #pragma once
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
-#include "video/Renderer.hpp"
 #include <vector>
 namespace firefly::video {
+class Renderer;
 class Object3D : public core::Object {
 private:
   std::vector<core::AutoPtr<Object3D>> _children;

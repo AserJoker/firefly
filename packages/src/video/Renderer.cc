@@ -7,16 +7,10 @@
 #include "video/Attribute.hpp"
 #include "video/Geometry.hpp"
 #include "video/Object3D.hpp"
-#include "video/Shader.hpp"
 using namespace firefly;
 using namespace firefly::video;
 
-void Renderer::setShader(const core::AutoPtr<Shader> &shader) {
-  _shader = shader;
-  _shader->use();
-}
-
-core::AutoPtr<Shader> &Renderer::getShader() { return _shader; }
+Renderer::Renderer() {}
 void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
   auto vao =
       geometry->getMetadata("gl::vertex_array_object").cast<gl::VertexArray>();
@@ -28,7 +22,7 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
     auto buf = attr->getMetadata("gl::buffer").cast<gl::Buffer>();
     if (!buf) {
       buf = new gl::Buffer(attr->getUsage());
-      buf->write(attr->getData().size(), attr->getData().data());
+      buf->setData(attr->getData().size(), attr->getData().data());
       attr->setMetadata("gl::buffer", buf);
       attr->clearUpdateRangeList();
     }
@@ -46,8 +40,8 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
   auto buf = indices->getMetadata("gl::buffer").cast<gl::Buffer>();
   if (!buf) {
     buf = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
-    buf->write(indices->getData().size() * sizeof(uint32_t),
-               indices->getData().data());
+    buf->setData(indices->getData().size() * sizeof(uint32_t),
+                 indices->getData().data());
     indices->setMetadata("gl::buffer", buf);
     indices->clearUpdateRangeList();
   }
@@ -93,13 +87,54 @@ void Renderer::renderGeometry(core::AutoPtr<Geometry> &geometry) {
     }
   }
 }
+void Renderer::renderGeometryInstance(core::AutoPtr<Geometry> &geometry,
+                                      const uint32_t &count) {
+  if (!geometry) {
+    return;
+  }
+  syncToBackend(geometry);
+  auto vao =
+      geometry->getMetadata("gl::vertex_array_object").cast<gl::VertexArray>();
+  gl::VertexArray::bind(vao);
+  auto renderRanges = geometry->getRenderRanges();
+  if (renderRanges.empty()) {
+    glDrawElementsInstanced(GL_TRIANGLES,
+                            geometry->getIndices()->getData().size(),
+                            GL_UNSIGNED_INT, 0, count);
+  } else {
+    for (auto &[start, count] : renderRanges) {
+      glDrawElementsInstanced(GL_TRIANGLES, count, GL_UNSIGNED_INT,
+                              (void *)(sizeof(uint32_t) * start), count);
+    }
+  }
+}
 
-void Renderer::render(core::AutoPtr<Object3D> root) {
+void Renderer::setMatrial(const core::AutoPtr<Material> &mat) {
+  
+}
+void Renderer::render(core::AutoPtr<Camera> camera,
+                      core::AutoPtr<Object3D> root) {
   if (!root->isVisible()) {
     return;
   }
+
+  if (!_shader) {
+    return;
+  }
+
   root->draw(this);
   for (auto &child : root->getChildren()) {
     child->draw(this);
+  }
+}
+
+core::AutoPtr<gl::Shader> Renderer::getShader() { return _shader; }
+
+void Renderer::setShader(const core::AutoPtr<gl::Shader> &shader) {
+  if (_shader != shader) {
+    _shader = shader;
+    if (_shader != nullptr) {
+      _shader->use();
+    }
   }
 }

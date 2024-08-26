@@ -44,6 +44,17 @@ FUNC_DEF(Trait_Buffer::readUint32) {
   }
   throw exception::ValidateException("Failed to read uint32,out of range");
 }
+FUNC_DEF(Trait_Buffer::readFloat) {
+  VALIDATE_ARGS(readFloat, 2);
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  uint32_t offset = args[1]->toNumber(ctx);
+  float *buf = (float *)buffer->getData();
+  if ((offset + 1) * 4 < buffer->getSize()) {
+    return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
+  }
+  throw exception::ValidateException("Failed to read float,out of range");
+}
 FUNC_DEF(Trait_Buffer::writeUint8) {
   VALIDATE_ARGS(writeUint8, 3);
   auto self = args[0];
@@ -95,6 +106,19 @@ FUNC_DEF(Trait_Buffer::writeUint32) {
   }
   throw exception::ValidateException("Failed to write uint32,out of range");
 }
+FUNC_DEF(Trait_Buffer::writeFloat) {
+  VALIDATE_ARGS(writeFloat, 3);
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  uint32_t offset = args[1]->toNumber(ctx);
+  auto value = args[2]->toNumber(ctx);
+  float *buf = (float *)buffer->getData();
+  if ((offset + 1) * 4 < buffer->getSize()) {
+    buf[offset] = (float)value;
+    return {};
+  }
+  throw exception::ValidateException("Failed to write float,out of range");
+}
 FUNC_DEF(Trait_Buffer::toUint8Array) {
   VALIDATE_ARGS(toUint8Array, 1);
   auto self = args[0];
@@ -136,6 +160,23 @@ FUNC_DEF(Trait_Buffer::toUint32Array) {
   }
   return {result};
 }
+
+FUNC_DEF(Trait_Buffer::toFloatArray) {
+  VALIDATE_ARGS(toFloatArray, 1);
+  auto self = args[0];
+  auto buffer = self->getOpaque().cast<core::Buffer>();
+  if (buffer->getSize() % 4 != 0) {
+    throw exception::ValidateException(
+        "Failed to convert buffer to float array,size is not aligned");
+  }
+  float *buf = (float *)buffer->getData();
+  auto result = ctx->createValue()->setArray(ctx);
+  for (auto i = 0; i < buffer->getSize() / 4; i++) {
+    result->setIndex(ctx, i, ctx->createValue()->setNumber(ctx, buf[i]));
+  }
+  return {result};
+}
+
 FUNC_DEF(Trait_Buffer::toString) {
   VALIDATE_ARGS(toString, 1);
   auto self = args[0];
@@ -158,16 +199,22 @@ void Trait_Buffer::initialize(core::AutoPtr<Script> ctx) {
                      ctx->createValue()->setFunction(ctx, readUint16))
           ->setField(ctx, "readUint32",
                      ctx->createValue()->setFunction(ctx, readUint32))
+          ->setField(ctx, "readFloat",
+                     ctx->createValue()->setFunction(ctx, readFloat))
           ->setField(ctx, "writeUint8",
                      ctx->createValue()->setFunction(ctx, writeUint8))
           ->setField(ctx, "writeUint16",
                      ctx->createValue()->setFunction(ctx, writeUint16))
           ->setField(ctx, "writeUint32",
                      ctx->createValue()->setFunction(ctx, writeUint32))
+          ->setField(ctx, "writeFloat",
+                     ctx->createValue()->setFunction(ctx, writeFloat))
           ->setField(ctx, "toUint8Array",
                      ctx->createValue()->setFunction(ctx, toUint8Array))
           ->setField(ctx, "toUint32Array",
                      ctx->createValue()->setFunction(ctx, toUint32Array))
+          ->setField(ctx, "toFloatArray",
+                     ctx->createValue()->setFunction(ctx, toFloatArray))
           ->setField(ctx, "toString",
                      ctx->createValue()->setFunction(ctx, toString));
   global->setField(ctx, "Buffer", Buffer);
