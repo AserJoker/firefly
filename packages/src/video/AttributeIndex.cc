@@ -53,3 +53,6 @@ const std::vector<std::pair<uint32_t, uint32_t>> &
 AttributeIndex::getUpdateRangeList() const {
   return _updateList;
 }
+void AttributeIndex::clearUpdateRangeList() {
+  _updateList.clear();
+}

@@ -16,6 +16,7 @@ void Renderer::setShader(const core::AutoPtr<Shader> &shader) {
   _shader->use();
 }
 
+core::AutoPtr<Shader> &Renderer::getShader() { return _shader; }
 void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
   auto vao =
       geometry->getMetadata("gl::vertex_array_object").cast<gl::VertexArray>();
@@ -29,6 +30,7 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
       buf = new gl::Buffer(attr->getUsage());
       buf->write(attr->getData().size(), attr->getData().data());
       attr->setMetadata("gl::buffer", buf);
+      attr->clearUpdateRangeList();
     }
     if (buf->getVersion() != attr->getVersion()) {
       for (auto &[start, count] : attr->getUpdateRangeList()) {
@@ -36,6 +38,7 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
                    count * attr->getDataTypeSize() * attr->getItemSize(),
                    attr->getData().data() + (start * attr->getDataTypeSize()));
       }
+      attr->clearUpdateRangeList();
       buf->setVersion(attr->getVersion());
     }
   }
@@ -46,12 +49,14 @@ void Renderer::syncToBackend(core::AutoPtr<Geometry> &geometry) {
     buf->write(indices->getData().size() * sizeof(uint32_t),
                indices->getData().data());
     indices->setMetadata("gl::buffer", buf);
+    indices->clearUpdateRangeList();
   }
   if (buf->getVersion() != indices->getVersion()) {
     for (auto &[start, count] : indices->getUpdateRangeList()) {
       buf->write(start * sizeof(uint32_t), count * sizeof(uint32_t),
                  indices->getData().data() + (start * sizeof(uint32_t)));
     }
+    indices->clearUpdateRangeList();
     buf->setVersion(indices->getVersion());
   }
   if (vao->getVersion() != geometry->getVersion()) {

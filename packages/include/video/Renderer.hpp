@@ -3,7 +3,6 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "video/Geometry.hpp"
-#include <unordered_map>
 namespace firefly::video {
 class Object3D;
 class Renderer : public core::Object {
@@ -16,6 +15,7 @@ private:
 
 public:
   void setShader(const core::AutoPtr<Shader> &shader);
+  core::AutoPtr<Shader> &getShader();
   void renderGeometry(core::AutoPtr<Geometry> &geometry);
   void render(core::AutoPtr<Object3D> root);
 };

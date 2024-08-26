@@ -19,5 +19,6 @@ public:
   const uint32_t &read(const uint32_t &offset);
   core::AutoPtr<AttributeIndex> clone() const;
   const std::vector<std::pair<uint32_t, uint32_t>> &getUpdateRangeList() const;
+  void clearUpdateRangeList();
 };
 }; // namespace firefly::video
