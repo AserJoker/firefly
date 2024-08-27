@@ -1,6 +1,6 @@
 #pragma once
 #include "core/Object.hpp"
-namespace firefly::video {
+namespace firefly::gl {
 class Texture : public core::Object {
 private:
   uint32_t _handle;
@@ -10,4 +10,4 @@ public:
   Texture(const uint32_t &handle = 0);
   ~Texture() override;
 };
-} // namespace firefly::video
+} // namespace firefly::gl

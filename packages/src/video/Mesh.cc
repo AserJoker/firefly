@@ -9,6 +9,6 @@ Mesh::Mesh(const core::AutoPtr<Geometry> &geometry,
 core::AutoPtr<Geometry> Mesh::getGeometry() { return _geometry; }
 core::AutoPtr<Material> Mesh::getMaterial() { return _material; }
 void Mesh::draw(core::AutoPtr<Renderer> renderer) {
-  renderer->setMatrial(_material);
+  renderer->setMaterial(_material);
   renderer->renderGeometry(_geometry);
 }

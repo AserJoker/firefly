@@ -3,9 +3,12 @@
 #include "gl/Buffer.hpp"
 #include "gl/BufferTarget.hpp"
 #include "gl/BufferUsage.hpp"
+#include "gl/Texture.hpp"
+#include "gl/Texture2D.hpp"
 #include "gl/VertexArray.hpp"
 #include "video/Attribute.hpp"
 #include "video/Geometry.hpp"
+#include "video/Material.hpp"
 #include "video/Object3D.hpp"
 using namespace firefly;
 using namespace firefly::video;
@@ -109,9 +112,27 @@ void Renderer::renderGeometryInstance(core::AutoPtr<Geometry> &geometry,
   }
 }
 
-void Renderer::setMatrial(const core::AutoPtr<Material> &mat) {
-  
+void Renderer::setMaterial(core::AutoPtr<Material> &mat) {
+  for (auto i = 0; i < 16; i++) {
+    auto img = mat->getTexture(i);
+    if (img != nullptr) {
+      auto tex = img->getMetadata("gl::texture").cast<gl::Texture>();
+      if (!tex) {
+        tex = new gl::Texture2D(img->getPixels());
+        img->setMetadata("gl::texture", tex);
+        tex->setVersion(img->getVersion());
+      }
+      if (tex->getVersion() != img->getVersion()) {
+
+        tex->setVersion(img->getVersion());
+      }
+      glActiveTexture(GL_TEXTURE0 + i);
+      glBindTexture(GL_TEXTURE_2D, tex->getHandle());
+      _shader->setValue(fmt::format("texture_{}", i), tex->getHandle());
+    }
+  }
 }
+
 void Renderer::render(core::AutoPtr<Camera> camera,
                       core::AutoPtr<Object3D> root) {
   if (!root->isVisible()) {

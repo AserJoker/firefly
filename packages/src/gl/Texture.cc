@@ -1,7 +1,7 @@
-#include "video/Texture.hpp"
+#include "gl/Texture.hpp"
 #include <glad/glad.h>
 using namespace firefly;
-using namespace firefly::video;
+using namespace firefly::gl;
 Texture::Texture(const uint32_t &handle) : _handle(handle) {
   if (!_handle) {
     glGenTextures(1, &_handle);

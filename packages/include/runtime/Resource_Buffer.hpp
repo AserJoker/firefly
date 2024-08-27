@@ -1,5 +1,7 @@
 #pragma once
 #include "Resource.hpp"
+#include "core/AutoPtr.hpp"
+#include "core/Buffer.hpp"
 namespace firefly::runtime {
 class Resource_Buffer : public Resource {
 private:

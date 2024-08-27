@@ -1,14 +1,12 @@
-#include "video/Texture2D.hpp"
+#include "gl/Texture2D.hpp"
 #include <SDL2/SDL_image.h>
-#include <SDL_pixels.h>
-#include <SDL_rwops.h>
-#include <SDL_surface.h>
+#include <SDL2/SDL.h>
 #include <glad/glad.h>
 using namespace firefly;
-using namespace firefly::video;
+using namespace firefly::gl;
 Texture2D::Texture2D(const core::AutoPtr<core::Buffer> &image,
                      const uint32_t &handle)
-    : Texture(handle) { 
+    : Texture(handle) {
   auto img =
       IMG_Load_RW(SDL_RWFromConstMem(image->getData(), image->getSize()), 0);
   auto formattedImg =

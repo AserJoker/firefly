@@ -1,6 +1,6 @@
 #pragma once
-#include "Meterial.hpp"
-#include "Renderer.hpp"
+#include "video/Material.hpp"
+#include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
 #include "video/Geometry.hpp"
 #include "video/Object3D.hpp"
