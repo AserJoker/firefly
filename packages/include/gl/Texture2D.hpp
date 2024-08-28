@@ -5,19 +5,18 @@
 #include "core/Object.hpp"
 #include "gl/DataType.hpp"
 #include "gl/PixelFormat.hpp"
-#include "gl/TextureTarget.hpp"
 namespace firefly::gl {
-class Texture : public core::Object {
+class Texture2D : public core::Object {
 private:
   uint32_t _handle;
 
 public:
   const uint32_t &getHandle() const;
-  Texture(const uint32_t &handle = 0);
-  ~Texture() override;
-  void set2DTextureImage(const uint32_t &level, PIXEL_FORMAT internalFormat,
-                         const uint32_t &width, const uint32_t &height,
-                         PIXEL_FORMAT format, DATA_TYPE type, const void *data);
+  Texture2D(const uint32_t &handle = 0);
+  ~Texture2D() override;
+  void setImage(const uint32_t &level, PIXEL_FORMAT internalFormat,
+                const uint32_t &width, const uint32_t &height,
+                PIXEL_FORMAT format, DATA_TYPE type, const void *data);
   void generateMipmap();
 
   void setMinifyingFilter(TEXTURE_FILTER filter);
@@ -27,6 +26,6 @@ public:
   void setTWrap(TEXTURE_WRAP_MODE mode);
 
 public:
-  static void bind(TEXTURE_TARGET target, const core::AutoPtr<Texture> &tex);
+  static void bind(const core::AutoPtr<Texture2D> &tex);
 };
 } // namespace firefly::gl

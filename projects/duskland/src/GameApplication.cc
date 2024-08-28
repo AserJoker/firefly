@@ -5,10 +5,11 @@
 #include "gl/BufferTarget.hpp"
 #include "gl/BufferUsage.hpp"
 #include "gl/DataType.hpp"
+#include "gl/PixelFormat.hpp"
 #include "gl/Program.hpp"
 #include "gl/Shader.hpp"
 #include "gl/ShaderType.hpp"
-#include "gl/Texture.hpp"
+#include "gl/Texture2D.hpp"
 #include "gl/VertexArray.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
@@ -34,6 +35,9 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include <SDL_image.h>
+#include <SDL_pixels.h>
+#include <SDL_rwops.h>
+#include <SDL_surface.h>
 #include <fmt/core.h>
 #include <glad/glad.h>
 #include <lua.hpp>
@@ -43,13 +47,17 @@ using namespace firefly;
 using namespace duskland;
 core::AutoPtr<gl::Buffer> vbo;
 core::AutoPtr<gl::Buffer> cbo;
+core::AutoPtr<gl::Buffer> tbo;
 core::AutoPtr<gl::Buffer> ebo;
 core::AutoPtr<gl::VertexArray> vao;
 core::AutoPtr<gl::Program> program;
-core::AutoPtr<gl::Texture> tex;
-float position[] = {-0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f};
-uint32_t indices[] = {0, 1, 2};
-float color[] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+core::AutoPtr<gl::Texture2D> tex;
+float position[] = {
+    -0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.5f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0,
+};
+uint32_t indices[] = {0, 1, 2, 2, 3, 0};
+float color[] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0};
+float coord[] = {0, 1, 1, 1, 1, 0, 0, 0};
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -102,6 +110,8 @@ void GameApplication::onInitialize() {
   ebo->setData(sizeof(indices), indices);
   cbo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
   cbo->setData(sizeof(color), color);
+  tbo = new gl::Buffer(gl::BUFFER_USAGE::STREAM_DRAW);
+  tbo->setData(sizeof(coord), coord);
   vao = new gl::VertexArray();
   gl::VertexArray::bind(vao);
   gl::Buffer::bind(gl::BUFFER_TARGET::ELEMENT_ARRAY, ebo);
@@ -112,6 +122,9 @@ void GameApplication::onInitialize() {
   gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, cbo);
   vao->setAttribute(1, gl::DATA_TYPE::FLOAT, 3, false, 3 * sizeof(float), 0);
   vao->enableAttribute(1);
+  gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, tbo);
+  vao->setAttribute(2, gl::DATA_TYPE::FLOAT, 2, false, 2 * sizeof(float), 0);
+  vao->enableAttribute(2);
 
   auto vss = _media->load("shader::sprite_2d::vertex.glsl")->read();
   auto fss = _media->load("shader::sprite_2d::fragment.glsl")->read();
@@ -138,6 +151,20 @@ void GameApplication::onInitialize() {
   if (!program->link()) {
     throw std::runtime_error(program->getInfoLog());
   }
+
+  tex = new gl::Texture2D();
+  auto img = _media->load("Graphics::Titles::001-Title01.jpg")->read();
+  SDL_Surface *source =
+      IMG_Load_RW(SDL_RWFromConstMem(img->getData(), img->getSize()), 1);
+  SDL_Surface *target =
+      SDL_ConvertSurfaceFormat(source, SDL_PIXELFORMAT_ARGB8888, 0);
+  SDL_FreeSurface(source);
+  tex->setImage(0, gl::PIXEL_FORMAT::RGBA, target->w, target->h,
+                gl::PIXEL_FORMAT::RGBA, gl::DATA_TYPE::UNSIGNED_BYTE,
+                target->pixels);
+  tex->generateMipmap();
+  SDL_FreeSurface(target);
+
   glClearColor(0.2, 0.3, 0.3, 1.0f);
   getWindow()->show();
 }
@@ -153,7 +180,10 @@ void GameApplication::onMainLoop() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   program->use();
   gl::VertexArray::bind(vao);
-  glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+  glActiveTexture(GL_TEXTURE0);
+  gl::Texture2D::bind(tex);
+  program->setUniform("texture0", 0);
+  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
   getWindow()->present();
 }
 
