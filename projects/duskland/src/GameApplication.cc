@@ -42,12 +42,14 @@
 using namespace firefly;
 using namespace duskland;
 core::AutoPtr<gl::Buffer> vbo;
+core::AutoPtr<gl::Buffer> cbo;
 core::AutoPtr<gl::Buffer> ebo;
 core::AutoPtr<gl::VertexArray> vao;
 core::AutoPtr<gl::Program> program;
 core::AutoPtr<gl::Texture> tex;
 float position[] = {-0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f};
 uint32_t indices[] = {0, 1, 2};
+float color[] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -98,6 +100,8 @@ void GameApplication::onInitialize() {
   vbo->setData(sizeof(position), position);
   ebo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
   ebo->setData(sizeof(indices), indices);
+  cbo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
+  cbo->setData(sizeof(color), color);
   vao = new gl::VertexArray();
   gl::VertexArray::bind(vao);
   gl::Buffer::bind(gl::BUFFER_TARGET::ELEMENT_ARRAY, ebo);
@@ -105,6 +109,9 @@ void GameApplication::onInitialize() {
   gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, vbo);
   vao->setAttribute(0, gl::DATA_TYPE::FLOAT, 3, false, 3 * sizeof(float), 0);
   vao->enableAttribute(0);
+  gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, cbo);
+  vao->setAttribute(1, gl::DATA_TYPE::FLOAT, 3, false, 3 * sizeof(float), 0);
+  vao->enableAttribute(1);
 
   auto vss = _media->load("shader::sprite_2d::vertex.glsl")->read();
   auto fss = _media->load("shader::sprite_2d::fragment.glsl")->read();
