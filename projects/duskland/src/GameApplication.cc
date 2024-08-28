@@ -1,8 +1,15 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
+#include "gl/Buffer.hpp"
+#include "gl/BufferTarget.hpp"
 #include "gl/BufferUsage.hpp"
+#include "gl/DataType.hpp"
+#include "gl/Program.hpp"
 #include "gl/Shader.hpp"
+#include "gl/ShaderType.hpp"
+#include "gl/Texture.hpp"
+#include "gl/VertexArray.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_MouseDown.hpp"
@@ -26,22 +33,21 @@
 #include "script/lib/Module_Media.hpp"
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
-#include "video/Attribute.hpp"
-#include "video/Camera.hpp"
-#include "video/Geometry.hpp"
-#include "video/Mesh.hpp"
-#include "video/Renderer.hpp"
 #include <SDL_image.h>
 #include <fmt/core.h>
 #include <glad/glad.h>
 #include <lua.hpp>
+#include <stdexcept>
 
 using namespace firefly;
 using namespace duskland;
-core::AutoPtr<gl::Shader> _shader;
-core::AutoPtr<video::Geometry> _geometry;
-core::AutoPtr<video::Mesh> _mesh;
-core::AutoPtr<video::Camera> _camera;
+core::AutoPtr<gl::Buffer> vbo;
+core::AutoPtr<gl::Buffer> ebo;
+core::AutoPtr<gl::VertexArray> vao;
+core::AutoPtr<gl::Program> program;
+core::AutoPtr<gl::Texture> tex;
+float position[] = {-0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.0f, 0.5f, 0.0f};
+uint32_t indices[] = {0, 1, 2};
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -80,52 +86,67 @@ void GameApplication::onInitialize() {
   _mouse = core::Singleton<input::Mouse>::instance();
   _keyboard = core::Singleton<input::Keyboard>::instance();
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
-  _renderer = new video::Renderer();
   initEvent();
   initLocale();
   initScript();
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
   _database->load();
-  _video->setClearColor(0.2, 0.3, 0.3, 1.0);
-  auto vertex = _media->load("shader::sprite_2d::vertex.glsl")->read();
-  auto fragment = _media->load("shader::sprite_2d::fragment.glsl")->read();
-  _geometry = new video::Geometry();
-  _geometry->setAttribute(
-      0, new video::Attribute(std::vector<glm::vec3>({{-0.5f, -0.5f, 0.0f},
-                                                      {0.5f, -0.5f, 0.0f},
-                                                      {0.0f, 0.5f, 0.0f}}),
-                              gl::BUFFER_USAGE::STATIC_DRAW));
-  _geometry->setAttribute(
-      1, new video::Attribute(
-             std::vector<glm::vec3>(
-                 {{1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}}),
-             gl::BUFFER_USAGE::STATIC_DRAW));
-  _geometry->getIndices()->write(0, {0, 1, 2});
-  _shader = new gl::Shader({
-      {GL_VERTEX_SHADER,
-       std::string((char *)vertex->getData(), vertex->getSize())},
-      {GL_FRAGMENT_SHADER,
-       std::string((char *)fragment->getData(), fragment->getSize())},
-  });
-  _renderer->setShader(_shader);
-  _mesh = new video::Mesh(_geometry);
-  _camera = new video::Camera();
-  _shader->setValue("color", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
   script::Module_Event::emit(_script, "gameLoaded");
+
+  vbo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
+  vbo->setData(sizeof(position), position);
+  ebo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
+  ebo->setData(sizeof(indices), indices);
+  vao = new gl::VertexArray();
+  gl::VertexArray::bind(vao);
+  gl::Buffer::bind(gl::BUFFER_TARGET::ELEMENT_ARRAY, ebo);
+
+  gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, vbo);
+  vao->setAttribute(0, gl::DATA_TYPE::FLOAT, 3, false, 3 * sizeof(float), 0);
+  vao->enableAttribute(0);
+
+  auto vss = _media->load("shader::sprite_2d::vertex.glsl")->read();
+  auto fss = _media->load("shader::sprite_2d::fragment.glsl")->read();
+
+  core::AutoPtr vs = new gl::Shader(gl::SHADER_TYPE::VERTEX_SHADER);
+  vs->setShaderSource(
+      std::string((const char *)vss->getData(), vss->getSize()));
+
+  core::AutoPtr fs = new gl::Shader(gl::SHADER_TYPE::FRAGMENT_SHADER);
+  fs->setShaderSource(
+      std::string((const char *)fss->getData(), fss->getSize()));
+
+  if (!vs->compile()) {
+    throw std::runtime_error(vs->getInfoLog());
+  }
+
+  if (!fs->compile()) {
+    throw std::runtime_error(fs->getInfoLog());
+  }
+
+  program = new gl::Program();
+  program->attach(vs);
+  program->attach(fs);
+  if (!program->link()) {
+    throw std::runtime_error(program->getInfoLog());
+  }
+  glClearColor(0.2, 0.3, 0.3, 1.0f);
   getWindow()->show();
 }
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   static auto time = SDL_GetTicks();
-  _video->clear();
   auto now = SDL_GetTicks();
   if (now - time > 50) {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
-  _renderer->render(_camera, _mesh);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  program->use();
+  gl::VertexArray::bind(vao);
+  glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
   getWindow()->present();
 }
 

@@ -9,7 +9,6 @@ private:
   uint32_t _handle;
   uint32_t _size;
   BUFFER_USAGE _usage;
-  uint32_t _version;
 
 public:
   Buffer(BUFFER_USAGE usage, const uint32_t &handle = 0);

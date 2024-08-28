@@ -11,7 +11,6 @@
 #include "core/Object.hpp"
 #include "database/Database.hpp"
 #include "script/Script.hpp"
-#include "video/Device.hpp"
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -33,7 +32,6 @@ protected:
   core::Injector<Media, INJECTOR_MEDIA> _media;
   core::Injector<Locale, INJECTOR_LOCALE> _locale;
   core::Injector<ModLoader, INJECTOR_MOD> _mod;
-  core::Injector<video::Device, INJECTOR_VIDEO> _video;
   core::Injector<script::Script, INJECTOR_SCRIPT> _script;
   core::Injector<database::Database, INJECTOR_DATABASE> _database;
 

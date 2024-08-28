@@ -28,7 +28,7 @@ void VertexArray::setAttribute(const uint32_t &index, DATA_TYPE dtype,
     break;
   case DATA_TYPE::HALF_FLOAT:
   case DATA_TYPE::FLOAT:
-    glVertexAttribPointer(index, size, (GLenum)dtype, stride, normalized,
+    glVertexAttribPointer(index, size, (GLenum)dtype, normalized, stride,
                           (const void *)(ptrdiff_t)offset);
     break;
   case DATA_TYPE::DOUBLE:
@@ -36,7 +36,7 @@ void VertexArray::setAttribute(const uint32_t &index, DATA_TYPE dtype,
                            (const void *)(ptrdiff_t)offset);
     break;
   case DATA_TYPE::FIXED:
-    glVertexAttribPointer(index, size, (GLenum)dtype, stride, normalized,
+    glVertexAttribPointer(index, size, (GLenum)dtype, normalized, stride,
                           (const void *)(ptrdiff_t)offset);
     break;
   case DATA_TYPE::INT_2_10_10_10_REV:

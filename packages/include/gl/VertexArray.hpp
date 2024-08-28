@@ -2,6 +2,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "gl/DataType.hpp"
+
 namespace firefly::gl {
 class VertexArray : public core::Object {
 private:
