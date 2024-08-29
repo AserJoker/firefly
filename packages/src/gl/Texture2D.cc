@@ -16,6 +16,14 @@ void Texture2D::setImage(const uint32_t &level, PIXEL_FORMAT internalFormat,
   glTexImage2D(GL_TEXTURE_2D, level, (GLint)internalFormat, width, height, 0,
                (GLint)format, (GLenum)type, data);
 }
+void Texture2D::setSubImage(const uint32_t &level, const uint32_t &x,
+                            const uint32_t &y, const uint32_t &width,
+                            const uint32_t &height, PIXEL_FORMAT format,
+                            DATA_TYPE type, const void *data) {
+  glBindTexture(GL_TEXTURE_2D, _handle);
+  glTexSubImage2D(GL_TEXTURE_2D, level, x, y, width, height, (GLenum)format,
+                  (GLenum)type, data);
+}
 void Texture2D::generateMipmap() {
   glBindTexture(GL_TEXTURE_2D, _handle);
   glGenerateMipmap(GL_TEXTURE_2D);

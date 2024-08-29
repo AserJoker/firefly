@@ -1,16 +1,12 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Buffer.hpp"
 #include "core/Singleton.hpp"
 #include "gl/Buffer.hpp"
 #include "gl/BufferTarget.hpp"
-#include "gl/BufferUsage.hpp"
 #include "gl/DataType.hpp"
 #include "gl/PixelFormat.hpp"
-#include "gl/Program.hpp"
-#include "gl/Shader.hpp"
-#include "gl/ShaderType.hpp"
 #include "gl/Texture2D.hpp"
-#include "gl/VertexArray.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_MouseDown.hpp"
@@ -34,23 +30,22 @@
 #include "script/lib/Module_Media.hpp"
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
+#include "video/Attribute.hpp"
+#include "video/Constant.hpp"
+#include "video/Geometry.hpp"
+#include "video/Renderer.hpp"
+#include "video/Shader.hpp"
 #include <SDL_image.h>
 #include <SDL_pixels.h>
 #include <SDL_rwops.h>
 #include <SDL_surface.h>
 #include <fmt/core.h>
 #include <glad/glad.h>
+#include <glm/gtc/type_ptr.hpp>
 #include <lua.hpp>
-#include <stdexcept>
 
 using namespace firefly;
 using namespace duskland;
-core::AutoPtr<gl::Buffer> vbo;
-core::AutoPtr<gl::Buffer> cbo;
-core::AutoPtr<gl::Buffer> tbo;
-core::AutoPtr<gl::Buffer> ebo;
-core::AutoPtr<gl::VertexArray> vao;
-core::AutoPtr<gl::Program> program;
 core::AutoPtr<gl::Texture2D> tex;
 float position[] = {
     -1.f, -1.f, 0.0f, 1.f, -1.f, 0.0f, 1.f, 1.f, 0.0f, -1.f, 1.f, 0.0,
@@ -58,6 +53,10 @@ float position[] = {
 uint32_t indices[] = {0, 1, 2, 2, 3, 0};
 float color[] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0};
 float coord[] = {0, 1, 1, 1, 1, 0, 0, 0};
+core::AutoPtr<video::Geometry> _geometry;
+core::AutoPtr<video::Shader> _shader;
+core::AutoPtr<video::Renderer> _renderer;
+core::AutoPtr<gl::Buffer> _ubo;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -104,54 +103,28 @@ void GameApplication::onInitialize() {
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
 
-  vbo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
-  vbo->setData(sizeof(position), position);
-  ebo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
-  ebo->setData(sizeof(indices), indices);
-  cbo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
-  cbo->setData(sizeof(color), color);
-  tbo = new gl::Buffer(gl::BUFFER_USAGE::STREAM_DRAW);
-  tbo->setData(sizeof(coord), coord);
-  vao = new gl::VertexArray();
-  gl::VertexArray::bind(vao);
-  gl::Buffer::bind(gl::BUFFER_TARGET::ELEMENT_ARRAY, ebo);
+  _renderer = new video::Renderer();
 
-  gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, vbo);
-  vao->setAttribute(0, gl::DATA_TYPE::FLOAT, 3, false, 3 * sizeof(float), 0);
-  vao->enableAttribute(0);
-  gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, cbo);
-  vao->setAttribute(1, gl::DATA_TYPE::FLOAT, 3, false, 3 * sizeof(float), 0);
-  vao->enableAttribute(1);
-  gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, tbo);
-  vao->setAttribute(2, gl::DATA_TYPE::FLOAT, 2, false, 2 * sizeof(float), 0);
-  vao->enableAttribute(2);
+  _geometry = new video::Geometry();
 
-  auto vss = _media->load("shader::sprite_2d::vertex.glsl")->read();
-  auto fss = _media->load("shader::sprite_2d::fragment.glsl")->read();
+  _geometry->setAttribute(
+      0, new video::Attribute(new core::Buffer(sizeof(position), position),
+                              typeid(float), 3));
+  _geometry->setAttribute(
+      1, new video::Attribute(new core::Buffer(sizeof(color), color),
+                              typeid(float), 3));
+  _geometry->setAttribute(
+      2, new video::Attribute(new core::Buffer(sizeof(coord), coord),
+                              typeid(float), 2));
+  _geometry->getIndices()->write(0, sizeof(indices) / sizeof(uint32_t),
+                                 indices);
 
-  core::AutoPtr vs = new gl::Shader(gl::SHADER_TYPE::VERTEX_SHADER);
-  vs->setShaderSource(
-      std::string((const char *)vss->getData(), vss->getSize()));
-
-  core::AutoPtr fs = new gl::Shader(gl::SHADER_TYPE::FRAGMENT_SHADER);
-  fs->setShaderSource(
-      std::string((const char *)fss->getData(), fss->getSize()));
-
-  if (!vs->compile()) {
-    throw std::runtime_error(vs->getInfoLog());
-  }
-
-  if (!fs->compile()) {
-    throw std::runtime_error(fs->getInfoLog());
-  }
-
-  program = new gl::Program();
-  program->attach(vs);
-  program->attach(fs);
-  if (!program->link()) {
-    throw std::runtime_error(program->getInfoLog());
-  }
-
+  _shader = new video::Shader("shader::sprite_2d");
+  core::AutoPtr constants = new video::Constant();
+  _renderer->setConstants(constants);
+  core::AutoPtr block = new video::ConstantBlock(0);
+  block->write(0, glm::vec4{1, 0, 0, 1});
+  constants->setField("block", block);
   tex = new gl::Texture2D();
   auto img = _media->load("Graphics::Titles::001-Title01.jpg")->read();
   SDL_Surface *source =
@@ -178,12 +151,10 @@ void GameApplication::onMainLoop() {
     script::Module_Event::emit(_script, "tick");
   }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  program->use();
-  gl::VertexArray::bind(vao);
+  _renderer->activeShader(_shader);
   glActiveTexture(GL_TEXTURE0);
   gl::Texture2D::bind(tex);
-  program->setUniform("texture0", 0);
-  glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+  _renderer->drawGeomeory(_geometry);
   getWindow()->present();
 }
 
@@ -234,4 +205,7 @@ void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
 void GameApplication::onClick(input::Event_Click &e) {
   script::Module_Event::emit(_script, "click",
                              createNumber(_script, e.getType()));
+  auto &data = _renderer->getConstants()->getField("block");
+  auto block = std::any_cast<core::AutoPtr<video::ConstantBlock>>(data);
+  block->write(0, glm::vec4{0, 1, 0, 1});
 }

@@ -133,6 +133,6 @@ public:
     return dynamic_cast<K *>(_object);
   }
 
-  bool operator!() { return _object == nullptr; }
+  const bool operator!() const { return _object == nullptr; }
 };
 } // namespace firefly::core

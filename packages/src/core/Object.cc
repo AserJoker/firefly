@@ -2,8 +2,8 @@
 using namespace firefly;
 using namespace firefly::core;
 void Object::setMetadata(const std::string &name,
-                         const core::AutoPtr<Object> &data) {
-  _metadata[name] = data;
+                         const core::AutoPtr<Object> &data) const {
+  (const_cast<Object *>(this)->_metadata)[name] = data;
 };
 core::AutoPtr<Object> Object::getMetadata(const std::string &name) {
   if (_metadata.contains(name)) {

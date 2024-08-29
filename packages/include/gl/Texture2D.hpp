@@ -17,6 +17,9 @@ public:
   void setImage(const uint32_t &level, PIXEL_FORMAT internalFormat,
                 const uint32_t &width, const uint32_t &height,
                 PIXEL_FORMAT format, DATA_TYPE type, const void *data);
+  void setSubImage(const uint32_t &level, const uint32_t &x, const uint32_t &y,
+                   const uint32_t &width, const uint32_t &height,
+                   PIXEL_FORMAT format, DATA_TYPE type, const void *data);
   void generateMipmap();
 
   void setMinifyingFilter(TEXTURE_FILTER filter);

@@ -37,7 +37,8 @@ public:
   }
   constexpr inline const uint32_t &getVersion() const { return _version; }
 
-  void setMetadata(const std::string &name, const core::AutoPtr<Object> &data);
+  void setMetadata(const std::string &name,
+                   const core::AutoPtr<Object> &data) const;
   core::AutoPtr<Object> getMetadata(const std::string &name);
   const core::AutoPtr<Object> getMetadata(const std::string &name) const;
 };
