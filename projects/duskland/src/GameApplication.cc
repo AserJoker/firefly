@@ -53,7 +53,7 @@ core::AutoPtr<gl::VertexArray> vao;
 core::AutoPtr<gl::Program> program;
 core::AutoPtr<gl::Texture2D> tex;
 float position[] = {
-    -0.5f, -0.5f, 0.0f, 0.5f, -0.5f, 0.0f, 0.5f, 0.5f, 0.0f, -0.5f, 0.5f, 0.0,
+    -1.f, -1.f, 0.0f, 1.f, -1.f, 0.0f, 1.f, 1.f, 0.0f, -1.f, 1.f, 0.0,
 };
 uint32_t indices[] = {0, 1, 2, 2, 3, 0};
 float color[] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0};
@@ -157,7 +157,7 @@ void GameApplication::onInitialize() {
   SDL_Surface *source =
       IMG_Load_RW(SDL_RWFromConstMem(img->getData(), img->getSize()), 1);
   SDL_Surface *target =
-      SDL_ConvertSurfaceFormat(source, SDL_PIXELFORMAT_ARGB8888, 0);
+      SDL_ConvertSurfaceFormat(source, SDL_PIXELFORMAT_ABGR8888, 0);
   SDL_FreeSurface(source);
   tex->setImage(0, gl::PIXEL_FORMAT::RGBA, target->w, target->h,
                 gl::PIXEL_FORMAT::RGBA, gl::DATA_TYPE::UNSIGNED_BYTE,
