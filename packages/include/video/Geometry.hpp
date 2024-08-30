@@ -21,5 +21,12 @@ public:
   getAttributes() const;
   const core::AutoPtr<AttributeIndex> &getIndices() const;
   core::AutoPtr<AttributeIndex> &getIndices();
+
+public:
+  static constexpr const uint32_t ATTR_POSITION = 0;
+  static constexpr const uint32_t ATTR_NORMAL = 1;
+  static constexpr const uint32_t ATTR_COLOR = 2;
+  static constexpr const uint32_t ATTR_TEXCOORD = 3;
+  static constexpr const uint32_t ATTR_CUSTOM = 4;
 };
 } // namespace firefly::video

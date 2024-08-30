@@ -60,14 +60,17 @@ public:
     _material = new video::Material("base");
 
     _geometry->setAttribute(
-        0, new video::Attribute(new core::Buffer(sizeof(position), position),
-                                typeid(float), 3));
+        video::Geometry::ATTR_POSITION,
+        new video::Attribute(new core::Buffer(sizeof(position), position),
+                             typeid(float), 3));
     _geometry->setAttribute(
-        1, new video::Attribute(new core::Buffer(sizeof(color), color),
-                                typeid(float), 3));
+        video::Geometry::ATTR_COLOR,
+        new video::Attribute(new core::Buffer(sizeof(color), color),
+                             typeid(float), 3));
     _geometry->setAttribute(
-        2, new video::Attribute(new core::Buffer(sizeof(coord), coord),
-                                typeid(float), 2));
+        video::Geometry::ATTR_TEXCOORD,
+        new video::Attribute(new core::Buffer(sizeof(coord), coord),
+                             typeid(float), 2));
     _geometry->getIndices()->write(0, sizeof(indices) / sizeof(uint32_t),
                                    indices);
 
