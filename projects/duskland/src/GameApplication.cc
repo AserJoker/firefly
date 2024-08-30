@@ -29,7 +29,10 @@
 #include "video/Attribute.hpp"
 #include "video/Geometry.hpp"
 #include "video/Image.hpp"
+#include "video/Material.hpp"
+#include "video/Object3D.hpp"
 #include "video/Renderer.hpp"
+#include "video/Scene.hpp"
 #include "video/Shader.hpp"
 #include <fmt/core.h>
 #include <glad/glad.h>
@@ -44,11 +47,42 @@ float position[] = {
 uint32_t indices[] = {0, 1, 2, 2, 3, 0};
 float color[] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0};
 float coord[] = {0, 1, 1, 1, 1, 0, 0, 0};
-core::AutoPtr<video::Geometry> _geometry;
-core::AutoPtr<video::Shader> _shader;
-core::AutoPtr<video::Renderer> _renderer;
-core::AutoPtr<video::Image> _tex0;
-core::AutoPtr<video::Image> _tex1;
+
+class Model : public video::Object3D {
+private:
+  core::AutoPtr<video::Material> _material;
+  core::AutoPtr<video::Geometry> _geometry;
+
+public:
+  Model() {
+    _geometry = new video::Geometry();
+
+    _material = new video::Material("base");
+
+    _geometry->setAttribute(
+        0, new video::Attribute(new core::Buffer(sizeof(position), position),
+                                typeid(float), 3));
+    _geometry->setAttribute(
+        1, new video::Attribute(new core::Buffer(sizeof(color), color),
+                                typeid(float), 3));
+    _geometry->setAttribute(
+        2, new video::Attribute(new core::Buffer(sizeof(coord), coord),
+                                typeid(float), 2));
+    _geometry->getIndices()->write(0, sizeof(indices) / sizeof(uint32_t),
+                                   indices);
+
+    auto _shader = video::Shader::get("shader::sprite_2d");
+    auto _tex0 = video::Image::get("Graphics::Titles::001-Title01.jpg");
+    auto _tex1 = video::Image::get("Graphics::Gameovers::001-Gameover01.jpg");
+    _material->setShader(_shader);
+    _material->setTexture("texture0", _tex0);
+    _material->setTexture("texture1", _tex1);
+  }
+  void draw(core::AutoPtr<video::Renderer> renderer) override {
+    renderer->draw(_material, _geometry);
+  }
+};
+core::AutoPtr<video::Scene> scene;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -94,28 +128,8 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-
-  _renderer = new video::Renderer();
-
-  _geometry = new video::Geometry();
-
-  _geometry->setAttribute(
-      0, new video::Attribute(new core::Buffer(sizeof(position), position),
-                              typeid(float), 3));
-  _geometry->setAttribute(
-      1, new video::Attribute(new core::Buffer(sizeof(color), color),
-                              typeid(float), 3));
-  _geometry->setAttribute(
-      2, new video::Attribute(new core::Buffer(sizeof(coord), coord),
-                              typeid(float), 2));
-  _geometry->getIndices()->write(0, sizeof(indices) / sizeof(uint32_t),
-                                 indices);
-
-  _shader = new video::Shader("shader::sprite_2d");
-  _tex0 = new video::Image("Graphics::Titles::001-Title01.jpg");
-  _tex1 = new video::Image("Graphics::Gameovers::001-Gameover01.jpg");
-  _renderer->getConstants()->setField("texture1", 1);
-
+  scene = new video::Scene();
+  scene->getRoot()->add(new Model());
   glClearColor(0.2, 0.3, 0.3, 1.0f);
   getWindow()->show();
 }
@@ -129,10 +143,7 @@ void GameApplication::onMainLoop() {
     script::Module_Event::emit(_script, "tick");
   }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  _renderer->activeShader(_shader);
-  _renderer->setTexture2D(_tex0);
-  _renderer->setTexture2D(_tex1, 1);
-  _renderer->drawGeomeory(_geometry);
+  _renderer->render(scene);
   getWindow()->present();
 }
 

@@ -4,8 +4,9 @@
 #include "core/Buffer.hpp"
 #include "core/Object.hpp"
 #include "core/Pack.hpp"
-#include <vector>
 #include <glm/glm.hpp>
+#include <unordered_map>
+#include <vector>
 namespace firefly::video {
 using ImageUpdateList = core::Pack<std::vector<glm::ivec4>>;
 class Image : public core::Object {
@@ -31,5 +32,13 @@ public:
   const core::AutoPtr<core::Buffer> read(const uint32_t &x, const uint32_t &y,
                                          const uint32_t &width,
                                          const uint32_t &height) const;
+
+private:
+  static std::unordered_map<std::string, core::AutoPtr<Image>> _cache;
+
+public:
+  static void clearCache();
+  static core::AutoPtr<Image>
+  get(const std::string &name, const IMAGE_FORMAT &format = IMAGE_FORMAT::RGBA);
 };
 }; // namespace firefly::video

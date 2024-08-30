@@ -3,12 +3,27 @@
 #include "core/Buffer.hpp"
 #include "core/Singleton.hpp"
 #include "runtime/Media.hpp"
+#include "video/ImageFormat.hpp"
 #include <SDL_image.h>
 #include <SDL_pixels.h>
 #include <SDL_rwops.h>
 #include <SDL_surface.h>
 using namespace firefly;
 using namespace firefly::video;
+std::unordered_map<std::string, core::AutoPtr<Image>> Image::_cache;
+
+void Image::clearCache() { _cache.clear(); }
+core::AutoPtr<Image> Image::get(const std::string &name,
+                                const IMAGE_FORMAT &fmt) {
+  auto id = fmt::format("{}:{}", name, (uint32_t)fmt);
+  if (_cache.contains(id)) {
+    return _cache.at(id);
+  }
+  core::AutoPtr img = new Image(name, fmt);
+  _cache[name] = img;
+  return img;
+}
+
 Image::Image(const std::string &path, const IMAGE_FORMAT &format)
     : _format(format) {
   auto media = core::Singleton<runtime::Media>::instance();

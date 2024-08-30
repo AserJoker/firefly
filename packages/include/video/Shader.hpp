@@ -13,6 +13,12 @@ private:
   load(const std::string &path);
   const static std::string preCompile(const std::string &source);
 
+  static std::unordered_map<std::string, core::AutoPtr<Shader>> _cache;
+
+public:
+  static void clearCache();
+  static core::AutoPtr<Shader> get(const std::string &name);
+
 public:
   Shader(const std::string &path);
   Shader(const std::unordered_map<std::string, std::string> &sources);

@@ -4,9 +4,6 @@ in vec3 outColor;
 in vec2 outCoord;
 uniform sampler2D texture0;
 uniform sampler2D texture1;
-layout(std140) uniform block{
-    vec4 color;
-};
 void main() {
-    out_color = texture2D(texture0,outCoord);
+    out_color = mix(texture2D(texture0, outCoord), texture2D(texture1, outCoord * 2), 0.5);
 }

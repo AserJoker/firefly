@@ -7,4 +7,4 @@
 #define INJECTOR_SCRIPT "firefly.script.Script"
 #define INJECTOR_LOCALE "firefly.runtime.Locale"
 #define INJECTOR_MOD "firefly.runtime.ModLoader"
-#define INJECTOR_VIDEO "firefly.video.device"
+#define INJECTOR_RENDERER "firefly.video.renderer"

@@ -9,6 +9,7 @@
 #include "runtime/Media.hpp"
 #include "runtime/ModLoader.hpp"
 #include "script/Script.hpp"
+#include "video/Renderer.hpp"
 
 namespace firefly {
 void InitFirefly() {
@@ -21,5 +22,6 @@ void InitFirefly() {
   provider->provide<runtime::ModLoader, INJECTOR_MOD>();
   provider->provide<script::Script, INJECTOR_SCRIPT>();
   provider->provide<database::Database, INJECTOR_DATABASE>();
+  provider->provide<video::Renderer, INJECTOR_RENDERER>();
 }
 } // namespace firefly

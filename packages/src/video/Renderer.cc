@@ -17,6 +17,7 @@
 #include "video/Geometry.hpp"
 #include "video/Shader.hpp"
 #include "video/UpdateRangeList.hpp"
+#include <queue>
 using namespace firefly;
 using namespace firefly::video;
 Renderer::Renderer() { _constants = new Constant(); }
@@ -102,7 +103,8 @@ void Renderer::drawGeomeory(const core::AutoPtr<Geometry> &geometry) {
   gl::VertexArray::bind(glVertexArray);
   glDrawElements(GL_TRIANGLES, indices->getIndicesCount(), GL_UNSIGNED_INT, 0);
 }
-void Renderer::activeShader(const core::AutoPtr<Shader> &shader) {
+
+void Renderer::setShader(const core::AutoPtr<Shader> &shader) {
   if (!shader) {
     glUseProgram(0);
     return;
@@ -142,13 +144,10 @@ void Renderer::activeShader(const core::AutoPtr<Shader> &shader) {
     }
     program->setVersion(shader->getVersion());
   }
-  if (_shader != shader) {
-    _shader = shader;
-    program->use();
-  }
+  program->use();
   if (_constants != nullptr) {
     auto bitmap = _constants->getMetadata("video::bitmap").cast<core::Bitmap>();
-    auto old = _shader->getMetadata("video::constants");
+    auto old = shader->getMetadata("video::constants");
     for (auto &[name, field] : _constants->getFields()) {
       auto type = _constants->getFieldType(name);
       if (bitmap->check(name) || type == CONSTANT_TYPE::BLOCK ||
@@ -261,11 +260,12 @@ void Renderer::activeShader(const core::AutoPtr<Shader> &shader) {
     }
     bitmap->clear();
     if (old != _constants) {
-      _shader->setMetadata("video::constants", _constants);
+      shader->setMetadata("video::constants", _constants);
     }
   }
 }
-void Renderer::setTexture2D(const core::AutoPtr<Image> image,
+
+void Renderer::setTexture2D(const core::AutoPtr<Image> &image,
                             const uint32_t &index) {
   auto tex = image->getMetadata("gl::texture").cast<gl::Texture2D>();
   if (!tex) {
@@ -319,12 +319,40 @@ void Renderer::setTexture2D(const core::AutoPtr<Image> image,
   glActiveTexture(GL_TEXTURE0 + index);
   gl::Texture2D::bind(tex);
 }
-void Renderer::setConstants(const core::AutoPtr<Constant> &constants) {
-  if (_constants != constants) {
-    _constants = constants;
+
+void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
+  material->active(_constants);
+  auto &shader = material->getShader();
+  setShader(shader);
+  auto &textures = material->getTextures();
+  auto index = 0;
+  for (auto &[_, texture] : textures) {
+    setTexture2D(texture, index++);
   }
 }
 const core::AutoPtr<Constant> &Renderer::getConstants() const {
   return _constants;
 }
 core::AutoPtr<Constant> &Renderer::getConstants() { return _constants; }
+void Renderer::draw(const core::AutoPtr<Material> &material,
+                    const core::AutoPtr<Geometry> &geometry) {
+  _normalRenderList.push_back(new RenderObject(geometry, material));
+}
+void Renderer::render(core::AutoPtr<Scene> &scene) {
+  auto &root = scene->getRoot();
+  std::queue<core::AutoPtr<Object3D>> workflow;
+  workflow.push(root);
+  while (!workflow.empty()) {
+    auto current = workflow.front();
+    workflow.pop();
+    current->draw(this);
+    auto &chidlren = current->getChildren();
+    for (auto &child : chidlren) {
+      workflow.push(child);
+    }
+  }
+  for (auto &item : _normalRenderList) {
+    setMaterial(item->getMeterial());
+    drawGeomeory(item->getGeometry());
+  }
+}
