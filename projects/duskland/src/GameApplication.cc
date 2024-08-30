@@ -2,11 +2,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Buffer.hpp"
 #include "core/Singleton.hpp"
-#include "gl/Buffer.hpp"
 #include "gl/BufferTarget.hpp"
-#include "gl/DataType.hpp"
-#include "gl/PixelFormat.hpp"
-#include "gl/Texture2D.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_MouseDown.hpp"
@@ -31,14 +27,10 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "video/Attribute.hpp"
-#include "video/Constant.hpp"
 #include "video/Geometry.hpp"
+#include "video/Image.hpp"
 #include "video/Renderer.hpp"
 #include "video/Shader.hpp"
-#include <SDL_image.h>
-#include <SDL_pixels.h>
-#include <SDL_rwops.h>
-#include <SDL_surface.h>
 #include <fmt/core.h>
 #include <glad/glad.h>
 #include <glm/gtc/type_ptr.hpp>
@@ -46,7 +38,6 @@
 
 using namespace firefly;
 using namespace duskland;
-core::AutoPtr<gl::Texture2D> tex;
 float position[] = {
     -1.f, -1.f, 0.0f, 1.f, -1.f, 0.0f, 1.f, 1.f, 0.0f, -1.f, 1.f, 0.0,
 };
@@ -56,7 +47,8 @@ float coord[] = {0, 1, 1, 1, 1, 0, 0, 0};
 core::AutoPtr<video::Geometry> _geometry;
 core::AutoPtr<video::Shader> _shader;
 core::AutoPtr<video::Renderer> _renderer;
-core::AutoPtr<gl::Buffer> _ubo;
+core::AutoPtr<video::Image> _tex0;
+core::AutoPtr<video::Image> _tex1;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -120,23 +112,9 @@ void GameApplication::onInitialize() {
                                  indices);
 
   _shader = new video::Shader("shader::sprite_2d");
-  core::AutoPtr constants = new video::Constant();
-  _renderer->setConstants(constants);
-  core::AutoPtr block = new video::ConstantBlock(0);
-  block->write(0, glm::vec4{1, 0, 0, 1});
-  constants->setField("block", block);
-  tex = new gl::Texture2D();
-  auto img = _media->load("Graphics::Titles::001-Title01.jpg")->read();
-  SDL_Surface *source =
-      IMG_Load_RW(SDL_RWFromConstMem(img->getData(), img->getSize()), 1);
-  SDL_Surface *target =
-      SDL_ConvertSurfaceFormat(source, SDL_PIXELFORMAT_ABGR8888, 0);
-  SDL_FreeSurface(source);
-  tex->setImage(0, gl::PIXEL_FORMAT::RGBA, target->w, target->h,
-                gl::PIXEL_FORMAT::RGBA, gl::DATA_TYPE::UNSIGNED_BYTE,
-                target->pixels);
-  tex->generateMipmap();
-  SDL_FreeSurface(target);
+  _tex0 = new video::Image("Graphics::Titles::001-Title01.jpg");
+  _tex1 = new video::Image("Graphics::Gameovers::001-Gameover01.jpg");
+  _renderer->getConstants()->setField("texture1", 1);
 
   glClearColor(0.2, 0.3, 0.3, 1.0f);
   getWindow()->show();
@@ -152,8 +130,8 @@ void GameApplication::onMainLoop() {
   }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   _renderer->activeShader(_shader);
-  glActiveTexture(GL_TEXTURE0);
-  gl::Texture2D::bind(tex);
+  _renderer->setTexture2D(_tex0);
+  _renderer->setTexture2D(_tex1, 1);
   _renderer->drawGeomeory(_geometry);
   getWindow()->present();
 }
@@ -205,7 +183,4 @@ void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
 void GameApplication::onClick(input::Event_Click &e) {
   script::Module_Event::emit(_script, "click",
                              createNumber(_script, e.getType()));
-  auto &data = _renderer->getConstants()->getField("block");
-  auto block = std::any_cast<core::AutoPtr<video::ConstantBlock>>(data);
-  block->write(0, glm::vec4{0, 1, 0, 1});
 }

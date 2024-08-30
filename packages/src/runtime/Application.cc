@@ -9,7 +9,6 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_ttf.h>
-#include <SDL_error.h>
 
 using namespace firefly;
 using namespace firefly::runtime;
@@ -33,7 +32,7 @@ void Application::onInitialize() {
     throw exception::SDLException(SDL_GetError());
   }
   _eventbus->on(this, &Application::onEvent);
-  _window = new runtime::Window("firefly", 1024, 768);
+  _window = new runtime::Window("firefly", 640, 480);
 }
 core::AutoPtr<Window> Application::getWindow() { return _window; }
 void Application::onMainLoop() {

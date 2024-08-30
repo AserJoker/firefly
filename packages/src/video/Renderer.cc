@@ -6,9 +6,12 @@
 #include "gl/BufferTarget.hpp"
 #include "gl/BufferUsage.hpp"
 #include "gl/DataType.hpp"
+#include "gl/PixelFormat.hpp"
 #include "gl/Program.hpp"
 #include "gl/Shader.hpp"
 #include "gl/ShaderType.hpp"
+#include "gl/Texture2D.hpp"
+#include "gl/TextureFilter.hpp"
 #include "gl/VertexArray.hpp"
 #include "video/Constant.hpp"
 #include "video/Geometry.hpp"
@@ -226,7 +229,7 @@ void Renderer::activeShader(const core::AutoPtr<Shader> &shader) {
         case CONSTANT_TYPE::BLOCK: {
           auto block = std::any_cast<core::AutoPtr<ConstantBlock>>(field);
           auto bindingName =
-              fmt::format("uniform_block_binding_{}", block->getIndex());
+              fmt::format("video::uniform_block_binding_{}", block->getIndex());
           auto binding = program->getMetadata(bindingName);
           if (binding != block) {
             program->bindUniformBlock(name, block->getIndex());
@@ -261,6 +264,60 @@ void Renderer::activeShader(const core::AutoPtr<Shader> &shader) {
       _shader->setMetadata("video::constants", _constants);
     }
   }
+}
+void Renderer::setTexture2D(const core::AutoPtr<Image> image,
+                            const uint32_t &index) {
+  auto tex = image->getMetadata("gl::texture").cast<gl::Texture2D>();
+  if (!tex) {
+    tex = new gl::Texture2D();
+    gl::PIXEL_FORMAT fmt;
+    switch (image->getFormat()) {
+    case IMAGE_FORMAT::RGB:
+      fmt = gl::PIXEL_FORMAT::RGB;
+      break;
+    case IMAGE_FORMAT::RGBA:
+      fmt = gl::PIXEL_FORMAT::RGBA;
+      break;
+    case IMAGE_FORMAT::GRAY:
+      fmt = gl::PIXEL_FORMAT::RED;
+      break;
+    }
+    tex->setImage(0, fmt, image->getWidth(), image->getHeight(), fmt,
+                  gl::DATA_TYPE::UNSIGNED_BYTE, image->getData()->getData());
+    tex->generateMipmap();
+    tex->setMinifyingFilter(gl::TEXTURE_FILTER::LINEAR);
+    tex->setMagnificationFilter(gl::TEXTURE_FILTER::LINEAR);
+    image->setMetadata("gl::texture", tex);
+    auto updateRangeList =
+        image->getMetadata("video::update_range_list").cast<ImageUpdateList>();
+    updateRangeList->getData().clear();
+    tex->setVersion(image->getVersion());
+  }
+  if (tex->getVersion() != image->getVersion()) {
+    auto updateRangeList =
+        image->getMetadata("video::update_range_list").cast<ImageUpdateList>();
+    gl::PIXEL_FORMAT fmt;
+    switch (image->getFormat()) {
+    case IMAGE_FORMAT::RGB:
+      fmt = gl::PIXEL_FORMAT::RGB;
+      break;
+    case IMAGE_FORMAT::RGBA:
+      fmt = gl::PIXEL_FORMAT::RGBA;
+      break;
+    case IMAGE_FORMAT::GRAY:
+      fmt = gl::PIXEL_FORMAT::RED;
+      break;
+    }
+    for (auto range : updateRangeList->getData()) {
+      auto buf = image->read(range.x, range.y, range.z, range.w);
+      tex->setSubImage(0, range.x, range.y, range.z, range.w, fmt,
+                       gl::DATA_TYPE::UNSIGNED_BYTE, buf->getData());
+    }
+    updateRangeList->getData().clear();
+    tex->setVersion(image->getVersion());
+  }
+  glActiveTexture(GL_TEXTURE0 + index);
+  gl::Texture2D::bind(tex);
 }
 void Renderer::setConstants(const core::AutoPtr<Constant> &constants) {
   if (_constants != constants) {

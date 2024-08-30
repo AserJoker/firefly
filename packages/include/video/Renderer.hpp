@@ -4,6 +4,7 @@
 #include "Shader.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include "video/Image.hpp"
 namespace firefly::video {
 class Renderer : public core::Object {
 private:
@@ -15,6 +16,8 @@ public:
   void drawGeomeory(const core::AutoPtr<Geometry> &geometry);
   void activeShader(const core::AutoPtr<Shader> &shader);
   void setConstants(const core::AutoPtr<Constant> &constants);
+  void setTexture2D(const core::AutoPtr<Image> image,
+                    const uint32_t &index = 0);
   const core::AutoPtr<Constant> &getConstants() const;
   core::AutoPtr<Constant> &getConstants();
 };
