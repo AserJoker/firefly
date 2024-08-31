@@ -1,7 +1,9 @@
 #include "video/Material.hpp"
 using namespace firefly;
 using namespace firefly::video;
-Material::Material(const std::string &type) : _type(type) {}
+Material::Material(const std::string &type)
+    : _type(type), _alphaTest(false), _depthTest(true), _stencilTest(false),
+      _blend(false), _visible(true) {}
 const std::string &Material::getType() const { return _type; }
 const std::unordered_map<std::string, core::AutoPtr<Image>> &
 Material::getTextures() const {
@@ -21,3 +23,9 @@ void Material::setShader(const core::AutoPtr<Shader> &shader) {
   _shader = shader;
 }
 const core::AutoPtr<Shader> &Material::getShader() const { return _shader; }
+const bool &Material::isBlend() const { return _blend; }
+void Material::setBlend(const bool &value) { _blend = value; }
+const bool &Material::isVisible() const { return _visible; }
+void Material::setVisible(const bool &value) { _visible = value; }
+const bool &Material::isDepthTest() const { return _depthTest; }
+void Material::setDepthTest(const bool &value) { _depthTest = value; }

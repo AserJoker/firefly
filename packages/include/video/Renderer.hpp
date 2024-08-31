@@ -1,4 +1,5 @@
 #pragma once
+#include "Camera.hpp"
 #include "Constant.hpp"
 #include "Geometry.hpp"
 #include "Material.hpp"
@@ -27,6 +28,6 @@ public:
   core::AutoPtr<Constant> &getConstants();
   void draw(const core::AutoPtr<Material> &material,
             const core::AutoPtr<Geometry> &geometry);
-  void render(core::AutoPtr<Scene> &scene);
+  void render(core::AutoPtr<Scene> &scene, const core::AutoPtr<Camera> &camera);
 };
 } // namespace firefly::video

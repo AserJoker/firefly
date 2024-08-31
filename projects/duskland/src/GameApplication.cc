@@ -27,6 +27,7 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "video/Attribute.hpp"
+#include "video/Camera.hpp"
 #include "video/Geometry.hpp"
 #include "video/Image.hpp"
 #include "video/Material.hpp"
@@ -34,19 +35,49 @@
 #include "video/Renderer.hpp"
 #include "video/Scene.hpp"
 #include "video/Shader.hpp"
+#include <SDL_scancode.h>
 #include <fmt/core.h>
 #include <glad/glad.h>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/quaternion_geometric.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <lua.hpp>
 
 using namespace firefly;
 using namespace duskland;
 float position[] = {
-    -1.f, -1.f, 0.0f, 1.f, -1.f, 0.0f, 1.f, 1.f, 0.0f, -1.f, 1.f, 0.0,
-};
-uint32_t indices[] = {0, 1, 2, 2, 3, 0};
-float color[] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0};
-float coord[] = {0, 1, 1, 1, 1, 0, 0, 0};
+    -0.5f, -0.5f, -0.5f, 0.5f,  -0.5f, -0.5f, 0.5f,  0.5f,  -0.5f,
+    0.5f,  0.5f,  -0.5f, -0.5f, 0.5f,  -0.5f, -0.5f, -0.5f, -0.5f,
+
+    -0.5f, -0.5f, 0.5f,  0.5f,  -0.5f, 0.5f,  0.5f,  0.5f,  0.5f,
+    0.5f,  0.5f,  0.5f,  -0.5f, 0.5f,  0.5f,  -0.5f, -0.5f, 0.5f,
+
+    -0.5f, 0.5f,  0.5f,  -0.5f, 0.5f,  -0.5f, -0.5f, -0.5f, -0.5f,
+    -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f,  -0.5f, 0.5f,  0.5f,
+
+    0.5f,  0.5f,  0.5f,  0.5f,  0.5f,  -0.5f, 0.5f,  -0.5f, -0.5f,
+    0.5f,  -0.5f, -0.5f, 0.5f,  -0.5f, 0.5f,  0.5f,  0.5f,  0.5f,
+
+    -0.5f, -0.5f, -0.5f, 0.5f,  -0.5f, -0.5f, 0.5f,  -0.5f, 0.5f,
+    0.5f,  -0.5f, 0.5f,  -0.5f, -0.5f, 0.5f,  -0.5f, -0.5f, -0.5f,
+
+    -0.5f, 0.5f,  -0.5f, 0.5f,  0.5f,  -0.5f, 0.5f,  0.5f,  0.5f,
+    0.5f,  0.5f,  0.5f,  -0.5f, 0.5f,  0.5f,  -0.5f, 0.5f,  -0.5f};
+uint32_t indices[] = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
+                      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+                      24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35};
+float coord[] = {
+    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+
+    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+
+    1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+
+    1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+
+    0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+
+    0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 
 class Model : public video::Object3D {
 private:
@@ -64,28 +95,24 @@ public:
         new video::Attribute(new core::Buffer(sizeof(position), position),
                              typeid(float), 3));
     _geometry->setAttribute(
-        video::Geometry::ATTR_COLOR,
-        new video::Attribute(new core::Buffer(sizeof(color), color),
-                             typeid(float), 3));
-    _geometry->setAttribute(
         video::Geometry::ATTR_TEXCOORD,
         new video::Attribute(new core::Buffer(sizeof(coord), coord),
                              typeid(float), 2));
+
     _geometry->getIndices()->write(0, sizeof(indices) / sizeof(uint32_t),
                                    indices);
 
     auto _shader = video::Shader::get("shader::sprite_2d");
-    auto _tex0 = video::Image::get("Graphics::Titles::001-Title01.jpg");
-    auto _tex1 = video::Image::get("Graphics::Gameovers::001-Gameover01.jpg");
+    auto _tex0 = video::Image::get("texture::box.jpg");
     _material->setShader(_shader);
     _material->setTexture("texture0", _tex0);
-    _material->setTexture("texture1", _tex1);
   }
   void draw(core::AutoPtr<video::Renderer> renderer) override {
     renderer->draw(_material, _geometry);
   }
 };
 core::AutoPtr<video::Scene> scene;
+core::AutoPtr<video::Camera> camera;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -133,6 +160,9 @@ void GameApplication::onInitialize() {
   script::Module_Event::emit(_script, "gameLoaded");
   scene = new video::Scene();
   scene->getRoot()->add(new Model());
+  camera = new video::Camera(
+      glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f),
+      glm::vec3(0, 0, -3.0f), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
   glClearColor(0.2, 0.3, 0.3, 1.0f);
   getWindow()->show();
 }
@@ -145,8 +175,38 @@ void GameApplication::onMainLoop() {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
+  float speed = 0.001;
+  if (_keyboard->getKeyState(SDL_SCANCODE_A)) {
+    auto pos = camera->getPosition();
+    auto up = camera->getUp();
+    auto front = camera->getFront();
+    auto right = glm::normalize(glm::cross(front, up));
+    pos += right * -speed;
+    camera->setPosition(pos);
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_D)) {
+    auto pos = camera->getPosition();
+    auto up = camera->getUp();
+    auto front = camera->getFront();
+    auto right = glm::normalize(glm::cross(front, up));
+    pos += right * speed;
+    camera->setPosition(pos);
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_W)) {
+    auto pos = camera->getPosition();
+    auto front = camera->getFront();
+    pos += front * speed;
+    camera->setPosition(pos);
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_S)) {
+    auto pos = camera->getPosition();
+    auto front = camera->getFront();
+    pos -= front * speed;
+    camera->setPosition(pos);
+  }
+
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  _renderer->render(scene);
+  _renderer->render(scene, camera);
   getWindow()->present();
 }
 
@@ -158,6 +218,9 @@ void GameApplication::onUnInitialize() {
 void GameApplication::onKeyDown(input::Event_KeyDown &e) {
   script::Module_Event::emit(_script, "keyDown",
                              createNumber(_script, e.getScancode()));
+  if (e.getScancode() == SDL_SCANCODE_ESCAPE) {
+    _mouse->releaseMouse();
+  }
 }
 
 void GameApplication::onKeyUp(input::Event_KeyUp &e) {
@@ -181,6 +244,7 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
   script::Module_Event::emit(_script, "mouseDown",
                              createNumber(_script, e.getType()));
+  _mouse->captureMouse();
 }
 
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {

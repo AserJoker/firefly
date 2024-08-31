@@ -15,6 +15,7 @@
 #include "gl/VertexArray.hpp"
 #include "video/Constant.hpp"
 #include "video/Geometry.hpp"
+#include "video/RenderObject.hpp"
 #include "video/Shader.hpp"
 #include "video/UpdateRangeList.hpp"
 #include <queue>
@@ -329,6 +330,9 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   for (auto &[_, texture] : textures) {
     setTexture2D(texture, index++);
   }
+  if (material->isDepthTest()) {
+    glEnable(GL_DEPTH_TEST);
+  }
 }
 const core::AutoPtr<Constant> &Renderer::getConstants() const {
   return _constants;
@@ -336,9 +340,18 @@ const core::AutoPtr<Constant> &Renderer::getConstants() const {
 core::AutoPtr<Constant> &Renderer::getConstants() { return _constants; }
 void Renderer::draw(const core::AutoPtr<Material> &material,
                     const core::AutoPtr<Geometry> &geometry) {
-  _normalRenderList.push_back(new RenderObject(geometry, material));
+  if (!material->isBlend()) {
+    _normalRenderList.push_back(new RenderObject(geometry, material));
+  } else {
+    _blendRenderList.push_back(new RenderObject(geometry, material));
+  }
 }
-void Renderer::render(core::AutoPtr<Scene> &scene) {
+void Renderer::render(core::AutoPtr<Scene> &scene,
+                      const core::AutoPtr<Camera> &camera) {
+  _normalRenderList.clear();
+  _blendRenderList.clear();
+  _constants->setField("projection", camera->getProjectionMatrix());
+  _constants->setField("view", camera->getViewMatrix());
   auto &root = scene->getRoot();
   std::queue<core::AutoPtr<Object3D>> workflow;
   workflow.push(root);

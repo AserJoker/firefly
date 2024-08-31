@@ -26,5 +26,13 @@ public:
   void setShader(const core::AutoPtr<Shader> &shader);
   virtual void active(core::AutoPtr<Constant> &constants) const;
   const core::AutoPtr<Shader> &getShader() const;
+
+  const bool &isBlend() const;
+  void setBlend(const bool &value);
+  const bool &isVisible() const;
+  void setVisible(const bool &value);
+
+  const bool &isDepthTest() const;
+  void setDepthTest(const bool &value);
 };
 } // namespace firefly::video
