@@ -41,6 +41,7 @@
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/quaternion_geometric.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/trigonometric.hpp>
 #include <lua.hpp>
 
 using namespace firefly;
@@ -78,6 +79,9 @@ float coord[] = {
     0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
 
     0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+
+float pitch = 0;
+float yaw = 90;
 
 class Model : public video::Object3D {
 private:
@@ -204,6 +208,18 @@ void GameApplication::onMainLoop() {
     pos -= front * speed;
     camera->setPosition(pos);
   }
+  if (_keyboard->getKeyState(SDL_SCANCODE_SPACE)) {
+    auto pos = camera->getPosition();
+    auto up = camera->getUp();
+    pos += up * speed;
+    camera->setPosition(pos);
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_LSHIFT)) {
+    auto pos = camera->getPosition();
+    auto up = camera->getUp();
+    pos -= up * speed;
+    camera->setPosition(pos);
+  }
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   _renderer->render(scene, camera);
@@ -239,6 +255,21 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
           ->setField(_script, "y", createNumber(_script, pos.y))
           ->setField(_script, "dx", createNumber(_script, delta.x))
           ->setField(_script, "dy", createNumber(_script, delta.y)));
+  if (_mouse->isCaptured()) {
+    pitch += -delta.y * 0.05;
+    yaw += delta.x * 0.05;
+    if (pitch > 89.0f) {
+      pitch = 89.0f;
+    }
+    if (pitch < -89.0f) {
+      pitch = -89.0f;
+    }
+    glm::vec3 front;
+    front.x = std::cos(glm::radians(pitch)) * std::cos(glm::radians(yaw));
+    front.y = sin(glm::radians(pitch));
+    front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
+    camera->setFront(front);
+  }
 }
 
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
