@@ -34,10 +34,10 @@ public:
       _object->addRef();
     }
   }
-
+  const T *getRawPointer() const { return _object; }
   template <class K> AutoPtr(const AutoPtr<K> &another) : _object(nullptr) {
     if (another != nullptr) {
-      _object = const_cast<K *>(&*another);
+      _object = const_cast<K *>(another.getRawPointer());
     }
     if (_object) {
       _object->addRef();
@@ -84,10 +84,10 @@ public:
   }
 
   template <class K> AutoPtr<T> &operator=(const AutoPtr<K> &another) {
-    if (_object && _object != &*another) {
+    if (_object && _object != another.getRawPointer()) {
       dispose();
     }
-    _object = const_cast<K *>(&*another);
+    _object = const_cast<K *>(another.getRawPointer());
     if (_object) {
       _object->addRef();
     }
@@ -98,10 +98,10 @@ public:
     if (this == &another) {
       return *this;
     }
-    if (_object && _object != another._object) {
+    if (_object && _object != another.getRawPointer()) {
       dispose();
     }
-    _object = another._object;
+    _object = (T *)another.getRawPointer();
     if (_object) {
       _object->addRef();
     }
@@ -121,11 +121,11 @@ public:
   bool operator!=(std::nullptr_t) const { return _object != nullptr; }
 
   template <class K> bool operator==(const AutoPtr<K> &another) const {
-    return _object == &*another;
+    return _object == another.getRawPointer();
   }
 
   template <class K> bool operator!=(const AutoPtr<K> &another) const {
-    return _object != &*another;
+    return _object != another.getRawPointer();
   }
 
   template <class K> AutoPtr<K> cast() { return dynamic_cast<K *>(_object); }

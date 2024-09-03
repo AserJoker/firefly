@@ -6,17 +6,6 @@
 #include <unordered_map>
 using namespace firefly;
 using namespace firefly::video;
-std::unordered_map<std::string, core::AutoPtr<Shader>> Shader::_cache;
-
-void Shader::clearCache() { _cache.clear(); }
-core::AutoPtr<Shader> Shader::get(const std::string &name) {
-  if (_cache.contains(name)) {
-    return _cache.at(name);
-  }
-  core::AutoPtr shader = new Shader(name);
-  _cache[name] = shader;
-  return shader;
-}
 const std::unordered_map<std::string, std::string>
 Shader::load(const std::string &path) {
   std::unordered_map<std::string, std::string> sources;

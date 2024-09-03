@@ -13,12 +13,12 @@
 #include "gl/Texture2D.hpp"
 #include "gl/TextureFilter.hpp"
 #include "gl/VertexArray.hpp"
+#include "video/Camera.hpp"
 #include "video/Constant.hpp"
 #include "video/Geometry.hpp"
 #include "video/RenderObject.hpp"
 #include "video/Shader.hpp"
 #include "video/UpdateRangeList.hpp"
-#include <queue>
 using namespace firefly;
 using namespace firefly::video;
 Renderer::Renderer() { _constants = new Constant(); }
@@ -145,10 +145,12 @@ void Renderer::setShader(const core::AutoPtr<Shader> &shader) {
     }
     program->setVersion(shader->getVersion());
   }
-  program->use();
   if (_constants != nullptr) {
     auto bitmap = _constants->getMetadata("video::bitmap").cast<core::Bitmap>();
     auto old = shader->getMetadata("video::constants");
+    if (old != _constants) {
+      program->use();
+    }
     for (auto &[name, field] : _constants->getFields()) {
       auto type = _constants->getFieldType(name);
       if (bitmap->check(name) || type == CONSTANT_TYPE::BLOCK ||
@@ -330,8 +332,23 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   for (auto &[_, texture] : textures) {
     setTexture2D(texture, index++);
   }
+
   if (material->isDepthTest()) {
     glEnable(GL_DEPTH_TEST);
+  } else {
+    glDisable(GL_DEPTH_TEST);
+  }
+
+  if (material->isStencilTest()) {
+    glEnable(GL_STENCIL_TEST);
+  } else {
+    glDisable(GL_STENCIL_TEST);
+  }
+
+  if (material->isAlphaTest()) {
+    glEnable(GL_ALPHA_TEST);
+  } else {
+    glDisable(GL_ALPHA_TEST);
   }
 }
 const core::AutoPtr<Constant> &Renderer::getConstants() const {
@@ -346,26 +363,26 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
     _blendRenderList.push_back(new RenderObject(geometry, material));
   }
 }
-void Renderer::render(core::AutoPtr<Scene> &scene,
-                      const core::AutoPtr<Camera> &camera) {
-  _normalRenderList.clear();
-  _blendRenderList.clear();
+void Renderer::draw(const core::AutoPtr<Model> &model) {
+  if (model->getMaterial()->isVisible()) {
+    draw(model->getMaterial(), model->getGeometry());
+  }
+}
+void Renderer::begin(const core::AutoPtr<Camera> &camera) {
   _constants->setField("projection", camera->getProjectionMatrix());
   _constants->setField("view", camera->getViewMatrix());
-  auto &root = scene->getRoot();
-  std::queue<core::AutoPtr<Object3D>> workflow;
-  workflow.push(root);
-  while (!workflow.empty()) {
-    auto current = workflow.front();
-    workflow.pop();
-    current->draw(this);
-    auto &chidlren = current->getChildren();
-    for (auto &child : chidlren) {
-      workflow.push(child);
-    }
-  }
+}
+void Renderer::end() {
+  glDisable(GL_BLEND);
   for (auto &item : _normalRenderList) {
     setMaterial(item->getMeterial());
     drawGeomeory(item->getGeometry());
   }
+  glEnable(GL_BLEND);
+  for (auto &item : _blendRenderList) {
+    setMaterial(item->getMeterial());
+    drawGeomeory(item->getGeometry());
+  }
+  _normalRenderList.clear();
+  _blendRenderList.clear();
 }

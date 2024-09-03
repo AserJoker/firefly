@@ -3,8 +3,8 @@
 #include "Constant.hpp"
 #include "Geometry.hpp"
 #include "Material.hpp"
+#include "Model.hpp"
 #include "RenderObject.hpp"
-#include "Scene.hpp"
 #include "Shader.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
@@ -28,6 +28,8 @@ public:
   core::AutoPtr<Constant> &getConstants();
   void draw(const core::AutoPtr<Material> &material,
             const core::AutoPtr<Geometry> &geometry);
-  void render(core::AutoPtr<Scene> &scene, const core::AutoPtr<Camera> &camera);
+  void draw(const core::AutoPtr<Model> &mesh);
+  void begin(const core::AutoPtr<Camera> &camera);
+  void end();
 };
 } // namespace firefly::video

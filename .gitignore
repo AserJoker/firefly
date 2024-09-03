@@ -1,7 +1,10 @@
 build
 .cache
 *.exe
+*.dll
+*.pdb
 *.run
+config
 Audio
 Graphics
 texture

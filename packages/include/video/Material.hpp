@@ -11,9 +11,11 @@ private:
   core::AutoPtr<Shader> _shader;
   std::string _type;
   std::unordered_map<std::string, core::AutoPtr<Image>> _textures;
+
   bool _alphaTest;
   bool _depthTest;
   bool _stencilTest;
+
   bool _blend;
   bool _visible;
 
@@ -29,10 +31,17 @@ public:
 
   const bool &isBlend() const;
   void setBlend(const bool &value);
+
   const bool &isVisible() const;
   void setVisible(const bool &value);
 
+  const bool &isStencilTest() const;
+  void setStencil(const bool &value);
+
   const bool &isDepthTest() const;
   void setDepthTest(const bool &value);
+
+  const bool &isAlphaTest() const;
+  void setAlphaTest(const bool &value);
 };
 } // namespace firefly::video

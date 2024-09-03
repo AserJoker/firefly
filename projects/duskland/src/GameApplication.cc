@@ -1,6 +1,5 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Buffer.hpp"
 #include "core/Singleton.hpp"
 #include "gl/BufferTarget.hpp"
 #include "input/Event_Click.hpp"
@@ -15,6 +14,7 @@
 #include "script/Value.hpp"
 #include "script/bridge/LuaBridge.hpp"
 #include "script/helper/Trait_Buffer.hpp"
+#include "script/helper/Trait_Image.hpp"
 #include "script/helper/Trait_Properties.hpp"
 #include "script/helper/Trait_Resource.hpp"
 #include "script/lib/Module_Array.hpp"
@@ -26,17 +26,14 @@
 #include "script/lib/Module_Media.hpp"
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
-#include "video/Attribute.hpp"
+#include "script/lib/Module_Video.hpp"
 #include "video/Camera.hpp"
-#include "video/Geometry.hpp"
-#include "video/Image.hpp"
 #include "video/Material.hpp"
-#include "video/Object3D.hpp"
+#include "video/Model.hpp"
 #include "video/Renderer.hpp"
-#include "video/Scene.hpp"
-#include "video/Shader.hpp"
 #include <SDL_scancode.h>
 #include <fmt/core.h>
+#include <fmt/format.h>
 #include <glad/glad.h>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/quaternion_geometric.hpp>
@@ -46,77 +43,13 @@
 
 using namespace firefly;
 using namespace duskland;
-float position[] = {
-    -0.5f, -0.5f, -0.5f, 0.5f,  -0.5f, -0.5f, 0.5f,  0.5f,  -0.5f,
-    0.5f,  0.5f,  -0.5f, -0.5f, 0.5f,  -0.5f, -0.5f, -0.5f, -0.5f,
-
-    -0.5f, -0.5f, 0.5f,  0.5f,  -0.5f, 0.5f,  0.5f,  0.5f,  0.5f,
-    0.5f,  0.5f,  0.5f,  -0.5f, 0.5f,  0.5f,  -0.5f, -0.5f, 0.5f,
-
-    -0.5f, 0.5f,  0.5f,  -0.5f, 0.5f,  -0.5f, -0.5f, -0.5f, -0.5f,
-    -0.5f, -0.5f, -0.5f, -0.5f, -0.5f, 0.5f,  -0.5f, 0.5f,  0.5f,
-
-    0.5f,  0.5f,  0.5f,  0.5f,  0.5f,  -0.5f, 0.5f,  -0.5f, -0.5f,
-    0.5f,  -0.5f, -0.5f, 0.5f,  -0.5f, 0.5f,  0.5f,  0.5f,  0.5f,
-
-    -0.5f, -0.5f, -0.5f, 0.5f,  -0.5f, -0.5f, 0.5f,  -0.5f, 0.5f,
-    0.5f,  -0.5f, 0.5f,  -0.5f, -0.5f, 0.5f,  -0.5f, -0.5f, -0.5f,
-
-    -0.5f, 0.5f,  -0.5f, 0.5f,  0.5f,  -0.5f, 0.5f,  0.5f,  0.5f,
-    0.5f,  0.5f,  0.5f,  -0.5f, 0.5f,  0.5f,  -0.5f, 0.5f,  -0.5f};
-uint32_t indices[] = {0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11,
-                      12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
-                      24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35};
-float coord[] = {
-    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-
-    0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-
-    1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-
-    1.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-
-    0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-
-    0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
-
 float pitch = 0;
 float yaw = 90;
 
-class Model : public video::Object3D {
-private:
-  core::AutoPtr<video::Material> _material;
-  core::AutoPtr<video::Geometry> _geometry;
+core::AutoPtr<video::Material> _material;
 
-public:
-  Model() {
-    _geometry = new video::Geometry();
-
-    _material = new video::Material("base");
-
-    _geometry->setAttribute(
-        video::Geometry::ATTR_POSITION,
-        new video::Attribute(new core::Buffer(sizeof(position), position),
-                             typeid(float), 3));
-    _geometry->setAttribute(
-        video::Geometry::ATTR_TEXCOORD,
-        new video::Attribute(new core::Buffer(sizeof(coord), coord),
-                             typeid(float), 2));
-
-    _geometry->getIndices()->write(0, sizeof(indices) / sizeof(uint32_t),
-                                   indices);
-
-    auto _shader = video::Shader::get("shader::sprite_2d");
-    auto _tex0 = video::Image::get("texture::box.jpg");
-    _material->setShader(_shader);
-    _material->setTexture("texture0", _tex0);
-  }
-  void draw(core::AutoPtr<video::Renderer> renderer) override {
-    renderer->draw(_material, _geometry);
-  }
-};
-core::AutoPtr<video::Scene> scene;
 core::AutoPtr<video::Camera> camera;
+std::vector<core::AutoPtr<video::Model>> _model;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -126,6 +59,7 @@ void GameApplication::initScript() {
   script::Trait_Buffer::initialize(_script);
   script::Trait_Resource::initialize(_script);
   script::Trait_Properties::initialize(_script);
+  script::Trait_Image::initialize(_script);
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);
   script::Module_Event::open(_script);
@@ -135,6 +69,7 @@ void GameApplication::initScript() {
   script::Module_Database::open(_script);
   script::Module_Serialization::open(_script);
   script::Module_Array::open(_script);
+  script::Module_Video::open(_script);
   _script->eval("require('duskland')");
 }
 void GameApplication::initLocale() {
@@ -162,12 +97,12 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  scene = new video::Scene();
-  scene->getRoot()->add(new Model());
+  _model = video::Model::load("model::backpack.obj");
   camera = new video::Camera(
       glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f),
       glm::vec3(0, 0, -3.0f), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
   glClearColor(0.2, 0.3, 0.3, 1.0f);
+  glEnable(GL_CULL_FACE);
   getWindow()->show();
 }
 
@@ -220,9 +155,12 @@ void GameApplication::onMainLoop() {
     pos -= up * speed;
     camera->setPosition(pos);
   }
-
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  _renderer->render(scene, camera);
+  _renderer->begin(camera);
+  for (auto m : _model) {
+    _renderer->draw(m);
+  }
+  _renderer->end();
   getWindow()->present();
 }
 

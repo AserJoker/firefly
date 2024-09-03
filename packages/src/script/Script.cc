@@ -66,7 +66,7 @@ core::AutoPtr<Value> Script::createValue(Atom *at) {
 }
 core::AutoPtr<Scope> Script::pushScope() {
   core::AutoPtr<Scope> current = _current;
-  _current = new Scope(&*current);
+  _current = new Scope((Scope *)current.getRawPointer());
   return current;
 }
 void Script::popScope(core::AutoPtr<Scope> scope) {

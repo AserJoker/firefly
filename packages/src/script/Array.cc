@@ -24,7 +24,7 @@ void Array::setIndex(core::AutoPtr<Script> ctx, int index,
       _items[index] = nullptr;
     }
   }
-  while (*_items.rbegin() == nullptr) {
+  while (!_items.empty() && *_items.rbegin() == nullptr) {
     _items.pop_back();
   }
 }
