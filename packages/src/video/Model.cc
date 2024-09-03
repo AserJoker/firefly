@@ -49,11 +49,12 @@ std::vector<core::AutoPtr<Model>> Model::load(const std::string &name) {
       workflow.push(node->mChildren[i]);
     }
   }
+  auto shader = new Shader("shader::sprite_2d");
+  core::AutoPtr _material = new Material("base");
+  _material->setShader(shader);
+  _material->setTexture("texture0", new video::Image("texture::diffuse.jpg"));
   for (auto &mesh : meshs) {
     core::AutoPtr _geometry = new Geometry();
-    core::AutoPtr _material = new Material("base");
-    _material->setShader(new Shader("shader::sprite_2d"));
-    _material->setTexture("texture0", new video::Image("texture::diffuse.jpg"));
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec2> coord[8];
     std::vector<glm::vec3> normal;
