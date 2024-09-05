@@ -9,6 +9,7 @@
 #include "video/Material.hpp"
 #include "video/Shader.hpp"
 #include <assimp/Importer.hpp>
+#include <assimp/material.h>
 #include <assimp/mesh.h>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
@@ -56,7 +57,7 @@ std::vector<core::AutoPtr<Model>> Model::load(const std::string &name) {
   for (auto &mesh : meshs) {
     core::AutoPtr _geometry = new Geometry();
     std::vector<glm::vec3> vertices;
-    std::vector<glm::vec2> coord[8];
+    std::vector<glm::vec2> coord[AI_MAX_NUMBER_OF_TEXTURECOORDS];
     std::vector<glm::vec3> normal;
     std::vector<uint32_t> indices;
     for (auto i = 0; i < mesh->mNumVertices; i++) {

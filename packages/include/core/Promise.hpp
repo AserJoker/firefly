@@ -160,7 +160,42 @@ public:
       }
     }
   }
-
+  template <class K>
+  core::AutoPtr<Promise<K>>
+  next(const std::function<core::AutoPtr<Promise<K>>(const T &value)> &fn) {
+    core::AutoPtr<Promise<K>> pro = new Promise<K>();
+    auto cb = [=](const T &value) -> void {
+      core::AutoPtr<Promise<K>> promise = pro;
+      try {
+        if constexpr (std::is_void_v<K>) {
+          fn(value);
+          promise->resolve();
+        } else {
+          core::AutoPtr<Promise<K>> resPromise = fn(value);
+          resPromise
+              ->next([=](const K &res) -> void {
+                core::AutoPtr<Promise<K>> promise = pro;
+                promise->resolve(res);
+              })
+              ->error([=](const std::string &e) -> void {
+                core::AutoPtr<Promise<K>> promise = pro;
+                promise->reject(e);
+              });
+          resPromise->error([=](const std::string &e) -> void {
+            core::AutoPtr<Promise<K>> promise = pro;
+            promise->reject(e);
+          });
+        }
+      } catch (std::exception &e) {
+        promise->reject(e.what());
+      }
+    };
+    _nexts.push_back(cb);
+    if (_status == PROMISE_STATUS::FULFILLED) {
+      cb(_value);
+    }
+    return pro;
+  }
   template <class K>
   core::AutoPtr<Promise<K>> next(const std::function<K(const T &value)> &fn) {
     core::AutoPtr<Promise<K>> pro = new Promise<K>();
