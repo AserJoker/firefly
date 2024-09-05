@@ -2,5 +2,9 @@
     "Lua.workspace.library": [
         "${workspaceFolder}/definition",
         "${workspaceFolder}/mods/*/definition"
+    ],
+    "cmake.configureArgs": [
+        "-DCMAKE_TOOLCHAIN_FILE=F:/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "-DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic"
     ]
 }

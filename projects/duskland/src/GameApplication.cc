@@ -1,7 +1,6 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
-#include "gl/BufferTarget.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_MouseDown.hpp"
@@ -39,6 +38,9 @@
 #include <glm/ext/quaternion_geometric.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
+#include <imgui.h>
+#include <imgui_impl_opengl3.h>
+#include <imgui_impl_sdl2.h>
 #include <lua.hpp>
 
 using namespace firefly;
@@ -87,6 +89,7 @@ void GameApplication::initEvent() {
 }
 void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
+
   _mouse = core::Singleton<input::Mouse>::instance();
   _keyboard = core::Singleton<input::Keyboard>::instance();
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
@@ -97,7 +100,7 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  _model = video::Model::load("model::backpack.obj");
+  _model = video::Model::load("model::model.obj");
   camera = new video::Camera(
       glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f),
       glm::vec3(0, 0, -3.0f), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
@@ -105,7 +108,7 @@ void GameApplication::onInitialize() {
   glEnable(GL_CULL_FACE);
   getWindow()->show();
 }
-
+bool show_demo_window = true;
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   static auto time = SDL_GetTicks();
@@ -155,17 +158,33 @@ void GameApplication::onMainLoop() {
     pos -= up * speed;
     camera->setPosition(pos);
   }
+  ImGui_ImplOpenGL3_NewFrame();
+  ImGui_ImplSDL2_NewFrame();
+  ImGui::NewFrame();
+
+  // 1. Show the big demo window (Most of the sample code is in
+  // ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear
+  // ImGui!).
+  if (show_demo_window)
+    ImGui::ShowDemoWindow(&show_demo_window);
+
+  // Rendering
+  ImGui::Render();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   _renderer->begin(camera);
   for (auto m : _model) {
     _renderer->draw(m);
   }
   _renderer->end();
+  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   getWindow()->present();
 }
 
 void GameApplication::onUnInitialize() {
   _script->dispose();
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplSDL2_Shutdown();
+  ImGui::DestroyContext();
   runtime::Application::onUnInitialize();
 }
 
@@ -213,7 +232,7 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
   script::Module_Event::emit(_script, "mouseDown",
                              createNumber(_script, e.getType()));
-  _mouse->captureMouse();
+  // _mouse->captureMouse();
 }
 
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {

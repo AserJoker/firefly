@@ -34,7 +34,8 @@ void Coroutine::init() {
 void Coroutine::start(const std::function<void()> &func) {
   routines.push_back({nullptr, func, true});
   auto &last = *routines.rbegin();
-  last.fiber = CreateFiber(NEO_COROUTINE_STACK_SIZE, &run, (void *)&last);
+  last.fiber = CreateFiber(NEO_COROUTINE_STACK_SIZE,
+                           (LPFIBER_START_ROUTINE)&run, (void *)&last);
 }
 void Coroutine::yield() {
   if (current == master) {

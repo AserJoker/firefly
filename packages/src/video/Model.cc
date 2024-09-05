@@ -53,7 +53,7 @@ std::vector<core::AutoPtr<Model>> Model::load(const std::string &name) {
   auto shader = new Shader("shader::sprite_2d");
   core::AutoPtr _material = new Material("base");
   _material->setShader(shader);
-  _material->setTexture("texture0", new video::Image("texture::diffuse.jpg"));
+  _material->setTexture("texture0", new video::Image("texture::container.jpg"));
   for (auto &mesh : meshs) {
     core::AutoPtr _geometry = new Geometry();
     std::vector<glm::vec3> vertices;

@@ -9,6 +9,7 @@
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_ttf.h>
+#include <imgui_impl_sdl2.h>
 
 using namespace firefly;
 using namespace firefly::runtime;
@@ -38,6 +39,7 @@ core::AutoPtr<Window> Application::getWindow() { return _window; }
 void Application::onMainLoop() {
   SDL_Event event;
   if (SDL_PollEvent(&event)) {
+    ImGui_ImplSDL2_ProcessEvent(&event);
     _eventbus->emit<Event_SDL>(event);
   }
 }
