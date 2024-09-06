@@ -27,7 +27,7 @@ public:
     listeners.push_back({.callback = [=](Event &e) -> void {
                            (const_cast<L &>(*listener).*func)((E &)e);
                          },
-                         .identity = typeid(L).name(),
+                         .identity = listener->getIdentity(),
                          .enable = true});
   }
   template <class L, class E> void on(L *listener, void (L::*func)(E &)) {
@@ -36,16 +36,29 @@ public:
     listeners.push_back({.callback = [=](Event &e) -> void {
                            (const_cast<L &>(*listener).*func)((E &)e);
                          },
-                         .identity = typeid(L).name(),
+                         .identity = listener->getIdentity(),
                          .enable = true});
   }
 
-  template <class L, class E> void off() {
+  template <class L, class E> void off(const core::AutoPtr<L> &listener) {
     std::string type = typeid(E).name();
     if (_listeners.contains(type)) {
       auto &listeners = _listeners.at(type);
       for (auto it = listeners.begin(); it != listeners.end(); it++) {
-        if (it->identity == typeid(E).name()) {
+        if (it->identity == listener->getIdentity()) {
+          it->enable = false;
+          return;
+        }
+      }
+    }
+  }
+
+  template <class L, class E> void off(L *listener) {
+    std::string type = typeid(E).name();
+    if (_listeners.contains(type)) {
+      auto &listeners = _listeners.at(type);
+      for (auto it = listeners.begin(); it != listeners.end(); it++) {
+        if (it->identity == listener->getIdentity()) {
           it->enable = false;
           return;
         }
