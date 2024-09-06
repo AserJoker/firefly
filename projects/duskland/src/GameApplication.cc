@@ -49,7 +49,7 @@ float yaw = 90;
 core::AutoPtr<video::Material> _material;
 
 core::AutoPtr<video::Camera> camera;
-std::vector<core::AutoPtr<video::Model>> _model;
+std::unordered_map<std::string, core::AutoPtr<video::Model>> _model;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -98,7 +98,7 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  _model = video::Model::load("model::model.obj");
+  _model = video::Model::load("model::backpack.obj");
   camera = new video::Camera(
       glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f),
       glm::vec3(0, 0, -3.0f), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
@@ -170,7 +170,7 @@ void GameApplication::onMainLoop() {
   ImGui::Render();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   _renderer->begin(camera);
-  for (auto m : _model) {
+  for (auto [_, m] : _model) {
     _renderer->draw(m);
   }
   _renderer->end();

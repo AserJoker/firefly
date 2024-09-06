@@ -58,7 +58,9 @@ std::vector<std::string> Media::resolve(const std::string &name) {
       tmp = tmp.substr(pos + 2);
       filepath.append(part);
     }
-    result.push_back(filepath.string());
+    if (std::filesystem::exists(filepath)) {
+      result.push_back(filepath.string());
+    }
   }
   return result;
 }

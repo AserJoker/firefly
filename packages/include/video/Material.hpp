@@ -4,6 +4,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "video/Image.hpp"
+#include <glm/fwd.hpp>
 #include <unordered_map>
 namespace firefly::video {
 class Material : public core::Object {
@@ -11,6 +12,13 @@ private:
   core::AutoPtr<Shader> _shader;
   std::string _type;
   std::unordered_map<std::string, core::AutoPtr<Image>> _textures;
+  
+  glm::vec4 _ambient;
+  glm::vec4 _diffuse;
+  glm::vec4 _specular;
+  glm::vec4 _emissive;
+  glm::vec4 _reflective;
+  glm::vec4 _transparent;
 
   bool _alphaTest;
   bool _depthTest;
