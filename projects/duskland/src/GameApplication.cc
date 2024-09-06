@@ -30,8 +30,6 @@
 #include "video/Material.hpp"
 #include "video/Model.hpp"
 #include "video/Renderer.hpp"
-#include <SDL_scancode.h>
-#include <fmt/core.h>
 #include <fmt/format.h>
 #include <glad/glad.h>
 #include <glm/ext/matrix_clip_space.hpp>

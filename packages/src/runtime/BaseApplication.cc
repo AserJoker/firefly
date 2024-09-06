@@ -1,4 +1,5 @@
 #include "runtime/BaseApplication.hpp"
+#include "core/Coroutine.hpp"
 #include <filesystem>
 #include <iostream>
 
@@ -48,8 +49,8 @@ void BaseApplication::showHelp() {
   std::cout << _cmdline->help() << std::endl;
 }
 
-void BaseApplication::onInitialize() {}
+void BaseApplication::onInitialize() { core::Coroutine::init(); }
 
 void BaseApplication::onUnInitialize() {}
 
-void BaseApplication::onMainLoop() {}
+void BaseApplication::onMainLoop() { core::Coroutine::yield(); }
