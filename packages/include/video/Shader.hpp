@@ -1,10 +1,11 @@
 #pragma once
 #include "Constant.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Cache.hpp"
 #include "core/Object.hpp"
 #include <unordered_map>
 namespace firefly::video {
-class Shader : public core::Object {
+class Shader : public core::Object, public core::Cache<Shader> {
 private:
   std::unordered_map<std::string, std::string> _sources;
 

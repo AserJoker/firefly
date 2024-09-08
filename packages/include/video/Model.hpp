@@ -5,7 +5,7 @@
 #include "core/Object.hpp"
 #include <unordered_map>
 namespace firefly::video {
-class Model : public core::Object {
+class Model : public core::Object, public core::Cache<Model> {
 private:
   core::AutoPtr<Geometry> _geometry;
   core::AutoPtr<Material> _material;

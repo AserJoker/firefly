@@ -5,12 +5,11 @@ Material::Material(const std::string &type)
     : _type(type), _alphaTest(false), _depthTest(true), _stencilTest(false),
       _blend(false), _visible(true) {}
 const std::string &Material::getType() const { return _type; }
-const std::unordered_map<std::string, core::AutoPtr<Image>> &
+const std::unordered_map<std::string, std::string> &
 Material::getTextures() const {
   return _textures;
 }
-void Material::setTexture(const std::string &name,
-                          const core::AutoPtr<Image> &texture) {
+void Material::setTexture(const std::string &name, const std::string &texture) {
   _textures[name] = texture;
 }
 void Material::active(core::AutoPtr<Constant> &constants) const {
@@ -19,10 +18,6 @@ void Material::active(core::AutoPtr<Constant> &constants) const {
     constants->setField(name, index++);
   }
 }
-void Material::setShader(const core::AutoPtr<Shader> &shader) {
-  _shader = shader;
-}
-const core::AutoPtr<Shader> &Material::getShader() const { return _shader; }
 
 const bool &Material::isBlend() const { return _blend; }
 void Material::setBlend(const bool &value) { _blend = value; }

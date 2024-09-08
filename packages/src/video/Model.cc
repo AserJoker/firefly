@@ -42,6 +42,7 @@ static std::vector<std::string> loadMaterialTextures(const aiMaterial *mat,
 static void
 parseMaterials(std::unordered_map<std::string, core::AutoPtr<Material>> &mat,
                const aiScene *scene) {
+
   for (auto i = 0; i < scene->mNumMaterials; i++) {
     auto &mat = scene->mMaterials[i];
     aiColor3D color;
@@ -57,8 +58,94 @@ parseMaterials(std::unordered_map<std::string, core::AutoPtr<Material>> &mat,
     }
     if (mat->Get(AI_MATKEY_COLOR_TRANSPARENT, color) == AI_SUCCESS) {
     }
-    float opacity;
-    if (mat->Get(AI_MATKEY_OPACITY, opacity) == AI_SUCCESS) {
+    float fvalue;
+    if (mat->Get(AI_MATKEY_REFLECTIVITY, fvalue) == AI_SUCCESS) {
+    }
+    int ivalue;
+    if (mat->Get(AI_MATKEY_ENABLE_WIREFRAME, ivalue) == AI_SUCCESS) {
+    }
+    if (mat->Get(AI_MATKEY_TWOSIDED, ivalue) == AI_SUCCESS) {
+    }
+    if (mat->Get(AI_MATKEY_BLEND_FUNC, ivalue) == AI_SUCCESS) {
+    }
+    if (mat->Get(AI_MATKEY_OPACITY, fvalue) == AI_SUCCESS) {
+    }
+    if (mat->Get(AI_MATKEY_SHININESS, fvalue) == AI_SUCCESS) {
+    }
+    if (mat->Get(AI_MATKEY_SHININESS_STRENGTH, fvalue) == AI_SUCCESS) {
+    }
+    if (mat->Get(AI_MATKEY_REFRACTI, fvalue) == AI_SUCCESS) {
+    }
+    aiString svalue;
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_DIFFUSE); i++) {
+      mat->GetTexture(aiTextureType_DIFFUSE, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_SPECULAR); i++) {
+      mat->GetTexture(aiTextureType_SPECULAR, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_AMBIENT); i++) {
+      mat->GetTexture(aiTextureType_AMBIENT, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_EMISSIVE); i++) {
+      mat->GetTexture(aiTextureType_EMISSIVE, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_HEIGHT); i++) {
+      mat->GetTexture(aiTextureType_HEIGHT, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_NORMALS); i++) {
+      mat->GetTexture(aiTextureType_NORMALS, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_SHININESS); i++) {
+      mat->GetTexture(aiTextureType_SHININESS, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_OPACITY); i++) {
+      mat->GetTexture(aiTextureType_OPACITY, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_DISPLACEMENT);
+         i++) {
+      mat->GetTexture(aiTextureType_DISPLACEMENT, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_LIGHTMAP); i++) {
+      mat->GetTexture(aiTextureType_LIGHTMAP, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_REFLECTION); i++) {
+
+      mat->GetTexture(aiTextureType_REFLECTION, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_BASE_COLOR); i++) {
+      mat->GetTexture(aiTextureType_BASE_COLOR, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_NORMAL_CAMERA);
+         i++) {
+      mat->GetTexture(aiTextureType_NORMAL_CAMERA, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_EMISSION_COLOR);
+         i++) {
+      mat->GetTexture(aiTextureType_EMISSION_COLOR, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_METALNESS); i++) {
+      mat->GetTexture(aiTextureType_METALNESS, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_DIFFUSE_ROUGHNESS);
+         i++) {
+      mat->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_AMBIENT_OCCLUSION);
+         i++) {
+      mat->GetTexture(aiTextureType_AMBIENT_OCCLUSION, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_SHEEN); i++) {
+      mat->GetTexture(aiTextureType_SHEEN, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_CLEARCOAT); i++) {
+      mat->GetTexture(aiTextureType_CLEARCOAT, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_TRANSMISSION);
+         i++) {
+      mat->GetTexture(aiTextureType_TRANSMISSION, i, &svalue);
+    }
+    for (auto i = 0; i < mat->GetTextureCount(aiTextureType_UNKNOWN); i++) {
+      mat->GetTexture(aiTextureType_UNKNOWN, i, &svalue);
     }
   }
 }

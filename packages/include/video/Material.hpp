@@ -2,17 +2,17 @@
 #include "Constant.hpp"
 #include "Shader.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Cache.hpp"
 #include "core/Object.hpp"
 #include "video/Image.hpp"
 #include <glm/fwd.hpp>
 #include <unordered_map>
 namespace firefly::video {
-class Material : public core::Object {
+class Material : public core::Object, public core::Cache<Material> {
 private:
-  core::AutoPtr<Shader> _shader;
   std::string _type;
-  std::unordered_map<std::string, core::AutoPtr<Image>> _textures;
-  
+  std::unordered_map<std::string, std::string> _textures;
+
   glm::vec4 _ambient;
   glm::vec4 _diffuse;
   glm::vec4 _specular;
@@ -30,12 +30,9 @@ private:
 public:
   Material(const std::string &type);
   const std::string &getType() const;
-  const std::unordered_map<std::string, core::AutoPtr<Image>> &
-  getTextures() const;
-  void setTexture(const std::string &name, const core::AutoPtr<Image> &texture);
-  void setShader(const core::AutoPtr<Shader> &shader);
+  const std::unordered_map<std::string, std::string> &getTextures() const;
+  void setTexture(const std::string &name, const std::string &texture);
   virtual void active(core::AutoPtr<Constant> &constants) const;
-  const core::AutoPtr<Shader> &getShader() const;
 
   const bool &isBlend() const;
   void setBlend(const bool &value);

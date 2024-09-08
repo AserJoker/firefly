@@ -2,13 +2,14 @@
 #include "ImageFormat.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Buffer.hpp"
+#include "core/Cache.hpp"
 #include "core/Object.hpp"
 #include "core/Pack.hpp"
 #include <glm/glm.hpp>
 #include <vector>
 namespace firefly::video {
 using ImageUpdateList = core::Pack<std::vector<glm::ivec4>>;
-class Image : public core::Object {
+class Image : public core::Object, public core::Cache<Image> {
 private:
   core::AutoPtr<core::Buffer> _data;
   uint32_t _width;

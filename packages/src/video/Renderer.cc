@@ -21,7 +21,10 @@
 #include "video/UpdateRangeList.hpp"
 using namespace firefly;
 using namespace firefly::video;
-Renderer::Renderer() { _constants = new Constant(); }
+Renderer::Renderer() {
+  _constants = new Constant();
+  _shader = Shader::get("standard", "standard");
+}
 void Renderer::drawGeomeory(const core::AutoPtr<Geometry> &geometry) {
   auto &attributes = geometry->getAttributes();
   auto &indices = geometry->getIndices();
@@ -147,14 +150,13 @@ void Renderer::setShader(const core::AutoPtr<Shader> &shader) {
   }
   if (_constants != nullptr) {
     auto bitmap = _constants->getMetadata("video::bitmap").cast<core::Bitmap>();
-    auto old = shader->getMetadata("video::constants");
-    if (old != _constants) {
+    if (shader != _shader) {
       program->use();
     }
     for (auto &[name, field] : _constants->getFields()) {
       auto type = _constants->getFieldType(name);
       if (bitmap->check(name) || type == CONSTANT_TYPE::BLOCK ||
-          _constants != old) {
+          shader != _shader) {
         switch (type) {
         case CONSTANT_TYPE::BOOL:
           program->setUniform(name, std::any_cast<bool>(field));
@@ -262,12 +264,13 @@ void Renderer::setShader(const core::AutoPtr<Shader> &shader) {
       }
     }
     bitmap->clear();
-    if (old != _constants) {
-      shader->setMetadata("video::constants", _constants);
+    if (shader != _shader) {
+      _shader = shader;
     }
   }
 }
 
+core::AutoPtr<Shader> &Renderer::geShader() { return _shader; }
 void Renderer::setTexture2D(const core::AutoPtr<Image> &image,
                             const uint32_t &index) {
   auto tex = image->getMetadata("gl::texture").cast<gl::Texture2D>();
@@ -325,12 +328,11 @@ void Renderer::setTexture2D(const core::AutoPtr<Image> &image,
 
 void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   material->active(_constants);
-  auto &shader = material->getShader();
-  setShader(shader);
+  setShader(_shader);
   auto &textures = material->getTextures();
   auto index = 0;
   for (auto &[_, texture] : textures) {
-    setTexture2D(texture, index++);
+    setTexture2D(Image::get(texture, texture), index++);
   }
 
   if (material->isDepthTest()) {
