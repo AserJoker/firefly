@@ -16,15 +16,13 @@
 #include "video/Camera.hpp"
 #include "video/Constant.hpp"
 #include "video/Geometry.hpp"
+#include "video/Image.hpp"
 #include "video/RenderObject.hpp"
 #include "video/Shader.hpp"
 #include "video/UpdateRangeList.hpp"
 using namespace firefly;
 using namespace firefly::video;
-Renderer::Renderer() {
-  _constants = new Constant();
-  _shader = Shader::get("standard", "standard");
-}
+Renderer::Renderer() { _constants = new Constant(); }
 void Renderer::drawGeomeory(const core::AutoPtr<Geometry> &geometry) {
   auto &attributes = geometry->getAttributes();
   auto &indices = geometry->getIndices();
@@ -148,15 +146,131 @@ void Renderer::setShader(const core::AutoPtr<Shader> &shader) {
     }
     program->setVersion(shader->getVersion());
   }
-  if (_constants != nullptr) {
-    auto bitmap = _constants->getMetadata("video::bitmap").cast<core::Bitmap>();
-    if (shader != _shader) {
-      program->use();
+
+  if (shader != _shader) {
+    _shader = shader;
+    program->use();
+    syncConstats(true);
+  }
+}
+void Renderer::setTexture2D(const core::AutoPtr<Image> &image,
+                            const uint32_t &index) {
+  auto tex = image->getMetadata("gl::texture").cast<gl::Texture2D>();
+  if (!tex) {
+    tex = new gl::Texture2D();
+    gl::PIXEL_FORMAT fmt;
+    switch (image->getFormat()) {
+    case IMAGE_FORMAT::RGB:
+      fmt = gl::PIXEL_FORMAT::RGB;
+      break;
+    case IMAGE_FORMAT::RGBA:
+      fmt = gl::PIXEL_FORMAT::RGBA;
+      break;
+    case IMAGE_FORMAT::GRAY:
+      fmt = gl::PIXEL_FORMAT::RED;
+      break;
     }
+    tex->setImage(0, fmt, image->getWidth(), image->getHeight(), fmt,
+                  gl::DATA_TYPE::UNSIGNED_BYTE, image->getData()->getData());
+    tex->generateMipmap();
+    tex->setMinifyingFilter(gl::TEXTURE_FILTER::LINEAR);
+    tex->setMagnificationFilter(gl::TEXTURE_FILTER::LINEAR);
+    image->setMetadata("gl::texture", tex);
+    auto updateRangeList =
+        image->getMetadata("video::update_range_list").cast<ImageUpdateList>();
+    updateRangeList->getData().clear();
+    tex->setVersion(image->getVersion());
+  }
+  if (tex->getVersion() != image->getVersion()) {
+    auto updateRangeList =
+        image->getMetadata("video::update_range_list").cast<ImageUpdateList>();
+    gl::PIXEL_FORMAT fmt;
+    switch (image->getFormat()) {
+    case IMAGE_FORMAT::RGB:
+      fmt = gl::PIXEL_FORMAT::RGB;
+      break;
+    case IMAGE_FORMAT::RGBA:
+      fmt = gl::PIXEL_FORMAT::RGBA;
+      break;
+    case IMAGE_FORMAT::GRAY:
+      fmt = gl::PIXEL_FORMAT::RED;
+      break;
+    }
+    for (auto range : updateRangeList->getData()) {
+      auto buf = image->read(range.x, range.y, range.z, range.w);
+      tex->setSubImage(0, range.x, range.y, range.z, range.w, fmt,
+                       gl::DATA_TYPE::UNSIGNED_BYTE, buf->getData());
+    }
+    updateRangeList->getData().clear();
+    tex->setVersion(image->getVersion());
+  }
+  glActiveTexture(GL_TEXTURE0 + index);
+  gl::Texture2D::bind(tex);
+}
+core::AutoPtr<Shader> &Renderer::geShader() { return _shader; }
+void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
+  material->active(_constants);
+  auto textures = material->getTextures();
+  auto index = 0;
+  for (auto &[_, texture] : textures) {
+    auto path = fmt::format("texture::{}", texture.path);
+    setTexture2D(Image::get(path, path), index++);
+  }
+
+  if (material->isDepthTest()) {
+    glEnable(GL_DEPTH_TEST);
+  } else {
+    glDisable(GL_DEPTH_TEST);
+  }
+
+  if (material->isStencilTest()) {
+    glEnable(GL_STENCIL_TEST);
+  } else {
+    glDisable(GL_STENCIL_TEST);
+  }
+
+  if (material->isAlphaTest()) {
+    glEnable(GL_ALPHA_TEST);
+  } else {
+    glDisable(GL_ALPHA_TEST);
+  }
+}
+const core::AutoPtr<Constant> &Renderer::getConstants() const {
+  return _constants;
+}
+core::AutoPtr<Constant> &Renderer::getConstants() { return _constants; }
+void Renderer::draw(const core::AutoPtr<Material> &material,
+                    const core::AutoPtr<Geometry> &geometry) {
+  if (!material->isBlend()) {
+    _normalRenderList.push_back(new RenderObject(geometry, material));
+  } else {
+    _blendRenderList.push_back(new RenderObject(geometry, material));
+  }
+}
+void Renderer::draw(const core::AutoPtr<Model> &model) {
+  if (model->getMaterial()->isVisible()) {
+    draw(model->getMaterial(), model->getGeometry());
+  }
+}
+void Renderer::draw(const core::AutoPtr<ModelSet> &modelset) {
+  for (auto &[_, model] : modelset->getModels()) {
+    draw(model);
+  }
+  for (auto &[_, child] : modelset->getChildren()) {
+    draw(child);
+  }
+}
+void Renderer::begin(const core::AutoPtr<Camera> &camera) {
+  _constants->setField("projection", camera->getProjectionMatrix());
+  _constants->setField("view", camera->getViewMatrix());
+}
+void Renderer::syncConstats(bool force = false) {
+  if (_constants != nullptr) {
+    auto program = _shader->getMetadata("gl::program").cast<gl::Program>();
+    auto bitmap = _constants->getMetadata("video::bitmap").cast<core::Bitmap>();
     for (auto &[name, field] : _constants->getFields()) {
       auto type = _constants->getFieldType(name);
-      if (bitmap->check(name) || type == CONSTANT_TYPE::BLOCK ||
-          shader != _shader) {
+      if (force || bitmap->check(name) || type == CONSTANT_TYPE::BLOCK) {
         switch (type) {
         case CONSTANT_TYPE::BOOL:
           program->setUniform(name, std::any_cast<bool>(field));
@@ -264,117 +378,13 @@ void Renderer::setShader(const core::AutoPtr<Shader> &shader) {
       }
     }
     bitmap->clear();
-    if (shader != _shader) {
-      _shader = shader;
-    }
   }
-}
-
-core::AutoPtr<Shader> &Renderer::geShader() { return _shader; }
-void Renderer::setTexture2D(const core::AutoPtr<Image> &image,
-                            const uint32_t &index) {
-  auto tex = image->getMetadata("gl::texture").cast<gl::Texture2D>();
-  if (!tex) {
-    tex = new gl::Texture2D();
-    gl::PIXEL_FORMAT fmt;
-    switch (image->getFormat()) {
-    case IMAGE_FORMAT::RGB:
-      fmt = gl::PIXEL_FORMAT::RGB;
-      break;
-    case IMAGE_FORMAT::RGBA:
-      fmt = gl::PIXEL_FORMAT::RGBA;
-      break;
-    case IMAGE_FORMAT::GRAY:
-      fmt = gl::PIXEL_FORMAT::RED;
-      break;
-    }
-    tex->setImage(0, fmt, image->getWidth(), image->getHeight(), fmt,
-                  gl::DATA_TYPE::UNSIGNED_BYTE, image->getData()->getData());
-    tex->generateMipmap();
-    tex->setMinifyingFilter(gl::TEXTURE_FILTER::LINEAR);
-    tex->setMagnificationFilter(gl::TEXTURE_FILTER::LINEAR);
-    image->setMetadata("gl::texture", tex);
-    auto updateRangeList =
-        image->getMetadata("video::update_range_list").cast<ImageUpdateList>();
-    updateRangeList->getData().clear();
-    tex->setVersion(image->getVersion());
-  }
-  if (tex->getVersion() != image->getVersion()) {
-    auto updateRangeList =
-        image->getMetadata("video::update_range_list").cast<ImageUpdateList>();
-    gl::PIXEL_FORMAT fmt;
-    switch (image->getFormat()) {
-    case IMAGE_FORMAT::RGB:
-      fmt = gl::PIXEL_FORMAT::RGB;
-      break;
-    case IMAGE_FORMAT::RGBA:
-      fmt = gl::PIXEL_FORMAT::RGBA;
-      break;
-    case IMAGE_FORMAT::GRAY:
-      fmt = gl::PIXEL_FORMAT::RED;
-      break;
-    }
-    for (auto range : updateRangeList->getData()) {
-      auto buf = image->read(range.x, range.y, range.z, range.w);
-      tex->setSubImage(0, range.x, range.y, range.z, range.w, fmt,
-                       gl::DATA_TYPE::UNSIGNED_BYTE, buf->getData());
-    }
-    updateRangeList->getData().clear();
-    tex->setVersion(image->getVersion());
-  }
-  glActiveTexture(GL_TEXTURE0 + index);
-  gl::Texture2D::bind(tex);
-}
-
-void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
-  material->active(_constants);
-  setShader(_shader);
-  auto &textures = material->getTextures();
-  auto index = 0;
-  for (auto &[_, texture] : textures) {
-    setTexture2D(Image::get(texture, texture), index++);
-  }
-
-  if (material->isDepthTest()) {
-    glEnable(GL_DEPTH_TEST);
-  } else {
-    glDisable(GL_DEPTH_TEST);
-  }
-
-  if (material->isStencilTest()) {
-    glEnable(GL_STENCIL_TEST);
-  } else {
-    glDisable(GL_STENCIL_TEST);
-  }
-
-  if (material->isAlphaTest()) {
-    glEnable(GL_ALPHA_TEST);
-  } else {
-    glDisable(GL_ALPHA_TEST);
-  }
-}
-const core::AutoPtr<Constant> &Renderer::getConstants() const {
-  return _constants;
-}
-core::AutoPtr<Constant> &Renderer::getConstants() { return _constants; }
-void Renderer::draw(const core::AutoPtr<Material> &material,
-                    const core::AutoPtr<Geometry> &geometry) {
-  if (!material->isBlend()) {
-    _normalRenderList.push_back(new RenderObject(geometry, material));
-  } else {
-    _blendRenderList.push_back(new RenderObject(geometry, material));
-  }
-}
-void Renderer::draw(const core::AutoPtr<Model> &model) {
-  if (model->getMaterial()->isVisible()) {
-    draw(model->getMaterial(), model->getGeometry());
-  }
-}
-void Renderer::begin(const core::AutoPtr<Camera> &camera) {
-  _constants->setField("projection", camera->getProjectionMatrix());
-  _constants->setField("view", camera->getViewMatrix());
 }
 void Renderer::end() {
+  if (!_shader) {
+    setShader(Shader::get("standard", "shader::standard"));
+  }
+  syncConstats();
   glDisable(GL_BLEND);
   for (auto &item : _normalRenderList) {
     setMaterial(item->getMeterial());

@@ -20,9 +20,5 @@ public:
   const std::unordered_map<std::string, core::AutoPtr<Model>> &
   getChildren() const;
   std::unordered_map<std::string, core::AutoPtr<Model>> &getChildren();
-
-public:
-  static std::unordered_map<std::string, core::AutoPtr<Model>>
-  load(const std::string &name);
 };
 } // namespace firefly::video

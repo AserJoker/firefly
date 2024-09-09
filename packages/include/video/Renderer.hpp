@@ -4,6 +4,7 @@
 #include "Geometry.hpp"
 #include "Material.hpp"
 #include "Model.hpp"
+#include "ModelSet.hpp"
 #include "RenderObject.hpp"
 #include "Shader.hpp"
 #include "core/AutoPtr.hpp"
@@ -19,6 +20,9 @@ private:
   std::vector<core::AutoPtr<RenderObject>> _normalRenderList;
   std::vector<core::AutoPtr<RenderObject>> _blendRenderList;
 
+private:
+  void syncConstats(bool force);
+
 public:
   Renderer();
   void drawGeomeory(const core::AutoPtr<Geometry> &geometry);
@@ -32,6 +36,7 @@ public:
   void draw(const core::AutoPtr<Material> &material,
             const core::AutoPtr<Geometry> &geometry);
   void draw(const core::AutoPtr<Model> &mesh);
+  void draw(const core::AutoPtr<ModelSet> &modelset);
   void begin(const core::AutoPtr<Camera> &camera);
   void end();
 };

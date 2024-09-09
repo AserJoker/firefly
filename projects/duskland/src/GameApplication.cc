@@ -13,7 +13,6 @@
 #include "script/Value.hpp"
 #include "script/bridge/LuaBridge.hpp"
 #include "script/helper/Trait_Buffer.hpp"
-#include "script/helper/Trait_Image.hpp"
 #include "script/helper/Trait_Properties.hpp"
 #include "script/helper/Trait_Resource.hpp"
 #include "script/lib/Module_Array.hpp"
@@ -27,8 +26,7 @@
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
 #include "video/Camera.hpp"
-#include "video/Material.hpp"
-#include "video/Model.hpp"
+#include "video/ModelSet.hpp"
 #include "video/Renderer.hpp"
 #include <fmt/format.h>
 #include <glad/glad.h>
@@ -46,10 +44,8 @@ using namespace duskland;
 float pitch = 0;
 float yaw = 90;
 
-core::AutoPtr<video::Material> _material;
-
 core::AutoPtr<video::Camera> camera;
-std::unordered_map<std::string, core::AutoPtr<video::Model>> _model;
+core::AutoPtr<video::ModelSet> modelSet;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -59,7 +55,6 @@ void GameApplication::initScript() {
   script::Trait_Buffer::initialize(_script);
   script::Trait_Resource::initialize(_script);
   script::Trait_Properties::initialize(_script);
-  script::Trait_Image::initialize(_script);
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);
   script::Module_Event::open(_script);
@@ -98,7 +93,7 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  _model = video::Model::load("model::backpack.obj");
+  modelSet = video::ModelSet::get("backpack.obj", "model::backpack.obj");
   camera = new video::Camera(
       glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f),
       glm::vec3(0, 0, -3.0f), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
@@ -156,25 +151,23 @@ void GameApplication::onMainLoop() {
     pos -= up * speed;
     camera->setPosition(pos);
   }
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplSDL2_NewFrame();
-  ImGui::NewFrame();
+  // ImGui_ImplOpenGL3_NewFrame();
+  // ImGui_ImplSDL2_NewFrame();
+  // ImGui::NewFrame();
 
   // 1. Show the big demo window (Most of the sample code is in
   // ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear
   // ImGui!).
-  if (show_demo_window)
-    ImGui::ShowDemoWindow(&show_demo_window);
+  // if (show_demo_window)
+  //   ImGui::ShowDemoWindow(&show_demo_window);
 
   // Rendering
-  ImGui::Render();
+  // ImGui::Render();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   _renderer->begin(camera);
-  for (auto [_, m] : _model) {
-    _renderer->draw(m);
-  }
+  _renderer->draw(modelSet);
   _renderer->end();
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+  // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   getWindow()->present();
 }
 
@@ -230,7 +223,7 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
   script::Module_Event::emit(_script, "mouseDown",
                              createNumber(_script, e.getType()));
-  // _mouse->captureMouse();
+  _mouse->captureMouse();
 }
 
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {

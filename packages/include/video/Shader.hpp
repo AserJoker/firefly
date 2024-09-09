@@ -1,6 +1,4 @@
 #pragma once
-#include "Constant.hpp"
-#include "core/AutoPtr.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
 #include <unordered_map>
@@ -19,7 +17,5 @@ public:
   Shader(const std::unordered_map<std::string, std::string> &sources);
   void setSource(const std::string &name, const std::string &source);
   const std::unordered_map<std::string, std::string> &getSources() const;
-  core::AutoPtr<Constant> &getConstants();
-  const core::AutoPtr<Constant> &getConstants() const;
 };
 }; // namespace firefly::video
