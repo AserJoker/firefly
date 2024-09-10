@@ -293,7 +293,7 @@ void Database::loadFromXML(const core::AutoPtr<core::Buffer> &buffer) {
                 for (auto &c : value) {
                   if (c == ',') {
                     if (!item.empty()) {
-                      val.push_back(strtoimax(item.c_str(), &end, 10));
+                      val.push_back((int)strtoimax(item.c_str(), &end, 10));
                     }
                     item.clear();
                   } else {
@@ -301,7 +301,7 @@ void Database::loadFromXML(const core::AutoPtr<core::Buffer> &buffer) {
                   }
                 }
                 if (!item.empty()) {
-                  val.push_back(strtoimax(item.c_str(), &end, 10));
+                  val.push_back((int)strtoimax(item.c_str(), &end, 10));
                 }
                 query[name] = new Value(val);
               } break;

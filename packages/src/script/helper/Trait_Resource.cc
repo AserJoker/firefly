@@ -9,9 +9,9 @@ using namespace firefly::script;
 FUNC_DEF(Trait_Resource::read) {
   auto self = args[0];
   auto resource = self->getOpaque().cast<runtime::Resource>();
-  auto size = 0;
+  uint32_t size = 0;
   if (args.size() > 1) {
-    size = args[1]->toNumber(ctx);
+    size = (uint32_t)args[1]->toNumber(ctx);
   }
   auto buffer = resource->read(size);
   return {Trait_Buffer::create(ctx, buffer)};

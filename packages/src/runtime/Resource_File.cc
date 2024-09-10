@@ -21,13 +21,13 @@ Resource_File::Resource_File(const std::string &filepath) {
   }
 }
 Resource_File::~Resource_File() { _file.close(); }
-core::AutoPtr<core::Buffer> Resource_File::read(const size_t &size) {
+core::AutoPtr<core::Buffer> Resource_File::read(const uint32_t &size) {
   if (!size) {
     return readAll();
   }
-  size_t pos = _file.tellg();
+  uint32_t pos = (uint32_t)_file.tellg();
   _file.seekg(0, std::ios::end);
-  size_t end = _file.tellg();
+  uint32_t end = (uint32_t)_file.tellg();
   _file.seekg(pos, std::ios::beg);
   if (end - pos == 0) {
     return new core::Buffer(0);
@@ -46,9 +46,9 @@ void Resource_File::write(const core::AutoPtr<core::Buffer> &buffer) {
   _file.write((char *)buf, size);
 }
 core::AutoPtr<core::Buffer> Resource_File::readAll() {
-  auto pos = _file.tellg();
+  uint32_t pos = (uint32_t)_file.tellg();
   _file.seekg(0, std::ios::end);
-  auto end = _file.tellg();
+  uint32_t end = (uint32_t)_file.tellg();
   if (end - pos == 0) {
     return new core::Buffer(0);
   }

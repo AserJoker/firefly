@@ -1,6 +1,5 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Bitmap.hpp"
 #include "exception/Exception.hpp"
 #include "gl/Buffer.hpp"
 #include "gl/BufferTarget.hpp"
@@ -31,7 +30,7 @@ void Renderer::drawGeomeory(const core::AutoPtr<Geometry> &geometry) {
       glBuffer = new gl::Buffer(attribute->isDynamic()
                                     ? gl::BUFFER_USAGE::DYNAMIC_DRAW
                                     : gl::BUFFER_USAGE::STATIC_DRAW);
-      glBuffer->setData(attribute->getBuffer()->getSize(),
+      glBuffer->setData((uint32_t)attribute->getBuffer()->getSize(),
                         attribute->getBuffer()->getData());
       attribute->setMetadata("gl::buffer", glBuffer);
       glBuffer->setVersion(glBuffer->getVersion());
@@ -221,117 +220,113 @@ void Renderer::begin(const core::AutoPtr<Camera> &camera) {
 void Renderer::syncConstats(bool force = false) {
   if (_constants != nullptr) {
     auto program = _shader->getMetadata("gl::program").cast<gl::Program>();
-    auto bitmap = _constants->getMetadata("video::bitmap").cast<core::Bitmap>();
     for (auto &[name, field] : _constants->getFields()) {
       auto type = _constants->getFieldType(name);
-      if (force || bitmap->check(name) || type == CONSTANT_TYPE::BLOCK) {
-        switch (type) {
-        case CONSTANT_TYPE::BOOL:
-          program->setUniform(name, std::any_cast<bool>(field));
-          break;
-        case CONSTANT_TYPE::INT:
-          program->setUniform(name, std::any_cast<int>(field));
-          break;
-        case CONSTANT_TYPE::IVEC2:
-          program->setUniform(name, std::any_cast<glm::ivec2>(field));
-          break;
-        case CONSTANT_TYPE::IVEC3:
-          program->setUniform(name, std::any_cast<glm::ivec3>(field));
-          break;
-        case CONSTANT_TYPE::IVEC4:
-          program->setUniform(name, std::any_cast<glm::ivec4>(field));
-          break;
-        case CONSTANT_TYPE::UINT:
-          program->setUniform(name, std::any_cast<uint32_t>(field));
-          break;
-        case CONSTANT_TYPE::UIVEC2:
-          program->setUniform(name, std::any_cast<glm::uvec2>(field));
-          break;
-        case CONSTANT_TYPE::UIVEC3:
-          program->setUniform(name, std::any_cast<glm::uvec3>(field));
-          break;
-        case CONSTANT_TYPE::UIVEC4:
-          program->setUniform(name, std::any_cast<glm::uvec4>(field));
-          break;
-        case CONSTANT_TYPE::FLOAT:
-          program->setUniform(name, std::any_cast<float>(field));
-          break;
-        case CONSTANT_TYPE::VEC2:
-          program->setUniform(name, std::any_cast<glm::vec2>(field));
-          break;
-        case CONSTANT_TYPE::VEC3:
-          program->setUniform(name, std::any_cast<glm::vec3>(field));
-          break;
-        case CONSTANT_TYPE::VEC4:
-          program->setUniform(name, std::any_cast<glm::vec4>(field));
-          break;
-        case CONSTANT_TYPE::DOUBLE:
-          program->setUniform(name, std::any_cast<double>(field));
-          break;
-        case CONSTANT_TYPE::DVEC2:
-          program->setUniform(name, std::any_cast<glm::dvec2>(field));
-          break;
-        case CONSTANT_TYPE::DVEC3:
-          program->setUniform(name, std::any_cast<glm::dvec3>(field));
-          break;
-        case CONSTANT_TYPE::DVEC4:
-          program->setUniform(name, std::any_cast<glm::dvec4>(field));
-          break;
-        case CONSTANT_TYPE::MATRIX2:
-          program->setUniform(name, std::any_cast<glm::mat2>(field));
-          break;
-        case CONSTANT_TYPE::MATRIX2x3:
-          program->setUniform(name, std::any_cast<glm::mat2x3>(field));
-          break;
-        case CONSTANT_TYPE::MATRIX3x2:
-          program->setUniform(name, std::any_cast<glm::mat3x2>(field));
-          break;
-        case CONSTANT_TYPE::MATRIX3:
-          program->setUniform(name, std::any_cast<glm::mat3>(field));
-          break;
-        case CONSTANT_TYPE::MATRIX3x4:
-          program->setUniform(name, std::any_cast<glm::mat3x4>(field));
-          break;
-        case CONSTANT_TYPE::MATRIX4x3:
-          program->setUniform(name, std::any_cast<glm::mat4x3>(field));
-          break;
-        case CONSTANT_TYPE::MATRIX4:
-          program->setUniform(name, std::any_cast<glm::mat4>(field));
-          break;
-        case CONSTANT_TYPE::BLOCK: {
-          auto block = std::any_cast<core::AutoPtr<ConstantBlock>>(field);
-          auto bindingName =
-              fmt::format("video::uniform_block_binding_{}", block->getIndex());
-          auto binding = program->getMetadata(bindingName);
-          if (binding != block) {
-            program->bindUniformBlock(name, block->getIndex());
-            program->setMetadata(bindingName, block);
-          }
-
-          auto buf = block->getMetadata("gl::buffer").cast<gl::Buffer>();
-          if (!buf) {
-            buf = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
-            buf->setData(block->getBuffer()->getSize(),
-                         block->getBuffer()->getData());
-            gl::Buffer::bindBase(gl::BUFFER_TARGET::UNIFORM, block->getIndex(),
-                                 buf);
-            block->setMetadata("gl::buffer", buf);
-          }
-          if (buf->getVersion() != block->getVersion()) {
-            auto range = block->getMetadata("video::update_range_list")
-                             .cast<UpdateRangeList>();
-            for (auto &[start, count] : range->getRanges()) {
-              buf->write(start, count,
-                         (char *)block->getBuffer()->getData() + start);
-            }
-            range->clear();
-            buf->setVersion(block->getVersion());
-          }
-        } break;
+      switch (type) {
+      case CONSTANT_TYPE::BOOL:
+        program->setUniform(name, std::any_cast<bool>(field));
+        break;
+      case CONSTANT_TYPE::INT:
+        program->setUniform(name, std::any_cast<int>(field));
+        break;
+      case CONSTANT_TYPE::IVEC2:
+        program->setUniform(name, std::any_cast<glm::ivec2>(field));
+        break;
+      case CONSTANT_TYPE::IVEC3:
+        program->setUniform(name, std::any_cast<glm::ivec3>(field));
+        break;
+      case CONSTANT_TYPE::IVEC4:
+        program->setUniform(name, std::any_cast<glm::ivec4>(field));
+        break;
+      case CONSTANT_TYPE::UINT:
+        program->setUniform(name, std::any_cast<uint32_t>(field));
+        break;
+      case CONSTANT_TYPE::UIVEC2:
+        program->setUniform(name, std::any_cast<glm::uvec2>(field));
+        break;
+      case CONSTANT_TYPE::UIVEC3:
+        program->setUniform(name, std::any_cast<glm::uvec3>(field));
+        break;
+      case CONSTANT_TYPE::UIVEC4:
+        program->setUniform(name, std::any_cast<glm::uvec4>(field));
+        break;
+      case CONSTANT_TYPE::FLOAT:
+        program->setUniform(name, std::any_cast<float>(field));
+        break;
+      case CONSTANT_TYPE::VEC2:
+        program->setUniform(name, std::any_cast<glm::vec2>(field));
+        break;
+      case CONSTANT_TYPE::VEC3:
+        program->setUniform(name, std::any_cast<glm::vec3>(field));
+        break;
+      case CONSTANT_TYPE::VEC4:
+        program->setUniform(name, std::any_cast<glm::vec4>(field));
+        break;
+      case CONSTANT_TYPE::DOUBLE:
+        program->setUniform(name, std::any_cast<double>(field));
+        break;
+      case CONSTANT_TYPE::DVEC2:
+        program->setUniform(name, std::any_cast<glm::dvec2>(field));
+        break;
+      case CONSTANT_TYPE::DVEC3:
+        program->setUniform(name, std::any_cast<glm::dvec3>(field));
+        break;
+      case CONSTANT_TYPE::DVEC4:
+        program->setUniform(name, std::any_cast<glm::dvec4>(field));
+        break;
+      case CONSTANT_TYPE::MATRIX2:
+        program->setUniform(name, std::any_cast<glm::mat2>(field));
+        break;
+      case CONSTANT_TYPE::MATRIX2x3:
+        program->setUniform(name, std::any_cast<glm::mat2x3>(field));
+        break;
+      case CONSTANT_TYPE::MATRIX3x2:
+        program->setUniform(name, std::any_cast<glm::mat3x2>(field));
+        break;
+      case CONSTANT_TYPE::MATRIX3:
+        program->setUniform(name, std::any_cast<glm::mat3>(field));
+        break;
+      case CONSTANT_TYPE::MATRIX3x4:
+        program->setUniform(name, std::any_cast<glm::mat3x4>(field));
+        break;
+      case CONSTANT_TYPE::MATRIX4x3:
+        program->setUniform(name, std::any_cast<glm::mat4x3>(field));
+        break;
+      case CONSTANT_TYPE::MATRIX4:
+        program->setUniform(name, std::any_cast<glm::mat4>(field));
+        break;
+      case CONSTANT_TYPE::BLOCK: {
+        auto block = std::any_cast<core::AutoPtr<ConstantBlock>>(field);
+        auto bindingName =
+            fmt::format("video::uniform_block_binding_{}", block->getIndex());
+        auto binding = program->getMetadata(bindingName);
+        if (binding != block) {
+          program->bindUniformBlock(name, block->getIndex());
+          program->setMetadata(bindingName, block);
         }
+
+        auto buf = block->getMetadata("gl::buffer").cast<gl::Buffer>();
+        if (!buf) {
+          buf = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
+          buf->setData((uint32_t)block->getBuffer()->getSize(),
+                       block->getBuffer()->getData());
+          gl::Buffer::bindBase(gl::BUFFER_TARGET::UNIFORM, block->getIndex(),
+                               buf);
+          block->setMetadata("gl::buffer", buf);
+        }
+        if (buf->getVersion() != block->getVersion()) {
+          auto range = block->getMetadata("video::update_range_list")
+                           .cast<UpdateRangeList>();
+          for (auto &[start, count] : range->getRanges()) {
+            buf->write(start, count,
+                       (char *)block->getBuffer()->getData() + start);
+          }
+          range->clear();
+          buf->setVersion(block->getVersion());
+        }
+      } break;
       }
     }
-    bitmap->clear();
   }
 }
 void Renderer::end() {

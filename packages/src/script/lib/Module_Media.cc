@@ -29,6 +29,6 @@ FUNC_DEF(Module_Media::createBuffer) {
   } else {
     auto str = args[0]->toString(ctx);
     return {Trait_Buffer::create(
-        ctx, new core::Buffer(str.size(), (void *)str.c_str()))};
+        ctx, new core::Buffer((uint32_t)str.size(), (void *)str.c_str()))};
   }
 }

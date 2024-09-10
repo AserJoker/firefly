@@ -40,4 +40,6 @@ core::AutoPtr<Value> Array::getIndex(core::AutoPtr<Script> ctx,
     }
   }
 }
-uint32_t Array::getLength(core::AutoPtr<Script> ctx) { return _items.size(); }
+uint32_t Array::getLength(core::AutoPtr<Script> ctx) {
+  return (uint32_t)_items.size();
+}

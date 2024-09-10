@@ -31,7 +31,9 @@ void Record::removeField(core::AutoPtr<Script> ctx, const std::string &name) {
     _fields.erase(name);
   }
 }
-uint32_t Record::getLength(core::AutoPtr<Script> ctx) { return _fields.size(); }
+uint32_t Record::getLength(core::AutoPtr<Script> ctx) {
+  return (uint32_t)_fields.size();
+}
 std::vector<std::string> Record::getKeys() {
   std::vector<std::string> keys;
   for (auto &[k, _] : _fields) {

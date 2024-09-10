@@ -9,7 +9,7 @@ private:
 
 public:
   void write(const core::AutoPtr<core::Buffer> &data) override;
-  core::AutoPtr<core::Buffer> read(const size_t &size) override;
+  core::AutoPtr<core::Buffer> read(const uint32_t &size) override;
   core::AutoPtr<core::Buffer> readAll();
   Resource_File(const std::string &filepath);
   ~Resource_File() override;

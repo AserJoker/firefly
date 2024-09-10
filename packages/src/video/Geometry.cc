@@ -51,7 +51,7 @@ void Geometry::computeBounding() {
     if (itemSize == 3) {
       glm::vec3 *data = (glm::vec3 *)position->getBuffer()->getData();
       auto count = position->getBuffer()->getSize() / position->getStride();
-      for (auto i = 0; i < count; i++) {
+      for (uint32_t i = 0; i < count; i++) {
         auto &item = data[i];
         _binding.left = std::min(_binding.left, item.x);
         _binding.right = std::max(_binding.right, item.x);
@@ -63,7 +63,7 @@ void Geometry::computeBounding() {
     } else if (itemSize == 2) {
       glm::vec2 *data = (glm::vec2 *)position->getBuffer()->getData();
       auto count = position->getBuffer()->getSize() / position->getStride();
-      for (auto i = 0; i < count; i++) {
+      for (uint32_t i = 0; i < count; i++) {
         auto &item = data[i];
         _binding.left = std::min(_binding.left, item.x);
         _binding.right = std::max(_binding.right, item.x);
@@ -84,7 +84,7 @@ void Geometry::computeBoundingSphere() {
     if (itemSize == 3) {
       glm::vec3 *data = (glm::vec3 *)position->getBuffer()->getData();
       auto count = position->getBuffer()->getSize() / position->getStride();
-      for (auto i = 0; i < count; i++) {
+      for (uint32_t i = 0; i < count; i++) {
         auto &item = data[i];
         auto dst = shpere.center - item;
         auto d = std::sqrt(dst.x * dst.x + dst.y * dst.y + dst.z * dst.z);
@@ -95,7 +95,7 @@ void Geometry::computeBoundingSphere() {
     } else {
       glm::vec2 *data = (glm::vec2 *)position->getBuffer()->getData();
       auto count = position->getBuffer()->getSize() / position->getStride();
-      for (auto i = 0; i < count; i++) {
+      for (uint32_t i = 0; i < count; i++) {
         auto &item = data[i];
         auto dst = glm::vec2(shpere.center) - item;
         auto d = std::sqrt(dst.x * dst.x + dst.y * dst.y);

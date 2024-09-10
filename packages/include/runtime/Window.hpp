@@ -15,10 +15,10 @@ public:
   Window(const std::string &title, int width, int height);
   void setTitle(const std::string &title);
   const std::string getTitle() const;
-  const glm::vec2 getSize() const;
-  void setSize(const glm::vec2 &size);
-  const glm::vec2 getWindowPosition() const;
-  void setWindowPosition(const glm::vec2 &pos);
+  const glm::ivec2 getSize() const;
+  void setSize(const glm::ivec2 &size);
+  const glm::ivec2 getWindowPosition() const;
+  void setWindowPosition(const glm::ivec2 &pos);
   void present();
   void setSwapInterval(int flag);
   void hide();

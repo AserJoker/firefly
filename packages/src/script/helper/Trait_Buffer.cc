@@ -9,13 +9,13 @@ FUNC_DEF(Trait_Buffer::getLength) {
   VALIDATE_ARGS(getLength, 1);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  return {ctx->createValue()->setNumber(ctx, buffer->getSize())};
+  return {ctx->createValue()->setNumber(ctx, (double)buffer->getSize())};
 }
 FUNC_DEF(Trait_Buffer::readUint8) {
   VALIDATE_ARGS(readUint8, 2);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  uint32_t offset = args[1]->toNumber(ctx);
+  uint32_t offset = (uint32_t)args[1]->toNumber(ctx);
   uint8_t *buf = (uint8_t *)buffer->getData();
   if (offset + 1 < buffer->getSize()) {
     return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
@@ -26,7 +26,7 @@ FUNC_DEF(Trait_Buffer::readUint16) {
   VALIDATE_ARGS(readUint16, 2);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  uint32_t offset = args[1]->toNumber(ctx);
+  uint32_t offset = (uint32_t)args[1]->toNumber(ctx);
   uint16_t *buf = (uint16_t *)buffer->getData();
   if ((offset + 1) * 2 < buffer->getSize()) {
     return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
@@ -37,7 +37,7 @@ FUNC_DEF(Trait_Buffer::readUint32) {
   VALIDATE_ARGS(readUint32, 2);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  uint32_t offset = args[1]->toNumber(ctx);
+  uint32_t offset = (uint32_t)args[1]->toNumber(ctx);
   uint32_t *buf = (uint32_t *)buffer->getData();
   if ((offset + 1) * 4 < buffer->getSize()) {
     return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
@@ -48,7 +48,7 @@ FUNC_DEF(Trait_Buffer::readFloat) {
   VALIDATE_ARGS(readFloat, 2);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  uint32_t offset = args[1]->toNumber(ctx);
+  uint32_t offset = (uint32_t)args[1]->toNumber(ctx);
   float *buf = (float *)buffer->getData();
   if ((offset + 1) * 4 < buffer->getSize()) {
     return {ctx->createValue()->setNumber(ctx, *(buf + offset))};
@@ -59,7 +59,7 @@ FUNC_DEF(Trait_Buffer::writeUint8) {
   VALIDATE_ARGS(writeUint8, 3);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  uint32_t offset = args[1]->toNumber(ctx);
+  uint32_t offset =(uint32_t) args[1]->toNumber(ctx);
   auto value = args[2]->toNumber(ctx);
   if (value >= 0xff || value <= 0) {
     throw exception::ValidateException(
@@ -76,7 +76,7 @@ FUNC_DEF(Trait_Buffer::writeUint16) {
   VALIDATE_ARGS(writeUint16, 3);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  uint32_t offset = args[1]->toNumber(ctx);
+  uint32_t offset = (uint32_t)args[1]->toNumber(ctx);
   auto value = args[2]->toNumber(ctx);
   if (value >= 0xffff || value <= 0) {
     throw exception::ValidateException(
@@ -93,7 +93,7 @@ FUNC_DEF(Trait_Buffer::writeUint32) {
   VALIDATE_ARGS(writeUint32, 3);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  uint32_t offset = args[1]->toNumber(ctx);
+  uint32_t offset = (uint32_t)args[1]->toNumber(ctx);
   auto value = args[2]->toNumber(ctx);
   if (value >= 0xffffffff || value <= 0) {
     throw exception::ValidateException(
@@ -110,7 +110,7 @@ FUNC_DEF(Trait_Buffer::writeFloat) {
   VALIDATE_ARGS(writeFloat, 3);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  uint32_t offset = args[1]->toNumber(ctx);
+  uint32_t offset = (uint32_t)args[1]->toNumber(ctx);
   auto value = args[2]->toNumber(ctx);
   float *buf = (float *)buffer->getData();
   if ((offset + 1) * 4 < buffer->getSize()) {
@@ -125,7 +125,7 @@ FUNC_DEF(Trait_Buffer::toUint8Array) {
   auto buffer = self->getOpaque().cast<core::Buffer>();
   uint8_t *buf = (uint8_t *)buffer->getData();
   auto result = ctx->createValue()->setArray(ctx);
-  for (auto i = 0; i < buffer->getSize(); i++) {
+  for (uint32_t i = 0; i < buffer->getSize(); i++) {
     result->setIndex(ctx, i, ctx->createValue()->setNumber(ctx, buf[i]));
   }
   return {result};
@@ -140,7 +140,7 @@ FUNC_DEF(Trait_Buffer::toUint16Array) {
   }
   uint16_t *buf = (uint16_t *)buffer->getData();
   auto result = ctx->createValue()->setArray(ctx);
-  for (auto i = 0; i < buffer->getSize() / 2; i++) {
+  for (uint32_t i = 0; i < buffer->getSize() / 2; i++) {
     result->setIndex(ctx, i, ctx->createValue()->setNumber(ctx, buf[i]));
   }
   return {result};
@@ -155,7 +155,7 @@ FUNC_DEF(Trait_Buffer::toUint32Array) {
   }
   uint32_t *buf = (uint32_t *)buffer->getData();
   auto result = ctx->createValue()->setArray(ctx);
-  for (auto i = 0; i < buffer->getSize() / 4; i++) {
+  for (uint32_t i = 0; i < buffer->getSize() / 4; i++) {
     result->setIndex(ctx, i, ctx->createValue()->setNumber(ctx, buf[i]));
   }
   return {result};
@@ -171,7 +171,7 @@ FUNC_DEF(Trait_Buffer::toFloatArray) {
   }
   float *buf = (float *)buffer->getData();
   auto result = ctx->createValue()->setArray(ctx);
-  for (auto i = 0; i < buffer->getSize() / 4; i++) {
+  for (uint32_t i = 0; i < buffer->getSize() / 4; i++) {
     result->setIndex(ctx, i, ctx->createValue()->setNumber(ctx, buf[i]));
   }
   return {result};

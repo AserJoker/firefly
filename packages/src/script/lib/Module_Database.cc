@@ -31,7 +31,7 @@ createQuery(core::AutoPtr<Script> ctx,
       case database::Field::TYPE::STRING: {
         std::vector<std::string> value;
         auto array = source->getField(ctx, key);
-        for (auto i = 0; i < array->getLength(ctx); i++) {
+        for (uint32_t i = 0; i < array->getLength(ctx); i++) {
           value.push_back(array->getIndex(ctx, i)->toString(ctx));
         }
         query[meta.getName()] = new database::Value(value);
@@ -39,7 +39,7 @@ createQuery(core::AutoPtr<Script> ctx,
       case database::Field::TYPE::INTEGER: {
         std::vector<int32_t> value;
         auto array = source->getField(ctx, key);
-        for (auto i = 0; i < array->getLength(ctx); i++) {
+        for (uint32_t i = 0; i < array->getLength(ctx); i++) {
           value.push_back((int32_t)array->getIndex(ctx, i)->toNumber(ctx));
         }
         query[meta.getName()] = new database::Value(value);
@@ -47,7 +47,7 @@ createQuery(core::AutoPtr<Script> ctx,
       case database::Field::TYPE::NUMBER: {
         std::vector<double> value;
         auto array = source->getField(ctx, key);
-        for (auto i = 0; i < array->getLength(ctx); i++) {
+        for (uint32_t i = 0; i < array->getLength(ctx); i++) {
           value.push_back(array->getIndex(ctx, i)->toNumber(ctx));
         }
         query[meta.getName()] = new database::Value(value);
@@ -55,7 +55,7 @@ createQuery(core::AutoPtr<Script> ctx,
       case database::Field::TYPE::BOOLEAN: {
         std::vector<bool> value;
         auto array = source->getField(ctx, key);
-        for (auto i = 0; i < array->getLength(ctx); i++) {
+        for (uint32_t i = 0; i < array->getLength(ctx); i++) {
           value.push_back(array->getIndex(ctx, i)->toBoolean(ctx));
         }
         query[meta.getName()] = new database::Value(value);

@@ -9,7 +9,7 @@ std::unordered_map<std::string, std::function<core::AutoPtr<Table>(
     Table::_drivers;
 
 Table::Table(const core::AutoPtr<Metadata> &metadata) : _metadata(metadata) {}
-const uint32_t Table::getLength() const { return _records.size(); }
+const uint32_t Table::getLength() const { return (uint32_t)_records.size(); }
 const core::AutoPtr<Metadata> &Table::getMetadata() const { return _metadata; }
 core::AutoPtr<Record> Table::getRecord(const uint32_t &index) {
   if (index >= _records.size()) {
@@ -58,7 +58,7 @@ core::AutoPtr<Record> Table::insertOne(core::AutoPtr<Record> query) {
         fmt::format("Duplicate primary key: '{}'", key));
   }
   _records.push_back(query);
-  _indices[key] = _records.size() - 1;
+  _indices[key] = (uint32_t)_records.size() - 1;
   return query;
 }
 core::AutoPtr<Record> Table::updateOne(core::AutoPtr<Record> query) {

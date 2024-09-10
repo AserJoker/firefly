@@ -66,21 +66,21 @@ void Window::present() { SDL_GL_SwapWindow(_window); }
 void Window::setSwapInterval(int flag) {
   SDL_ASSERT(SDL_GL_SetSwapInterval(flag) >= 0);
 }
-const glm::vec2 Window::getSize() const {
+const glm::ivec2 Window::getSize() const {
   int w, h;
   SDL_GetWindowSize(_window, &w, &h);
   return {w, h};
 }
-void Window::setSize(const glm::vec2 &size) {
+void Window::setSize(const glm::ivec2 &size) {
   SDL_SetWindowSize(_window, size.x, size.y);
 }
 void Window::hide() { SDL_HideWindow(_window); }
 void Window::show() { SDL_ShowWindow(_window); }
-const glm::vec2 Window::getWindowPosition() const {
+const glm::ivec2 Window::getWindowPosition() const {
   int x, y;
   SDL_GetWindowPosition(_window, &x, &y);
   return {x, y};
 }
-void Window::setWindowPosition(const glm::vec2 &pos) {
+void Window::setWindowPosition(const glm::ivec2 &pos) {
   SDL_SetWindowSize(_window, pos.x, pos.y);
 }

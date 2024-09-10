@@ -28,7 +28,7 @@ int LuaBridge::luaFuncCall(lua_State *state) {
 int LuaBridge::luaFuncGC(lua_State *state) {
   auto obj = lua_gettop(state);
   lua_getfield(state, obj, "$handle");
-  auto handle = lua_tonumber(state, -1);
+  uint32_t handle = (uint32_t)lua_tonumber(state, -1);
   if (core::Singleton<Script>::isInitialized()) {
     auto ctx = core::Singleton<Script>::instance();
     ctx->getNativeGlobal()
@@ -40,7 +40,7 @@ int LuaBridge::luaFuncGC(lua_State *state) {
 int LuaBridge::luaObjectGC(lua_State *state) {
   auto obj = lua_gettop(state);
   lua_getfield(state, obj, "$handle");
-  auto handle = lua_tonumber(state, -1);
+  uint32_t handle = (uint32_t)lua_tonumber(state, -1);
   if (core::Singleton<Script>::isInitialized()) {
     auto ctx = core::Singleton<Script>::instance();
     ctx->getNativeGlobal()
@@ -53,7 +53,7 @@ int LuaBridge::luaObjectGet(lua_State *state) {
   auto obj_idx = 1;
   auto key_idx = 2;
   lua_getfield(state, obj_idx, "$handle");
-  auto handle = lua_tonumber(state, -1);
+  uint32_t handle = (uint32_t)lua_tonumber(state, -1);
   auto ctx = core::Singleton<Script>::instance();
   auto bridge = ctx->getBridge().cast<LuaBridge>();
   auto self =
@@ -62,7 +62,8 @@ int LuaBridge::luaObjectGet(lua_State *state) {
     auto field = self->getField(ctx, lua_tostring(state, key_idx));
     bridge->dump(state, field);
   } else {
-    auto field = self->getIndex(ctx, lua_tonumber(state, key_idx) - 1);
+    auto field =
+        self->getIndex(ctx, (uint32_t)lua_tonumber(state, key_idx) - 1);
     bridge->dump(state, field);
   }
   return 1;
@@ -72,7 +73,7 @@ int LuaBridge::luaObjectSet(lua_State *state) {
   auto key_idx = 2;
   auto value_idx = 3;
   lua_getfield(state, obj_idx, "$handle");
-  auto handle = lua_tonumber(state, -1);
+  uint32_t handle = (uint32_t)lua_tonumber(state, -1);
   auto ctx = core::Singleton<Script>::instance();
   auto bridge = ctx->getBridge().cast<LuaBridge>();
   auto self =
@@ -81,14 +82,14 @@ int LuaBridge::luaObjectSet(lua_State *state) {
   if (lua_type(state, key_idx) == LUA_TSTRING) {
     self->setField(ctx, lua_tostring(state, key_idx), value);
   } else {
-    self->setIndex(ctx, lua_tonumber(state, key_idx) - 1, value);
+    self->setIndex(ctx, (uint32_t)lua_tonumber(state, key_idx) - 1, value);
   }
   return 0;
 }
 int LuaBridge::luaObjectLen(lua_State *state) {
   auto obj_idx = 1;
   lua_getfield(state, obj_idx, "$handle");
-  auto handle = lua_tonumber(state, -1);
+  uint32_t handle = (uint32_t)lua_tonumber(state, -1);
   auto ctx = core::Singleton<Script>::instance();
   auto bridge = ctx->getBridge().cast<LuaBridge>();
   auto self =
@@ -99,7 +100,7 @@ int LuaBridge::luaObjectLen(lua_State *state) {
 int LuaBridge::luaObjectNext(lua_State *state) {
   auto obj_idx = 1;
   lua_getfield(state, obj_idx, "$handle");
-  auto handle = lua_tonumber(state, -1);
+  uint32_t handle = (uint32_t)lua_tonumber(state, -1);
   auto ctx = core::Singleton<Script>::instance();
   auto bridge = ctx->getBridge().cast<LuaBridge>();
   auto self =
@@ -147,7 +148,7 @@ Value::Stack LuaBridge::funcGC(core::AutoPtr<Script> ctx, Value::Stack args) {
   }
   auto state = bridge->_state;
   auto self = args[0];
-  uint32_t handle = self->getRawField(ctx, "$handle")->toNumber(ctx);
+  uint32_t handle = (uint32_t)self->getRawField(ctx, "$handle")->toNumber(ctx);
   auto top = lua_gettop(state);
   lua_getglobal(state, "$functions");
   auto functions = lua_gettop(state);
@@ -163,7 +164,7 @@ Value::Stack LuaBridge::funcCall(core::AutoPtr<Script> ctx, Value::Stack args) {
   }
   auto state = bridge->_state;
   auto self = args[0];
-  uint32_t handle = self->getRawField(ctx, "$handle")->toNumber(ctx);
+  uint32_t handle = (uint32_t)self->getRawField(ctx, "$handle")->toNumber(ctx);
   auto top = lua_gettop(state);
   lua_getglobal(state, "$functions");
   auto functions = lua_gettop(state);
@@ -172,7 +173,7 @@ Value::Stack LuaBridge::funcCall(core::AutoPtr<Script> ctx, Value::Stack args) {
     bridge->dump(state, args[i]);
   }
   auto current = lua_gettop(state);
-  if (lua_pcall(state, args.size() - 1, LUA_MULTRET, 0)) {
+  if (lua_pcall(state, (uint32_t)args.size() - 1, LUA_MULTRET, 0)) {
     throw exception::LuaException(lua_tostring(state, -1));
   }
   auto end = lua_gettop(state);
@@ -190,7 +191,7 @@ Value::Stack LuaBridge::objectGC(core::AutoPtr<Script> ctx, Value::Stack args) {
   }
   auto state = bridge->_state;
   auto self = args[0];
-  uint32_t handle = self->getRawField(ctx, "$handle")->toNumber(ctx);
+  uint32_t handle = (uint32_t)self->getRawField(ctx, "$handle")->toNumber(ctx);
   auto top = lua_gettop(state);
   lua_getglobal(state, "$objects");
   auto objects = lua_gettop(state);
@@ -208,7 +209,7 @@ Value::Stack LuaBridge::objectGet(core::AutoPtr<Script> ctx,
   auto state = bridge->_state;
   auto self = args[0];
   auto key = args[1];
-  uint32_t handle = self->getRawField(ctx, "$handle")->toNumber(ctx);
+  uint32_t handle = (uint32_t)self->getRawField(ctx, "$handle")->toNumber(ctx);
   auto top = lua_gettop(state);
   lua_getglobal(state, "$objects");
   auto objects = lua_gettop(state);
@@ -217,7 +218,7 @@ Value::Stack LuaBridge::objectGet(core::AutoPtr<Script> ctx,
   if (key->getType(ctx) == Atom::TYPE::STRING) {
     lua_getfield(state, obj, key->toString(ctx).c_str());
   } else {
-    lua_geti(state, obj, key->toNumber(ctx) + 1);
+    lua_geti(state, obj, (uint32_t)key->toNumber(ctx) + 1);
   }
   auto result = bridge->load(state, lua_gettop(state));
   lua_settop(state, top);
@@ -233,7 +234,7 @@ Value::Stack LuaBridge::objectSet(core::AutoPtr<Script> ctx,
   auto self = args[0];
   auto key = args[1];
   auto value = args[2];
-  uint32_t handle = self->getRawField(ctx, "$handle")->toNumber(ctx);
+  uint32_t handle = (uint32_t)self->getRawField(ctx, "$handle")->toNumber(ctx);
   auto top = lua_gettop(state);
   lua_getglobal(state, "$objects");
   auto objects = lua_gettop(state);
@@ -243,7 +244,7 @@ Value::Stack LuaBridge::objectSet(core::AutoPtr<Script> ctx,
   if (key->getType(ctx) == Atom::TYPE::STRING) {
     lua_setfield(state, obj, key->toString(ctx).c_str());
   } else {
-    lua_seti(state, obj, key->toNumber(ctx) + 1);
+    lua_seti(state, obj, (uint32_t)key->toNumber(ctx) + 1);
   }
   lua_settop(state, top);
   return {};
@@ -256,7 +257,7 @@ Value::Stack LuaBridge::objectKeys(core::AutoPtr<Script> ctx,
   }
   auto state = bridge->_state;
   auto self = args[0];
-  uint32_t handle = self->getRawField(ctx, "$handle")->toNumber(ctx);
+  uint32_t handle = (uint32_t)self->getRawField(ctx, "$handle")->toNumber(ctx);
   auto top = lua_gettop(state);
   lua_getglobal(state, "$objects");
   auto objects = lua_gettop(state);
@@ -284,7 +285,7 @@ Value::Stack LuaBridge::objectLen(core::AutoPtr<Script> ctx,
   }
   auto state = bridge->_state;
   auto self = args[0];
-  uint32_t handle = self->getRawField(ctx, "$handle")->toNumber(ctx);
+  uint32_t handle = (uint32_t)self->getRawField(ctx, "$handle")->toNumber(ctx);
   auto top = lua_gettop(state);
   lua_getglobal(state, "$objects");
   auto objects = lua_gettop(state);
@@ -345,7 +346,7 @@ void LuaBridge::registerModule(const std::string &name,
 int LuaBridge::call(lua_State *state) {
   auto argc = lua_gettop(state);
   lua_getfield(state, 1, "$handle");
-  auto handle = lua_tonumber(_state, -1);
+  uint32_t handle = (uint32_t)lua_tonumber(_state, -1);
   lua_settop(state, argc);
   auto ctx = core::Singleton<Script>::instance();
   auto func = ctx->getNativeGlobal()
@@ -359,7 +360,7 @@ int LuaBridge::call(lua_State *state) {
   for (auto &item : result) {
     dump(state, item);
   }
-  return result.size();
+  return (int)result.size();
 }
 core::AutoPtr<Value> LuaBridge::getObjectMetadata() {
   auto ctx = core::Singleton<Script>::instance();
@@ -409,7 +410,7 @@ core::AutoPtr<Value> LuaBridge::load(lua_State *state, int index) {
 
     lua_getfield(state, index, "$handle");
     if (lua_type(state, -1) == LUA_TNUMBER) {
-      uint32_t handle = lua_tonumber(state, -1);
+      uint32_t handle = (uint32_t)lua_tonumber(state, -1);
       value = ctx->getNativeGlobal()
                   ->getField(ctx, "$objects")
                   ->getIndex(ctx, handle);

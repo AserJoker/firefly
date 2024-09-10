@@ -41,8 +41,8 @@ FUNC_DEF(Module_Runtime::getWindowTitle) {
 }
 FUNC_DEF(Module_Runtime::setWindowSize) {
   VALIDATE_ARGS(setWindowSize, 2);
-  uint32_t width = args[0]->toNumber(ctx);
-  uint32_t height = args[1]->toNumber(ctx);
+  uint32_t width = (uint32_t)args[0]->toNumber(ctx);
+  uint32_t height = (uint32_t)args[1]->toNumber(ctx);
   auto app = core::Singleton<runtime::Application>::instance();
   app->getWindow()->setSize({width, height});
   return {};
@@ -67,7 +67,8 @@ FUNC_DEF(Module_Runtime::saveConfig) {
   }
   configPath = configPath.append(filename + ".cfg");
   core::AutoPtr file = new runtime::Resource_File(configPath.string());
-  core::AutoPtr buf = new core::Buffer(data.size(), (char *)data.c_str());
+  core::AutoPtr buf =
+      new core::Buffer((uint32_t)data.size(), (char *)data.c_str());
   file->write(buf);
   return {};
 }

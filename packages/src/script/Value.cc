@@ -199,7 +199,7 @@ std::vector<std::string> Value::getKeys(core::AutoPtr<Script> ctx) {
     if (keys->getType(ctx) != Atom::TYPE::NIL) {
       std::vector<std::string> result;
       auto res = keys->call(ctx, {this})[0];
-      for (auto i = 0; i < res->getLength(ctx); i++) {
+      for (uint32_t i = 0; i < res->getLength(ctx); i++) {
         result.push_back(res->getIndex(ctx, i)->toString(ctx));
       }
       return result;
@@ -326,7 +326,7 @@ uint32_t Value::getLength(core::AutoPtr<Script> ctx) {
     auto metadata = getMetadata(ctx);
     auto length = metadata->getField(ctx, "length");
     if (length->getType(ctx) != Atom::TYPE::NIL) {
-      return length->call(ctx, {this})[0]->toNumber(ctx);
+      return (uint32_t)length->call(ctx, {this})[0]->toNumber(ctx);
     }
   }
   if (getType(ctx) == Atom::TYPE::OBJECT) {
@@ -817,7 +817,7 @@ core::AutoPtr<Value> Value::optNot(core::AutoPtr<Script> ctx) {
     throw exception::ValidateException(fmt::format(
         "attempt to perform arithmetic on a '{}' value ", getTypeName(ctx)));
   }
-  return ctx->createValue()->setNumber(ctx, ~(uint32_t)toNumber(ctx));
+  return ctx->createValue()->setNumber(ctx, ~(int32_t)toNumber(ctx));
 }
 
 Atom *Value::getAtom() { return _atom; }
@@ -853,7 +853,7 @@ static cJSON *toJSONItem(core::AutoPtr<Script> ctx,
   case Atom::TYPE::ARRAY: {
     root = cJSON_CreateArray();
     auto length = value->getLength(ctx);
-    for (auto i = 0; i < length; i++) {
+    for (uint32_t i = 0; i < length; i++) {
       cJSON_AddItemToArray(root, toJSONItem(ctx, value->getIndex(ctx, i)));
     }
   } break;
@@ -885,7 +885,7 @@ static YAML::Node toYAMLItem(core::AutoPtr<Script> ctx,
     break;
   case Atom::TYPE::ARRAY: {
     auto length = value->getLength(ctx);
-    for (auto i = 0; i < length; i++) {
+    for (uint32_t i = 0; i < length; i++) {
       node.push_back(toYAMLItem(ctx, value->getIndex(ctx, i)));
     }
   } break;

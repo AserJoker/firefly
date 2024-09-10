@@ -12,7 +12,7 @@ const uint32_t *AttributeIndex::getIndices() const {
   return (uint32_t *)_buffer->getData();
 }
 const uint32_t AttributeIndex::getIndicesCount() const {
-  return _buffer->getSize() / sizeof(uint32_t);
+  return (uint32_t)(_buffer->getSize() / sizeof(uint32_t));
 }
 void AttributeIndex::write(const uint32_t &offset, const uint32_t &size,
                            const uint32_t *data) {

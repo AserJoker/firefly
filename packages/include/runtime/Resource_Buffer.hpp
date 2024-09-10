@@ -12,7 +12,7 @@ private:
 public:
   Resource_Buffer(const void *buffer = 0, const uint32_t &size = 0);
   ~Resource_Buffer() override;
-  core::AutoPtr<core::Buffer> read(const size_t &size) override;
+  core::AutoPtr<core::Buffer> read(const uint32_t &size) override;
   void write(const core::AutoPtr<core::Buffer> &data) override;
 };
 } // namespace firefly::runtime

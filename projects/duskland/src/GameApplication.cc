@@ -101,7 +101,7 @@ void GameApplication::onInitialize() {
   camera = new video::Camera(
       glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f),
       glm::vec3(0, 0, -3.0f), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
-  glClearColor(0.2, 0.3, 0.3, 1.0f);
+  glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
   getWindow()->show();
 }
 bool show_demo_window = true;
@@ -113,7 +113,7 @@ void GameApplication::onMainLoop() {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
-  float speed = 0.001;
+  float speed = 0.001f;
   if (_keyboard->getKeyState(SDL_SCANCODE_A)) {
     auto pos = camera->getPosition();
     auto up = camera->getUp();
@@ -223,8 +223,8 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
           ->setField(_script, "dx", createNumber(_script, delta.x))
           ->setField(_script, "dy", createNumber(_script, delta.y)));
   if (_mouse->isCaptured()) {
-    pitch += -delta.y * 0.05;
-    yaw += delta.x * 0.05;
+    pitch += -delta.y * 0.05f;
+    yaw += delta.x * 0.05f;
     if (pitch > 89.0f) {
       pitch = 89.0f;
     }

@@ -59,7 +59,7 @@ void Module_Event::emit(core::AutoPtr<Script> ctx, const std::string &event,
   auto callbacks = events->getField(ctx, event);
   if (callbacks->getType(ctx) != Atom::TYPE::NIL) {
     auto length = callbacks->getLength(ctx);
-    for (auto i = 0; i < length; i++) {
+    for (uint32_t i = 0; i < length; i++) {
       auto callback = callbacks->getIndex(ctx, i);
       if (callback->getType(ctx) != Atom::TYPE::NIL) {
         Value::Stack args;

@@ -139,7 +139,7 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
         break;
       };
       Material::TextureInfo info{};
-      for (auto i = 0; i < count; i++) {
+      for (uint32_t i = 0; i < count; i++) {
         if (mat->GetTexture((aiTextureType)type, i, &svalue) == AI_SUCCESS) {
           info.path = svalue.C_Str();
           if (mat->Get(AI_MATKEY_TEXBLEND((aiTextureType)type, i), fvalue) ==
@@ -238,7 +238,7 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
   std::vector<glm::vec3> normals;
   std::vector<glm::vec2> texcoords[AI_MAX_NUMBER_OF_TEXTURECOORDS];
   std::vector<glm::vec4> colors;
-  for (auto i = 0; i < mesh->mNumVertices; i++) {
+  for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
     auto &v = mesh->mVertices[i];
     vertices.push_back({v.x, v.y, v.z});
     for (auto j = 0; j < AI_MAX_NUMBER_OF_TEXTURECOORDS; j++) {
@@ -257,42 +257,45 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
     }
   }
   core::AutoPtr<Attribute> attrVertices = new Attribute(
-      new core::Buffer(vertices.size() * sizeof(glm::vec3), vertices.data()),
+      new core::Buffer((uint32_t)vertices.size() * sizeof(glm::vec3),
+                       vertices.data()),
       typeid(float), 3);
   geometry->setAttribute(Geometry::ATTR_POSITION, attrVertices);
   core::AutoPtr<Attribute> attrNormals = new Attribute(
-      new core::Buffer(normals.size() * sizeof(glm::vec3), normals.data()),
+      new core::Buffer((uint32_t)normals.size() * sizeof(glm::vec3),
+                       normals.data()),
       typeid(float), 3);
   geometry->setAttribute(Geometry::ATTR_NORMAL, attrVertices);
   if (colors.empty()) {
     core::AutoPtr attrColor = new Attribute(
-        new core::Buffer(colors.size() * sizeof(glm::vec4), colors.data()),
+        new core::Buffer((uint32_t)colors.size() * sizeof(glm::vec4),
+                         colors.data()),
         typeid(float), 4);
     geometry->setAttribute(Geometry::ATTR_COLOR, attrColor);
   }
   for (auto i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; i++) {
     if (!texcoords[i].empty()) {
       core::AutoPtr attrTex = new Attribute(
-          new core::Buffer(texcoords[i].size() * sizeof(glm::vec2),
+          new core::Buffer((uint32_t)texcoords[i].size() * sizeof(glm::vec2),
                            texcoords[i].data()),
           typeid(float), 2);
       geometry->setAttribute(Geometry::ATTR_TEXCOORD + i, attrTex);
     }
   }
   std::vector<uint32_t> indices;
-  for (auto i = 0; i < mesh->mNumFaces; i++) {
-    for (auto j = 0; j < mesh->mFaces[i].mNumIndices; j++) {
+  for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
+    for (uint32_t j = 0; j < mesh->mFaces[i].mNumIndices; j++) {
       indices.push_back(mesh->mFaces[i].mIndices[j]);
     }
   }
-  geometry->getIndices()->write(0, indices.size(), indices.data());
+  geometry->getIndices()->write(0, (uint32_t)indices.size(), indices.data());
   return geometry;
 }
 static std::unordered_map<std::string, core::AutoPtr<Model>> parseModels(
     const aiScene *scene, const aiNode *node,
     std::unordered_map<std::string, core::AutoPtr<Material>> &materials) {
   std::unordered_map<std::string, core::AutoPtr<Model>> models;
-  for (auto i = 0; i < node->mNumMeshes; i++) {
+  for (uint32_t i = 0; i < node->mNumMeshes; i++) {
     auto mesh = scene->mMeshes[node->mMeshes[i]];
     auto mat = scene->mMaterials[mesh->mMaterialIndex];
     if (!materials.contains(mat->GetName().C_Str())) {
@@ -312,7 +315,7 @@ static void loadModelSet(
   for (auto &[name, model] : models) {
     modelset->setModel(name, model);
   }
-  for (auto i = 0; i < node->mNumChildren; i++) {
+  for (uint32_t i = 0; i < node->mNumChildren; i++) {
     core::AutoPtr<ModelSet> mset = new ModelSet();
     loadModelSet(mset, scene, node->mChildren[i], materials);
     modelset->setChild(node->mChildren[i]->mName.C_Str(), mset);
@@ -332,7 +335,7 @@ ModelSet::ModelSet(const std::string &name) {
     throw exception::RuntimeException<"LoadModel">(importer.GetErrorString());
   }
   _models = parseModels(scene, scene->mRootNode, materials);
-  for (auto i = 0; i < scene->mRootNode->mNumChildren; i++) {
+  for (uint32_t i = 0; i < scene->mRootNode->mNumChildren; i++) {
     auto node = scene->mRootNode->mChildren[i];
     core::AutoPtr<ModelSet> mset = new ModelSet();
     loadModelSet(mset, scene, node, materials);

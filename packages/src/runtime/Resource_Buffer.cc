@@ -17,7 +17,7 @@ Resource_Buffer::~Resource_Buffer() {
     ::operator delete(_buffer);
   }
 };
-core::AutoPtr<core::Buffer> Resource_Buffer::read(const size_t &size) {
+core::AutoPtr<core::Buffer> Resource_Buffer::read(const uint32_t &size) {
   if (_pos == _size) {
     return new core::Buffer(0);
   }
