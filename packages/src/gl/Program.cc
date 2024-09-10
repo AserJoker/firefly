@@ -1,20 +1,83 @@
 #include "gl/Program.hpp"
 #include "gl/ShaderType.hpp"
+#include <filesystem>
 #include <glm/gtc/type_ptr.hpp>
+#include <runtime/Media.hpp>
+
 using namespace firefly;
 using namespace firefly::gl;
 
+std::string Program::preCompile(const std::string &source) {
+  std::string result = source;
+  return result;
+}
+
+const std::unordered_map<std::string, std::string>
+Program::load(const std::string &path) {
+  std::unordered_map<std::string, std::string> sources;
+  core::AutoPtr media = core::Singleton<runtime::Media>::instance();
+  auto items = media->scan(path);
+  for (auto &item : items) {
+    auto files = media->resolve(item);
+    if (!files.empty()) {
+      std::filesystem::path itemPath = files[files.size() - 1];
+      if (!std::filesystem::is_directory(itemPath) &&
+          itemPath.extension() == ".glsl") {
+        auto name = itemPath.filename().string();
+        name = name.substr(0, name.length() - 5);
+        auto buffer = media->load(item)->read();
+        sources[name] =
+            std::string((const char *)buffer->getData(), buffer->getSize());
+      }
+    }
+  }
+  return sources;
+}
+
 Program::Program() { _handle = glCreateProgram(); }
+
+Program::Program(const std::string &path) : Program() {
+  auto sources = load(path);
+  for (auto &[name, source] : sources) {
+    core::AutoPtr<gl::Shader> shader;
+    if (name == "vertex") {
+      shader = new gl::Shader(gl::SHADER_TYPE::VERTEX_SHADER);
+    } else if (name == "fragment") {
+      shader = new gl::Shader(gl::SHADER_TYPE::FRAGMENT_SHADER);
+    } else if (name == "tess_control") {
+      shader = new gl::Shader(gl::SHADER_TYPE::TESS_CONTROL_SHADER);
+    } else if (name == "tess_evaluation") {
+      shader = new gl::Shader(gl::SHADER_TYPE::TESS_EVALUATION_SHADER);
+    } else if (name == "geometry") {
+      shader = new gl::Shader(gl::SHADER_TYPE::GEOMETRY_SHADER);
+    }
+    if (!shader) {
+      continue;
+    }
+    shader->setShaderSource(source);
+    if (!shader->compile()) {
+      throw exception::RuntimeException<"ShaderCompile">(shader->getInfoLog());
+    }
+    attach(shader);
+  }
+  if (!link()) {
+    throw exception::RuntimeException<"ShaderLink">(getInfoLog());
+  }
+}
+
 Program::~Program() { glDeleteProgram(_handle); }
+
 void Program::attach(const core::AutoPtr<Shader> &shader) {
   glAttachShader(_handle, shader->getHandle());
 }
+
 bool Program::link() {
   glLinkProgram(_handle);
   int status;
   glGetProgramiv(_handle, GL_LINK_STATUS, &status);
   return status;
 }
+
 const std::string Program::getInfoLog() const {
   int size;
   glGetProgramiv(_handle, GL_INFO_LOG_LENGTH, &size);
@@ -24,6 +87,7 @@ const std::string Program::getInfoLog() const {
   delete[] buf;
   return result;
 }
+
 const uint32_t &Program::getHandle() const { return _handle; }
 
 void Program::use() { glUseProgram(_handle); }
@@ -35,6 +99,7 @@ const uint32_t &Program::getUniformLocation(const std::string &name) {
   }
   return _locations.at(name);
 }
+
 void Program::bindUniformBlock(const std::string &name, const uint32_t &index) {
   if (!_uniformBlockLocations.contains(name)) {
     _uniformBlockLocations[name] =
@@ -46,6 +111,7 @@ void Program::bindUniformBlock(const std::string &name, const uint32_t &index) {
   }
   glUniformBlockBinding(_handle, loc, index);
 }
+
 void Program::setUniform(const std::string &name, const int32_t &value) {
   auto loc = getUniformLocation(name);
   if (loc == GL_INVALID_INDEX) {

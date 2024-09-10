@@ -1,18 +1,26 @@
 #pragma once
 #include "core/AutoPtr.hpp"
+#include "core/Cache.hpp"
 #include "core/Object.hpp"
 #include "gl/Shader.hpp"
 #include <glm/glm.hpp>
 #include <unordered_map>
 namespace firefly::gl {
-class Program : public core::Object {
+class Program : public core::Object, public core::Cache<Program> {
 private:
   uint32_t _handle;
   std::unordered_map<std::string, uint32_t> _locations;
   std::unordered_map<std::string, uint32_t> _uniformBlockLocations;
 
+private:
+  static const std::unordered_map<std::string, std::string>
+  load(const std::string &path);
+
+  static std::string preCompile(const std::string &source);
+
 public:
   Program();
+  Program(const std::string &path);
   ~Program() override;
   void attach(const core::AutoPtr<Shader> &shader);
   bool link();

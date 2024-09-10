@@ -25,7 +25,6 @@ private:
 
 public:
   Geometry();
-  Geometry(const std::string &name);
   void setAttribute(const uint32_t &index,
                     const core::AutoPtr<Attribute> &attribute);
   core::AutoPtr<Attribute> getAttribute(const uint32_t &index);
