@@ -9,7 +9,6 @@
 #include "Shader.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
-#include "video/Image.hpp"
 #include "video/Shader.hpp"
 #include <vector>
 namespace firefly::video {
@@ -28,8 +27,6 @@ public:
   void drawGeomeory(const core::AutoPtr<Geometry> &geometry);
   void setShader(const core::AutoPtr<Shader> &shader);
   core::AutoPtr<Shader> &geShader();
-  void setTexture2D(const core::AutoPtr<Image> &image,
-                    const uint32_t &index = 0);
   void setMaterial(const core::AutoPtr<Material> &material);
   const core::AutoPtr<Constant> &getConstants() const;
   core::AutoPtr<Constant> &getConstants();

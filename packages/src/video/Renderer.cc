@@ -6,17 +6,16 @@
 #include "gl/BufferTarget.hpp"
 #include "gl/BufferUsage.hpp"
 #include "gl/DataType.hpp"
-#include "gl/PixelFormat.hpp"
 #include "gl/Program.hpp"
 #include "gl/Shader.hpp"
 #include "gl/ShaderType.hpp"
 #include "gl/Texture2D.hpp"
-#include "gl/TextureFilter.hpp"
+#include "gl/TextureWrapMode.hpp"
 #include "gl/VertexArray.hpp"
 #include "video/Camera.hpp"
 #include "video/Constant.hpp"
 #include "video/Geometry.hpp"
-#include "video/Image.hpp"
+#include "video/Material.hpp"
 #include "video/RenderObject.hpp"
 #include "video/Shader.hpp"
 #include "video/UpdateRangeList.hpp"
@@ -153,60 +152,7 @@ void Renderer::setShader(const core::AutoPtr<Shader> &shader) {
     syncConstats(true);
   }
 }
-void Renderer::setTexture2D(const core::AutoPtr<Image> &image,
-                            const uint32_t &index) {
-  auto tex = image->getMetadata("gl::texture").cast<gl::Texture2D>();
-  if (!tex) {
-    tex = new gl::Texture2D();
-    gl::PIXEL_FORMAT fmt;
-    switch (image->getFormat()) {
-    case IMAGE_FORMAT::RGB:
-      fmt = gl::PIXEL_FORMAT::RGB;
-      break;
-    case IMAGE_FORMAT::RGBA:
-      fmt = gl::PIXEL_FORMAT::RGBA;
-      break;
-    case IMAGE_FORMAT::GRAY:
-      fmt = gl::PIXEL_FORMAT::RED;
-      break;
-    }
-    tex->setImage(0, fmt, image->getWidth(), image->getHeight(), fmt,
-                  gl::DATA_TYPE::UNSIGNED_BYTE, image->getData()->getData());
-    tex->generateMipmap();
-    tex->setMinifyingFilter(gl::TEXTURE_FILTER::LINEAR);
-    tex->setMagnificationFilter(gl::TEXTURE_FILTER::LINEAR);
-    image->setMetadata("gl::texture", tex);
-    auto updateRangeList =
-        image->getMetadata("video::update_range_list").cast<ImageUpdateList>();
-    updateRangeList->getData().clear();
-    tex->setVersion(image->getVersion());
-  }
-  if (tex->getVersion() != image->getVersion()) {
-    auto updateRangeList =
-        image->getMetadata("video::update_range_list").cast<ImageUpdateList>();
-    gl::PIXEL_FORMAT fmt;
-    switch (image->getFormat()) {
-    case IMAGE_FORMAT::RGB:
-      fmt = gl::PIXEL_FORMAT::RGB;
-      break;
-    case IMAGE_FORMAT::RGBA:
-      fmt = gl::PIXEL_FORMAT::RGBA;
-      break;
-    case IMAGE_FORMAT::GRAY:
-      fmt = gl::PIXEL_FORMAT::RED;
-      break;
-    }
-    for (auto range : updateRangeList->getData()) {
-      auto buf = image->read(range.x, range.y, range.z, range.w);
-      tex->setSubImage(0, range.x, range.y, range.z, range.w, fmt,
-                       gl::DATA_TYPE::UNSIGNED_BYTE, buf->getData());
-    }
-    updateRangeList->getData().clear();
-    tex->setVersion(image->getVersion());
-  }
-  glActiveTexture(GL_TEXTURE0 + index);
-  gl::Texture2D::bind(tex);
-}
+
 core::AutoPtr<Shader> &Renderer::geShader() { return _shader; }
 void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   material->active(_constants);
@@ -214,7 +160,10 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   auto index = 0;
   for (auto &[_, texture] : textures) {
     auto path = fmt::format("texture::{}", texture.path);
-    setTexture2D(Image::get(path, path), index++);
+    auto tex = gl::Texture2D::get(path, path, texture.mappingmodeU,
+                                  texture.mappingmodeV);
+    glActiveTexture(GL_TEXTURE0 + index++);
+    gl::Texture2D::bind(tex);
   }
 
   if (material->isDepthTest()) {
@@ -233,6 +182,11 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
     glEnable(GL_ALPHA_TEST);
   } else {
     glDisable(GL_ALPHA_TEST);
+  }
+  if (material->isWireframe()) {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+  } else {
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
 }
 const core::AutoPtr<Constant> &Renderer::getConstants() const {

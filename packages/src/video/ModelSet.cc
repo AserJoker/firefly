@@ -1,6 +1,7 @@
 #include "video/ModelSet.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Buffer.hpp"
+#include "gl/TextureWrapMode.hpp"
 #include "runtime/Media.hpp"
 #include "video/Attribute.hpp"
 #include "video/Geometry.hpp"
@@ -167,15 +168,41 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
           }
           if (mat->Get(AI_MATKEY_MAPPINGMODE_U((aiTextureType)type, i),
                        ivalue) == AI_SUCCESS) {
-            info.mappingmodeU = (Material::TEXTURE_WRAP_MODE)ivalue;
+            switch (ivalue) {
+            case aiTextureMapMode_Wrap:
+              info.mappingmodeU = gl::TEXTURE_WRAP_MODE::REPEAT;
+              break;
+            case aiTextureMapMode_Clamp:
+              info.mappingmodeU = gl::TEXTURE_WRAP_MODE::CLAMP_TO_EDGE;
+              break;
+            case aiTextureMapMode_Mirror:
+              info.mappingmodeU = gl::TEXTURE_WRAP_MODE::MIRRORED_REPEAT;
+              break;
+            case aiTextureMapMode_Decal:
+              info.mappingmodeU = gl::TEXTURE_WRAP_MODE::CLAMP_TO_BORDER;
+              break;
+            }
           } else {
-            info.mappingmodeU = Material::TEXTURE_WRAP_MODE::WRAP;
+            info.mappingmodeU = gl::TEXTURE_WRAP_MODE::REPEAT;
           }
           if (mat->Get(AI_MATKEY_MAPPINGMODE_V((aiTextureType)type, i),
                        ivalue) == AI_SUCCESS) {
-            info.mappingmodeV = (Material::TEXTURE_WRAP_MODE)ivalue;
+            switch (ivalue) {
+            case aiTextureMapMode_Wrap:
+              info.mappingmodeV = gl::TEXTURE_WRAP_MODE::REPEAT;
+              break;
+            case aiTextureMapMode_Clamp:
+              info.mappingmodeV = gl::TEXTURE_WRAP_MODE::CLAMP_TO_EDGE;
+              break;
+            case aiTextureMapMode_Mirror:
+              info.mappingmodeV = gl::TEXTURE_WRAP_MODE::MIRRORED_REPEAT;
+              break;
+            case aiTextureMapMode_Decal:
+              info.mappingmodeV = gl::TEXTURE_WRAP_MODE::CLAMP_TO_BORDER;
+              break;
+            }
           } else {
-            info.mappingmodeV = Material::TEXTURE_WRAP_MODE::WRAP;
+            info.mappingmodeV = gl::TEXTURE_WRAP_MODE::REPEAT;
           }
           glm::vec3 position;
           if (mat->Get(AI_MATKEY_TEXMAP_AXIS((aiTextureType)type, i),
@@ -315,6 +342,31 @@ ModelSet::ModelSet(const std::string &name) {
 const std::unordered_map<std::string, core::AutoPtr<Model>> &
 ModelSet::getModels() const {
   return _models;
+}
+const std::unordered_map<std::string, core::AutoPtr<Model>>
+ModelSet::getAllModels() const {
+  std::unordered_map<std::string, core::AutoPtr<Model>> models;
+  for (auto &[name, model] : getModels()) {
+    models[name] = model;
+  }
+  for (auto &[_, child] : _children) {
+    for (auto &[name, model] : child->getAllModels()) {
+      models[name] = model;
+    }
+  }
+  return models;
+}
+std::unordered_map<std::string, core::AutoPtr<Model>> ModelSet::getAllModels() {
+  std::unordered_map<std::string, core::AutoPtr<Model>> models;
+  for (auto &[name, model] : getModels()) {
+    models[name] = model;
+  }
+  for (auto &[_, child] : _children) {
+    for (auto &[name, model] : child->getAllModels()) {
+      models[name] = model;
+    }
+  }
+  return models;
 }
 void ModelSet::setModel(const std::string &name,
                         const core::AutoPtr<Model> &model) {

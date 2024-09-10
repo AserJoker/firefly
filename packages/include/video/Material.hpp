@@ -3,6 +3,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
+#include "gl/TextureWrapMode.hpp"
 #include <functional>
 #include <glm/glm.hpp>
 #include <set>
@@ -19,21 +20,14 @@ public:
     SIGNED_ADD = 5
   };
 
-  enum class TEXTURE_WRAP_MODE {
-    WRAP = 0,
-    CLAMP = 1,
-    MIRROR = 2,
-    DECAL = 3,
-  };
-
   struct TextureInfo {
     std::string path;
     float blend;
     TEXTURE_OPERATOR op;
     int mapping;
     int uvwsrc;
-    TEXTURE_WRAP_MODE mappingmodeU;
-    TEXTURE_WRAP_MODE mappingmodeV;
+    gl::TEXTURE_WRAP_MODE mappingmodeU;
+    gl::TEXTURE_WRAP_MODE mappingmodeV;
     glm::vec3 texmapAxis;
     bool useAlpha;
     bool invert;

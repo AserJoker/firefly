@@ -1,4 +1,8 @@
 #include "gl/Texture2D.hpp"
+#include "core/Singleton.hpp"
+#include "gl/PixelFormat.hpp"
+#include "runtime/Media.hpp"
+#include <SDL_image.h>
 #include <glad/glad.h>
 using namespace firefly;
 using namespace firefly::gl;
@@ -6,6 +10,45 @@ Texture2D::Texture2D(const uint32_t &handle) : _handle(handle) {
   if (!_handle) {
     glGenTextures(1, &_handle);
   }
+}
+Texture2D::Texture2D(const std::string &name, TEXTURE_WRAP_MODE swrap,
+                     TEXTURE_WRAP_MODE twrap)
+    : Texture2D() {
+  auto media = core::Singleton<runtime::Media>::instance();
+  auto buf = media->load(name)->read();
+  SDL_Surface *img =
+      IMG_Load_RW(SDL_RWFromConstMem(buf->getData(), buf->getSize()), 1);
+  PIXEL_FORMAT fmt;
+  switch ((SDL_PixelFormatEnum)img->format->format) {
+  case SDL_PIXELFORMAT_RGBA4444:
+    fmt = PIXEL_FORMAT::RGBA16;
+    break;
+  case SDL_PIXELFORMAT_RGB24:
+    fmt = PIXEL_FORMAT::RGB;
+    break;
+  case SDL_PIXELFORMAT_RGBA8888:
+  case SDL_PIXELFORMAT_RGBX8888:
+    fmt = PIXEL_FORMAT::RGBA;
+    break;
+  case SDL_PIXELFORMAT_INDEX8:
+    fmt = PIXEL_FORMAT::RED;
+    break;
+  default: {
+    SDL_Surface *sur = SDL_ConvertSurfaceFormat(img, SDL_PIXELFORMAT_RGBA32, 0);
+    SDL_FreeSurface(img);
+    img = sur;
+    fmt = PIXEL_FORMAT::RGBA;
+    break;
+  }
+  }
+  glBindTexture(GL_TEXTURE_2D, _handle);
+  glTexImage2D(GL_TEXTURE_2D, 0, (GLenum)fmt, img->w, img->h, 0, (GLenum)fmt,
+               GL_UNSIGNED_BYTE, img->pixels);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  generateMipmap();
+  setSWrap(swrap);
+  setTWrap(twrap);
+  SDL_FreeSurface(img);
 }
 Texture2D::~Texture2D() { glDeleteTextures(1, &_handle); }
 void Texture2D::setImage(const uint32_t &level, PIXEL_FORMAT internalFormat,

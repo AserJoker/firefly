@@ -26,8 +26,11 @@
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
 #include "video/Camera.hpp"
+#include "video/Material.hpp"
 #include "video/ModelSet.hpp"
 #include "video/Renderer.hpp"
+#include <SDL_mouse.h>
+#include <SDL_scancode.h>
 #include <fmt/format.h>
 #include <glad/glad.h>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -38,6 +41,7 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
 #include <lua.hpp>
+#include <set>
 
 using namespace firefly;
 using namespace duskland;
@@ -93,12 +97,11 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  modelSet = video::ModelSet::get("backpack.obj", "model::backpack.obj");
+  modelSet = video::ModelSet::get("backpack.obj", "model::nanosuit.obj");
   camera = new video::Camera(
       glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f),
       glm::vec3(0, 0, -3.0f), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
   glClearColor(0.2, 0.3, 0.3, 1.0f);
-  glEnable(GL_CULL_FACE);
   getWindow()->show();
 }
 bool show_demo_window = true;
@@ -184,6 +187,22 @@ void GameApplication::onKeyDown(input::Event_KeyDown &e) {
                              createNumber(_script, e.getScancode()));
   if (e.getScancode() == SDL_SCANCODE_ESCAPE) {
     _mouse->releaseMouse();
+  }
+  if (e.getScancode() == SDL_SCANCODE_RETURN) {
+    auto models = modelSet->getAllModels();
+    std::set<const video::Material *> cache;
+    for (auto &[name, model] : models) {
+      auto material = model->getMaterial();
+      if (cache.contains(material.getRawPointer())) {
+        continue;
+      }
+      cache.insert(material.getRawPointer());
+      if (material->isWireframe()) {
+        material->setIsWireframe(false);
+      } else {
+        material->setIsWireframe(true);
+      }
+    }
   }
 }
 

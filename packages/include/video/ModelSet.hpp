@@ -15,6 +15,9 @@ public:
   ModelSet(const std::string &name);
   const std::unordered_map<std::string, core::AutoPtr<Model>> &
   getModels() const;
+  const std::unordered_map<std::string, core::AutoPtr<Model>> 
+  getAllModels() const;
+  std::unordered_map<std::string, core::AutoPtr<Model>> getAllModels();
   void setModel(const std::string &name, const core::AutoPtr<Model> &model);
   const core::AutoPtr<Model> getModel(const std::string &name) const;
   const std::unordered_map<std::string, core::AutoPtr<ModelSet>> &
