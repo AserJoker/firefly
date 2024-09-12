@@ -2,6 +2,7 @@
 #include "ConstantBlock.hpp"
 #include "ConstantType.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Bitmap.hpp"
 #include "core/Object.hpp"
 #include <any>
 #include <glm/fwd.hpp>
@@ -12,6 +13,7 @@ public:
 private:
   std::unordered_map<std::string, CONSTANT_TYPE> _metadata;
   std::unordered_map<std::string, std::any> _fields;
+  core::AutoPtr<core::Bitmap> _bitmap;
 
 private:
   template <class T>
@@ -29,7 +31,7 @@ private:
   }
 
 public:
-  Constant();
+  Constant(const core::AutoPtr<core::Bitmap> &bitmap);
   void setField(const std::string &name, const bool &value);
   void setField(const std::string &name, const int32_t &value);
   void setField(const std::string &name, const glm::ivec2 &value);

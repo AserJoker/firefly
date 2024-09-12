@@ -11,6 +11,7 @@ private:
   uint32_t _handle;
   std::unordered_map<std::string, uint32_t> _locations;
   std::unordered_map<std::string, uint32_t> _uniformBlockLocations;
+  std::unordered_map<uint32_t, uint32_t> _unformBlockBindings;
 
 private:
   static const std::unordered_map<std::string, std::string>

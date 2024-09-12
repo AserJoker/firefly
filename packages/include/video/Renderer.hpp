@@ -7,6 +7,7 @@
 #include "ModelSet.hpp"
 #include "RenderObject.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Bitmap.hpp"
 #include "core/Object.hpp"
 #include "gl/Program.hpp"
 #include <vector>
@@ -15,6 +16,7 @@ class Renderer : public core::Object {
 private:
   core::AutoPtr<gl::Program> _shader;
   core::AutoPtr<Constant> _constants;
+  core::AutoPtr<core::Bitmap> _constantBitmap;
   std::vector<core::AutoPtr<RenderObject>> _normalRenderList;
   std::vector<core::AutoPtr<RenderObject>> _blendRenderList;
 

@@ -4,13 +4,13 @@
 #include <glm/glm.hpp>
 using namespace firefly;
 using namespace firefly::video;
-Constant::Constant() { setMetadata("video::bitmap", new core::Bitmap()); }
+Constant::Constant(const core::AutoPtr<core::Bitmap> &bitmap)
+    : _bitmap(bitmap) {}
 void Constant::setField(const std::string &name, const CONSTANT_TYPE &type,
                         const std::any &value) {
   _metadata[name] = type;
   _fields[name] = value;
-  auto bitmap = getMetadata("video::bitmap").cast<core::Bitmap>();
-  bitmap->enable(name);
+  _bitmap->enable(name);
 }
 void Constant::setField(const std::string &name, const bool &value) {
   setField<CONSTANT_TYPE::BOOL>(name, value);

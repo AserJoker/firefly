@@ -109,6 +109,10 @@ void Program::bindUniformBlock(const std::string &name, const uint32_t &index) {
   if (loc == GL_INVALID_INDEX) {
     return;
   }
+  if (_unformBlockBindings[loc] == index) {
+    return;
+  }
+  _unformBlockBindings[loc] = index;
   glUniformBlockBinding(_handle, loc, index);
 }
 
