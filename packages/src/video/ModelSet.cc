@@ -4,6 +4,7 @@
 #include "gl/TextureWrapMode.hpp"
 #include "runtime/Media.hpp"
 #include "video/Attribute.hpp"
+#include "video/AttributeIndex.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
 #include "video/Model.hpp"
@@ -288,7 +289,8 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
       indices.push_back(mesh->mFaces[i].mIndices[j]);
     }
   }
-  geometry->getIndices()->write(0, (uint32_t)indices.size(), indices.data());
+  geometry->setAttributeIndex(new AttributeIndex(new core::Buffer(
+      (uint32_t)indices.size() * sizeof(uint32_t), indices.data())));
   return geometry;
 }
 static std::unordered_map<std::string, core::AutoPtr<Model>> parseModels(

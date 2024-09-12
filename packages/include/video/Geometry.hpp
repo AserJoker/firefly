@@ -1,6 +1,8 @@
 #pragma once
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include "gl/DrawMode.hpp"
+#include "gl/VertexArray.hpp"
 #include "video/Attribute.hpp"
 #include "video/AttributeIndex.hpp"
 #include <glm/glm.hpp>
@@ -19,9 +21,10 @@ public:
 
 private:
   std::unordered_map<uint32_t, core::AutoPtr<Attribute>> _attributes;
-  core::AutoPtr<AttributeIndex> _indices;
+  core::AutoPtr<AttributeIndex> _attrIndex;
   Bounding _binding;
   BoundingShpere _bindingShpere;
+  core::AutoPtr<gl::VertexArray> _vao;
 
 public:
   Geometry();
@@ -32,12 +35,14 @@ public:
   void removeAttribute(const uint32_t &index);
   const std::unordered_map<uint32_t, core::AutoPtr<Attribute>> &
   getAttributes() const;
-  const core::AutoPtr<AttributeIndex> &getIndices() const;
-  core::AutoPtr<AttributeIndex> &getIndices();
+  void setAttributeIndex(const core::AutoPtr<AttributeIndex> &attrindex);
+  const core::AutoPtr<AttributeIndex> &getAttributeIndex() const;
+  core::AutoPtr<AttributeIndex> &getAttributeIndex();
   void computeBounding();
   void computeBoundingSphere();
   const Bounding &getBounding() const;
   const BoundingShpere &getBoundingSphere() const;
+  virtual void draw(gl::DRAW_MODE mode) const;
 
 public:
   static constexpr const uint32_t ATTR_POSITION = 0;

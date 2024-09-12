@@ -23,7 +23,6 @@ private:
 
 public:
   Renderer();
-  void drawGeomeory(const core::AutoPtr<Geometry> &geometry);
   void setShader(const std::string &name);
   void setMaterial(const core::AutoPtr<Material> &material);
   const core::AutoPtr<Constant> &getConstants() const;

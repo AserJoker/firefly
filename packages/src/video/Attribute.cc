@@ -1,13 +1,14 @@
 #include "video/Attribute.hpp"
-#include "video/UpdateRangeList.hpp"
+#include "gl/Buffer.hpp"
+#include "gl/BufferUsage.hpp"
 using namespace firefly;
 using namespace firefly::video;
 
 Attribute::Attribute(const core::AutoPtr<core::Buffer> &buffer,
                      const std::type_info &type, const uint32_t &itemSize,
                      const bool &normalize, const bool &dynamic)
-    : _buffer(buffer), _itemType(type.name()), _itemSize(itemSize),
-      _normalize(normalize), _dynamic(dynamic) {
+    : _itemType(type.name()), _itemSize(itemSize), _normalize(normalize),
+      _dynamic(dynamic) {
   if (type == typeid(float)) {
     _stride = sizeof(float) * itemSize;
   } else if (type == typeid(int32_t)) {
@@ -25,9 +26,10 @@ Attribute::Attribute(const core::AutoPtr<core::Buffer> &buffer,
   } else if (type == typeid(uint16_t)) {
     _stride = sizeof(uint16_t) * itemSize;
   }
-  core::AutoPtr updateRangeList = new UpdateRangeList();
-  updateRangeList->add(0, _buffer->getSize());
-  setMetadata("video::update_range_list", updateRangeList);
+  _vbo = new gl::Buffer(dynamic ? gl::BUFFER_USAGE::DYNAMIC_DRAW
+                                : gl::BUFFER_USAGE::STATIC_DRAW);
+  _vbo->setData(buffer->getSize(), buffer->getData());
+  _itemCount = buffer->getSize() / _stride;
 }
 
 const std::string &Attribute::getItemType() const { return _itemType; }
@@ -38,17 +40,13 @@ const bool &Attribute::isNormalized() const { return _normalize; }
 
 const bool &Attribute::isDynamic() const { return _dynamic; }
 
-const core::AutoPtr<core::Buffer> &Attribute::getBuffer() const {
-  return _buffer;
+const core::AutoPtr<gl::Buffer> &Attribute::getVertexBufferObject() const {
+  return _vbo;
 }
 const uint32_t &Attribute::getStride() const { return _stride; }
 
+const uint32_t &Attribute::getItemCount() const { return _itemCount; }
 void Attribute::write(const uint32_t &offset, const uint32_t &size,
                       const void *data) {
-  _buffer->setData(offset, size, data);
-
-  auto updateRangeList =
-      getMetadata("video::update_range_list").cast<UpdateRangeList>();
-  updateRangeList->add(offset, size);
-  setVersion(getVersion() + 1);
+  _vbo->write(offset, size, data);
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "MapAccess.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "gl/BufferTarget.hpp"
@@ -14,6 +15,9 @@ public:
   ~Buffer() override;
   void setData(const uint32_t &size, const void *data);
   void write(const uint32_t &offset, const uint32_t &size, const void *data);
+  const void *map(MAP_ACCESS access) const;
+  void *map(MAP_ACCESS access);
+  void unmap() const;
   const uint32_t getBufferSize() const;
 
 public:

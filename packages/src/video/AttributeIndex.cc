@@ -1,23 +1,22 @@
 #include "video/AttributeIndex.hpp"
+#include "core/AutoPtr.hpp"
 #include "core/Buffer.hpp"
-#include "video/UpdateRangeList.hpp"
+#include "gl/Buffer.hpp"
+#include "gl/BufferUsage.hpp"
 using namespace firefly;
 using namespace firefly::video;
-AttributeIndex::AttributeIndex() {
-  _buffer = new core::Buffer(0);
-  core::AutoPtr updateRangeList = new UpdateRangeList();
-  setMetadata("video::update_range_list", updateRangeList);
+AttributeIndex::AttributeIndex(const core::AutoPtr<core::Buffer> &buffer)
+    : _size(0) {
+  _ebo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
+  _size = buffer->getSize() / sizeof(uint32_t);
+  _ebo->setData(buffer->getSize(), buffer->getData());
 }
-const uint32_t *AttributeIndex::getIndices() const {
-  return (uint32_t *)_buffer->getData();
-}
-const uint32_t AttributeIndex::getIndicesCount() const {
-  return (uint32_t)(_buffer->getSize() / sizeof(uint32_t));
-}
+const uint32_t AttributeIndex::getIndicesCount() const { return _size; }
 void AttributeIndex::write(const uint32_t &offset, const uint32_t &size,
                            const uint32_t *data) {
-  _buffer->setData(offset * sizeof(uint32_t), size * sizeof(uint32_t), data);
-  core::AutoPtr updateRangeList = new UpdateRangeList();
-  updateRangeList->add(offset * sizeof(uint32_t), size * sizeof(uint32_t));
-  setVersion(getVersion() + 1);
+  _ebo->write(offset * sizeof(uint32_t), size * sizeof(uint32_t), data);
+}
+const core::AutoPtr<gl::Buffer> &
+AttributeIndex::getElementBufferObject() const {
+  return _ebo;
 }

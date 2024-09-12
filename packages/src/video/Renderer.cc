@@ -3,11 +3,9 @@
 #include "gl/Buffer.hpp"
 #include "gl/BufferTarget.hpp"
 #include "gl/BufferUsage.hpp"
-#include "gl/DataType.hpp"
+#include "gl/DrawMode.hpp"
 #include "gl/Program.hpp"
 #include "gl/Texture2D.hpp"
-#include "gl/TextureWrapMode.hpp"
-#include "gl/VertexArray.hpp"
 #include "video/Camera.hpp"
 #include "video/Constant.hpp"
 #include "video/Geometry.hpp"
@@ -17,88 +15,6 @@
 using namespace firefly;
 using namespace firefly::video;
 Renderer::Renderer() { _constants = new Constant(); }
-void Renderer::drawGeomeory(const core::AutoPtr<Geometry> &geometry) {
-  auto &attributes = geometry->getAttributes();
-  auto &indices = geometry->getIndices();
-  for (auto &[_, attribute] : attributes) {
-    auto glBuffer = attribute->getMetadata("gl::buffer").cast<gl::Buffer>();
-    if (!glBuffer) {
-      glBuffer = new gl::Buffer(attribute->isDynamic()
-                                    ? gl::BUFFER_USAGE::DYNAMIC_DRAW
-                                    : gl::BUFFER_USAGE::STATIC_DRAW);
-      glBuffer->setData((uint32_t)attribute->getBuffer()->getSize(),
-                        attribute->getBuffer()->getData());
-      attribute->setMetadata("gl::buffer", glBuffer);
-      glBuffer->setVersion(glBuffer->getVersion());
-      auto updateRangeList = attribute->getMetadata("video::update_range_list")
-                                 .cast<UpdateRangeList>();
-      updateRangeList->clear();
-    }
-    if (glBuffer->getVersion() != attribute->getVersion()) {
-      auto updateRangeList = attribute->getMetadata("video::update_range_list")
-                                 .cast<UpdateRangeList>();
-      for (auto &[start, size] : updateRangeList->getRanges()) {
-        glBuffer->write(start, size,
-                        (char *)attribute->getBuffer()->getData() + start);
-      }
-      updateRangeList->clear();
-      glBuffer->setVersion(attribute->getVersion());
-    }
-  }
-  auto glBuffer = indices->getMetadata("gl::buffer").cast<gl::Buffer>();
-  if (!glBuffer) {
-    glBuffer = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
-    glBuffer->setData(indices->getIndicesCount() * sizeof(uint32_t),
-                      indices->getIndices());
-    indices->setMetadata("gl::buffer", glBuffer);
-  }
-  if (glBuffer->getVersion() != indices->getVersion()) {
-    glBuffer->write(0, indices->getIndicesCount() * sizeof(uint32_t),
-                    indices->getIndices());
-    glBuffer->setVersion(indices->getVersion());
-  }
-  auto glVertexArray =
-      geometry->getMetadata("gl::vertex_array").cast<gl::VertexArray>();
-  if (!glVertexArray) {
-    glVertexArray = new gl::VertexArray();
-    geometry->setMetadata("gl::vertex_array", glVertexArray);
-  }
-  if (geometry->getVersion() != glVertexArray->getVersion()) {
-    gl::VertexArray::bind(glVertexArray);
-    gl::Buffer::bind(gl::BUFFER_TARGET::ELEMENT_ARRAY, glBuffer);
-    for (auto &[index, attribute] : attributes) {
-      auto glBuffer = attribute->getMetadata("gl::buffer").cast<gl::Buffer>();
-      gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY, glBuffer);
-      gl::DATA_TYPE dtype;
-      auto &type = attribute->getItemType();
-      if (type == typeid(float).name()) {
-        dtype = gl::DATA_TYPE::FLOAT;
-      } else if (type == typeid(int32_t).name()) {
-        dtype = gl::DATA_TYPE::INT;
-      } else if (type == typeid(uint32_t).name()) {
-        dtype = gl::DATA_TYPE::UNSIGNED_INT;
-      } else if (type == typeid(double).name()) {
-        dtype = gl::DATA_TYPE::DOUBLE;
-      } else if (type == typeid(int8_t).name()) {
-        dtype = gl::DATA_TYPE::BTYE;
-      } else if (type == typeid(uint8_t).name()) {
-        dtype = gl::DATA_TYPE::UNSIGNED_BYTE;
-      } else if (type == typeid(int16_t).name()) {
-        dtype = gl::DATA_TYPE::SHORT;
-      } else if (type == typeid(uint16_t).name()) {
-        dtype = gl::DATA_TYPE::UNSIGNED_SHORT;
-      }
-      glVertexArray->setAttribute(index, dtype, attribute->getItemSize(),
-                                  attribute->isNormalized(),
-                                  attribute->getStride(), 0);
-      glVertexArray->enableAttribute(index);
-    }
-    glVertexArray->setVersion(geometry->getVersion());
-  }
-
-  gl::VertexArray::bind(glVertexArray);
-  glDrawElements(GL_TRIANGLES, indices->getIndicesCount(), GL_UNSIGNED_INT, 0);
-}
 
 void Renderer::setShader(const std::string &name) {
   auto shader = gl::Program::get(name, fmt::format("shader::{}", name));
@@ -300,12 +216,12 @@ void Renderer::end() {
   glDisable(GL_BLEND);
   for (auto &item : _normalRenderList) {
     setMaterial(item->getMeterial());
-    drawGeomeory(item->getGeometry());
+    item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
   }
   glEnable(GL_BLEND);
   for (auto &item : _blendRenderList) {
     setMaterial(item->getMeterial());
-    drawGeomeory(item->getGeometry());
+    item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
   }
   _normalRenderList.clear();
   _blendRenderList.clear();

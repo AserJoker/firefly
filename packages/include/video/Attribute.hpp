@@ -2,16 +2,18 @@
 #include "core/AutoPtr.hpp"
 #include "core/Buffer.hpp"
 #include "core/Object.hpp"
+#include "gl/Buffer.hpp"
 #include <typeinfo>
 namespace firefly::video {
 class Attribute : public core::Object {
 private:
-  core::AutoPtr<core::Buffer> _buffer;
   std::string _itemType;
   uint32_t _itemSize;
+  uint32_t _itemCount;
   uint32_t _stride;
   bool _normalize;
   bool _dynamic;
+  core::AutoPtr<gl::Buffer> _vbo;
 
 public:
   Attribute(const core::AutoPtr<core::Buffer> &buffer,
@@ -22,7 +24,8 @@ public:
   const bool &isNormalized() const;
   const bool &isDynamic() const;
   const uint32_t &getStride() const;
-  const core::AutoPtr<core::Buffer> &getBuffer() const;
+  const uint32_t &getItemCount() const;
+  const core::AutoPtr<gl::Buffer> &getVertexBufferObject() const;
   void write(const uint32_t &offset, const uint32_t &size, const void *data);
   template <class T> void write(const uint32_t &offset, const T &value) {
     write(offset, sizeof(T), &value);

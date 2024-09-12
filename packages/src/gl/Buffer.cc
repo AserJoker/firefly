@@ -19,6 +19,18 @@ void Buffer::write(const uint32_t &offset, const uint32_t &size,
   glBindBuffer(GL_ARRAY_BUFFER, _handle);
   glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
 }
+const void *Buffer::map(MAP_ACCESS access) const {
+  glBindBuffer(GL_ARRAY_BUFFER, _handle);
+  return glMapBuffer(GL_ARRAY_BUFFER, (GLenum)access);
+}
+void *Buffer::map(MAP_ACCESS access) {
+  glBindBuffer(GL_ARRAY_BUFFER, _handle);
+  return glMapBuffer(GL_ARRAY_BUFFER, (GLenum)access);
+}
+void Buffer::unmap() const {
+  glBindBuffer(GL_ARRAY_BUFFER, _handle);
+  glUnmapBuffer(GL_ARRAY_BUFFER);
+}
 const uint32_t Buffer::getBufferSize() const {
   int32_t size;
   glBindBuffer(GL_ARRAY_BUFFER, _handle);
@@ -32,7 +44,11 @@ Buffer::~Buffer() {
   }
 }
 void Buffer::bind(BUFFER_TARGET target, const core::AutoPtr<Buffer> &buffer) {
-  glBindBuffer((GLenum)target, buffer->_handle);
+  if (!buffer) {
+    glBindBuffer((GLenum)target, 0);
+  } else {
+    glBindBuffer((GLenum)target, buffer->_handle);
+  }
 }
 void Buffer::bindBase(BUFFER_TARGET target, const uint32_t &index,
                       const core::AutoPtr<Buffer> &buffer) {
