@@ -62,6 +62,7 @@ const float &Material::getShininess() const { return _shininess; }
 const float &Material::getShininessStrength() const {
   return _shininessStrength;
 }
+const std::string &Material::getName() const { return _name; }
 
 void Material::setAmbient(const glm::vec3 &color) {
   _ambient = color;
@@ -154,6 +155,7 @@ void Material::setShininessStrength(float value) {
     };
   }
 }
+void Material::setName(const std::string &name) { _name = name; }
 
 const bool &Material::isBlend() const { return _blend; }
 void Material::setBlend(const bool &value) { _blend = value; }

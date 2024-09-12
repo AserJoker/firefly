@@ -25,6 +25,7 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
   aiColor3D color;
   float fvalue;
   int ivalue;
+  material->setName(mat->GetName().C_Str());
   if (mat->Get(AI_MATKEY_COLOR_AMBIENT, color) == AI_SUCCESS) {
     glm::vec3 v = {color.r, color.g, color.b};
     material->setAmbient(v);
@@ -348,6 +349,34 @@ const std::unordered_map<std::string, core::AutoPtr<Model>> &
 ModelSet::getModels() const {
   return _models;
 }
+
+std::unordered_map<std::string, core::AutoPtr<Model>> ModelSet::getAllModels() {
+  std::unordered_map<std::string, core::AutoPtr<Model>> models;
+  for (auto &[name, model] : getModels()) {
+    models[name] = model;
+  }
+  for (auto &[_, child] : _children) {
+    for (auto &[name, model] : child->getAllModels()) {
+      models[name] = model;
+    }
+  }
+  return models;
+}
+std::unordered_map<std::string, core::AutoPtr<Material>>
+ModelSet::getAllMaterials() {
+  std::unordered_map<std::string, core::AutoPtr<Material>> materials;
+  for (auto &[name, model] : getModels()) {
+    auto material = model->getMaterial();
+    materials[material->getName()] = material;
+  }
+  for (auto &[_, child] : _children) {
+    for (auto &[name, material] : child->getAllMaterials()) {
+      materials[name] = material;
+    }
+  }
+  return materials;
+};
+
 const std::unordered_map<std::string, core::AutoPtr<Model>>
 ModelSet::getAllModels() const {
   std::unordered_map<std::string, core::AutoPtr<Model>> models;
@@ -361,18 +390,21 @@ ModelSet::getAllModels() const {
   }
   return models;
 }
-std::unordered_map<std::string, core::AutoPtr<Model>> ModelSet::getAllModels() {
-  std::unordered_map<std::string, core::AutoPtr<Model>> models;
+const std::unordered_map<std::string, core::AutoPtr<Material>>
+ModelSet::getAllMaterials() const {
+  std::unordered_map<std::string, core::AutoPtr<Material>> materials;
   for (auto &[name, model] : getModels()) {
-    models[name] = model;
+    auto material = model->getMaterial();
+    materials[material->getName()] = material;
   }
   for (auto &[_, child] : _children) {
-    for (auto &[name, model] : child->getAllModels()) {
-      models[name] = model;
+    for (auto &[name, material] : child->getAllMaterials()) {
+      materials[name] = material;
     }
   }
-  return models;
-}
+  return materials;
+};
+
 void ModelSet::setModel(const std::string &name,
                         const core::AutoPtr<Model> &model) {
   _models[name] = model;

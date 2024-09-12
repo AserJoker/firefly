@@ -41,7 +41,6 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
 #include <lua.hpp>
-#include <set>
 
 using namespace firefly;
 using namespace duskland;
@@ -154,23 +153,10 @@ void GameApplication::onMainLoop() {
     pos -= up * speed;
     camera->setPosition(pos);
   }
-  // ImGui_ImplOpenGL3_NewFrame();
-  // ImGui_ImplSDL2_NewFrame();
-  // ImGui::NewFrame();
-
-  // 1. Show the big demo window (Most of the sample code is in
-  // ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear
-  // ImGui!).
-  // if (show_demo_window)
-  //   ImGui::ShowDemoWindow(&show_demo_window);
-
-  // Rendering
-  // ImGui::Render();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   _renderer->begin(camera);
   _renderer->draw(modelSet);
   _renderer->end();
-  // ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
   getWindow()->present();
 }
 
@@ -189,14 +175,7 @@ void GameApplication::onKeyDown(input::Event_KeyDown &e) {
     _mouse->releaseMouse();
   }
   if (e.getScancode() == SDL_SCANCODE_RETURN) {
-    auto models = modelSet->getAllModels();
-    std::set<const video::Material *> cache;
-    for (auto &[name, model] : models) {
-      auto material = model->getMaterial();
-      if (cache.contains(material.getRawPointer())) {
-        continue;
-      }
-      cache.insert(material.getRawPointer());
+    for (auto &[name, material] : modelSet->getAllMaterials()) {
       if (material->isWireframe()) {
         material->setIsWireframe(false);
       } else {

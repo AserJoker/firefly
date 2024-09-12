@@ -73,6 +73,8 @@ private:
 
   std::set<std::string> _enableAttributes;
 
+  std::string _name;
+
   glm::vec3 _ambient;
   glm::vec3 _diffuse;
   glm::vec3 _specular;
@@ -112,6 +114,7 @@ public:
   const float &getOpacity() const;
   const float &getShininess() const;
   const float &getShininessStrength() const;
+  const std::string &getName() const;
 
   void setAmbient(const glm::vec3 &color);
   void setDiffuse(const glm::vec3 &color);
@@ -126,6 +129,7 @@ public:
   void setOpacity(float value);
   void setShininess(float value);
   void setShininessStrength(float value);
+  void setName(const std::string &name);
 
   void active(core::AutoPtr<Constant> &constants) const;
 

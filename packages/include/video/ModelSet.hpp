@@ -1,4 +1,5 @@
 #pragma once
+#include "Material.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
@@ -15,8 +16,11 @@ public:
   ModelSet(const std::string &name);
   const std::unordered_map<std::string, core::AutoPtr<Model>> &
   getModels() const;
-  const std::unordered_map<std::string, core::AutoPtr<Model>> 
+  const std::unordered_map<std::string, core::AutoPtr<Model>>
   getAllModels() const;
+  const std::unordered_map<std::string, core::AutoPtr<Material>>
+  getAllMaterials() const;
+  std::unordered_map<std::string, core::AutoPtr<Material>> getAllMaterials();
   std::unordered_map<std::string, core::AutoPtr<Model>> getAllModels();
   void setModel(const std::string &name, const core::AutoPtr<Model> &model);
   const core::AutoPtr<Model> getModel(const std::string &name) const;
