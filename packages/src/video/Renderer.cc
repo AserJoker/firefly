@@ -20,7 +20,7 @@ Renderer::Renderer() : _shaderName("standard") {
 
 bool Renderer::activeShader(const std::string &name, const std::string &stage) {
   auto shader = Shader::get(name, fmt::format("shader::{}", name));
-  auto program = shader->active(stage);
+  auto program = shader->getProgram(stage);
   if (!program) {
     return false;
   }

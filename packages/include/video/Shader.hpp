@@ -28,6 +28,6 @@ public:
   const std::unordered_map<std::string, core::AutoPtr<gl::Program>> &
   getPrograms() const;
   std::unordered_map<std::string, core::AutoPtr<gl::Program>> &getPrograms();
-  core::AutoPtr<gl::Program> active(const std::string &name);
+  core::AutoPtr<gl::Program> getProgram(const std::string &name);
 };
 }; // namespace firefly::video

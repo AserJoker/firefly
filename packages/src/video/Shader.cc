@@ -96,11 +96,9 @@ Shader::getPrograms() {
   return _programs;
 }
 
-core::AutoPtr<gl::Program> Shader::active(const std::string &name) {
+core::AutoPtr<gl::Program> Shader::getProgram(const std::string &name) {
   if (_programs.contains(name)) {
-    auto program = _programs.at(name);
-    program->use();
-    return program;
+    return _programs.at(name);
   }
   return nullptr;
 }
