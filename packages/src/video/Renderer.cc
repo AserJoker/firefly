@@ -3,18 +3,19 @@
 #include "gl/Constant.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/Texture2D.hpp"
-#include "video/AmbientLight.hpp"
 #include "video/Camera.hpp"
 #include "video/Geometry.hpp"
+#include "video/Light.hpp"
 #include "video/Material.hpp"
 #include "video/RenderObject.hpp"
 #include "video/Shader.hpp"
+#include <glm/ext/matrix_transform.hpp>
 
 using namespace firefly;
 using namespace firefly::video;
 Renderer::Renderer() : _shaderName("standard") {
   _constants = new gl::Constant();
-  _light.ambient = new AmbientLight();
+  _light = new Light();
   _constants->setField("model", glm::mat4(1.0f));
 }
 
@@ -77,12 +78,7 @@ const core::AutoPtr<gl::Constant> &Renderer::getConstants() const {
 
 core::AutoPtr<gl::Constant> &Renderer::getConstants() { return _constants; }
 
-core::AutoPtr<AmbientLight> Renderer::getAmbientLight() {
-  return _light.ambient;
-}
-const core::AutoPtr<AmbientLight> Renderer::getAmbientLight() const {
-  return _light.ambient;
-}
+core::AutoPtr<Light> &Renderer::getLight() { return _light; }
 void Renderer::draw(const core::AutoPtr<Material> &material,
                     const core::AutoPtr<Geometry> &geometry) {
   if (!material->isBlend()) {
@@ -110,10 +106,11 @@ void Renderer::draw(const core::AutoPtr<ModelSet> &modelset) {
 void Renderer::begin(const core::AutoPtr<Camera> &camera) {
   _constants->setField("projection", camera->getProjectionMatrix());
   _constants->setField("view", camera->getViewMatrix());
+  _constants->setField("cameraPosition", camera->getPosition());
 }
 void Renderer::end() {
   activeShader(_shaderName, "gbuffer_basic");
-  _light.ambient->active(_constants);
+  _light->active(_constants);
   glDisable(GL_BLEND);
   for (auto &item : _normalRenderList) {
     setMaterial(item->getMeterial());

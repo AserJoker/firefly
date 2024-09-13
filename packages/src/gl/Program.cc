@@ -76,7 +76,7 @@ void Program::setUniform(const std::string &name, const uint32_t &value) {
   if (loc == GL_INVALID_INDEX) {
     return;
   }
-  glUniform1ui(getUniformLocation(name), value);
+  glUniform1ui(loc, value);
 }
 void Program::setUniform(const std::string &name, const bool &value) {
   auto loc = getUniformLocation(name);

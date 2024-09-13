@@ -46,7 +46,7 @@ using namespace firefly;
 using namespace duskland;
 float pitch = 0;
 float yaw = 90;
-float strength = 0.0f;
+float strength = 0.1f;
 core::AutoPtr<video::Camera> camera;
 core::AutoPtr<video::ModelSet> modelSet;
 GameApplication::GameApplication(int argc, char *argv[])
@@ -96,17 +96,20 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  modelSet = video::ModelSet::get("backpack.obj", "model::nanosuit.obj");
+  modelSet = video::ModelSet::get("backpack.obj", "model::backpack.obj");
   auto materials = modelSet->getAllMaterials();
   for (auto &[name, material] : materials) {
     material->enableAttribute(video::Material::HEIGHT_TEX);
     material->enableAttribute(video::Material::SPECULAR_TEX);
   }
-  _renderer->getAmbientLight()->setStrength(strength);
+  _renderer->getLight()->getAmbientLight()->setStrength(strength);
   camera = new video::Camera(
       glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f),
       glm::vec3(0, 0, -3.0f), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
   glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+  auto &plight = _renderer->getLight()->getPointLight("self");
+  camera->setPosition({0, 0, -5});
+  plight->setPosition(camera->getPosition());
   getWindow()->show();
 }
 bool show_demo_window = true;
@@ -159,20 +162,8 @@ void GameApplication::onMainLoop() {
     pos -= up * speed;
     camera->setPosition(pos);
   }
-  if (_keyboard->getKeyState(SDL_SCANCODE_KP_PLUS)) {
-    strength += 0.01f;
-    if (strength > 1.0f) {
-      strength = 1.0f;
-    }
-    _renderer->getAmbientLight()->setStrength(strength);
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_KP_MINUS)) {
-    strength -= 0.01f;
-    if (strength < 0.0f) {
-      strength = 0.0f;
-    }
-    _renderer->getAmbientLight()->setStrength(strength);
-  }
+  static int count = 0;
+  _renderer->getConstants()->setField("time", count++);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   _renderer->begin(camera);
   _renderer->draw(modelSet);

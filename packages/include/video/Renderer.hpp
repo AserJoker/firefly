@@ -1,7 +1,7 @@
 #pragma once
-#include "AmbientLight.hpp"
 #include "Camera.hpp"
 #include "Geometry.hpp"
+#include "Light.hpp"
 #include "Material.hpp"
 #include "Model.hpp"
 #include "ModelSet.hpp"
@@ -15,17 +15,13 @@
 namespace firefly::video {
 class Renderer : public core::Object {
 public:
-  struct Light {
-    core::AutoPtr<AmbientLight> ambient;
-  };
-
 private:
   std::string _shaderName;
   core::AutoPtr<gl::Program> _shader;
   core::AutoPtr<gl::Constant> _constants;
   std::vector<core::AutoPtr<RenderObject>> _normalRenderList;
   std::vector<core::AutoPtr<RenderObject>> _blendRenderList;
-  Light _light;
+  core::AutoPtr<Light> _light;
 
 private:
   bool activeShader(const std::string &name, const std::string &stage);
@@ -36,8 +32,7 @@ public:
   void setMaterial(const core::AutoPtr<Material> &material);
   const core::AutoPtr<gl::Constant> &getConstants() const;
   core::AutoPtr<gl::Constant> &getConstants();
-  core::AutoPtr<AmbientLight> getAmbientLight();
-  const core::AutoPtr<AmbientLight> getAmbientLight() const;
+  core::AutoPtr<Light> &getLight();
   void draw(const core::AutoPtr<Material> &material,
             const core::AutoPtr<Geometry> &geometry);
   void draw(const core::AutoPtr<Model> &mesh);

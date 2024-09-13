@@ -10,4 +10,5 @@ void AmbientLight::setColor(const glm::vec3 &color) { _color = color; }
 void AmbientLight::active(core::AutoPtr<gl::Constant> &constants) const {
   constants->setField("ambientLight.strength", _strength);
   constants->setField("ambientLight.color", _color);
+  constants->setField("ambientLight.result", _color * _strength);
 }
