@@ -1,6 +1,6 @@
 #include "video/Material.hpp"
 #include "core/AutoPtr.hpp"
-#include "video/Constant.hpp"
+#include "gl/Constant.hpp"
 using namespace firefly;
 using namespace firefly::video;
 Material::Material()
@@ -13,9 +13,9 @@ Material::Material()
   enableAttribute(DIFFUSE_TEX);
 }
 
-const std::unordered_map<std::string, Material::TextureInfo>
+const std::map<std::string, Material::TextureInfo>
 Material::getTextures() const {
-  std::unordered_map<std::string, Material::TextureInfo> textures;
+  std::map<std::string, Material::TextureInfo> textures;
   for (auto &[name, info] : _textures) {
     auto rpos = name.find_last_of('_');
     if (_enableAttributes.contains(name) ||
@@ -32,7 +32,7 @@ void Material::setTexture(const std::string &name,
   _textures[name] = texture;
 }
 
-void Material::active(core::AutoPtr<Constant> &constants) const {
+void Material::active(core::AutoPtr<gl::Constant> &constants) const {
   for (auto &attribute : _enableAttributes) {
     if (_attributes.contains(attribute)) {
       _attributes.at(attribute)(constants);
@@ -68,7 +68,7 @@ void Material::setAmbient(const glm::vec3 &color) {
   _ambient = color;
   if (_attributes.contains(AMBIENT_COLOR)) {
     _attributes[AMBIENT_COLOR] =
-        [this](core::AutoPtr<Constant> constants) -> void {
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("ambient", _ambient);
     };
   }
@@ -77,7 +77,7 @@ void Material::setDiffuse(const glm::vec3 &color) {
   _diffuse = color;
   if (_attributes.contains(AMBIENT_COLOR)) {
     _attributes[AMBIENT_COLOR] =
-        [this](core::AutoPtr<Constant> constants) -> void {
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("diffuse", _diffuse);
     };
   }
@@ -86,7 +86,7 @@ void Material::setSpecular(const glm::vec3 &color) {
   _specular = color;
   if (_attributes.contains(SPECULAR_COLOR)) {
     _attributes[SPECULAR_COLOR] =
-        [this](core::AutoPtr<Constant> constants) -> void {
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("specular", _specular);
     };
   }
@@ -95,7 +95,7 @@ void Material::setEmissive(const glm::vec3 &color) {
   _emissive = color;
   if (_attributes.contains(EMISSIVE_COLOR)) {
     _attributes[EMISSIVE_COLOR] =
-        [this](core::AutoPtr<Constant> constants) -> void {
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("emissive", _emissive);
     };
   }
@@ -104,7 +104,7 @@ void Material::setReflective(const glm::vec3 &color) {
   _reflective = color;
   if (_attributes.contains(REFLECTIVE_COLOR)) {
     _attributes[REFLECTIVE_COLOR] =
-        [this](core::AutoPtr<Constant> constants) -> void {
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("reflective", _reflective);
     };
   }
@@ -113,7 +113,7 @@ void Material::setTransparent(const glm::vec3 &color) {
   _transparent = color;
   if (_attributes.contains(TRANSPARENT_COLOR)) {
     _attributes[TRANSPARENT_COLOR] =
-        [this](core::AutoPtr<Constant> constants) -> void {
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("transparent", _transparent);
     };
   }
@@ -122,7 +122,7 @@ void Material::setReflectivity(float value) {
   _reflectivity = value;
   if (_attributes.contains(REFLECTIVITY)) {
     _attributes[REFLECTIVITY] =
-        [this](core::AutoPtr<Constant> constants) -> void {
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("reflectivity", _reflectivity);
     };
   }
@@ -133,7 +133,7 @@ void Material::setIsBlendAdd(bool value) { _blendAdd = value; }
 void Material::setOpacity(float value) {
   _opacity = value;
   if (_attributes.contains(OPACITY)) {
-    _attributes[OPACITY] = [this](core::AutoPtr<Constant> constants) -> void {
+    _attributes[OPACITY] = [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("opacity", _opacity);
     };
   }
@@ -141,7 +141,7 @@ void Material::setOpacity(float value) {
 void Material::setShininess(float value) {
   _shininess = value;
   if (_attributes.contains(SHININESS)) {
-    _attributes[SHININESS] = [this](core::AutoPtr<Constant> constants) -> void {
+    _attributes[SHININESS] = [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("shininess", _shininess);
     };
   }
@@ -150,7 +150,7 @@ void Material::setShininessStrength(float value) {
   _shininessStrength = value;
   if (_attributes.contains(SHININESS_STRENGTH)) {
     _attributes[SHININESS_STRENGTH] =
-        [this](core::AutoPtr<Constant> constants) -> void {
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("shininess_strength", _shininessStrength);
     };
   }

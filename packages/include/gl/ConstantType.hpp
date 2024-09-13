@@ -1,5 +1,5 @@
 #pragma once
-namespace firefly::video {
+namespace firefly::gl {
 enum class CONSTANT_TYPE {
   BOOL,
   INT,
@@ -28,4 +28,4 @@ enum class CONSTANT_TYPE {
   BLOCK
 };
 
-} // namespace firefly::video
+} // namespace firefly::gl

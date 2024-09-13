@@ -36,8 +36,10 @@ std::vector<std::string> Media::scan(const std::string &name) {
   for (auto &part : filepaths) {
     if (std::filesystem::exists(part)) {
       for (auto &item : std::filesystem::directory_iterator(part)) {
-        result.push_back(
-            fmt::format("{}::{}", name, item.path().filename().string()));
+        auto key = fmt::format("{}::{}", name, item.path().filename().string());
+        if (std::find(result.begin(), result.end(), key) == result.end()) {
+          result.push_back(key);
+        }
       }
     }
   }

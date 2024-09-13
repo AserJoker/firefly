@@ -7,7 +7,7 @@
 #include <any>
 #include <glm/fwd.hpp>
 #include <unordered_map>
-namespace firefly::video {
+namespace firefly::gl {
 class Constant : public core::Object {
 public:
 private:
@@ -20,8 +20,6 @@ private:
   constexpr bool check_any(const std::any &value, const T &raw) {
     return value.type() == typeid(T) && std::any_cast<T>(value) == raw;
   }
-  void setField(const std::string &name, const CONSTANT_TYPE &type,
-                const std::any &value);
   template <CONSTANT_TYPE type, class T>
   void setField(const std::string &name, const T &value) {
     if (_fields.contains(name) && check_any(_fields.at(name), value)) {
@@ -31,7 +29,9 @@ private:
   }
 
 public:
-  Constant(const core::AutoPtr<core::Bitmap> &bitmap);
+  Constant(const core::AutoPtr<core::Bitmap> &bitmap = nullptr);
+  void setField(const std::string &name, const CONSTANT_TYPE &type,
+                const std::any &value);
   void setField(const std::string &name, const bool &value);
   void setField(const std::string &name, const int32_t &value);
   void setField(const std::string &name, const glm::ivec2 &value);
@@ -61,5 +61,6 @@ public:
   const std::unordered_map<std::string, std::any> &getFields() const;
   const std::any getField(const std::string &name) const;
   const CONSTANT_TYPE getFieldType(const std::string &name);
+  void sync(core::AutoPtr<Constant> &another);
 };
-}; // namespace firefly::video
+}; // namespace firefly::gl

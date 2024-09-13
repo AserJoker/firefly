@@ -1,9 +1,9 @@
-#include "video/ConstantBlock.hpp"
+#include "gl/ConstantBlock.hpp"
 #include "core/AutoPtr.hpp"
 #include "gl/Buffer.hpp"
 #include "gl/BufferUsage.hpp"
 using namespace firefly;
-using namespace firefly::video;
+using namespace firefly::gl;
 ConstantBlock::ConstantBlock(const uint32_t &size, const uint32_t &index)
     : _index(index) {
   _ubo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);

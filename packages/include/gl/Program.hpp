@@ -1,5 +1,7 @@
 #pragma once
+#include "Constant.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Bitmap.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
 #include "gl/Shader.hpp"
@@ -12,16 +14,11 @@ private:
   std::unordered_map<std::string, uint32_t> _locations;
   std::unordered_map<std::string, uint32_t> _uniformBlockLocations;
   std::unordered_map<uint32_t, uint32_t> _unformBlockBindings;
-
-private:
-  static const std::unordered_map<std::string, std::string>
-  load(const std::string &path);
-
-  static std::string preCompile(const std::string &source);
+  core::AutoPtr<Constant> _constants;
+  core::AutoPtr<core::Bitmap> _constantBitmap;
 
 public:
   Program();
-  Program(const std::string &path);
   ~Program() override;
   void attach(const core::AutoPtr<Shader> &shader);
   bool link();
@@ -61,5 +58,6 @@ public:
                   const bool &transpose = false);
   void setUniform(const std::string &name, const glm::mat4 &value,
                   const bool &transpose = false);
+  void setUniform(core::AutoPtr<Constant> &constants);
 };
 }; // namespace firefly::gl

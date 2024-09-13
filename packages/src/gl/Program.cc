@@ -1,68 +1,16 @@
 #include "gl/Program.hpp"
-#include "gl/ShaderType.hpp"
-#include <filesystem>
+#include "core/Bitmap.hpp"
+#include "gl/Constant.hpp"
 #include <glm/gtc/type_ptr.hpp>
 #include <runtime/Media.hpp>
 
 using namespace firefly;
 using namespace firefly::gl;
 
-std::string Program::preCompile(const std::string &source) {
-  std::string result = source;
-  return result;
-}
-
-const std::unordered_map<std::string, std::string>
-Program::load(const std::string &path) {
-  std::unordered_map<std::string, std::string> sources;
-  core::AutoPtr media = core::Singleton<runtime::Media>::instance();
-  auto items = media->scan(path);
-  for (auto &item : items) {
-    auto files = media->resolve(item);
-    if (!files.empty()) {
-      std::filesystem::path itemPath = files[files.size() - 1];
-      if (!std::filesystem::is_directory(itemPath) &&
-          itemPath.extension() == ".glsl") {
-        auto name = itemPath.filename().string();
-        name = name.substr(0, name.length() - 5);
-        auto buffer = media->load(item)->read();
-        sources[name] =
-            std::string((const char *)buffer->getData(), buffer->getSize());
-      }
-    }
-  }
-  return sources;
-}
-
-Program::Program() { _handle = glCreateProgram(); }
-
-Program::Program(const std::string &path) : Program() {
-  auto sources = load(path);
-  for (auto &[name, source] : sources) {
-    core::AutoPtr<gl::Shader> shader;
-    if (name == "vertex") {
-      shader = new gl::Shader(gl::SHADER_TYPE::VERTEX_SHADER);
-    } else if (name == "fragment") {
-      shader = new gl::Shader(gl::SHADER_TYPE::FRAGMENT_SHADER);
-    } else if (name == "tess_control") {
-      shader = new gl::Shader(gl::SHADER_TYPE::TESS_CONTROL_SHADER);
-    } else if (name == "tess_evaluation") {
-      shader = new gl::Shader(gl::SHADER_TYPE::TESS_EVALUATION_SHADER);
-    } else if (name == "geometry") {
-      shader = new gl::Shader(gl::SHADER_TYPE::GEOMETRY_SHADER);
-    }
-    if (!shader) {
-      continue;
-    }
-    shader->setShaderSource(source);
-    if (!shader->compile()) {
-      throw exception::RuntimeException<"ShaderCompile">(shader->getInfoLog());
-    }
-    attach(shader);
-  }
-  if (!link()) {
-    throw exception::RuntimeException<"ShaderLink">(getInfoLog());
-  }
+Program::Program() {
+  _handle = glCreateProgram();
+  _constantBitmap = new core::Bitmap();
+  _constants = new Constant(_constantBitmap);
 }
 
 Program::~Program() { glDeleteProgram(_handle); }
@@ -296,4 +244,90 @@ void Program::setUniform(const std::string &name, const glm::mat4x3 &value,
     return;
   }
   glUniformMatrix4x3fv(loc, 1, transpose, glm::value_ptr(value));
+}
+void Program::setUniform(core::AutoPtr<Constant> &constants) {
+  constants->sync(_constants);
+  for (auto &[name, _] : _constantBitmap->getData()) {
+    auto &field = _constants->getField(name);
+    auto type = _constants->getFieldType(name);
+    switch (type) {
+    case CONSTANT_TYPE::BOOL:
+      this->setUniform(name, std::any_cast<bool>(field));
+      break;
+    case CONSTANT_TYPE::INT:
+      this->setUniform(name, std::any_cast<int>(field));
+      break;
+    case CONSTANT_TYPE::IVEC2:
+      this->setUniform(name, std::any_cast<glm::ivec2>(field));
+      break;
+    case CONSTANT_TYPE::IVEC3:
+      this->setUniform(name, std::any_cast<glm::ivec3>(field));
+      break;
+    case CONSTANT_TYPE::IVEC4:
+      this->setUniform(name, std::any_cast<glm::ivec4>(field));
+      break;
+    case CONSTANT_TYPE::UINT:
+      this->setUniform(name, std::any_cast<uint32_t>(field));
+      break;
+    case CONSTANT_TYPE::UIVEC2:
+      this->setUniform(name, std::any_cast<glm::uvec2>(field));
+      break;
+    case CONSTANT_TYPE::UIVEC3:
+      this->setUniform(name, std::any_cast<glm::uvec3>(field));
+      break;
+    case CONSTANT_TYPE::UIVEC4:
+      this->setUniform(name, std::any_cast<glm::uvec4>(field));
+      break;
+    case CONSTANT_TYPE::FLOAT:
+      this->setUniform(name, std::any_cast<float>(field));
+      break;
+    case CONSTANT_TYPE::VEC2:
+      this->setUniform(name, std::any_cast<glm::vec2>(field));
+      break;
+    case CONSTANT_TYPE::VEC3:
+      this->setUniform(name, std::any_cast<glm::vec3>(field));
+      break;
+    case CONSTANT_TYPE::VEC4:
+      this->setUniform(name, std::any_cast<glm::vec4>(field));
+      break;
+    case CONSTANT_TYPE::DOUBLE:
+      this->setUniform(name, std::any_cast<double>(field));
+      break;
+    case CONSTANT_TYPE::DVEC2:
+      this->setUniform(name, std::any_cast<glm::dvec2>(field));
+      break;
+    case CONSTANT_TYPE::DVEC3:
+      this->setUniform(name, std::any_cast<glm::dvec3>(field));
+      break;
+    case CONSTANT_TYPE::DVEC4:
+      this->setUniform(name, std::any_cast<glm::dvec4>(field));
+      break;
+    case CONSTANT_TYPE::MATRIX2:
+      this->setUniform(name, std::any_cast<glm::mat2>(field));
+      break;
+    case CONSTANT_TYPE::MATRIX2x3:
+      this->setUniform(name, std::any_cast<glm::mat2x3>(field));
+      break;
+    case CONSTANT_TYPE::MATRIX3x2:
+      this->setUniform(name, std::any_cast<glm::mat3x2>(field));
+      break;
+    case CONSTANT_TYPE::MATRIX3:
+      this->setUniform(name, std::any_cast<glm::mat3>(field));
+      break;
+    case CONSTANT_TYPE::MATRIX3x4:
+      this->setUniform(name, std::any_cast<glm::mat3x4>(field));
+      break;
+    case CONSTANT_TYPE::MATRIX4x3:
+      this->setUniform(name, std::any_cast<glm::mat4x3>(field));
+      break;
+    case CONSTANT_TYPE::MATRIX4:
+      this->setUniform(name, std::any_cast<glm::mat4>(field));
+      break;
+    case CONSTANT_TYPE::BLOCK: {
+      auto block = std::any_cast<core::AutoPtr<ConstantBlock>>(field);
+      this->bindUniformBlock(name, block->getIndex());
+    } break;
+    }
+  }
+  _constantBitmap->clear();
 }

@@ -1,11 +1,15 @@
-#include "video/Constant.hpp"
+#include "gl/Constant.hpp"
 #include "core/Bitmap.hpp"
-#include "video/ConstantType.hpp"
+#include "gl/ConstantType.hpp"
 #include <glm/glm.hpp>
 using namespace firefly;
-using namespace firefly::video;
+using namespace firefly::gl;
 Constant::Constant(const core::AutoPtr<core::Bitmap> &bitmap)
-    : _bitmap(bitmap) {}
+    : _bitmap(bitmap) {
+  if (_bitmap == nullptr) {
+    _bitmap = new core::Bitmap();
+  }
+}
 void Constant::setField(const std::string &name, const CONSTANT_TYPE &type,
                         const std::any &value) {
   _metadata[name] = type;
@@ -102,4 +106,11 @@ const CONSTANT_TYPE Constant::getFieldType(const std::string &name) {
     return _metadata.at(name);
   }
   return CONSTANT_TYPE::INT;
+}
+void Constant::sync(core::AutoPtr<Constant> &another) {
+  for (auto &[name, value] : _bitmap->getData()) {
+    auto &field = _fields[name];
+    another->setField(name, _metadata.at(name), field);
+  }
+  _bitmap->clear();
 }

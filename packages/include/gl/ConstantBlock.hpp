@@ -2,7 +2,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "gl/Buffer.hpp"
-namespace firefly::video {
+namespace firefly::gl {
 class ConstantBlock : public core::Object {
 private:
   uint32_t _index;
@@ -17,4 +17,4 @@ public:
   }
   const uint32_t &getIndex() const;
 };
-} // namespace firefly::video
+} // namespace firefly::gl

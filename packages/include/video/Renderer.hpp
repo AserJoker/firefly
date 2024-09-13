@@ -1,34 +1,43 @@
 #pragma once
+#include "AmbientLight.hpp"
 #include "Camera.hpp"
-#include "Constant.hpp"
 #include "Geometry.hpp"
 #include "Material.hpp"
 #include "Model.hpp"
 #include "ModelSet.hpp"
 #include "RenderObject.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Bitmap.hpp"
 #include "core/Object.hpp"
+#include "gl/Constant.hpp"
 #include "gl/Program.hpp"
 #include <vector>
+
 namespace firefly::video {
 class Renderer : public core::Object {
-private:
-  core::AutoPtr<gl::Program> _shader;
-  core::AutoPtr<Constant> _constants;
-  core::AutoPtr<core::Bitmap> _constantBitmap;
-  std::vector<core::AutoPtr<RenderObject>> _normalRenderList;
-  std::vector<core::AutoPtr<RenderObject>> _blendRenderList;
+public:
+  struct Light {
+    core::AutoPtr<AmbientLight> ambient;
+  };
 
 private:
-  void syncConstats(bool force);
+  std::string _shaderName;
+  core::AutoPtr<gl::Program> _shader;
+  core::AutoPtr<gl::Constant> _constants;
+  std::vector<core::AutoPtr<RenderObject>> _normalRenderList;
+  std::vector<core::AutoPtr<RenderObject>> _blendRenderList;
+  Light _light;
+
+private:
+  bool activeShader(const std::string &name, const std::string &stage);
 
 public:
   Renderer();
   void setShader(const std::string &name);
   void setMaterial(const core::AutoPtr<Material> &material);
-  const core::AutoPtr<Constant> &getConstants() const;
-  core::AutoPtr<Constant> &getConstants();
+  const core::AutoPtr<gl::Constant> &getConstants() const;
+  core::AutoPtr<gl::Constant> &getConstants();
+  core::AutoPtr<AmbientLight> getAmbientLight();
+  const core::AutoPtr<AmbientLight> getAmbientLight() const;
   void draw(const core::AutoPtr<Material> &material,
             const core::AutoPtr<Geometry> &geometry);
   void draw(const core::AutoPtr<Model> &mesh);

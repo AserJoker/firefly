@@ -332,7 +332,8 @@ ModelSet::ModelSet(const std::string &name) {
   std::string filepath;
   auto fp = media->resolve(name);
   Assimp::Importer importer;
-  auto scene = importer.ReadFile(fp[fp.size() - 1], aiProcess_Triangulate);
+  auto scene = importer.ReadFile(fp[fp.size() - 1],
+                                 aiProcess_Triangulate | aiProcess_GenNormals);
   if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
       !scene->mRootNode) {
     throw exception::RuntimeException<"LoadModel">(importer.GetErrorString());

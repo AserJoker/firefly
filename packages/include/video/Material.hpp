@@ -1,13 +1,15 @@
 #pragma once
-#include "Constant.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
+#include "gl/Constant.hpp"
 #include "gl/TextureWrapMode.hpp"
 #include <functional>
 #include <glm/glm.hpp>
+#include <map>
 #include <set>
 #include <unordered_map>
+
 namespace firefly::video {
 class Material : public core::Object, public core::Cache<Material> {
 public:
@@ -68,7 +70,8 @@ public:
 
 private:
   std::unordered_map<std::string, TextureInfo> _textures;
-  std::unordered_map<std::string, std::function<void(core::AutoPtr<Constant>)>>
+  std::unordered_map<std::string,
+                     std::function<void(core::AutoPtr<gl::Constant>)>>
       _attributes;
 
   std::set<std::string> _enableAttributes;
@@ -98,7 +101,7 @@ private:
 
 public:
   Material();
-  const std::unordered_map<std::string, TextureInfo> getTextures() const;
+  const std::map<std::string, TextureInfo> getTextures() const;
   void setTexture(const std::string &name, const TextureInfo &texture);
 
   const glm::vec3 &getAmbient() const;
@@ -131,7 +134,7 @@ public:
   void setShininessStrength(float value);
   void setName(const std::string &name);
 
-  void active(core::AutoPtr<Constant> &constants) const;
+  void active(core::AutoPtr<gl::Constant> &constants) const;
 
   const bool &isBlend() const;
   void setBlend(const bool &value);
