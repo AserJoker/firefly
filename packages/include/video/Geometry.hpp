@@ -49,6 +49,8 @@ public:
   static constexpr const uint32_t ATTR_NORMAL = 1;
   static constexpr const uint32_t ATTR_COLOR = 2;
   static constexpr const uint32_t ATTR_TEXCOORD = 3;
-  static constexpr const uint32_t ATTR_CUSTOM = 11;
+  static constexpr const uint32_t ATTR_TANGENT = 11;
+  static constexpr const uint32_t ATTR_BITANGENT = 12;
+  static constexpr const uint32_t ATTR_CUSTOM = 13;
 };
 } // namespace firefly::video

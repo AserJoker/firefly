@@ -15,6 +15,7 @@
 #include <assimp/scene.h>
 #include <assimp/texture.h>
 #include <assimp/types.h>
+#include <cstdint>
 #include <unordered_map>
 #include <vector>
 using namespace firefly;
@@ -238,6 +239,8 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
   core::AutoPtr<Geometry> geometry = new Geometry();
   std::vector<glm::vec3> vertices;
   std::vector<glm::vec3> normals;
+  std::vector<glm::vec3> tangents;
+  std::vector<glm::vec3> bitangents;
   std::vector<glm::vec2> texcoords[AI_MAX_NUMBER_OF_TEXTURECOORDS];
   std::vector<glm::vec4> colors;
   for (uint32_t i = 0; i < mesh->mNumVertices; i++) {
@@ -256,6 +259,12 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
     if (mesh->HasNormals()) {
       auto &v = mesh->mNormals[i];
       normals.push_back({v.x, v.y, v.z});
+    }
+    if (mesh->HasTangentsAndBitangents()) {
+      auto &v = mesh->mTangents[i];
+      tangents.push_back({v.x, v.y, v.z});
+      v = mesh->mBitangents[i];
+      bitangents.push_back({v.x, v.y, v.z});
     }
   }
   core::AutoPtr<Attribute> attrVertices = new Attribute(
@@ -283,6 +292,18 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
           typeid(float), 2);
       geometry->setAttribute(Geometry::ATTR_TEXCOORD + i, attrTex);
     }
+  }
+  if (!tangents.empty()) {
+    core::AutoPtr attrTangent = new Attribute(
+        new core::Buffer((uint32_t)tangents.size() * sizeof(glm::vec3),
+                         tangents.data()),
+        typeid(float), 3);
+    geometry->setAttribute(Geometry::ATTR_TANGENT, attrTangent);
+    core::AutoPtr attrBitangent = new Attribute(
+        new core::Buffer((uint32_t)bitangents.size() * sizeof(glm::vec3),
+                         bitangents.data()),
+        typeid(float), 3);
+    geometry->setAttribute(Geometry::ATTR_BITANGENT, attrBitangent);
   }
   std::vector<uint32_t> indices;
   for (uint32_t i = 0; i < mesh->mNumFaces; i++) {
@@ -333,7 +354,8 @@ ModelSet::ModelSet(const std::string &name) {
   auto fp = media->resolve(name);
   Assimp::Importer importer;
   auto scene = importer.ReadFile(fp[fp.size() - 1],
-                                 aiProcess_Triangulate | aiProcess_GenNormals);
+                                 aiProcess_Triangulate | aiProcess_GenNormals |
+                                     aiProcess_CalcTangentSpace);
   if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
       !scene->mRootNode) {
     throw exception::RuntimeException<"LoadModel">(importer.GetErrorString());
