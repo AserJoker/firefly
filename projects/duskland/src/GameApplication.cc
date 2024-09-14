@@ -34,7 +34,9 @@
 #include <fmt/format.h>
 #include <glad/glad.h>
 #include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/quaternion_geometric.hpp>
+#include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/trigonometric.hpp>
 #include <imgui.h>
@@ -49,6 +51,7 @@ float yaw = 90;
 float strength = 0.1f;
 core::AutoPtr<video::Camera> camera;
 core::AutoPtr<video::ModelSet> modelSet;
+glm::mat4 model(1.0);
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -96,7 +99,7 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  modelSet = video::ModelSet::get("backpack.obj", "model::backpack.obj");
+  modelSet = video::ModelSet::get("backpack.obj", "model::model.obj");
   auto materials = modelSet->getAllMaterials();
   for (auto &[name, material] : materials) {
     material->enableAttribute(video::Material::HEIGHT_TEX);
@@ -162,8 +165,30 @@ void GameApplication::onMainLoop() {
     pos -= up * speed;
     camera->setPosition(pos);
   }
+  if (_keyboard->getKeyState(SDL_SCANCODE_LEFT)) {
+    model = glm::translate(model, glm::vec3(-speed, 0, 0));
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_RIGHT)) {
+    model = glm::translate(model, glm::vec3(speed, 0, 0));
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_UP)) {
+    model = glm::translate(model, glm::vec3(0, speed, 0));
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_DOWN)) {
+    model = glm::translate(model, glm::vec3(0, -speed, 0));
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_Q)) {
+    model = glm::rotate(model, speed, glm::vec3(0, 1, 0));
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_E)) {
+    model = glm::rotate(model, -speed, glm::vec3(0, 1, 0));
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_R)) {
+    model = glm::mat4(1.0f);
+  }
   static int count = 0;
   _renderer->getConstants()->setField("time", count++);
+  _renderer->getConstants()->setField("model", model);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   _renderer->begin(camera);
   _renderer->draw(modelSet);
