@@ -7,10 +7,10 @@ private:
   uint32_t _size;
 
 public:
-  Buffer(const uint32_t &size, const void *data = 0);
+  Buffer(uint32_t size = 0, const void *data = 0);
   ~Buffer() override;
   const void *getData() const;
   const uint32_t &getSize() const;
-  void setData(const uint32_t &offset, const uint32_t &length, const void *data);
+  void setData(uint32_t offset, uint32_t length, const void *data);
 };
 } // namespace firefly::core

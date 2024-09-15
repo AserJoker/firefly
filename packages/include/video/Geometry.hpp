@@ -28,11 +28,10 @@ private:
 
 public:
   Geometry();
-  void setAttribute(const uint32_t &index,
-                    const core::AutoPtr<Attribute> &attribute);
-  core::AutoPtr<Attribute> getAttribute(const uint32_t &index);
-  const core::AutoPtr<Attribute> getAttribute(const uint32_t &index) const;
-  void removeAttribute(const uint32_t &index);
+  void setAttribute(uint32_t index, const core::AutoPtr<Attribute> &attribute);
+  core::AutoPtr<Attribute> getAttribute(uint32_t index);
+  const core::AutoPtr<Attribute> getAttribute(uint32_t index) const;
+  void removeAttribute(uint32_t index);
   const std::unordered_map<uint32_t, core::AutoPtr<Attribute>> &
   getAttributes() const;
   void setAttributeIndex(const core::AutoPtr<AttributeIndex> &attrindex);

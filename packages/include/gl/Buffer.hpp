@@ -11,10 +11,10 @@ private:
   BUFFER_USAGE _usage;
 
 public:
-  Buffer(BUFFER_USAGE usage, const uint32_t &handle = 0);
+  Buffer(BUFFER_USAGE usage, uint32_t handle = 0);
   ~Buffer() override;
-  void setData(const uint32_t &size, const void *data);
-  void write(const uint32_t &offset, const uint32_t &size, const void *data);
+  void setData(uint32_t size, const void *data);
+  void write(uint32_t offset, uint32_t size, const void *data);
   const void *map(MAP_ACCESS access) const;
   void *map(MAP_ACCESS access);
   void unmap() const;
@@ -22,7 +22,7 @@ public:
 
 public:
   static void bind(BUFFER_TARGET target, const core::AutoPtr<Buffer> &buffer);
-  static void bindBase(BUFFER_TARGET target, const uint32_t &index,
+  static void bindBase(BUFFER_TARGET target, uint32_t index,
                        const core::AutoPtr<Buffer> &buffer);
 };
 } // namespace firefly::gl

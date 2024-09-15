@@ -2,7 +2,7 @@
 using namespace firefly;
 using namespace firefly::gl;
 
-VertexArray::VertexArray(const uint32_t &handle) : _handle(handle) {
+VertexArray::VertexArray(uint32_t handle) : _handle(handle) {
   if (!_handle) {
     glGenVertexArrays(1, &_handle);
   }
@@ -13,9 +13,9 @@ VertexArray::~VertexArray() {
     _handle = 0;
   }
 }
-void VertexArray::setAttribute(const uint32_t &index, DATA_TYPE dtype,
-                               const uint32_t &size, const bool &normalized,
-                               const uint32_t &stride, const uint32_t &offset) {
+void VertexArray::setAttribute(uint32_t index, DATA_TYPE dtype, uint32_t size,
+                               bool normalized, uint32_t stride,
+                               uint32_t offset) {
   switch (dtype) {
   case DATA_TYPE::BTYE:
   case DATA_TYPE::UNSIGNED_BYTE:
@@ -47,10 +47,10 @@ void VertexArray::setAttribute(const uint32_t &index, DATA_TYPE dtype,
     break;
   }
 }
-void VertexArray::enableAttribute(const uint32_t &index) {
+void VertexArray::enableAttribute(uint32_t index) {
   glEnableVertexAttribArray(index);
 }
-void VertexArray::disableAttribute(const uint32_t &index) {
+void VertexArray::disableAttribute(uint32_t index) {
   glDisableVertexAttribArray(index);
 }
 void VertexArray::bind(const core::AutoPtr<VertexArray> &vao) {

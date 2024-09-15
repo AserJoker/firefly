@@ -32,20 +32,20 @@ public:
   Constant(const core::AutoPtr<core::Bitmap> &bitmap = nullptr);
   void setField(const std::string &name, const CONSTANT_TYPE &type,
                 const std::any &value);
-  void setField(const std::string &name, const bool &value);
-  void setField(const std::string &name, const int32_t &value);
+  void setField(const std::string &name, bool value);
+  void setField(const std::string &name, int32_t value);
   void setField(const std::string &name, const glm::ivec2 &value);
   void setField(const std::string &name, const glm::ivec3 &value);
   void setField(const std::string &name, const glm::ivec4 &value);
-  void setField(const std::string &name, const uint32_t &value);
+  void setField(const std::string &name, uint32_t value);
   void setField(const std::string &name, const glm::uvec2 &value);
   void setField(const std::string &name, const glm::uvec3 &value);
   void setField(const std::string &name, const glm::uvec4 &value);
-  void setField(const std::string &name, const float &value);
+  void setField(const std::string &name, float value);
   void setField(const std::string &name, const glm::vec2 &value);
   void setField(const std::string &name, const glm::vec3 &value);
   void setField(const std::string &name, const glm::vec4 &value);
-  void setField(const std::string &name, const double &value);
+  void setField(const std::string &name, double value);
   void setField(const std::string &name, const glm::dvec2 &value);
   void setField(const std::string &name, const glm::dvec3 &value);
   void setField(const std::string &name, const glm::dvec4 &value);

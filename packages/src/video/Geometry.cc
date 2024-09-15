@@ -14,7 +14,7 @@ using namespace firefly::video;
 Geometry::Geometry() : _binding({0, 0, 0, 0, 0, 0}) {
   _vao = new gl::VertexArray();
 }
-void Geometry::setAttribute(const uint32_t &index,
+void Geometry::setAttribute(uint32_t index,
                             const core::AutoPtr<Attribute> &attribute) {
   if (_attributes.contains(index) && _attributes.at(index) == attribute) {
     return;
@@ -47,20 +47,19 @@ void Geometry::setAttribute(const uint32_t &index,
                      attribute->isNormalized(), attribute->getStride(), 0);
   _vao->enableAttribute(index);
 }
-core::AutoPtr<Attribute> Geometry::getAttribute(const uint32_t &index) {
+core::AutoPtr<Attribute> Geometry::getAttribute(uint32_t index) {
   if (!_attributes.contains(index)) {
     return nullptr;
   }
   return _attributes.at(index);
 }
-const core::AutoPtr<Attribute>
-Geometry::getAttribute(const uint32_t &index) const {
+const core::AutoPtr<Attribute> Geometry::getAttribute(uint32_t index) const {
   if (!_attributes.contains(index)) {
     return nullptr;
   }
   return _attributes.at(index);
 }
-void Geometry::removeAttribute(const uint32_t &index) {
+void Geometry::removeAttribute(uint32_t index) {
   _attributes.erase(index);
   _vao->disableAttribute(index);
 }

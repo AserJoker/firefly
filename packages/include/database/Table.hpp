@@ -17,8 +17,8 @@ public:
   Table(const core::AutoPtr<Metadata> &metadata);
   const uint32_t getLength() const;
   const core::AutoPtr<Metadata> &getMetadata() const;
-  core::AutoPtr<Record> getRecord(const uint32_t &index);
-  const core::AutoPtr<Record> getRecord(const uint32_t &index) const;
+  core::AutoPtr<Record> getRecord(uint32_t index);
+  const core::AutoPtr<Record> getRecord(uint32_t index) const;
   virtual core::AutoPtr<Record> queryOne(core::AutoPtr<Record> query);
   virtual std::vector<core::AutoPtr<Record>>
   queryList(core::AutoPtr<Record> query);

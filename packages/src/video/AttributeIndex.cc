@@ -12,7 +12,7 @@ AttributeIndex::AttributeIndex(const core::AutoPtr<core::Buffer> &buffer)
   _ebo->setData(buffer->getSize(), buffer->getData());
 }
 const uint32_t AttributeIndex::getIndicesCount() const { return _size; }
-void AttributeIndex::write(const uint32_t &offset, const uint32_t &size,
+void AttributeIndex::write(uint32_t offset, uint32_t size,
                            const uint32_t *data) {
   _ebo->write(offset * sizeof(uint32_t), size * sizeof(uint32_t), data);
 }

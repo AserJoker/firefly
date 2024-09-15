@@ -137,19 +137,19 @@ public:
   void active(core::AutoPtr<gl::Constant> &constants) const;
 
   const bool &isBlend() const;
-  void setBlend(const bool &value);
+  void setBlend(bool value);
 
   const bool &isVisible() const;
-  void setVisible(const bool &value);
+  void setVisible(bool value);
 
   const bool &isStencilTest() const;
-  void setStencil(const bool &value);
+  void setStencil(bool value);
 
   const bool &isDepthTest() const;
-  void setDepthTest(const bool &value);
+  void setDepthTest(bool value);
 
   const bool &isAlphaTest() const;
-  void setAlphaTest(const bool &value);
+  void setAlphaTest(bool value);
 
   void enableAttribute(const std::string &name);
   void disableAttribute(const std::string &name);

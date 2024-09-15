@@ -16,10 +16,10 @@ void Constant::setField(const std::string &name, const CONSTANT_TYPE &type,
   _fields[name] = value;
   _bitmap->enable(name);
 }
-void Constant::setField(const std::string &name, const bool &value) {
+void Constant::setField(const std::string &name, bool value) {
   setField<CONSTANT_TYPE::BOOL>(name, value);
 }
-void Constant::setField(const std::string &name, const int32_t &value) {
+void Constant::setField(const std::string &name, int32_t value) {
   setField<CONSTANT_TYPE::INT>(name, value);
 }
 void Constant::setField(const std::string &name, const glm::ivec2 &value) {
@@ -31,7 +31,7 @@ void Constant::setField(const std::string &name, const glm::ivec3 &value) {
 void Constant::setField(const std::string &name, const glm::ivec4 &value) {
   setField<CONSTANT_TYPE::IVEC4>(name, value);
 }
-void Constant::setField(const std::string &name, const uint32_t &value) {
+void Constant::setField(const std::string &name, uint32_t value) {
   setField<CONSTANT_TYPE::UINT>(name, value);
 }
 void Constant::setField(const std::string &name, const glm::uvec2 &value) {
@@ -43,7 +43,7 @@ void Constant::setField(const std::string &name, const glm::uvec3 &value) {
 void Constant::setField(const std::string &name, const glm::uvec4 &value) {
   setField<CONSTANT_TYPE::UIVEC4>(name, value);
 }
-void Constant::setField(const std::string &name, const float &value) {
+void Constant::setField(const std::string &name, float value) {
   setField<CONSTANT_TYPE::FLOAT>(name, value);
 }
 void Constant::setField(const std::string &name, const glm::vec2 &value) {
@@ -55,7 +55,7 @@ void Constant::setField(const std::string &name, const glm::vec3 &value) {
 void Constant::setField(const std::string &name, const glm::vec4 &value) {
   setField<CONSTANT_TYPE::VEC4>(name, value);
 }
-void Constant::setField(const std::string &name, const double &value) {
+void Constant::setField(const std::string &name, double value) {
   setField<CONSTANT_TYPE::DOUBLE>(name, value);
 }
 void Constant::setField(const std::string &name, const glm::dvec2 &value) {

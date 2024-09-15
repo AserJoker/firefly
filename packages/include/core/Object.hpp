@@ -32,9 +32,7 @@ public:
   virtual void initialize() {}
   virtual ~Object() = default;
 
-  constexpr inline void setVersion(const uint32_t &version) {
-    _version = version;
-  }
+  constexpr inline void setVersion(uint32_t version) { _version = version; }
   constexpr inline const uint32_t &getVersion() const { return _version; }
 
   void setMetadata(const std::string &name,

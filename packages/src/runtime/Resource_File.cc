@@ -21,7 +21,7 @@ Resource_File::Resource_File(const std::string &filepath) {
   }
 }
 Resource_File::~Resource_File() { _file.close(); }
-core::AutoPtr<core::Buffer> Resource_File::read(const uint32_t &size) {
+core::AutoPtr<core::Buffer> Resource_File::read(uint32_t size) {
   if (!size) {
     return readAll();
   }

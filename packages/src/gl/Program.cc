@@ -48,7 +48,7 @@ const uint32_t &Program::getUniformLocation(const std::string &name) {
   return _locations.at(name);
 }
 
-void Program::bindUniformBlock(const std::string &name, const uint32_t &index) {
+void Program::bindUniformBlock(const std::string &name, uint32_t index) {
   if (!_uniformBlockLocations.contains(name)) {
     _uniformBlockLocations[name] =
         glGetUniformBlockIndex(_handle, name.c_str());
@@ -64,35 +64,35 @@ void Program::bindUniformBlock(const std::string &name, const uint32_t &index) {
   glUniformBlockBinding(_handle, loc, index);
 }
 
-void Program::setUniform(const std::string &name, const int32_t &value) {
+void Program::setUniform(const std::string &name, int32_t value) {
   auto loc = getUniformLocation(name);
   if (loc == GL_INVALID_INDEX) {
     return;
   }
   glUniform1i(loc, value);
 }
-void Program::setUniform(const std::string &name, const uint32_t &value) {
+void Program::setUniform(const std::string &name, uint32_t value) {
   auto loc = getUniformLocation(name);
   if (loc == GL_INVALID_INDEX) {
     return;
   }
   glUniform1ui(loc, value);
 }
-void Program::setUniform(const std::string &name, const bool &value) {
+void Program::setUniform(const std::string &name, bool value) {
   auto loc = getUniformLocation(name);
   if (loc == GL_INVALID_INDEX) {
     return;
   }
   glUniform1i(getUniformLocation(name), value);
 }
-void Program::setUniform(const std::string &name, const float &value) {
+void Program::setUniform(const std::string &name, float value) {
   auto loc = getUniformLocation(name);
   if (loc == GL_INVALID_INDEX) {
     return;
   }
   glUniform1f(getUniformLocation(name), value);
 }
-void Program::setUniform(const std::string &name, const double &value) {
+void Program::setUniform(const std::string &name, double value) {
   auto loc = getUniformLocation(name);
   if (loc == GL_INVALID_INDEX) {
     return;

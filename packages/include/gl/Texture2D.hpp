@@ -13,17 +13,17 @@ private:
 
 public:
   const uint32_t &getHandle() const;
-  Texture2D(const uint32_t &handle = 0);
+  Texture2D(uint32_t handle = 0);
   Texture2D(const std::string &name,
             TEXTURE_WRAP_MODE swrap = TEXTURE_WRAP_MODE::REPEAT,
             TEXTURE_WRAP_MODE twrap = TEXTURE_WRAP_MODE::REPEAT);
   ~Texture2D() override;
-  void setImage(const uint32_t &level, PIXEL_FORMAT internalFormat,
-                const uint32_t &width, const uint32_t &height,
-                PIXEL_FORMAT format, DATA_TYPE type, const void *data);
-  void setSubImage(const uint32_t &level, const uint32_t &x, const uint32_t &y,
-                   const uint32_t &width, const uint32_t &height,
-                   PIXEL_FORMAT format, DATA_TYPE type, const void *data);
+  void setImage(uint32_t level, PIXEL_FORMAT internalFormat, uint32_t width,
+                uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,
+                const void *data);
+  void setSubImage(uint32_t level, uint32_t x, uint32_t y, uint32_t width,
+                   uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,
+                   const void *data);
   void generateMipmap();
 
   void setMinifyingFilter(TEXTURE_FILTER filter);

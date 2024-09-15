@@ -7,7 +7,7 @@ private:
   uint32_t _scancode;
 
 public:
-  Event_KeyDown(const uint32_t &scancode);
+  Event_KeyDown(uint32_t scancode);
   const uint32_t &getScancode() const;
 };
 }; // namespace firefly::input

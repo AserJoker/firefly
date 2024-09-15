@@ -12,8 +12,7 @@ private:
 public:
   AttributeIndex(const core::AutoPtr<core::Buffer> &buffer);
   const uint32_t getIndicesCount() const;
-  void write(const uint32_t &offset, const uint32_t &size,
-             const uint32_t *data);
+  void write(uint32_t offset, uint32_t size, const uint32_t *data);
   const core::AutoPtr<gl::Buffer> &getElementBufferObject() const;
 };
 }; // namespace firefly::video

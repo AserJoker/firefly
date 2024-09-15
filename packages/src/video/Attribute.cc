@@ -5,8 +5,8 @@ using namespace firefly;
 using namespace firefly::video;
 
 Attribute::Attribute(const core::AutoPtr<core::Buffer> &buffer,
-                     const std::type_info &type, const uint32_t &itemSize,
-                     const bool &normalize, const bool &dynamic)
+                     const std::type_info &type, uint32_t itemSize,
+                     const bool &normalize, bool dynamic)
     : _itemType(type.name()), _itemSize(itemSize), _normalize(normalize),
       _dynamic(dynamic) {
   if (type == typeid(float)) {
@@ -46,7 +46,6 @@ const core::AutoPtr<gl::Buffer> &Attribute::getVertexBufferObject() const {
 const uint32_t &Attribute::getStride() const { return _stride; }
 
 const uint32_t &Attribute::getItemCount() const { return _itemCount; }
-void Attribute::write(const uint32_t &offset, const uint32_t &size,
-                      const void *data) {
+void Attribute::write(uint32_t offset, uint32_t size, const void *data) {
   _vbo->write(offset, size, data);
 }

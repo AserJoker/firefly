@@ -6,7 +6,7 @@
 #include <glad/glad.h>
 using namespace firefly;
 using namespace firefly::gl;
-Texture2D::Texture2D(const uint32_t &handle) : _handle(handle) {
+Texture2D::Texture2D(uint32_t handle) : _handle(handle) {
   if (!_handle) {
     glGenTextures(1, &_handle);
   }
@@ -51,18 +51,17 @@ Texture2D::Texture2D(const std::string &name, TEXTURE_WRAP_MODE swrap,
   SDL_FreeSurface(img);
 }
 Texture2D::~Texture2D() { glDeleteTextures(1, &_handle); }
-void Texture2D::setImage(const uint32_t &level, PIXEL_FORMAT internalFormat,
-                         const uint32_t &width, const uint32_t &height,
-                         PIXEL_FORMAT format, DATA_TYPE type,
-                         const void *data) {
+void Texture2D::setImage(uint32_t level, PIXEL_FORMAT internalFormat,
+                         uint32_t width, uint32_t height, PIXEL_FORMAT format,
+                         DATA_TYPE type, const void *data) {
   glBindTexture(GL_TEXTURE_2D, _handle);
   glTexImage2D(GL_TEXTURE_2D, level, (GLint)internalFormat, width, height, 0,
                (GLint)format, (GLenum)type, data);
 }
-void Texture2D::setSubImage(const uint32_t &level, const uint32_t &x,
-                            const uint32_t &y, const uint32_t &width,
-                            const uint32_t &height, PIXEL_FORMAT format,
-                            DATA_TYPE type, const void *data) {
+void Texture2D::setSubImage(uint32_t level, uint32_t x, uint32_t y,
+                            uint32_t width, uint32_t height,
+                            PIXEL_FORMAT format, DATA_TYPE type,
+                            const void *data) {
   glBindTexture(GL_TEXTURE_2D, _handle);
   glTexSubImage2D(GL_TEXTURE_2D, level, x, y, width, height, (GLenum)format,
                   (GLenum)type, data);

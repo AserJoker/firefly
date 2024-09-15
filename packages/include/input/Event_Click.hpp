@@ -7,7 +7,7 @@ private:
   uint32_t _type;
 
 public:
-  Event_Click(const uint32_t &type);
+  Event_Click(uint32_t type);
   const uint32_t &getType() const;
 };
 }; // namespace firefly::input

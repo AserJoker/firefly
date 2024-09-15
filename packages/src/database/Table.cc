@@ -11,13 +11,13 @@ std::unordered_map<std::string, std::function<core::AutoPtr<Table>(
 Table::Table(const core::AutoPtr<Metadata> &metadata) : _metadata(metadata) {}
 const uint32_t Table::getLength() const { return (uint32_t)_records.size(); }
 const core::AutoPtr<Metadata> &Table::getMetadata() const { return _metadata; }
-core::AutoPtr<Record> Table::getRecord(const uint32_t &index) {
+core::AutoPtr<Record> Table::getRecord(uint32_t index) {
   if (index >= _records.size()) {
     return nullptr;
   }
   return _records[index];
 }
-const core::AutoPtr<Record> Table::getRecord(const uint32_t &index) const {
+const core::AutoPtr<Record> Table::getRecord(uint32_t index) const {
   if (index >= _records.size()) {
     return nullptr;
   }

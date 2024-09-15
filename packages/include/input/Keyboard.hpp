@@ -11,6 +11,6 @@ private:
 
 public:
   Keyboard();
-  const bool &getKeyState(const uint32_t &scancode) const;
+  const bool &getKeyState(uint32_t scancode) const;
 };
 }; // namespace firefly::input

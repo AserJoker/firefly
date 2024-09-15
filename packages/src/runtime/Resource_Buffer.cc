@@ -5,7 +5,7 @@
 using namespace firefly;
 using namespace firefly::runtime;
 
-Resource_Buffer::Resource_Buffer(const void *buffer, const uint32_t &size)
+Resource_Buffer::Resource_Buffer(const void *buffer, uint32_t size)
     : _buffer(nullptr), _size(size), _pos(0) {
   if (size) {
     _buffer = ::operator new(size);
@@ -17,7 +17,7 @@ Resource_Buffer::~Resource_Buffer() {
     ::operator delete(_buffer);
   }
 };
-core::AutoPtr<core::Buffer> Resource_Buffer::read(const uint32_t &size) {
+core::AutoPtr<core::Buffer> Resource_Buffer::read(uint32_t size) {
   if (_pos == _size) {
     return new core::Buffer(0);
   }

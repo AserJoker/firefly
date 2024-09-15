@@ -133,7 +133,8 @@ void Material::setIsBlendAdd(bool value) { _blendAdd = value; }
 void Material::setOpacity(float value) {
   _opacity = value;
   if (_attributes.contains(OPACITY)) {
-    _attributes[OPACITY] = [this](core::AutoPtr<gl::Constant> constants) -> void {
+    _attributes[OPACITY] =
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("opacity", _opacity);
     };
   }
@@ -141,7 +142,8 @@ void Material::setOpacity(float value) {
 void Material::setShininess(float value) {
   _shininess = value;
   if (_attributes.contains(SHININESS)) {
-    _attributes[SHININESS] = [this](core::AutoPtr<gl::Constant> constants) -> void {
+    _attributes[SHININESS] =
+        [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("shininess", _shininess);
     };
   }
@@ -158,19 +160,19 @@ void Material::setShininessStrength(float value) {
 void Material::setName(const std::string &name) { _name = name; }
 
 const bool &Material::isBlend() const { return _blend; }
-void Material::setBlend(const bool &value) { _blend = value; }
+void Material::setBlend(bool value) { _blend = value; }
 
 const bool &Material::isVisible() const { return _visible; }
-void Material::setVisible(const bool &value) { _visible = value; }
+void Material::setVisible(bool value) { _visible = value; }
 
 const bool &Material::isStencilTest() const { return _stencilTest; }
-void Material::setStencil(const bool &value) { _stencilTest = value; }
+void Material::setStencil(bool value) { _stencilTest = value; }
 
 const bool &Material::isDepthTest() const { return _depthTest; }
-void Material::setDepthTest(const bool &value) { _depthTest = value; }
+void Material::setDepthTest(bool value) { _depthTest = value; }
 
 const bool &Material::isAlphaTest() const { return _alphaTest; }
-void Material::setAlphaTest(const bool &value) { _alphaTest = value; }
+void Material::setAlphaTest(bool value) { _alphaTest = value; }
 void Material::enableAttribute(const std::string &name) {
   _enableAttributes.insert(name);
 }

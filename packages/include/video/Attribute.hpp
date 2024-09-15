@@ -17,8 +17,8 @@ private:
 
 public:
   Attribute(const core::AutoPtr<core::Buffer> &buffer,
-            const std::type_info &type, const uint32_t &itemSize,
-            const bool &normalize = false, const bool &dynamic = false);
+            const std::type_info &type, uint32_t itemSize,
+            const bool &normalize = false, bool dynamic = false);
   const std::string &getItemType() const;
   const uint32_t &getItemSize() const;
   const bool &isNormalized() const;
@@ -26,8 +26,8 @@ public:
   const uint32_t &getStride() const;
   const uint32_t &getItemCount() const;
   const core::AutoPtr<gl::Buffer> &getVertexBufferObject() const;
-  void write(const uint32_t &offset, const uint32_t &size, const void *data);
-  template <class T> void write(const uint32_t &offset, const T &value) {
+  void write(uint32_t offset, uint32_t size, const void *data);
+  template <class T> void write(uint32_t offset, const T &value) {
     write(offset, sizeof(T), &value);
   }
 };

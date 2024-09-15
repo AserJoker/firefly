@@ -9,13 +9,12 @@ private:
   uint32_t _handle;
 
 public:
-  VertexArray(const uint32_t &handle = 0);
+  VertexArray(uint32_t handle = 0);
   ~VertexArray() override;
-  void setAttribute(const uint32_t &index, DATA_TYPE dtype,
-                    const uint32_t &size, const bool &normalized,
-                    const uint32_t &stride, const uint32_t &offset);
-  void enableAttribute(const uint32_t &index);
-  void disableAttribute(const uint32_t &index);
+  void setAttribute(uint32_t index, DATA_TYPE dtype, uint32_t size,
+                    bool normalized, uint32_t stride, uint32_t offset);
+  void enableAttribute(uint32_t index);
+  void disableAttribute(uint32_t index);
 
 public:
   static void bind(const core::AutoPtr<VertexArray> &vao);

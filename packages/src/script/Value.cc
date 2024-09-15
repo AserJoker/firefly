@@ -114,8 +114,7 @@ core::AutoPtr<Value> Value::setNumber(core::AutoPtr<Script> ctx,
   _atom->_value = double(value);
   return this;
 }
-core::AutoPtr<Value> Value::setBoolean(core::AutoPtr<Script> ctx,
-                                       const bool &value) {
+core::AutoPtr<Value> Value::setBoolean(core::AutoPtr<Script> ctx, bool value) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);
     auto ofValue = metadata->getField(ctx, "ofValue");
@@ -281,8 +280,7 @@ core::AutoPtr<Value> Value::getField(core::AutoPtr<Script> ctx,
       std::any_cast<core::AutoPtr<Record>>(_atom->_value)->getField(ctx, name);
   return res;
 }
-core::AutoPtr<Value> Value::setIndex(core::AutoPtr<Script> ctx,
-                                     const uint32_t &name,
+core::AutoPtr<Value> Value::setIndex(core::AutoPtr<Script> ctx, uint32_t name,
                                      core::AutoPtr<Value> field) {
   if (_atom->_metadata) {
     auto metadata = getMetadata(ctx);

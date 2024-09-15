@@ -83,7 +83,7 @@ public:
   std::string toString(core::AutoPtr<Script> ctx);
   core::AutoPtr<Value> setNumber(core::AutoPtr<Script> ctx,
                                  const double &value);
-  core::AutoPtr<Value> setBoolean(core::AutoPtr<Script> ctx, const bool &value);
+  core::AutoPtr<Value> setBoolean(core::AutoPtr<Script> ctx, bool value);
   core::AutoPtr<Value> setString(core::AutoPtr<Script> ctx,
                                  const std::string &value);
   core::AutoPtr<Value> setNil(core::AutoPtr<Script> ctx);
@@ -101,7 +101,7 @@ public:
 
   std::vector<std::string> getKeys(core::AutoPtr<Script> ctx);
 
-  core::AutoPtr<Value> setIndex(core::AutoPtr<Script> ctx, const uint32_t &name,
+  core::AutoPtr<Value> setIndex(core::AutoPtr<Script> ctx, uint32_t name,
                                 core::AutoPtr<Value> field);
   core::AutoPtr<Value> getIndex(core::AutoPtr<Script> ctx,
                                 const uint32_t &name);
