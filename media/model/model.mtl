@@ -1,0 +1,8 @@
+# Blender MTL File: 'None'
+# Material Count: 1
+
+newmtl box
+map_Kd box::diffuse.jpg
+map_Bump box::normal.jpg
+map_Ks box::specular.png
+

@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"

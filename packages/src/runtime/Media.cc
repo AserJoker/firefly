@@ -1,11 +1,12 @@
 #include "runtime/Media.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/File.hpp"
 #include "exception/MediaNotExistException.hpp"
 #include "runtime/Resource.hpp"
-#include "runtime/Resource_File.hpp"
 #include <filesystem>
 #include <fmt/core.h>
 #include <vector>
+
 using namespace firefly;
 using namespace firefly::runtime;
 core::AutoPtr<Resource> Media::load(const std::string &name) {
@@ -13,7 +14,7 @@ core::AutoPtr<Resource> Media::load(const std::string &name) {
   for (auto it = filepaths.rbegin(); it != filepaths.rend(); it++) {
     auto filepath = *it;
     if (std::filesystem::exists(filepath)) {
-      return new Resource_File(filepath);
+      return new ResourceTrait<core::File>(filepath);
     }
   }
   throw exception::MediaNotExistException(
@@ -25,7 +26,7 @@ std::vector<core::AutoPtr<Resource>> Media::loadAll(const std::string &name) {
   for (auto it = filepaths.begin(); it != filepaths.end(); it++) {
     auto filepath = *it;
     if (std::filesystem::exists(filepath)) {
-      result.push_back(new Resource_File(filepath));
+      result.push_back(new ResourceTrait<core::File>(filepath));
     }
   }
   return result;

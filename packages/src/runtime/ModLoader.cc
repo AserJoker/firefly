@@ -1,17 +1,19 @@
 #include "runtime/ModLoader.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/File.hpp"
 #include "core/Singleton.hpp"
 #include "exception/JSONException.hpp"
 #include "exception/ModLoaderException.hpp"
 #include "runtime/Logger.hpp"
 #include "runtime/Media.hpp"
-#include "runtime/Resource_File.hpp"
+#include "runtime/Resource.hpp"
 #include "script/Script.hpp"
 #include <algorithm>
 #include <cjson/cJSON.h>
 #include <exception>
 #include <filesystem>
 #include <unordered_map>
+
 using namespace std::filesystem;
 using namespace firefly;
 using namespace firefly::runtime;
@@ -119,9 +121,9 @@ ModLoader::Manifest ModLoader::parseManifest(const std::string &source) {
   path modPath = source;
   path maniefstPath = modPath;
   Manifest manifest;
-  core::AutoPtr file =
-      new Resource_File(maniefstPath.append("manifest.json").string());
-  auto buffer = file->readAll();
+  core::AutoPtr file = new ResourceTrait<core::File>(
+      maniefstPath.append("manifest.json").string());
+  auto buffer = file->read();
   auto root =
       cJSON_ParseWithLength((const char *)buffer->getData(), buffer->getSize());
   if (!root) {

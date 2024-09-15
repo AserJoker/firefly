@@ -1,11 +1,13 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Buffer.hpp"
+#include "core/File.hpp"
 #include "core/Properties.hpp"
 #include "core/Singleton.hpp"
 #include "exception/ValidateException.hpp"
 #include "runtime/Application.hpp"
-#include "runtime/Resource_File.hpp"
+#include "runtime/Resource.hpp"
+#include "core/File.hpp"
 #include "script/helper/Trait_Buffer.hpp"
 #include "script/helper/Trait_Properties.hpp"
 #include <filesystem>
@@ -66,7 +68,8 @@ FUNC_DEF(Module_Runtime::saveConfig) {
     std::filesystem::create_directories(configPath);
   }
   configPath = configPath.append(filename + ".cfg");
-  core::AutoPtr file = new runtime::Resource_File(configPath.string());
+  core::AutoPtr file =
+      new runtime::ResourceTrait<core::File>(configPath.string());
   core::AutoPtr buf =
       new core::Buffer((uint32_t)data.size(), (char *)data.c_str());
   file->write(buf);
@@ -85,8 +88,9 @@ FUNC_DEF(Module_Runtime::loadConfig) {
   if (!std::filesystem::exists(configPath)) {
     return {};
   }
-  core::AutoPtr file = new runtime::Resource_File(configPath.string());
-  auto buf = file->readAll();
+  core::AutoPtr file =
+      new runtime::ResourceTrait<core::File>(configPath.string());
+  auto buf = file->read();
   return {Trait_Properties::create(ctx, new core::Properties(buf))};
 }
 FUNC_DEF(Module_Runtime::save) {
@@ -99,7 +103,8 @@ FUNC_DEF(Module_Runtime::save) {
     std::filesystem::create_directories(savePath);
   }
   savePath = savePath.append(file + ".data");
-  core::AutoPtr resource = new runtime::Resource_File(savePath.string());
+  core::AutoPtr resource =
+      new runtime::ResourceTrait<core::File>(savePath.string());
   resource->write(args[2]->getOpaque().cast<core::Buffer>());
   return {};
 }
@@ -113,8 +118,9 @@ FUNC_DEF(Module_Runtime::load) {
   if (!std::filesystem::exists(savePath)) {
     return {};
   }
-  core::AutoPtr resource = new runtime::Resource_File(savePath.string());
-  auto buffer = resource->readAll();
+  core::AutoPtr resource =
+      new runtime::ResourceTrait<core::File>(savePath.string());
+  auto buffer = resource->read();
   return {Trait_Buffer::create(ctx, buffer)};
 }
 FUNC_DEF(Module_Runtime::createProperties) {

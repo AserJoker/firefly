@@ -1,60 +1,56 @@
 #include "core/File.hpp"
-#include "core/AutoPtr.hpp"
-#include "core/Buffer.hpp"
-#include "core/Object.hpp"
-#include "exception/Exception.hpp"
 #include "exception/FileException.hpp"
-#include <corecrt.h>
-#include <cstdio>
 #include <fmt/format.h>
-#include <stdio.h>
-#include <string.h>
-#include <vcruntime_new_debug.h>
+#include <ios>
 using namespace firefly;
 using namespace firefly::core;
 File::File(const std::string &name, bool append) {
   if (append) {
-    auto error = fopen_s(&_handle, name.c_str(), "a+");
-    if (error != 0) {
-      char buf[1024];
-      strerror_s(buf, error);
-      throw new exception::FileException(
-          fmt::format("Failed to open file '{}':'{}'", name, buf));
-    }
+    _handle.open(name, std::ios::in | std::ios::out | std::ios::binary |
+                           std::ios::app);
   } else {
-    auto error = fopen_s(&_handle, name.c_str(), "w+");
-    if (error != 0) {
-      char buf[1024];
-      strerror_s(buf, error);
-      throw new exception::FileException(
-          fmt::format("Failed to open file '{}':'{}'", name, buf));
-    }
+    _handle.open(name, std::ios::in | std::ios::out | std::ios::binary |
+                           std::ios::trunc);
+  }
+  if (!_handle.is_open()) {
+    throw exception::FileException(
+        fmt::format("Failed to open file '{}'", name));
   }
 }
-File::~File() { fclose(_handle); }
-const size_t File::getLength() const {
-  auto pos = ftell(_handle);
-  fseek(_handle, 0, SEEK_END);
-  auto length = ftell(_handle);
-  fseek(_handle, pos, SEEK_SET);
-  return length;
-}
-const size_t File::getOffset() const { return ftell(_handle); }
-void File::setOffset(size_t offset, bool absolute) {
-  if (absolute) {
-    fseek(_handle, offset, SEEK_SET);
-  } else {
-    fseek(_handle, offset, SEEK_CUR);
+
+File::~File() { _handle.close(); }
+
+core::AutoPtr<Buffer> File::read(uint32_t size) {
+  if (!size) {
+    uint32_t pos = (uint32_t)_handle.tellg();
+    _handle.seekg(0, std::ios::end);
+    uint32_t end = (uint32_t)_handle.tellg();
+    if (end - pos == 0) {
+      return new core::Buffer(0);
+    }
+    _handle.seekg(pos, std::ios::beg);
+    auto buf = new core::Buffer(end - pos);
+    _handle.read((char *)buf->getData(), end - pos);
+    return buf;
   }
+  uint32_t pos = (uint32_t)_handle.tellg();
+  _handle.seekg(0, std::ios::end);
+  uint32_t end = (uint32_t)_handle.tellg();
+  _handle.seekg(pos, std::ios::beg);
+  if (end - pos == 0) {
+    return new core::Buffer(0);
+  }
+  auto buf = new core::Buffer(size);
+  if (end - pos < size) {
+    _handle.read((char *)buf->getData(), end - pos);
+  } else {
+    _handle.read((char *)buf->getData(), size);
+  }
+  return buf;
 }
-core::AutoPtr<Buffer> File::read(size_t size) const {
-  core::AutoPtr<Buffer> buffer = new core::Buffer(0);
-  void *buf = ::operator new(size);
-  auto readsize = fread(buf, size, 1, _handle);
-  buffer->setData(0, readsize, buf);
-  ::operator delete(buf);
-  return buffer;
-}
+
 void File::write(const core::AutoPtr<Buffer> &data) {
-  fwrite(data->getData(), data->getSize(), 1, _handle);
+  auto buf = data->getData();
+  auto &size = data->getSize();
+  _handle.write((char *)buf, size);
 }
