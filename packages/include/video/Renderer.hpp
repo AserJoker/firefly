@@ -10,6 +10,7 @@
 #include "core/Object.hpp"
 #include "gl/Constant.hpp"
 #include "gl/Program.hpp"
+#include "runtime/Event_Resize.hpp"
 #include <vector>
 
 namespace firefly::video {
@@ -25,6 +26,7 @@ private:
 
 private:
   bool activeShader(const std::string &name, const std::string &stage);
+  void onWindowResize(const runtime::Event_Resize &event);
 
 public:
   Renderer();

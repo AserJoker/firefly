@@ -4,11 +4,13 @@
 #include "runtime/Application.hpp"
 #include "core/AutoPtr.hpp"
 #include "exception/SDLException.hpp"
+#include "runtime/Event_Resize.hpp"
 #include "runtime/Event_SDL.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL_video.h>
 #include <imgui_impl_sdl2.h>
 
 using namespace firefly;
@@ -55,5 +57,11 @@ void Application::onUnInitialize() {
 void Application::onEvent(Event_SDL &event) {
   if (event.getEvent().type == SDL_QUIT) {
     exit();
+  }
+  if (event.getEvent().type == SDL_WINDOWEVENT) {
+    if (event.getEvent().window.event == SDL_WINDOWEVENT_RESIZED) {
+      _eventbus->emit<Event_Resize>(glm::ivec2(
+          {event.getEvent().window.data1, event.getEvent().window.data2}));
+    }
   }
 }

@@ -12,6 +12,7 @@ private:
 public:
   Camera(const glm::mat4 &projection, const glm::vec3 &position,
          const glm::vec3 &front, const glm::vec3 &up);
+  void setProjectionMatrix(const glm::mat4 &projection);
   void setPosition(const glm::vec3 &position);
   void setUp(const glm::vec3 &up);
   void setFront(const glm::vec3 &front);

@@ -28,6 +28,7 @@
 #include "video/Camera.hpp"
 #include "video/Material.hpp"
 #include "video/ModelSet.hpp"
+#include "video/PerspectiveCamera.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_mouse.h>
 #include <SDL_scancode.h>
@@ -106,9 +107,8 @@ void GameApplication::onInitialize() {
     material->enableAttribute(video::Material::SPECULAR_TEX);
   }
   _renderer->getLight()->getAmbientLight()->setStrength(strength);
-  camera = new video::Camera(
-      glm::perspective(glm::radians(45.0f), 4.0f / 3.0f, 0.1f, 100.0f),
-      glm::vec3(0, 0, -3.0f), glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
+  camera = new video::PerspectiveCamera(glm::vec3(0, 0, -3.0f),
+                                        glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
   glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
   auto &plight = _renderer->getLight()->getPointLight("self");
   camera->setPosition({0, 0, -5});

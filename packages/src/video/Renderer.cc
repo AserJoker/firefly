@@ -1,8 +1,11 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Singleton.hpp"
 #include "gl/Constant.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/Texture2D.hpp"
+#include "runtime/EventBus.hpp"
+#include "runtime/Event_Resize.hpp"
 #include "video/Camera.hpp"
 #include "video/Geometry.hpp"
 #include "video/Light.hpp"
@@ -17,6 +20,8 @@ Renderer::Renderer() : _shaderName("standard") {
   _constants = new gl::Constant();
   _light = new Light();
   _constants->setField("model", glm::mat4(1.0f));
+  auto bus = core::Singleton<runtime::EventBus>::instance();
+  bus->on(this, &Renderer::onWindowResize);
 }
 
 bool Renderer::activeShader(const std::string &name, const std::string &stage) {
@@ -125,4 +130,7 @@ void Renderer::end() {
   }
   _normalRenderList.clear();
   _blendRenderList.clear();
+}
+void Renderer::onWindowResize(const runtime::Event_Resize &event) {
+  glViewport(0, 0, event.getSize().x, event.getSize().y);
 }

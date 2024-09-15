@@ -5,6 +5,10 @@ using namespace firefly::video;
 Camera::Camera(const glm::mat4 &projection, const glm::vec3 &position,
                const glm::vec3 &front, const glm::vec3 &up)
     : _projection(projection), _position(position), _front(front), _up(up) {}
+
+void Camera::setProjectionMatrix(const glm::mat4 &projection) {
+  _projection = projection;
+};
 void Camera::setPosition(const glm::vec3 &position) { _position = position; }
 void Camera::setUp(const glm::vec3 &up) { _up = up; }
 void Camera::setFront(const glm::vec3 &front) { _front = front; }

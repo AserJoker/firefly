@@ -59,8 +59,8 @@ void main() {
         float diff = max(dot(normal, lightDir), 0.0);
         vec3 diffuse = diff * lightColor * diff_color;
 
-        float spec = pow(max(dot(viewDir, halfwayDir), 0.0), 32);
-        vec3 specular = specularStrength * spec * lightColor * specular_color;
+        float spec = pow(max(dot(normal, halfwayDir), 0.0), 32);
+        vec3 specular = specularStrength * spec *specular_color;
 
         out_color += vec4(ambient + diffuse + specular, 1.0);
     }
