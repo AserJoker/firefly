@@ -50,6 +50,13 @@ Texture2D::Texture2D(const std::string &name, TEXTURE_WRAP_MODE swrap,
   setTWrap(twrap);
   SDL_FreeSurface(img);
 }
+
+Texture2D::Texture2D(uint32_t width, uint32_t height, PIXEL_FORMAT format,
+                     void *data) {
+  glBindTexture(GL_TEXTURE_2D, _handle);
+  glTexImage2D(GL_TEXTURE_2D, 0, (GLenum)format, width, height, 0,
+               (GLenum)format, GL_UNSIGNED_BYTE, data);
+}
 Texture2D::~Texture2D() { glDeleteTextures(1, &_handle); }
 void Texture2D::setImage(uint32_t level, PIXEL_FORMAT internalFormat,
                          uint32_t width, uint32_t height, PIXEL_FORMAT format,

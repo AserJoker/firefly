@@ -17,6 +17,8 @@ public:
   Texture2D(const std::string &name,
             TEXTURE_WRAP_MODE swrap = TEXTURE_WRAP_MODE::REPEAT,
             TEXTURE_WRAP_MODE twrap = TEXTURE_WRAP_MODE::REPEAT);
+  Texture2D(uint32_t width, uint32_t height, PIXEL_FORMAT format,
+            void *data = 0);
   ~Texture2D() override;
   void setImage(uint32_t level, PIXEL_FORMAT internalFormat, uint32_t width,
                 uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,

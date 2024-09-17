@@ -19,10 +19,10 @@ private:
 public:
   Cache(){};
   template <class... ARGS>
-  static const core::AutoPtr<T> &get(const std::string &name, ARGS... args) {
+  static const core::AutoPtr<T> &get(const std::string &name, ARGS &&...args) {
     auto theCahce = core::Singleton<Cache<T>::CacheInstance>::instance();
     if (!theCahce->_cache.contains(name)) {
-      core::AutoPtr<T> object = new T(args...);
+      core::AutoPtr<T> object = new T(std::forward<ARGS>(args)...);
       theCahce->_cache[name] = object;
     }
     return theCahce->_cache.at(name);

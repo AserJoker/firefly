@@ -1,6 +1,12 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
+#include "exception/Exception.hpp"
+#include "gl/Buffer.hpp"
+#include "gl/FrameBuffer.hpp"
+#include "gl/PixelFormat.hpp"
+#include "gl/Texture2D.hpp"
+#include "gl/VertexArray.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_MouseDown.hpp"
@@ -30,6 +36,8 @@
 #include "video/ModelSet.hpp"
 #include "video/PerspectiveCamera.hpp"
 #include "video/Renderer.hpp"
+#include "video/Shader.hpp"
+#include <SDL_image.h>
 #include <SDL_mouse.h>
 #include <SDL_scancode.h>
 #include <fmt/format.h>
@@ -52,7 +60,19 @@ float yaw = 90;
 float strength = 0.1f;
 core::AutoPtr<video::Camera> camera;
 core::AutoPtr<video::ModelSet> modelSet;
-glm::mat4 model(1.0);
+core::AutoPtr<gl::FrameBuffer> frameBuffer;
+core::AutoPtr<gl::Texture2D> frameTexture;
+float quadVertices[] = { // vertex attributes for a quad that fills the entire
+                         // screen in Normalized Device Coordinates.
+    // positions   // texCoords
+    -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f,
+
+    -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f, 1.0f};
+core::AutoPtr<video::Shader> quad;
+core::AutoPtr<gl::Buffer> vbo;
+core::AutoPtr<gl::VertexArray> vao;
+glm::mat4 model =
+    glm::rotate(glm::mat4(1.0), glm::radians(45.0f), glm::vec3(0, 1, 0));
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 void GameApplication::initScript() {
@@ -113,6 +133,12 @@ void GameApplication::onInitialize() {
   auto &plight = _renderer->getLight()->getPointLight("self");
   camera->setPosition({0, 0, -5});
   plight->setPosition(camera->getPosition());
+  frameBuffer = new gl::FrameBuffer();
+  frameTexture = new gl::Texture2D(1024, 768, gl::PIXEL_FORMAT::RGB);
+  frameBuffer->bindAttachments({frameTexture});
+  if (!frameBuffer->check())
+    throw exception::RuntimeException<"Check Framebuffer">();
+  getWindow()->setSwapInterval(0);
   getWindow()->show();
 }
 bool show_demo_window = true;
@@ -124,6 +150,7 @@ void GameApplication::onMainLoop() {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
+  script::Module_Event::emit(_script, "update");
   float speed = 0.001f;
   if (_keyboard->getKeyState(SDL_SCANCODE_A)) {
     auto pos = camera->getPosition();
@@ -193,7 +220,6 @@ void GameApplication::onMainLoop() {
   _renderer->begin(camera);
   _renderer->draw(modelSet);
   _renderer->end();
-  getWindow()->setSwapInterval(0);
   getWindow()->present();
 }
 

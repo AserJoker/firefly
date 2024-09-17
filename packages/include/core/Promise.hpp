@@ -1,5 +1,9 @@
 #pragma once
 #include "Object.hpp"
+#include <mutex>
+#include <shared_mutex>
+
+
 namespace firefly::core {
 template <class T> class Promise;
 
@@ -11,10 +15,12 @@ private:
   PROMISE_STATUS _status;
   T _value{};
   std::string _messge;
+  std::shared_mutex _mutex;
 
 public:
   Promise() : _status(PROMISE_STATUS::PENDDING){};
   void resolve(const T &value) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     if (_status == PROMISE_STATUS::PENDDING) {
       _value = value;
       _status = PROMISE_STATUS::FULFILLED;
@@ -22,13 +28,27 @@ public:
   }
 
   void reject(const std::string &messge) {
+    std::unique_lock<std::shared_mutex> lock(_mutex);
     if (_status == PROMISE_STATUS::PENDDING) {
       _messge = messge;
       _status = PROMISE_STATUS::REJECTED;
     }
   }
-  const PROMISE_STATUS &getStatus() const { return _status; }
-  const T &getValue() const { return _value; }
-  const std::string &getMessage() const { return _messge; }
+  const PROMISE_STATUS &getStatus() const {
+    std::shared_lock<std::shared_mutex> lock(
+        const_cast<std::shared_mutex &>(_mutex));
+    return _status;
+  }
+  const T &getValue() const {
+    std::shared_lock<std::shared_mutex> lock(
+        const_cast<std::shared_mutex &>(_mutex));
+    return _value;
+  }
+  const std::string &getMessage() const {
+    std::shared_lock<std::shared_mutex> lock(
+        const_cast<std::shared_mutex &>(_mutex));
+    return _messge;
+  }
 };
+template <class T> using Promisify = AutoPtr<Promise<T>>;
 }; // namespace firefly::core
