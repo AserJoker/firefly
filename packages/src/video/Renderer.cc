@@ -1,5 +1,6 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Buffer.hpp"
 #include "core/Singleton.hpp"
 #include "gl/Constant.hpp"
 #include "gl/DrawMode.hpp"
@@ -8,6 +9,8 @@
 #include "gl/Texture2D.hpp"
 #include "runtime/EventBus.hpp"
 #include "runtime/Event_Resize.hpp"
+#include "video/Attribute.hpp"
+#include "video/AttributeIndex.hpp"
 #include "video/Camera.hpp"
 #include "video/Geometry.hpp"
 #include "video/Light.hpp"
@@ -19,17 +22,19 @@
 using namespace firefly;
 using namespace firefly::video;
 
-float quadVertices[] = {
-    -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f,
+glm::vec2 quadVec[] = {{-1.0f, 1.0f}, {-1.0f, -1.0f}, {1.0f, -1.0f},
+                       {-1.0f, 1.0f}, {1.0f, -1.0f},  {1.0f, 1.0f}};
+glm::vec2 quadTex[] = {{0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f},
+                       {0.0f, 1.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}};
 
-    -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f, 1.0f};
-// cube VAO
-unsigned int quadVAO, quadVBO;
+uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
 
 core::AutoPtr<gl::FrameBuffer> frameBuffer;
 core::AutoPtr<gl::Texture2D> frameTexture;
+core::AutoPtr<video::Geometry> quad;
+core::AutoPtr<video::Material> material;
 
-Renderer::Renderer() : _shaderName("demo") {
+Renderer::Renderer() : _shaderName("standard") {
   _constants = new gl::Constant();
   _light = new Light();
   _constants->setField("model", glm::mat4(1.0f));
@@ -128,47 +133,51 @@ void Renderer::begin(const core::AutoPtr<Camera> &camera) {
 }
 void Renderer::end() {
   if (!frameBuffer) {
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices,
-                 GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                          (void *)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                          (void *)(2 * sizeof(float)));
-
+    quad = new video::Geometry();
+    quad->setAttribute(
+        0, new video::Attribute(new core::Buffer(sizeof(quadVec), quadVec),
+                                typeid(float), 2));
+    quad->setAttribute(
+        1, new video::Attribute(new core::Buffer(sizeof(quadTex), quadTex),
+                                typeid(float), 2));
+    quad->setAttributeIndex(
+        new AttributeIndex(new core::Buffer(sizeof(quadIndex), quadIndex)));
     activeShader(_shaderName, "final");
     _shader->setUniform("final_color", 0);
 
-    frameBuffer = new gl::FrameBuffer();
+    frameBuffer = new gl::FrameBuffer({1024, 768});
     frameTexture = new gl::Texture2D(1024, 768, gl::PIXEL_FORMAT::RGB);
     frameBuffer->bindAttachments({frameTexture});
   }
-  glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer->getHandle());
-  glEnable(GL_DEPTH_TEST);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  _light->active(_constants);
+  gl::FrameBuffer::bind(frameBuffer);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-  activeShader(_shaderName, "basic");
+  activeShader(_shaderName, "gbuffer_basic");
+  glDisable(GL_BLEND);
   for (auto &item : _normalRenderList) {
     setMaterial(item->getMeterial());
     _shader->setUniform(_constants);
     item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
   }
   _normalRenderList.clear();
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-  glDisable(GL_DEPTH_TEST);
-  glClear(GL_COLOR_BUFFER_BIT);
+  glEnable(GL_BLEND);
+  for (auto &item : _blendRenderList) {
+    setMaterial(item->getMeterial());
+    _shader->setUniform(_constants);
+    item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
+  }
+  _blendRenderList.clear();
+  gl::FrameBuffer::bind(nullptr);
 
+  glDisable(GL_DEPTH_TEST);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   activeShader(_shaderName, "final");
-  glBindVertexArray(quadVAO);
   glActiveTexture(GL_TEXTURE0);
   gl::Texture2D::bind(frameTexture);
-  glDrawArrays(GL_TRIANGLES, 0, 6);
+  quad->draw(gl::DRAW_MODE::TRIANGLES);
 }
 void Renderer::onWindowResize(const runtime::Event_Resize &event) {
-  glViewport(0, 0, event.getSize().x, event.getSize().y);
+  _viewport = {0, 0, event.getSize().x, event.getSize().y};
+  glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
 }

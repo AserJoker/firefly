@@ -3,38 +3,44 @@
 #include <glad/glad.h>
 using namespace firefly;
 using namespace firefly::gl;
-FrameBuffer::FrameBuffer(uint32_t handle) : _handle(handle) {
+FrameBuffer::FrameBuffer(const glm::ivec2 &size, uint32_t handle)
+    : _handle(handle), _size(size) {
   if (!_handle) {
     glGenFramebuffers(1, &_handle);
   }
   glBindFramebuffer(GL_FRAMEBUFFER, _handle);
-  glGenRenderbuffers(1, &_renderbuffer);
-  glBindRenderbuffer(GL_RENDERBUFFER, _renderbuffer);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1024, 768);
+  glGenRenderbuffers(1, &_renderBuffer);
+  glBindRenderbuffer(GL_RENDERBUFFER, _renderBuffer);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.x, size.y);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-                            GL_RENDERBUFFER, _renderbuffer);
+                            GL_RENDERBUFFER, _renderBuffer);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 FrameBuffer::~FrameBuffer() {
-  glDeleteRenderbuffers(1, &_renderbuffer);
+  glDeleteRenderbuffers(1, &_renderBuffer);
   glDeleteFramebuffers(1, &_handle);
 }
 void FrameBuffer::bindAttachments(
     const std::vector<core::AutoPtr<Texture2D>> &textures) {
   glBindFramebuffer(GL_FRAMEBUFFER, _handle);
   auto index = 0;
-  std::vector<uint32_t> attachments;
   for (auto &texture : textures) {
     gl::Texture2D::bind(texture);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + index,
                            GL_TEXTURE_2D, texture->getHandle(), 0);
-    attachments.push_back(GL_COLOR_ATTACHMENT0 + index);
+    _attachmentBuffers.push_back(GL_COLOR_ATTACHMENT0 + index);
     index++;
   }
-  if (attachments.size() > 1) {
-    glDrawBuffers(textures.size(), attachments.data());
+  if (_attachmentBuffers.size() > 1) {
+    glDrawBuffers(textures.size(), _attachmentBuffers.data());
   }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  _attachments = textures;
+}
+
+const std::vector<core::AutoPtr<Texture2D>> &
+FrameBuffer::getAttachments() const {
+  return _attachments;
 }
 bool FrameBuffer::check() {
   glBindFramebuffer(GL_FRAMEBUFFER, _handle);
@@ -51,3 +57,4 @@ void FrameBuffer::bind(const core::AutoPtr<FrameBuffer> &framebuffer) {
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->_handle);
   }
 }
+const glm::ivec2 &FrameBuffer::getSize() const { return _size; }

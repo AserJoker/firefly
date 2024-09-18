@@ -11,6 +11,7 @@
 #include "gl/Constant.hpp"
 #include "gl/Program.hpp"
 #include "runtime/Event_Resize.hpp"
+#include <glm/fwd.hpp>
 #include <vector>
 
 namespace firefly::video {
@@ -23,6 +24,7 @@ private:
   std::vector<core::AutoPtr<RenderObject>> _normalRenderList;
   std::vector<core::AutoPtr<RenderObject>> _blendRenderList;
   core::AutoPtr<Light> _light;
+  glm::ivec4 _viewport;
 
 private:
   bool activeShader(const std::string &name, const std::string &stage);
