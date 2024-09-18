@@ -1,6 +1,7 @@
 #include "gl/Program.hpp"
 #include "core/Bitmap.hpp"
 #include "gl/Constant.hpp"
+#include "gl/MapAccess.hpp"
 #include <glm/gtc/type_ptr.hpp>
 #include <runtime/Media.hpp>
 
@@ -328,6 +329,7 @@ void Program::setUniform(core::AutoPtr<Constant> &constants) {
       this->bindUniformBlock(name, block->getIndex());
     } break;
     }
+    auto err = glGetError();
   }
   _constantBitmap->clear();
 }

@@ -17,7 +17,7 @@ using namespace firefly::runtime;
 Window::Window(const std::string &title, int width, int height) {
   SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1");
   SDL_ASSERT(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4) == 0);
-  SDL_ASSERT(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2) == 0);
+  SDL_ASSERT(SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3) == 0);
 #ifndef __apple__
   SDL_ASSERT(SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
                                  SDL_GL_CONTEXT_PROFILE_CORE) == 0);

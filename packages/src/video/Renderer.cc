@@ -3,6 +3,8 @@
 #include "core/Singleton.hpp"
 #include "gl/Constant.hpp"
 #include "gl/DrawMode.hpp"
+#include "gl/FrameBuffer.hpp"
+#include "gl/PixelFormat.hpp"
 #include "gl/Texture2D.hpp"
 #include "runtime/EventBus.hpp"
 #include "runtime/Event_Resize.hpp"
@@ -16,7 +18,18 @@
 
 using namespace firefly;
 using namespace firefly::video;
-Renderer::Renderer() : _shaderName("standard") {
+
+float quadVertices[] = {
+    -1.0f, 1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, -1.0f, 1.0f, 0.0f,
+
+    -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  -1.0f, 1.0f, 0.0f, 1.0f, 1.0f,  1.0f, 1.0f};
+// cube VAO
+unsigned int quadVAO, quadVBO;
+
+core::AutoPtr<gl::FrameBuffer> frameBuffer;
+core::AutoPtr<gl::Texture2D> frameTexture;
+
+Renderer::Renderer() : _shaderName("demo") {
   _constants = new gl::Constant();
   _light = new Light();
   _constants->setField("model", glm::mat4(1.0f));
@@ -114,22 +127,47 @@ void Renderer::begin(const core::AutoPtr<Camera> &camera) {
   _constants->setField("cameraPosition", camera->getPosition());
 }
 void Renderer::end() {
-  activeShader(_shaderName, "gbuffer_basic");
-  _light->active(_constants);
-  glDisable(GL_BLEND);
+  if (!frameBuffer) {
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices,
+                 GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                          (void *)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
+                          (void *)(2 * sizeof(float)));
+
+    activeShader(_shaderName, "final");
+    _shader->setUniform("final_color", 0);
+
+    frameBuffer = new gl::FrameBuffer();
+    frameTexture = new gl::Texture2D(1024, 768, gl::PIXEL_FORMAT::RGB);
+    frameBuffer->bindAttachments({frameTexture});
+  }
+  glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer->getHandle());
+  glEnable(GL_DEPTH_TEST);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  activeShader(_shaderName, "basic");
   for (auto &item : _normalRenderList) {
     setMaterial(item->getMeterial());
     _shader->setUniform(_constants);
     item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
   }
-  glEnable(GL_BLEND);
-  for (auto &item : _blendRenderList) {
-    setMaterial(item->getMeterial());
-    _shader->setUniform(_constants);
-    item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
-  }
   _normalRenderList.clear();
-  _blendRenderList.clear();
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glDisable(GL_DEPTH_TEST);
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  activeShader(_shaderName, "final");
+  glBindVertexArray(quadVAO);
+  glActiveTexture(GL_TEXTURE0);
+  gl::Texture2D::bind(frameTexture);
+  glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 void Renderer::onWindowResize(const runtime::Event_Resize &event) {
   glViewport(0, 0, event.getSize().x, event.getSize().y);

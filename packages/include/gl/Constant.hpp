@@ -62,5 +62,10 @@ public:
   const std::any getField(const std::string &name) const;
   const CONSTANT_TYPE getFieldType(const std::string &name);
   void sync(core::AutoPtr<Constant> &another);
+  void clear() {
+    _bitmap->clear();
+    _fields.clear();
+    _metadata.clear();
+  }
 };
 }; // namespace firefly::gl

@@ -1,7 +1,5 @@
 #include "gl/FrameBuffer.hpp"
-#include "core/Singleton.hpp"
 #include "gl/Texture2D.hpp"
-#include "runtime/Application.hpp"
 #include <glad/glad.h>
 using namespace firefly;
 using namespace firefly::gl;
@@ -10,12 +8,11 @@ FrameBuffer::FrameBuffer(uint32_t handle) : _handle(handle) {
     glGenFramebuffers(1, &_handle);
   }
   glBindFramebuffer(GL_FRAMEBUFFER, _handle);
-  unsigned int rbo;
-  glGenRenderbuffers(1, &rbo);
-  glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+  glGenRenderbuffers(1, &_renderbuffer);
+  glBindRenderbuffer(GL_RENDERBUFFER, _renderbuffer);
   glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, 1024, 768);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
-                            GL_RENDERBUFFER, rbo);
+                            GL_RENDERBUFFER, _renderbuffer);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 FrameBuffer::~FrameBuffer() {
