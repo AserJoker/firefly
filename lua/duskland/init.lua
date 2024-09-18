@@ -9,5 +9,14 @@ require'event'.on('gameLoaded', function()
     local locale = require 'locale'
     locale.setLang(config:getKey("options.locale"))
     runtime.setWindowTitle(locale.i18n("duskland.system.title"))
-    local video = require 'video'
+    local co = require 'co'
+    local now = 0
+    local promise = co.start(function()
+        while now < 500 do
+            now = now + 1;
+            co.yield()
+        end
+        return "data";
+    end)
+    promise:next(function(value) print(value[1]) end)
 end)

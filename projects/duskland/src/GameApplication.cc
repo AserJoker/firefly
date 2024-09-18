@@ -19,9 +19,11 @@
 #include "script/Value.hpp"
 #include "script/bridge/LuaBridge.hpp"
 #include "script/helper/Trait_Buffer.hpp"
+#include "script/helper/Trait_Promise.hpp"
 #include "script/helper/Trait_Properties.hpp"
 #include "script/helper/Trait_Resource.hpp"
 #include "script/lib/Module_Array.hpp"
+#include "script/lib/Module_Co.hpp"
 #include "script/lib/Module_Database.hpp"
 #include "script/lib/Module_Event.hpp"
 #include "script/lib/Module_Input.hpp"
@@ -82,6 +84,7 @@ void GameApplication::initScript() {
   script::Trait_Buffer::initialize(_script);
   script::Trait_Resource::initialize(_script);
   script::Trait_Properties::initialize(_script);
+  script::Trait_Promise::initialize(_script);
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);
   script::Module_Event::open(_script);
@@ -92,6 +95,7 @@ void GameApplication::initScript() {
   script::Module_Serialization::open(_script);
   script::Module_Array::open(_script);
   script::Module_Video::open(_script);
+  script::Module_Co::open(_script);
   _script->eval("require('duskland')");
 }
 void GameApplication::initLocale() {

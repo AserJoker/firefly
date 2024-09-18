@@ -4,6 +4,7 @@
 #include "runtime/Application.hpp"
 #include "core/AutoPtr.hpp"
 #include "exception/SDLException.hpp"
+#include "runtime/BaseApplication.hpp"
 #include "runtime/Event_Resize.hpp"
 #include "runtime/Event_SDL.hpp"
 #include <SDL2/SDL.h>
@@ -39,6 +40,7 @@ void Application::onInitialize() {
 }
 core::AutoPtr<Window> Application::getWindow() { return _window; }
 void Application::onMainLoop() {
+  BaseApplication::onMainLoop();
   SDL_Event event;
   if (SDL_PollEvent(&event)) {
     ImGui_ImplSDL2_ProcessEvent(&event);

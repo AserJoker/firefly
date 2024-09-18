@@ -6,13 +6,13 @@
 #include <functional>
 namespace firefly::core {
 class Coroutine : public Object {
+
 public:
-  static void init();
   static void start(const std::function<void()> &func);
+  static void init();
   static void yield();
   static bool done();
-  template <class T>
-  static AutoPtr<Promise<T>> async(const std::function<T()> &func) {
+  template <class T, class Fn> static AutoPtr<Promise<T>> async(Fn &&func) {
     AutoPtr pro = new Promise<T>();
     start([=]() -> void {
       auto promise = pro;
@@ -29,10 +29,16 @@ public:
     }
     throw exception::RuntimeException<"Promise Reject">(promise->getMessage());
   }
-  template <class T>
-  static void next(core::AutoPtr<Promise<T>> promise,
-                   const std::function<void(const T &)> &callback) {
-    start([=]() -> void { callback(wait(promise)); });
+  template <class T, class Fn, class CFn>
+  static void next(core::AutoPtr<Promise<T>> promise, Fn &&callback,
+                   CFn &&catchCallback) {
+    start([=]() -> void {
+      try {
+        callback(wait(promise));
+      } catch (const std::exception &e) {
+        catchCallback(e.what());
+      }
+    });
   }
 };
 } // namespace firefly::core

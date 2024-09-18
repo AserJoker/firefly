@@ -16,6 +16,8 @@ private:
 
   static FUNC_DEF(createProperties);
 
+  static FUNC_DEF(sleep);
+
 public:
   static void open(core::AutoPtr<Script> ctx);
 };

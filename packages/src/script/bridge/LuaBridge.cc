@@ -178,7 +178,7 @@ Value::Stack LuaBridge::funcCall(core::AutoPtr<Script> ctx, Value::Stack args) {
   }
   auto end = lua_gettop(state);
   Value::Stack result;
-  for (auto i = current + 1; i <= end; i++) {
+  for (auto i = current; i <= end; i++) {
     result.push_back(bridge->load(state, i));
   }
   lua_settop(state, top);

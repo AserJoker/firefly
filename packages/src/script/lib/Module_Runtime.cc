@@ -7,10 +7,10 @@
 #include "exception/ValidateException.hpp"
 #include "runtime/Application.hpp"
 #include "runtime/Resource.hpp"
-#include "core/File.hpp"
 #include "script/helper/Trait_Buffer.hpp"
 #include "script/helper/Trait_Properties.hpp"
 #include <filesystem>
+
 using namespace firefly;
 using namespace firefly::script;
 using exception::ValidateException;
