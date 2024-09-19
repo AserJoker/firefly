@@ -14,6 +14,7 @@
 #include "video/RenderTarget.hpp"
 #include "video/Shader.hpp"
 #include <algorithm>
+#include <cstddef>
 #include <glm/ext/matrix_transform.hpp>
 
 using namespace firefly;
@@ -29,6 +30,15 @@ Renderer::Renderer() : _shaderName("standard") {
 void Renderer::setViewport(const glm::ivec4 &viewport) {
   _viewport = viewport;
   glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
+  if (_deferred != nullptr) {
+    _deferred->resize({_viewport.z, _viewport.w});
+  }
+  for (auto &attr : _shaderRenderTargets) {
+    attr->resize({_viewport.z, _viewport.w});
+  }
+  if (_renderTarget != nullptr) {
+    _renderTarget->resize({_viewport.z, _viewport.w});
+  }
 }
 
 const glm::ivec4 &Renderer::getViewport() const { return _viewport; }

@@ -78,3 +78,22 @@ void RenderTarget::draw(core::AutoPtr<gl::Program> &program) {
   }
   _geometry->draw(gl::DRAW_MODE::TRIANGLES);
 }
+void RenderTarget::resize(const glm::ivec2 &size) {
+  if (size.x <= _size.x && size.y <= _size.y) {
+    return;
+  }
+  _size = size;
+  auto attachment = _frame->getAttachments().size();
+  _frame = new gl::FrameBuffer(size);
+  std::vector<core::AutoPtr<gl::Texture2D>> textures;
+  for (uint32_t i = 0; i < attachment; i++) {
+    core::AutoPtr texture =
+        new gl::Texture2D(size.x, size.y, gl::PIXEL_FORMAT::RGB);
+    textures.push_back(texture);
+  }
+  _frame->bindAttachments(textures);
+  if (!_frame->check()) {
+    throw exception::RuntimeException<"Check Framebuffer">(
+        "Failed to check framebuffer");
+  }
+}

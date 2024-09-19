@@ -27,7 +27,6 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
-#include "video/Camera.hpp"
 #include "video/Material.hpp"
 #include "video/ModelSet.hpp"
 #include "video/PerspectiveCamera.hpp"
@@ -53,7 +52,7 @@ using namespace duskland;
 float pitch = 0;
 float yaw = 90;
 float strength = 0.1f;
-core::AutoPtr<video::Camera> camera;
+core::AutoPtr<video::PerspectiveCamera> camera;
 core::AutoPtr<video::ModelSet> modelSet;
 
 glm::mat4 model =
@@ -94,6 +93,7 @@ void GameApplication::initEvent() {
   _eventbus->on(this, &GameApplication::onMouseDown);
   _eventbus->on(this, &GameApplication::onMouseWheel);
   _eventbus->on(this, &GameApplication::onClick);
+  _eventbus->on(this, &GameApplication::onResize);
 }
 
 void GameApplication::onInitialize() {
@@ -116,7 +116,8 @@ void GameApplication::onInitialize() {
     material->enableAttribute(video::Material::SPECULAR_TEX);
   }
   _renderer->getLight()->getAmbientLight()->setStrength(strength);
-  camera = new video::PerspectiveCamera(glm::vec3(0, 0, -3.0f),
+  camera = new video::PerspectiveCamera(getWindow()->getSize(),
+                                        glm::vec3(0, 0, -3.0f),
                                         glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
   glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
   auto &plight = _renderer->getLight()->getPointLight("self");
@@ -287,4 +288,5 @@ void GameApplication::onClick(input::Event_Click &e) {
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
   _renderer->setViewport({0, 0, e.getSize()});
+  camera->setSize(e.getSize());
 }

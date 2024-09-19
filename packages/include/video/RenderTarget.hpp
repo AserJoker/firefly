@@ -27,5 +27,6 @@ public:
   const core::AutoPtr<gl::FrameBuffer> &getFrameBuffer() const;
   const std::vector<core::AutoPtr<gl::Texture2D>> &getAttachments() const;
   void draw(core::AutoPtr<gl::Program> &program);
+  void resize(const glm::ivec2& size);
 };
 } // namespace firefly::video
