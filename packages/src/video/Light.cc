@@ -10,7 +10,7 @@ void Light::active(core::AutoPtr<gl::Constant> &constants) {
   for (auto &[_, plight] : _positionLights) {
     plight->active(constants, index++);
   }
-  constants->setField("numPointLight", (uint32_t)_positionLights.size());
+  constants->setField("numPointLight", (int32_t)_positionLights.size());
 }
 core::AutoPtr<AmbientLight> Light::getAmbientLight() { return _ambientLight; }
 core::AutoPtr<PointLight> &Light::getPointLight(const std::string &name) {

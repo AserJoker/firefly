@@ -25,8 +25,9 @@ private:
   std::vector<core::AutoPtr<RenderObject>> _blendRenderList;
   core::AutoPtr<Light> _light;
   glm::ivec4 _viewport;
-  std::vector<core::AutoPtr<RenderTarget>> _renderTargets;
+  std::vector<core::AutoPtr<RenderTarget>> _shaderRenderTargets;
   core::AutoPtr<RenderTarget> _deferred;
+  core::AutoPtr<RenderTarget> _renderTarget;
 
 public:
   bool activeShader(const std::string &name, const std::string &stage);
@@ -45,5 +46,6 @@ public:
   void draw(const core::AutoPtr<ModelSet> &modelset);
   void begin(const core::AutoPtr<Camera> &camera);
   void end();
+  void setRenderTarget(const core::AutoPtr<RenderTarget>& target);
 };
 } // namespace firefly::video

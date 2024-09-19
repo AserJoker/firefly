@@ -23,7 +23,7 @@ struct PointLight {
     vec3 color;
 };
 
-uniform uint numPointLight;
+uniform int numPointLight;
 
 uniform AmbientLight ambientLight;
 
@@ -49,7 +49,7 @@ void main() {
 
     vec3 ambient = ambientLight.result * diff_color;
 
-    for(uint i = uint(0); i < numPointLight; i++) {
+    for(int i = 0; i < numPointLight; i++) {
         vec3 lightColor = pointLights[i].color;
         vec3 lightPosition = vTBN * pointLights[i].position;
 

@@ -44,7 +44,7 @@ RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
         0, new Attribute(new core::Buffer(sizeof(quadVec), quadVec),
                          typeid(float), 2));
     _geometry->setAttribute(
-        1, new Attribute(new core::Buffer(sizeof(quadTex), quadTex),
+        3, new Attribute(new core::Buffer(sizeof(quadTex), quadTex),
                          typeid(float), 2));
     _geometry->setAttributeIndex(
         new AttributeIndex(new core::Buffer(sizeof(quadIndex), quadIndex)));

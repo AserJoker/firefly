@@ -25,10 +25,12 @@ Renderer::Renderer() : _shaderName("standard") {
   _constants->setField("model", glm::mat4(1.0f));
   auto bus = core::Singleton<runtime::EventBus>::instance();
 }
+
 void Renderer::setViewport(const glm::ivec4 &viewport) {
   _viewport = viewport;
   glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
 }
+
 const glm::ivec4 &Renderer::getViewport() const { return _viewport; }
 
 bool Renderer::activeShader(const std::string &name, const std::string &stage) {
@@ -43,6 +45,7 @@ bool Renderer::activeShader(const std::string &name, const std::string &stage) {
   }
   return true;
 }
+
 core::AutoPtr<gl::Program> Renderer::getShaderProgram() { return _shader; }
 
 void Renderer::setShader(const std::string &name) {
@@ -51,14 +54,14 @@ void Renderer::setShader(const std::string &name) {
   auto &programs = shader->getPrograms();
   for (auto &[name, _] : programs) {
     if (name.starts_with("composite_") || name == "composite") {
-      _renderTargets.push_back(
+      _shaderRenderTargets.push_back(
           new RenderTarget(name, {_viewport.z, _viewport.w}));
     }
     if (name == "deferred") {
       _deferred = new video::RenderTarget(name, {_viewport.z, _viewport.w}, 3);
     }
   }
-  std::sort(_renderTargets.begin(), _renderTargets.end(),
+  std::sort(_shaderRenderTargets.begin(), _shaderRenderTargets.end(),
             [](const core::AutoPtr<RenderTarget> &a,
                const core::AutoPtr<RenderTarget> &b) -> bool {
               if (a->getStage() == "composite") {
@@ -149,6 +152,7 @@ void Renderer::begin(const core::AutoPtr<Camera> &camera) {
   _constants->setField("view", camera->getViewMatrix());
   _constants->setField("cameraPosition", camera->getPosition());
 }
+
 void Renderer::end() {
   _light->active(_constants);
   if (_deferred != nullptr) {
@@ -173,9 +177,9 @@ void Renderer::end() {
     _blendRenderList.clear();
   }
   auto current = _deferred;
-  if (_renderTargets.size()) {
-    for (size_t i = 0; i < _renderTargets.size(); i++) {
-      auto next = _renderTargets[i];
+  if (_shaderRenderTargets.size()) {
+    for (size_t i = 0; i < _shaderRenderTargets.size(); i++) {
+      auto next = _shaderRenderTargets[i];
       next->active();
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
               GL_STENCIL_BUFFER_BIT);
@@ -184,9 +188,17 @@ void Renderer::end() {
       current = next;
     }
   }
-  gl::FrameBuffer::bind(nullptr);
-  glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
+  if (!_renderTarget) {
+    gl::FrameBuffer::bind(nullptr);
+    glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
+  } else {
+    _renderTarget->active();
+  }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   activeShader(_shaderName, current->getStage());
   current->draw(_shader);
+}
+
+void Renderer::setRenderTarget(const core::AutoPtr<RenderTarget> &target) {
+  _renderTarget = target;
 }
