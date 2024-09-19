@@ -1,5 +1,4 @@
 #version 330 core 
-out vec4 out_color;
 
 in vec3 vertexPosition;
 in vec3 vertexNormal;
@@ -36,7 +35,7 @@ float specularStrength = 0.5;
 uniform int time;
 
 void main() {
-
+    vec4 out_color;
     vec3 diff_color = vec3(texture2D(diffuse_texture, vertexCoord));
     vec3 specular_color = vec3(texture2D(specular_texture, vertexCoord));
     vec3 normal_color = texture2D(height_texture, vertexCoord).rgb;
@@ -60,8 +59,9 @@ void main() {
         vec3 diffuse = diff * lightColor * diff_color;
 
         float spec = pow(max(dot(normal, halfwayDir), 0.0), 32);
-        vec3 specular = specularStrength * spec *specular_color;
+        vec3 specular = specularStrength * spec * specular_color;
 
         out_color += vec4(ambient + diffuse + specular, 1.0);
     }
+    gl_FragColor = out_color;
 }
