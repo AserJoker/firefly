@@ -10,7 +10,7 @@
 #include "core/Object.hpp"
 #include "gl/Constant.hpp"
 #include "gl/Program.hpp"
-#include "runtime/Event_Resize.hpp"
+#include "video/RenderTarget.hpp"
 #include <glm/fwd.hpp>
 #include <vector>
 
@@ -25,18 +25,20 @@ private:
   std::vector<core::AutoPtr<RenderObject>> _blendRenderList;
   core::AutoPtr<Light> _light;
   glm::ivec4 _viewport;
-
-private:
-  bool activeShader(const std::string &name, const std::string &stage);
-  void onWindowResize(const runtime::Event_Resize &event);
+  std::vector<core::AutoPtr<RenderTarget>> _renderTargets;
+  core::AutoPtr<RenderTarget> _deferred;
 
 public:
+  bool activeShader(const std::string &name, const std::string &stage);
   Renderer();
   void setShader(const std::string &name);
   void setMaterial(const core::AutoPtr<Material> &material);
   const core::AutoPtr<gl::Constant> &getConstants() const;
   core::AutoPtr<gl::Constant> &getConstants();
   core::AutoPtr<Light> &getLight();
+  void setViewport(const glm::ivec4 &viewport);
+  const glm::ivec4 &getViewport() const;
+  core::AutoPtr<gl::Program> getShaderProgram();
   void draw(const core::AutoPtr<Material> &material,
             const core::AutoPtr<Geometry> &geometry);
   void draw(const core::AutoPtr<Model> &mesh);

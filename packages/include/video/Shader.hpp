@@ -21,13 +21,19 @@ private:
 
 public:
   Shader(const std::string &path);
+
   Shader(const std::unordered_map<std::string, ShaderSource> &sources);
+
   void setSource(const std::string &name, const gl::SHADER_TYPE &type,
                  const std::string &source);
+
   const std::unordered_map<std::string, ShaderSource> &getSources() const;
+
   const std::unordered_map<std::string, core::AutoPtr<gl::Program>> &
   getPrograms() const;
+
   std::unordered_map<std::string, core::AutoPtr<gl::Program>> &getPrograms();
+
   core::AutoPtr<gl::Program> getProgram(const std::string &name);
 };
 }; // namespace firefly::video

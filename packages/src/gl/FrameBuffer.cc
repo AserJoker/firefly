@@ -31,9 +31,6 @@ void FrameBuffer::bindAttachments(
     _attachmentBuffers.push_back(GL_COLOR_ATTACHMENT0 + index);
     index++;
   }
-  if (_attachmentBuffers.size() > 1) {
-    glDrawBuffers(textures.size(), _attachmentBuffers.data());
-  }
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
   _attachments = textures;
 }
@@ -58,3 +55,6 @@ void FrameBuffer::bind(const core::AutoPtr<FrameBuffer> &framebuffer) {
   }
 }
 const glm::ivec2 &FrameBuffer::getSize() const { return _size; }
+const std::vector<uint32_t> &FrameBuffer::getAttachmentBuffers() const {
+  return _attachmentBuffers;
+}

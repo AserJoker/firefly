@@ -10,6 +10,7 @@
 #include "input/Keyboard.hpp"
 #include "input/Mouse.hpp"
 #include "runtime/Application.hpp"
+#include "runtime/Event_Resize.hpp"
 
 namespace duskland {
 using namespace firefly;
@@ -36,6 +37,8 @@ protected:
   void onClick(input::Event_Click &e);
   void onKeyDown(input::Event_KeyDown &e);
   void onKeyUp(input::Event_KeyUp &e);
+
+  void onResize(runtime::Event_Resize &e);
 
 public:
   GameApplication(int argc, char *argv[]);

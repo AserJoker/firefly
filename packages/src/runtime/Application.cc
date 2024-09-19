@@ -37,6 +37,7 @@ void Application::onInitialize() {
   }
   _eventbus->on(this, &Application::onEvent);
   _window = new runtime::Window("firefly", 1024, 768);
+  _renderer->setViewport({0, 0, 1024, 768});
 }
 core::AutoPtr<Window> Application::getWindow() { return _window; }
 void Application::onMainLoop() {

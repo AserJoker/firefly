@@ -7,6 +7,7 @@
 #include "video/AttributeIndex.hpp"
 #include <glm/glm.hpp>
 #include <unordered_map>
+#include <vector>
 namespace firefly::video {
 class Geometry : public core::Object {
 public:
@@ -28,6 +29,8 @@ private:
 
 public:
   Geometry();
+  Geometry(const std::vector<core::AutoPtr<Attribute>> &attributes,
+           const core::AutoPtr<AttributeIndex> &index);
   void setAttribute(uint32_t index, const core::AutoPtr<Attribute> &attribute);
   core::AutoPtr<Attribute> getAttribute(uint32_t index);
   const core::AutoPtr<Attribute> getAttribute(uint32_t index) const;

@@ -48,9 +48,6 @@
 #include <imgui_impl_sdl2.h>
 #include <lua.hpp>
 
-#define SCR_WIDTH 1024
-#define SCR_HEIGHT 768
-
 using namespace firefly;
 using namespace duskland;
 float pitch = 0;
@@ -125,6 +122,7 @@ void GameApplication::onInitialize() {
   auto &plight = _renderer->getLight()->getPointLight("self");
   camera->setPosition({0, 0, -5});
   plight->setPosition(camera->getPosition());
+  _renderer->setShader("standard");
   getWindow()->setSwapInterval(0);
   getWindow()->show();
 }
@@ -286,4 +284,8 @@ void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
 void GameApplication::onClick(input::Event_Click &e) {
   script::Module_Event::emit(_script, "click",
                              createNumber(_script, e.getType()));
+}
+
+void GameApplication::onResize(runtime::Event_Resize &e) {
+  _renderer->setViewport({0, 0, e.getSize()});
 }

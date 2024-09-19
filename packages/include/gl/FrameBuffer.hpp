@@ -22,6 +22,7 @@ public:
   bool check();
   uint32_t getHandle() const;
   const glm::ivec2 &getSize() const;
+  const std::vector<uint32_t> &getAttachmentBuffers() const;
 
 public:
   static void bind(const core::AutoPtr<FrameBuffer> &framebuffer);

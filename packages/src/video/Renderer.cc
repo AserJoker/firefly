@@ -1,46 +1,35 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Buffer.hpp"
 #include "core/Singleton.hpp"
 #include "gl/Constant.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
-#include "gl/PixelFormat.hpp"
 #include "gl/Texture2D.hpp"
 #include "runtime/EventBus.hpp"
-#include "runtime/Event_Resize.hpp"
-#include "video/Attribute.hpp"
-#include "video/AttributeIndex.hpp"
 #include "video/Camera.hpp"
 #include "video/Geometry.hpp"
 #include "video/Light.hpp"
 #include "video/Material.hpp"
 #include "video/RenderObject.hpp"
+#include "video/RenderTarget.hpp"
 #include "video/Shader.hpp"
+#include <algorithm>
 #include <glm/ext/matrix_transform.hpp>
 
 using namespace firefly;
 using namespace firefly::video;
-
-glm::vec2 quadVec[] = {{-1.0f, 1.0f}, {-1.0f, -1.0f}, {1.0f, -1.0f},
-                       {-1.0f, 1.0f}, {1.0f, -1.0f},  {1.0f, 1.0f}};
-glm::vec2 quadTex[] = {{0.0f, 1.0f}, {0.0f, 0.0f}, {1.0f, 0.0f},
-                       {0.0f, 1.0f}, {1.0f, 0.0f}, {1.0f, 1.0f}};
-
-uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
-
-core::AutoPtr<gl::FrameBuffer> frameBuffer;
-core::AutoPtr<gl::Texture2D> frameTexture;
-core::AutoPtr<video::Geometry> quad;
-core::AutoPtr<video::Material> material;
 
 Renderer::Renderer() : _shaderName("standard") {
   _constants = new gl::Constant();
   _light = new Light();
   _constants->setField("model", glm::mat4(1.0f));
   auto bus = core::Singleton<runtime::EventBus>::instance();
-  bus->on(this, &Renderer::onWindowResize);
 }
+void Renderer::setViewport(const glm::ivec4 &viewport) {
+  _viewport = viewport;
+  glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
+}
+const glm::ivec4 &Renderer::getViewport() const { return _viewport; }
 
 bool Renderer::activeShader(const std::string &name, const std::string &stage) {
   auto shader = Shader::get(name, fmt::format("shader::{}", name));
@@ -54,8 +43,37 @@ bool Renderer::activeShader(const std::string &name, const std::string &stage) {
   }
   return true;
 }
+core::AutoPtr<gl::Program> Renderer::getShaderProgram() { return _shader; }
 
-void Renderer::setShader(const std::string &name) { _shaderName = name; }
+void Renderer::setShader(const std::string &name) {
+  _shaderName = name;
+  auto shader = Shader::get(name, fmt::format("shader::{}", name));
+  auto &programs = shader->getPrograms();
+  for (auto &[name, _] : programs) {
+    if (name.starts_with("composite_") || name == "composite") {
+      _renderTargets.push_back(
+          new RenderTarget(name, {_viewport.z, _viewport.w}));
+    }
+    if (name == "deferred") {
+      _deferred = new video::RenderTarget(name, {_viewport.z, _viewport.w}, 3);
+    }
+  }
+  std::sort(_renderTargets.begin(), _renderTargets.end(),
+            [](const core::AutoPtr<RenderTarget> &a,
+               const core::AutoPtr<RenderTarget> &b) -> bool {
+              if (a->getStage() == "composite") {
+                return false;
+              }
+              if (b->getStage() == "composite") {
+                return true;
+              }
+              auto sida = a->getStage().substr(11);
+              auto ida = std::atoi(sida.c_str());
+              auto sidb = b->getStage().substr(11);
+              auto idb = std::atoi(sidb.c_str());
+              return ida <= idb;
+            });
+}
 
 void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   material->active(_constants);
@@ -132,52 +150,43 @@ void Renderer::begin(const core::AutoPtr<Camera> &camera) {
   _constants->setField("cameraPosition", camera->getPosition());
 }
 void Renderer::end() {
-  if (!frameBuffer) {
-    quad = new video::Geometry();
-    quad->setAttribute(
-        0, new video::Attribute(new core::Buffer(sizeof(quadVec), quadVec),
-                                typeid(float), 2));
-    quad->setAttribute(
-        1, new video::Attribute(new core::Buffer(sizeof(quadTex), quadTex),
-                                typeid(float), 2));
-    quad->setAttributeIndex(
-        new AttributeIndex(new core::Buffer(sizeof(quadIndex), quadIndex)));
-    activeShader(_shaderName, "final");
-    _shader->setUniform("final_color", 0);
-
-    frameBuffer = new gl::FrameBuffer({1024, 768});
-    frameTexture = new gl::Texture2D(1024, 768, gl::PIXEL_FORMAT::RGB);
-    frameBuffer->bindAttachments({frameTexture});
-  }
   _light->active(_constants);
-  gl::FrameBuffer::bind(frameBuffer);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-  activeShader(_shaderName, "gbuffer_basic");
-  glDisable(GL_BLEND);
-  for (auto &item : _normalRenderList) {
-    setMaterial(item->getMeterial());
-    _shader->setUniform(_constants);
-    item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
+  if (_deferred != nullptr) {
+    _deferred->active();
   }
-  _normalRenderList.clear();
-  glEnable(GL_BLEND);
-  for (auto &item : _blendRenderList) {
-    setMaterial(item->getMeterial());
-    _shader->setUniform(_constants);
-    item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
+  {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    activeShader(_shaderName, "gbuffer");
+    glDisable(GL_BLEND);
+    for (auto &item : _normalRenderList) {
+      setMaterial(item->getMeterial());
+      _shader->setUniform(_constants);
+      item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
+    }
+    _normalRenderList.clear();
+    glEnable(GL_BLEND);
+    for (auto &item : _blendRenderList) {
+      setMaterial(item->getMeterial());
+      _shader->setUniform(_constants);
+      item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
+    }
+    _blendRenderList.clear();
   }
-  _blendRenderList.clear();
+  auto current = _deferred;
+  if (_renderTargets.size()) {
+    for (size_t i = 0; i < _renderTargets.size(); i++) {
+      auto next = _renderTargets[i];
+      next->active();
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
+              GL_STENCIL_BUFFER_BIT);
+      activeShader(_shaderName, current->getStage());
+      current->draw(_shader);
+      current = next;
+    }
+  }
   gl::FrameBuffer::bind(nullptr);
-
-  glDisable(GL_DEPTH_TEST);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  activeShader(_shaderName, "final");
-  glActiveTexture(GL_TEXTURE0);
-  gl::Texture2D::bind(frameTexture);
-  quad->draw(gl::DRAW_MODE::TRIANGLES);
-}
-void Renderer::onWindowResize(const runtime::Event_Resize &event) {
-  _viewport = {0, 0, event.getSize().x, event.getSize().y};
   glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  activeShader(_shaderName, current->getStage());
+  current->draw(_shader);
 }

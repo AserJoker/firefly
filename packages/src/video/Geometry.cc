@@ -14,6 +14,14 @@ using namespace firefly::video;
 Geometry::Geometry() : _binding({0, 0, 0, 0, 0, 0}) {
   _vao = new gl::VertexArray();
 }
+Geometry::Geometry(const std::vector<core::AutoPtr<Attribute>> &attributes,
+                   const core::AutoPtr<AttributeIndex> &index)
+    : Geometry() {
+  for (size_t i = 0; i < attributes.size(); i++) {
+    setAttribute(i, attributes[i]);
+  }
+  setAttributeIndex(index);
+}
 void Geometry::setAttribute(uint32_t index,
                             const core::AutoPtr<Attribute> &attribute) {
   if (_attributes.contains(index) && _attributes.at(index) == attribute) {
