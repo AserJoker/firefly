@@ -199,9 +199,8 @@ void GameApplication::onMainLoop() {
     model = glm::mat4(1.0f);
   }
   static int count = 0;
-  _renderer->getConstants()->setField("model", model);
   _renderer->begin(camera);
-  _renderer->draw(modelSet);
+  _renderer->draw(modelSet, model);
   _renderer->end();
   getWindow()->present();
 }

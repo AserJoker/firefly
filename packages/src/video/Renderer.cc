@@ -124,26 +124,28 @@ core::AutoPtr<gl::Constant> &Renderer::getConstants() { return _constants; }
 
 core::AutoPtr<Light> &Renderer::getLight() { return _light; }
 void Renderer::draw(const core::AutoPtr<Material> &material,
-                    const core::AutoPtr<Geometry> &geometry) {
+                    const core::AutoPtr<Geometry> &geometry,
+                    const glm::mat4 &model) {
   if (!material->isBlend()) {
-    _normalRenderList.push_back(new RenderObject(geometry, material));
+    _normalRenderList.push_back(new RenderObject(geometry, material, model));
   } else {
-    _blendRenderList.push_back(new RenderObject(geometry, material));
+    _blendRenderList.push_back(new RenderObject(geometry, material, model));
   }
 }
 
-void Renderer::draw(const core::AutoPtr<Model> &model) {
-  if (model->getMaterial()->isVisible()) {
-    draw(model->getMaterial(), model->getGeometry());
+void Renderer::draw(const core::AutoPtr<Model> &m, const glm::mat4 &model) {
+  if (m->getMaterial()->isVisible()) {
+    draw(m->getMaterial(), m->getGeometry(), model);
   }
 }
 
-void Renderer::draw(const core::AutoPtr<ModelSet> &modelset) {
-  for (auto &[_, model] : modelset->getModels()) {
-    draw(model);
+void Renderer::draw(const core::AutoPtr<ModelSet> &modelset,
+                    const glm::mat4 &model) {
+  for (auto &[_, m] : modelset->getModels()) {
+    draw(m, model);
   }
   for (auto &[_, child] : modelset->getChildren()) {
-    draw(child);
+    draw(child, model);
   }
 }
 
@@ -164,6 +166,7 @@ void Renderer::end() {
     glDisable(GL_BLEND);
     for (auto &item : _normalRenderList) {
       setMaterial(item->getMeterial());
+      _constants->setField("model", item->getModelMatrix());
       _shader->setUniform(_constants);
       item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
     }
@@ -171,6 +174,7 @@ void Renderer::end() {
     glEnable(GL_BLEND);
     for (auto &item : _blendRenderList) {
       setMaterial(item->getMeterial());
+      _constants->setField("model", item->getModelMatrix());
       _shader->setUniform(_constants);
       item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
     }

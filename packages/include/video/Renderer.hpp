@@ -41,9 +41,12 @@ public:
   const glm::ivec4 &getViewport() const;
   core::AutoPtr<gl::Program> getShaderProgram();
   void draw(const core::AutoPtr<Material> &material,
-            const core::AutoPtr<Geometry> &geometry);
-  void draw(const core::AutoPtr<Model> &mesh);
-  void draw(const core::AutoPtr<ModelSet> &modelset);
+            const core::AutoPtr<Geometry> &geometry,
+                    const glm::mat4 &model);
+  void draw(const core::AutoPtr<Model> &m,
+                    const glm::mat4 &model);
+  void draw(const core::AutoPtr<ModelSet> &modelset,
+                    const glm::mat4 &model);
   void begin(const core::AutoPtr<Camera> &camera);
   void end();
   void setRenderTarget(const core::AutoPtr<RenderTarget>& target);
