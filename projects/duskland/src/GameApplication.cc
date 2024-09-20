@@ -286,5 +286,5 @@ void GameApplication::onClick(input::Event_Click &e) {
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
   _renderer->setViewport({0, 0, e.getSize()});
-  camera->setViewport({0, 0, e.getSize()});
+  // camera->setViewport({0, 0, e.getSize()});
 }
