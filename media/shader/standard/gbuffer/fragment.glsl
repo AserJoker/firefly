@@ -2,7 +2,7 @@
 
 in vec3 vertexPosition;
 in vec3 vertexNormal;
-in vec2 vertexCoord;
+in vec2 vertexTexcoord;
 in mat3 TBN;
 in vec3 vertexTangent;
 in vec3 vertexBitangent;
@@ -36,9 +36,9 @@ uniform int time;
 
 void main() {
     vec4 out_color;
-    vec3 diff_color = vec3(texture2D(diffuse_texture, vertexCoord));
-    vec3 specular_color = vec3(texture2D(specular_texture, vertexCoord));
-    vec3 normal_color = texture2D(height_texture, vertexCoord).rgb;
+    vec3 diff_color = vec3(texture2D(diffuse_texture, vertexTexcoord));
+    vec3 specular_color = vec3(texture2D(specular_texture, vertexTexcoord));
+    vec3 normal_color = texture2D(height_texture, vertexTexcoord).rgb;
     vec3 normal = normalize(normal_color * 2.0 - 1.0);
     mat3 vTBN = transpose(TBN);
     out_color = vec4(0.0);

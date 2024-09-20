@@ -7,7 +7,7 @@ layout(location = 12) in vec3 bitangent;
 
 out vec3 vertexPosition;
 out vec3 vertexNormal;
-out vec2 vertexCoord;
+out vec2 vertexTexcoord;
 out vec3 vertexTangent;
 out vec3 vertexBitangent;
 out mat3 TBN;
@@ -19,7 +19,7 @@ uniform mat4 model;
 void main() {
     gl_Position = projection * view * model * vec4(position, 1.0);
     vertexPosition = position;
-    vertexCoord = coord;
+    vertexTexcoord = coord;
     vec3 T = normalize(vec3(model * vec4(tangent, 0.0)));
     vec3 N = normalize(vec3(model * vec4(normal, 0.0)));
     vec3 B = cross(T, N);
