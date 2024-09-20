@@ -35,9 +35,11 @@ void Application::onInitialize() {
   if (TTF_Init() != 0) {
     throw exception::SDLException(SDL_GetError());
   }
-  _eventbus->on(this, &Application::onEvent);
+  _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
   _window = new runtime::Window("firefly", 1024, 768);
-  _renderer->setViewport({0, 0, 1024, 768});
+  _renderer->initialize({0, 0, 1024, 768});
+  _renderer->setShader("standard");
+  _eventbus->on(this, &Application::onEvent);
 }
 core::AutoPtr<Window> Application::getWindow() { return _window; }
 void Application::onMainLoop() {

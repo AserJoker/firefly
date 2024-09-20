@@ -1,11 +1,10 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Singleton.hpp"
 #include "gl/Constant.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
+#include "gl/ShaderType.hpp"
 #include "gl/Texture2D.hpp"
-#include "runtime/EventBus.hpp"
 #include "video/Camera.hpp"
 #include "video/Geometry.hpp"
 #include "video/Light.hpp"
@@ -13,18 +12,77 @@
 #include "video/RenderObject.hpp"
 #include "video/RenderTarget.hpp"
 #include "video/Shader.hpp"
-#include <algorithm>
-#include <cstddef>
+#include <concurrencysal.h>
 #include <glm/ext/matrix_transform.hpp>
+#include <unordered_map>
 
 using namespace firefly;
 using namespace firefly::video;
 
-Renderer::Renderer() : _shaderName("standard") {
+constexpr static const char *internalGBufferVertex =
+    "#version 330 core \n\r"
+    "layout(location = 0) in vec3 position;\n\r"
+    "layout(location = 3) in vec2 coord;\n\r"
+    "out vec2 vertexTexcoord;\n\r"
+    "uniform mat4 projection;\n\r"
+    "uniform mat4 view;\n\r"
+    "uniform mat4 model;\n\r"
+    "void main() {\n\r"
+    "gl_Position = projection * view * model * vec4(position, 1.0);\n\r"
+    "vertexTexcoord = coord;\n\r"
+    "}\n\r";
+constexpr static const char *internalGBufferFragment =
+    "#version 330 core\n\r"
+    "in vec2 vertexTexcoord;\n\r"
+    "uniform sampler2D diffuse_texture;\n\r"
+    "void main() {\n\r"
+    "    vec3 col = texture(diffuse_texture, vertexTexcoord).rgb;\n\r"
+    "    gl_FragColor = vec4(col, 1.0);\n\r"
+    "}\n\r";
+
+constexpr static const char *internalBasicVertex =
+    "#version 330 core \n\r"
+    "layout(location = 0) in vec2 position;\n\r"
+    "layout(location = 3) in vec2 coord;\n\r"
+    "out vec2 vertexTexcoord;\n\r"
+    "void main() {\n\r"
+    "gl_Position = vec4(position, 0.0, 1.0);\n\r"
+    "vertexTexcoord = coord;\n\r"
+    "}\n\r";
+constexpr static const char *internalBasicFragment =
+    "#version 330 core\n\r"
+    "in vec2 vertexTexcoord;\n\r"
+    "uniform sampler2D attachment_0;\n\r"
+    "void main() {\n\r"
+    "    vec3 col = texture(attachment_0, vertexTexcoord).rgb;\n\r"
+    "    gl_FragColor = vec4(col, 1.0);\n\r"
+    "}\n\r";
+
+Renderer::Renderer() : _shaderName("internal") {
   _constants = new gl::Constant();
   _light = new Light();
   _constants->setField("model", glm::mat4(1.0f));
-  auto bus = core::Singleton<runtime::EventBus>::instance();
+}
+void Renderer::initialize(const glm::ivec4 &viewport) {
+  setViewport(viewport);
+  std::unordered_map<std::string, Shader::ShaderSource> sources = {
+      {
+          "gbuffer",
+          {
+              {gl::SHADER_TYPE::VERTEX_SHADER, internalGBufferVertex},
+              {gl::SHADER_TYPE::FRAGMENT_SHADER, internalGBufferFragment},
+          },
+      },
+      {
+          "basic",
+          {
+              {gl::SHADER_TYPE::VERTEX_SHADER, internalBasicVertex},
+              {gl::SHADER_TYPE::FRAGMENT_SHADER, internalBasicFragment},
+          },
+      },
+  };
+  core::AutoPtr<Shader> shader = new Shader(sources);
+  Shader::set("internal", shader);
 }
 
 void Renderer::setViewport(const glm::ivec4 &viewport) {
@@ -59,6 +117,9 @@ bool Renderer::activeShader(const std::string &name, const std::string &stage) {
 core::AutoPtr<gl::Program> Renderer::getShaderProgram() { return _shader; }
 
 void Renderer::setShader(const std::string &name) {
+  if (_shaderName == name) {
+    return;
+  }
   _shaderName = name;
   auto shader = Shader::get(name, fmt::format("shader::{}", name));
   auto &programs = shader->getPrograms();
@@ -71,22 +132,23 @@ void Renderer::setShader(const std::string &name) {
       _deferred = new video::RenderTarget(name, {_viewport.z, _viewport.w}, 3);
     }
   }
-  std::sort(_shaderRenderTargets.begin(), _shaderRenderTargets.end(),
-            [](const core::AutoPtr<RenderTarget> &a,
-               const core::AutoPtr<RenderTarget> &b) -> bool {
-              if (a->getStage() == "composite") {
-                return false;
-              }
-              if (b->getStage() == "composite") {
-                return true;
-              }
-              auto sida = a->getStage().substr(11);
-              auto ida = std::atoi(sida.c_str());
-              auto sidb = b->getStage().substr(11);
-              auto idb = std::atoi(sidb.c_str());
-              return ida <= idb;
-            });
+  _shaderRenderTargets.sort([](const core::AutoPtr<RenderTarget> &a,
+                               const core::AutoPtr<RenderTarget> &b) -> bool {
+    if (a->getStage() == "composite") {
+      return false;
+    }
+    if (b->getStage() == "composite") {
+      return true;
+    }
+    auto sida = a->getStage().substr(11);
+    auto ida = std::atoi(sida.c_str());
+    auto sidb = b->getStage().substr(11);
+    auto idb = std::atoi(sidb.c_str());
+    return ida <= idb;
+  });
 }
+
+const std::string &Renderer::getShader() const { return _shaderName; }
 
 void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   material->active(_constants);
@@ -133,26 +195,37 @@ const core::AutoPtr<gl::Constant> &Renderer::getConstants() const {
 core::AutoPtr<gl::Constant> &Renderer::getConstants() { return _constants; }
 
 core::AutoPtr<Light> &Renderer::getLight() { return _light; }
+
+const core::AutoPtr<Light> &Renderer::getLight() const { return _light; }
+
 void Renderer::draw(const core::AutoPtr<Material> &material,
                     const core::AutoPtr<Geometry> &geometry,
                     const glm::mat4 &model) {
   if (!material->isBlend()) {
     _normalRenderList.push_back(new RenderObject(geometry, material, model));
   } else {
-    _blendRenderList.push_back(new RenderObject(geometry, material, model));
-  }
-}
-
-void Renderer::draw(const core::AutoPtr<Model> &m, const glm::mat4 &model) {
-  if (m->getMaterial()->isVisible()) {
-    draw(m->getMaterial(), m->getGeometry(), model);
+    core::AutoPtr<RenderObject> rbo;
+    for (auto it = _blendRenderList.begin(); it != _blendRenderList.end();
+         it++) {
+      auto &m = (*it)->getModelMatrix();
+      if (model[3][2] > m[3][2]) {
+        rbo = new RenderObject(geometry, material, model);
+        _blendRenderList.insert(it, rbo);
+        break;
+      }
+    }
+    if (!rbo) {
+      _blendRenderList.push_back(new RenderObject(geometry, material, model));
+    }
   }
 }
 
 void Renderer::draw(const core::AutoPtr<ModelSet> &modelset,
                     const glm::mat4 &model) {
   for (auto &[_, m] : modelset->getModels()) {
-    draw(m, model);
+    if (m->getMaterial()->isVisible()) {
+      draw(m->getMaterial(), m->getGeometry(), model);
+    }
   }
   for (auto &[_, child] : modelset->getChildren()) {
     draw(child, model);
@@ -172,7 +245,9 @@ void Renderer::end() {
   }
   {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    activeShader(_shaderName, "gbuffer");
+    if (!activeShader(_shaderName, "gbuffer")) {
+      activeShader("internal", "basic");
+    }
     glDisable(GL_BLEND);
     for (auto &item : _normalRenderList) {
       setMaterial(item->getMeterial());
@@ -192,14 +267,16 @@ void Renderer::end() {
   }
   auto current = _deferred;
   if (_shaderRenderTargets.size()) {
-    for (size_t i = 0; i < _shaderRenderTargets.size(); i++) {
-      auto next = _shaderRenderTargets[i];
-      next->active();
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
-              GL_STENCIL_BUFFER_BIT);
-      activeShader(_shaderName, current->getStage());
-      current->draw(_shader);
-      current = next;
+    for (auto it = _shaderRenderTargets.begin();
+         it != _shaderRenderTargets.end(); it++) {
+      auto &next = *it;
+      if (activeShader(_shaderName, current->getStage())) {
+        next->active();
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
+                GL_STENCIL_BUFFER_BIT);
+        current->draw(_shader);
+        current = next;
+      }
     }
   }
   if (!_renderTarget) {
@@ -209,7 +286,9 @@ void Renderer::end() {
     _renderTarget->active();
   }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  activeShader(_shaderName, current->getStage());
+  if (!activeShader(_shaderName, current->getStage())) {
+    activeShader("internal", "basic");
+  }
   current->draw(_shader);
 }
 

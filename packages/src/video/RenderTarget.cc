@@ -50,6 +50,8 @@ RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
         new AttributeIndex(new core::Buffer(sizeof(quadIndex), quadIndex)));
   }
 }
+RenderTarget::RenderTarget(const glm::ivec2 &size, uint32_t attachment)
+    : RenderTarget("basic", size, attachment) {}
 void RenderTarget::active() {
   gl::FrameBuffer::bind(_frame);
   glViewport(0, 0, _size.x, _size.y);

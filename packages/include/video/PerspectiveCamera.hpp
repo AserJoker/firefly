@@ -10,6 +10,6 @@ public:
                     const glm::vec3 &position = {0.f, 0.f, 0.f},
                     const glm::vec3 &up = {0.f, 1.f, 0.f},
                     const glm::vec3 &front = {0.f, 0.f, 1.f});
-  void setSize(const glm::ivec2 &size);
+  void setViewport(const glm::ivec4 &viewport);
 };
 } // namespace firefly::video

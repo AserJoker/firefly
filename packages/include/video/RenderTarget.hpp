@@ -21,12 +21,13 @@ private:
 public:
   RenderTarget(const std::string &stage, const glm::ivec2 &size,
                uint32_t attachment = 1);
+  RenderTarget(const glm::ivec2 &size, uint32_t attachment = 1);
   void active();
   const glm::ivec2 &getSize() const;
   const std::string &getStage() const;
   const core::AutoPtr<gl::FrameBuffer> &getFrameBuffer() const;
   const std::vector<core::AutoPtr<gl::Texture2D>> &getAttachments() const;
   void draw(core::AutoPtr<gl::Program> &program);
-  void resize(const glm::ivec2& size);
+  void resize(const glm::ivec2 &size);
 };
 } // namespace firefly::video

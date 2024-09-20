@@ -11,7 +11,8 @@ PerspectiveCamera::PerspectiveCamera(const glm::ivec2 &size,
   setProjectionMatrix(glm::perspective(
       glm::radians(45.0f), (float)size.x / (float)size.y, 0.1f, 100.0f));
 }
-void PerspectiveCamera::setSize(const glm::ivec2 &size) {
-  setProjectionMatrix(glm::perspective(
-      glm::radians(45.0f), (float)size.x / (float)size.y, 0.1f, 100.0f));
+void PerspectiveCamera::setViewport(const glm::ivec4 &viewport) {
+  setProjectionMatrix(glm::perspective(glm::radians(45.0f),
+                                       (float)viewport.z / (float)viewport.w,
+                                       0.1f, 100.0f));
 }

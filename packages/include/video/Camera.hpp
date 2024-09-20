@@ -21,5 +21,6 @@ public:
   const glm::vec3 &getFront() const;
   const glm::mat4 &getProjectionMatrix() const;
   const glm::mat4 getViewMatrix() const;
+  virtual void setViewport(const glm::ivec4 &viewport);
 };
 } // namespace firefly::video

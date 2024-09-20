@@ -27,13 +27,12 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
+#include "video/Camera.hpp"
 #include "video/Material.hpp"
 #include "video/ModelSet.hpp"
 #include "video/PerspectiveCamera.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_image.h>
-#include <SDL_mouse.h>
-#include <SDL_scancode.h>
 #include <fmt/format.h>
 #include <glad/glad.h>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -52,7 +51,7 @@ using namespace duskland;
 float pitch = 0;
 float yaw = 90;
 float strength = 0.1f;
-core::AutoPtr<video::PerspectiveCamera> camera;
+core::AutoPtr<video::Camera> camera;
 core::AutoPtr<video::ModelSet> modelSet;
 
 glm::mat4 model =
@@ -98,10 +97,8 @@ void GameApplication::initEvent() {
 
 void GameApplication::onInitialize() {
   runtime::Application::onInitialize();
-
   _mouse = core::Singleton<input::Mouse>::instance();
   _keyboard = core::Singleton<input::Keyboard>::instance();
-  _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
   initEvent();
   initLocale();
   initScript();
@@ -109,6 +106,7 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
+
   modelSet = video::ModelSet::get("backpack.obj", "model::model.obj");
   auto materials = modelSet->getAllMaterials();
   for (auto &[name, material] : materials) {
@@ -123,7 +121,7 @@ void GameApplication::onInitialize() {
   auto &plight = _renderer->getLight()->getPointLight("self");
   camera->setPosition({0, 0, -5});
   plight->setPosition(camera->getPosition());
-  _renderer->setShader("standard");
+
   getWindow()->setSwapInterval(0);
   getWindow()->show();
 }
@@ -288,5 +286,5 @@ void GameApplication::onClick(input::Event_Click &e) {
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
   _renderer->setViewport({0, 0, e.getSize()});
-  camera->setSize(e.getSize());
+  camera->setViewport({0, 0, e.getSize()});
 }
