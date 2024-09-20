@@ -60,7 +60,7 @@ public:
 
   void draw(const core::AutoPtr<ModelSet> &modelset, const glm::mat4 &model);
 
-  void begin(const core::AutoPtr<Camera> &camera);
+  void begin(const core::AutoPtr<Camera> &camera = nullptr);
   void end();
 
   void setRenderTarget(const core::AutoPtr<RenderTarget> &target);

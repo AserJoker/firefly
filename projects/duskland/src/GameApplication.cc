@@ -1,5 +1,6 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Buffer.hpp"
 #include "core/Singleton.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
@@ -27,10 +28,12 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
+#include "video/Attribute.hpp"
+#include "video/AttributeIndex.hpp"
 #include "video/Camera.hpp"
+#include "video/Geometry.hpp"
 #include "video/Material.hpp"
-#include "video/ModelSet.hpp"
-#include "video/PerspectiveCamera.hpp"
+#include "video/OrthoCamera.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_image.h>
 #include <fmt/format.h>
@@ -48,14 +51,25 @@
 
 using namespace firefly;
 using namespace duskland;
-float pitch = 0;
-float yaw = 90;
-float strength = 0.1f;
-core::AutoPtr<video::Camera> camera;
-core::AutoPtr<video::ModelSet> modelSet;
+
+core::AutoPtr<video::Geometry> quad;
+core::AutoPtr<video::Material> quadMaterial;
+
+constexpr static const glm::vec2 quadVec[] = {{0.f, 0.0f},      {1.0f, 0.0f},
+                                              {0.0f, 1.0f},   {0.0f, 1.0f},
+                                              {1.0f, 1.0f}, {1.0f, 0.0f}};
+
+constexpr static const glm::vec2 quadTex[] = {{0.0f, 0.0f}, {1.0f, 0.0f},
+                                              {0.0f, 1.0f}, {0.0f, 1.0f},
+                                              {1.0f, 1.0f}, {1.0f, 0.0f}};
+
+constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
 
 glm::mat4 model =
-    glm::rotate(glm::mat4(1.0), glm::radians(45.0f), glm::vec3(0, 1, 0));
+
+    glm::scale(glm::mat4(1.0f), {2 / 1024.0f, 2 / 768.0f, 1.0f}) *
+    glm::translate(glm::mat4(1.0f), {1024.0f / -2.f, 768.0f / 2.f, 0.0f});
+core::AutoPtr<video::Camera> camera;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 
@@ -107,21 +121,28 @@ void GameApplication::onInitialize() {
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
 
-  modelSet = video::ModelSet::get("backpack.obj", "model::model.obj");
-  auto materials = modelSet->getAllMaterials();
-  for (auto &[name, material] : materials) {
-    material->enableAttribute(video::Material::HEIGHT_TEX);
-    material->enableAttribute(video::Material::SPECULAR_TEX);
-  }
-  _renderer->getLight()->getAmbientLight()->setStrength(strength);
-  camera = new video::PerspectiveCamera(getWindow()->getSize(),
-                                        glm::vec3(0, 0, -3.0f),
-                                        glm::vec3(0, 0, 1), glm::vec3(0, 1, 0));
-  glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-  auto &plight = _renderer->getLight()->getPointLight("self");
-  camera->setPosition({0, 0, -5});
-  plight->setPosition(camera->getPosition());
-
+  quadMaterial = new video::Material();
+  quadMaterial->setTexture("diffuse_texture", {.path = "wall.jpg"});
+  quadMaterial->setDepthTest(false);
+  quadMaterial->setBlend(true);
+  quad = new video::Geometry();
+  quad->setAttribute(
+      video::Geometry::ATTR_POSITION,
+      new video::Attribute(new core::Buffer(sizeof(quadVec), quadVec),
+                           typeid(float), 2));
+  quad->setAttribute(
+      video::Geometry::ATTR_TEXCOORD,
+      new video::Attribute(new core::Buffer(sizeof(quadTex), quadTex),
+                           typeid(float), 2));
+  quad->setAttributeIndex(new video::AttributeIndex(
+      new core::Buffer(sizeof(quadIndex), quadIndex)));
+  auto size = getWindow()->getSize();
+  _renderer->setShader("2d");
+  camera = new video::OrthoCamera({0.0f, 0.f, 1024.0f / 2, 768.0f / 2});
+  auto pos = camera->getProjectionMatrix() *
+             glm::vec4(100.0f / 1024, 100.f / 768, 0.f, 1.f);
+  auto x = pos.x * 1024;
+  auto y = pos.y * 768;
   getWindow()->setSwapInterval(0);
   getWindow()->show();
 }
@@ -135,71 +156,8 @@ void GameApplication::onMainLoop() {
     script::Module_Event::emit(_script, "tick");
   }
   script::Module_Event::emit(_script, "update");
-  float speed = 0.001f;
-  if (_keyboard->getKeyState(SDL_SCANCODE_A)) {
-    auto pos = camera->getPosition();
-    auto up = camera->getUp();
-    auto front = camera->getFront();
-    auto right = glm::normalize(glm::cross(front, up));
-    pos += right * -speed;
-    camera->setPosition(pos);
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_D)) {
-    auto pos = camera->getPosition();
-    auto up = camera->getUp();
-    auto front = camera->getFront();
-    auto right = glm::normalize(glm::cross(front, up));
-    pos += right * speed;
-    camera->setPosition(pos);
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_W)) {
-    auto pos = camera->getPosition();
-    auto front = camera->getFront();
-    pos += front * speed;
-    camera->setPosition(pos);
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_S)) {
-    auto pos = camera->getPosition();
-    auto front = camera->getFront();
-    pos -= front * speed;
-    camera->setPosition(pos);
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_SPACE)) {
-    auto pos = camera->getPosition();
-    auto up = camera->getUp();
-    pos += up * speed;
-    camera->setPosition(pos);
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_LSHIFT)) {
-    auto pos = camera->getPosition();
-    auto up = camera->getUp();
-    pos -= up * speed;
-    camera->setPosition(pos);
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_LEFT)) {
-    model = glm::translate(model, glm::vec3(-speed, 0, 0));
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_RIGHT)) {
-    model = glm::translate(model, glm::vec3(speed, 0, 0));
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_UP)) {
-    model = glm::translate(model, glm::vec3(0, speed, 0));
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_DOWN)) {
-    model = glm::translate(model, glm::vec3(0, -speed, 0));
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_Q)) {
-    model = glm::rotate(model, speed, glm::vec3(0, 1, 0));
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_E)) {
-    model = glm::rotate(model, -speed, glm::vec3(0, 1, 0));
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_R)) {
-    model = glm::mat4(1.0f);
-  }
-  static int count = 0;
   _renderer->begin(camera);
-  _renderer->draw(modelSet, model);
+  _renderer->draw(quadMaterial, quad, model);
   _renderer->end();
   getWindow()->present();
 }
@@ -217,15 +175,6 @@ void GameApplication::onKeyDown(input::Event_KeyDown &e) {
                              createNumber(_script, e.getScancode()));
   if (e.getScancode() == SDL_SCANCODE_ESCAPE) {
     _mouse->releaseMouse();
-  }
-  if (e.getScancode() == SDL_SCANCODE_RETURN) {
-    for (auto &[name, material] : modelSet->getAllMaterials()) {
-      if (material->isWireframe()) {
-        material->setIsWireframe(false);
-      } else {
-        material->setIsWireframe(true);
-      }
-    }
   }
 }
 
@@ -245,21 +194,6 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
           ->setField(_script, "y", createNumber(_script, pos.y))
           ->setField(_script, "dx", createNumber(_script, delta.x))
           ->setField(_script, "dy", createNumber(_script, delta.y)));
-  if (_mouse->isCaptured()) {
-    pitch += -delta.y * 0.05f;
-    yaw += delta.x * 0.05f;
-    if (pitch > 89.0f) {
-      pitch = 89.0f;
-    }
-    if (pitch < -89.0f) {
-      pitch = -89.0f;
-    }
-    glm::vec3 front;
-    front.x = std::cos(glm::radians(pitch)) * std::cos(glm::radians(yaw));
-    front.y = sin(glm::radians(pitch));
-    front.z = cos(glm::radians(pitch)) * sin(glm::radians(yaw));
-    camera->setFront(front);
-  }
 }
 
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
@@ -286,5 +220,4 @@ void GameApplication::onClick(input::Event_Click &e) {
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
   _renderer->setViewport({0, 0, e.getSize()});
-  // camera->setViewport({0, 0, e.getSize()});
 }

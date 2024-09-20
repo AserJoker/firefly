@@ -233,9 +233,11 @@ void Renderer::draw(const core::AutoPtr<ModelSet> &modelset,
 }
 
 void Renderer::begin(const core::AutoPtr<Camera> &camera) {
-  _constants->setField("projection", camera->getProjectionMatrix());
-  _constants->setField("view", camera->getViewMatrix());
-  _constants->setField("cameraPosition", camera->getPosition());
+  if (camera != nullptr) {
+    _constants->setField("projection", camera->getProjectionMatrix());
+    _constants->setField("view", camera->getViewMatrix());
+    _constants->setField("cameraPosition", camera->getPosition());
+  }
 }
 
 void Renderer::end() {
