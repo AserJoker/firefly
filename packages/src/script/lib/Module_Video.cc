@@ -5,6 +5,7 @@ using namespace firefly;
 using namespace firefly::script;
 using exception::ValidateException;
 void Module_Video::open(core::AutoPtr<Script> ctx) {
+  auto scope = ctx->pushScope();
   auto exports = ctx->createValue()->setObject(ctx);
   auto format =
       ctx->createValue()
@@ -14,4 +15,5 @@ void Module_Video::open(core::AutoPtr<Script> ctx) {
           ->setField(ctx, "GRAY", ctx->createValue()->setNumber(ctx, 2));
   exports->setField(ctx, "format", format);
   ctx->registerModule("video", exports);
+  ctx->popScope(scope);
 }

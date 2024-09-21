@@ -24,6 +24,7 @@ Trait_Promise::create(core::AutoPtr<Script> ctx,
 }
 
 void Trait_Promise::initialize(core::AutoPtr<Script> ctx) {
+  auto scope = ctx->pushScope();
   auto global = ctx->getNativeGlobal();
 
   auto Promise = ctx->createValue()
@@ -34,6 +35,7 @@ void Trait_Promise::initialize(core::AutoPtr<Script> ctx) {
                      ->setFunctionField(ctx, reject);
 
   global->setField(ctx, "Promise", Promise);
+  ctx->popScope(scope);
 }
 FUNC_DEF(Trait_Promise::next) {
   VALIDATE_ARGS(next, 2);

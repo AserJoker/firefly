@@ -19,6 +19,14 @@ public:
   Attribute(const core::AutoPtr<core::Buffer> &buffer,
             const std::type_info &type, uint32_t itemSize,
             const bool &normalize = false, bool dynamic = false);
+  Attribute(uint32_t size, const void *buffer, const std::type_info &type,
+            uint32_t itemSize, const bool &normalize = false,
+            bool dynamic = false);
+  template <class T, uint32_t N>
+  Attribute(T (&buffer)[N], uint32_t itemSize, const bool &normalize = false,
+            bool dynamic = false)
+      : Attribute(buffer, N * sizeof(T), typeid(T), itemSize, normalize,
+                  dynamic) {}
   const std::string &getItemType() const;
   const uint32_t &getItemSize() const;
   const bool &isNormalized() const;

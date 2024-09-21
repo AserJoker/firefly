@@ -7,6 +7,7 @@ using namespace firefly;
 using namespace firefly::script;
 using exception::ValidateException;
 void Module_Log::open(core::AutoPtr<Script> ctx) {
+  auto scope = ctx->pushScope();
   auto exports = ctx->createValue()->setObject(ctx);
   exports->setField(ctx, "debug", ctx->createValue()->setFunction(ctx, debug));
   exports->setField(ctx, "info", ctx->createValue()->setFunction(ctx, info));
@@ -15,6 +16,7 @@ void Module_Log::open(core::AutoPtr<Script> ctx) {
   exports->setField(ctx, "error", ctx->createValue()->setFunction(ctx, error));
   exports->setField(ctx, "panic", ctx->createValue()->setFunction(ctx, panic));
   ctx->registerModule("log", exports);
+  ctx->popScope(scope);
 }
 FUNC_DEF(Module_Log::debug) {
   VALIDATE_ARGS(debug, 1);

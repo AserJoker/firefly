@@ -6,6 +6,7 @@
 using namespace firefly;
 using namespace firefly::script;
 void Module_Input::open(core::AutoPtr<Script> ctx) {
+  auto scope = ctx->pushScope();
   auto exports = ctx->createValue()
                      ->setObject(ctx)
                      ->setFunctionField(ctx, captureMouse)
@@ -340,6 +341,7 @@ void Module_Input::open(core::AutoPtr<Script> ctx) {
           ->setField(ctx, "ENDCALL", createNumber(ctx, SDL_SCANCODE_ENDCALL));
   exports->setField(ctx, "SCANCODE", scancodes);
   ctx->registerModule("input", exports);
+  ctx->popScope(scope);
 }
 
 FUNC_DEF(Module_Input::captureMouse) {

@@ -7,6 +7,12 @@ using namespace firefly::video;
 Attribute::Attribute(const core::AutoPtr<core::Buffer> &buffer,
                      const std::type_info &type, uint32_t itemSize,
                      const bool &normalize, bool dynamic)
+    : Attribute(buffer->getSize(), buffer->getData(), type, itemSize, normalize,
+                dynamic) {}
+
+Attribute::Attribute(uint32_t size, const void *buffer,
+                     const std::type_info &type, uint32_t itemSize,
+                     const bool &normalize, bool dynamic)
     : _itemType(type.name()), _itemSize(itemSize), _normalize(normalize),
       _dynamic(dynamic) {
   if (type == typeid(float)) {
@@ -28,8 +34,8 @@ Attribute::Attribute(const core::AutoPtr<core::Buffer> &buffer,
   }
   _vbo = new gl::Buffer(dynamic ? gl::BUFFER_USAGE::DYNAMIC_DRAW
                                 : gl::BUFFER_USAGE::STATIC_DRAW);
-  _vbo->setData(buffer->getSize(), buffer->getData());
-  _itemCount = buffer->getSize() / _stride;
+  _vbo->setData(size, buffer);
+  _itemCount = size / _stride;
 }
 
 const std::string &Attribute::getItemType() const { return _itemType; }

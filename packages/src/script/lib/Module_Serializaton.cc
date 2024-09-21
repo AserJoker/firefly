@@ -8,6 +8,7 @@ using namespace firefly;
 using namespace firefly::script;
 using exception::ValidateException;
 void Module_Serialization::open(core::AutoPtr<Script> ctx) {
+  auto scope = ctx->pushScope();
   auto exports = ctx->createValue()->setObject(ctx);
   auto json =
       ctx->createValue()
@@ -26,6 +27,7 @@ void Module_Serialization::open(core::AutoPtr<Script> ctx) {
   exports->setField(ctx, "JSON", json);
   exports->setField(ctx, "YAML", yaml);
   ctx->registerModule("serialization", exports);
+  ctx->popScope(scope);
 }
 
 FUNC_DEF(Module_Serialization::JSON_stringify) {

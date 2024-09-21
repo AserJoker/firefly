@@ -59,7 +59,7 @@ FUNC_DEF(Trait_Buffer::writeUint8) {
   VALIDATE_ARGS(writeUint8, 3);
   auto self = args[0];
   auto buffer = self->getOpaque().cast<core::Buffer>();
-  uint32_t offset =(uint32_t) args[1]->toNumber(ctx);
+  uint32_t offset = (uint32_t)args[1]->toNumber(ctx);
   auto value = args[2]->toNumber(ctx);
   if (value >= 0xff || value <= 0) {
     throw exception::ValidateException(
@@ -187,6 +187,8 @@ FUNC_DEF(Trait_Buffer::toString) {
 }
 
 void Trait_Buffer::initialize(core::AutoPtr<Script> ctx) {
+
+  auto scope = ctx->pushScope();
   auto global = ctx->getNativeGlobal();
   auto Buffer =
       ctx->createValue()
@@ -218,6 +220,7 @@ void Trait_Buffer::initialize(core::AutoPtr<Script> ctx) {
           ->setField(ctx, "toString",
                      ctx->createValue()->setFunction(ctx, toString));
   global->setField(ctx, "Buffer", Buffer);
+  ctx->popScope(scope);
 }
 
 core::AutoPtr<Value> Trait_Buffer::create(core::AutoPtr<Script> ctx,

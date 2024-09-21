@@ -17,7 +17,6 @@ private:
 private:
   static const std::unordered_map<std::string, ShaderSource>
   load(const std::string &path);
-  const static std::string preCompile(const std::string &source);
 
 public:
   Shader(const std::string &path);

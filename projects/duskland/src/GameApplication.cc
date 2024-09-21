@@ -55,9 +55,9 @@ using namespace duskland;
 core::AutoPtr<video::Geometry> quad;
 core::AutoPtr<video::Material> quadMaterial;
 
-constexpr static const glm::vec2 quadVec[] = {{0.f, 0.0f},      {1.0f, 0.0f},
-                                              {0.0f, 1.0f},   {0.0f, 1.0f},
-                                              {1.0f, 1.0f}, {1.0f, 0.0f}};
+constexpr static const glm::vec2 quadVec[] = {{0.f, 0.0f},      {128.0f, 0.0f},
+                                              {0.0f, 192.0f},   {0.0f, 192.0f},
+                                              {128.0f, 192.0f}, {128.0f, 0.0f}};
 
 constexpr static const glm::vec2 quadTex[] = {{0.0f, 0.0f}, {1.0f, 0.0f},
                                               {0.0f, 1.0f}, {0.0f, 1.0f},
@@ -65,10 +65,7 @@ constexpr static const glm::vec2 quadTex[] = {{0.0f, 0.0f}, {1.0f, 0.0f},
 
 constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
 
-glm::mat4 model =
-
-    glm::scale(glm::mat4(1.0f), {2 / 1024.0f, 2 / 768.0f, 1.0f}) *
-    glm::translate(glm::mat4(1.0f), {1024.0f / -2.f, 768.0f / 2.f, 0.0f});
+glm::mat4 model = glm::translate(glm::mat4(1.0f), {0, 0, 0.0f});
 core::AutoPtr<video::Camera> camera;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
@@ -122,8 +119,8 @@ void GameApplication::onInitialize() {
   script::Module_Event::emit(_script, "gameLoaded");
 
   quadMaterial = new video::Material();
-  quadMaterial->setTexture("diffuse_texture", {.path = "wall.jpg"});
-  quadMaterial->setDepthTest(false);
+  quadMaterial->setTexture("diffuse_texture", {.path = "001-Fighter01.png"});
+  quadMaterial->setDepthTest(true);
   quadMaterial->setBlend(true);
   quad = new video::Geometry();
   quad->setAttribute(
@@ -138,11 +135,7 @@ void GameApplication::onInitialize() {
       new core::Buffer(sizeof(quadIndex), quadIndex)));
   auto size = getWindow()->getSize();
   _renderer->setShader("2d");
-  camera = new video::OrthoCamera({0.0f, 0.f, 1024.0f / 2, 768.0f / 2});
-  auto pos = camera->getProjectionMatrix() *
-             glm::vec4(100.0f / 1024, 100.f / 768, 0.f, 1.f);
-  auto x = pos.x * 1024;
-  auto y = pos.y * 768;
+  camera = new video::OrthoCamera({0.0f, 0.f, getWindow()->getSize()});
   getWindow()->setSwapInterval(0);
   getWindow()->show();
 }
@@ -220,4 +213,5 @@ void GameApplication::onClick(input::Event_Click &e) {
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
   _renderer->setViewport({0, 0, e.getSize()});
+  camera->setViewport({0, 0, e.getSize()});
 }

@@ -11,9 +11,11 @@ using namespace firefly;
 using namespace firefly::script;
 using exception::ValidateException;
 void Module_Media::open(core::AutoPtr<Script> ctx) {
+  auto scope = ctx->pushScope();
   auto exports = ctx->createValue()->setObject(ctx);
   exports->setFunctionField(ctx, &query)->setFunctionField(ctx, createBuffer);
   ctx->registerModule("media", exports);
+  ctx->popScope(scope);
 }
 FUNC_DEF(Module_Media::query) {
   VALIDATE_ARGS(query, 1);

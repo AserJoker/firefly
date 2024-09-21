@@ -12,11 +12,13 @@
 using namespace firefly;
 using namespace firefly::script;
 void Module_Database::open(core::AutoPtr<Script> ctx) {
+  auto scope = ctx->pushScope();
   auto exports = ctx->createValue()
                      ->setObject(ctx)
                      ->setFunctionField(ctx, queryOne)
                      ->setFunctionField(ctx, queryList);
   ctx->registerModule("database", exports);
+  ctx->popScope(scope);
 }
 static core::AutoPtr<database::Record>
 createQuery(core::AutoPtr<Script> ctx,

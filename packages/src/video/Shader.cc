@@ -78,11 +78,6 @@ Shader::Shader(const std::unordered_map<std::string, ShaderSource> &sources)
 void Shader::setSource(const std::string &name, const gl::SHADER_TYPE &type,
                        const std::string &source) {}
 
-const std::string Shader::preCompile(const std::string &source) {
-  std::string result = source;
-  return result;
-}
-
 const std::unordered_map<std::string, Shader::ShaderSource> &
 Shader::getSources() const {
   return _sources;

@@ -30,9 +30,6 @@ Texture2D::Texture2D(const std::string &name, TEXTURE_WRAP_MODE swrap,
   case SDL_PIXELFORMAT_RGBX8888:
     fmt = PIXEL_FORMAT::RGBA;
     break;
-  case SDL_PIXELFORMAT_INDEX8:
-    fmt = PIXEL_FORMAT::RED;
-    break;
   default: {
     SDL_Surface *sur = SDL_ConvertSurfaceFormat(img, SDL_PIXELFORMAT_RGBA32, 0);
     SDL_FreeSurface(img);

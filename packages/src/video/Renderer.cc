@@ -83,6 +83,7 @@ void Renderer::initialize(const glm::ivec4 &viewport) {
   };
   core::AutoPtr<Shader> shader = new Shader(sources);
   Shader::set("internal", shader);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void Renderer::setViewport(const glm::ivec4 &viewport) {
