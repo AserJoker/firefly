@@ -1,6 +1,5 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Buffer.hpp"
 #include "core/Singleton.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
@@ -125,14 +124,11 @@ void GameApplication::onInitialize() {
   quad = new video::Geometry();
   quad->setAttribute(
       video::Geometry::ATTR_POSITION,
-      new video::Attribute(new core::Buffer(sizeof(quadVec), quadVec),
-                           typeid(float), 2));
+      new video::Attribute(sizeof(quadVec), quadVec, typeid(float), 2));
   quad->setAttribute(
       video::Geometry::ATTR_TEXCOORD,
-      new video::Attribute(new core::Buffer(sizeof(quadTex), quadTex),
-                           typeid(float), 2));
-  quad->setAttributeIndex(new video::AttributeIndex(
-      new core::Buffer(sizeof(quadIndex), quadIndex)));
+      new video::Attribute(sizeof(quadTex), quadTex, typeid(float), 2));
+  quad->setAttributeIndex(new video::AttributeIndex(quadIndex));
   auto size = getWindow()->getSize();
   _renderer->setShader("2d");
   camera = new video::OrthoCamera({0.0f, 0.f, getWindow()->getSize()});

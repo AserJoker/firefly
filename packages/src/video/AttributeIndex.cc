@@ -6,10 +6,13 @@
 using namespace firefly;
 using namespace firefly::video;
 AttributeIndex::AttributeIndex(const core::AutoPtr<core::Buffer> &buffer)
-    : _size(0) {
+    : AttributeIndex(buffer->getSize() / sizeof(uint32_t),
+                     (const uint32_t *)buffer->getData()) {}
+
+AttributeIndex::AttributeIndex(const uint32_t count, const uint32_t *buffer) {
   _ebo = new gl::Buffer(gl::BUFFER_USAGE::STATIC_DRAW);
-  _size = buffer->getSize() / sizeof(uint32_t);
-  _ebo->setData(buffer->getSize(), buffer->getData());
+  _size = count;
+  _ebo->setData(count * sizeof(uint32_t), buffer);
 }
 const uint32_t AttributeIndex::getIndicesCount() const { return _size; }
 void AttributeIndex::write(uint32_t offset, uint32_t size,

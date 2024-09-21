@@ -25,7 +25,7 @@ public:
   template <class T, uint32_t N>
   Attribute(T (&buffer)[N], uint32_t itemSize, const bool &normalize = false,
             bool dynamic = false)
-      : Attribute(buffer, N * sizeof(T), typeid(T), itemSize, normalize,
+      : Attribute(N * sizeof(T), buffer, typeid(T), itemSize, normalize,
                   dynamic) {}
   const std::string &getItemType() const;
   const uint32_t &getItemSize() const;

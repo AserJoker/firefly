@@ -13,12 +13,11 @@
 #include <vector>
 using namespace firefly;
 using namespace firefly::video;
-constexpr static const glm::vec2 quadVec[] = {{-1.0f, 1.0f}, {-1.0f, -1.0f},
-                                              {1.0f, -1.0f}, {-1.0f, 1.0f},
-                                              {1.0f, -1.0f}, {1.0f, 1.0f}};
-constexpr static const glm::vec2 quadTex[] = {{0.0f, 1.0f}, {0.0f, 0.0f},
-                                              {1.0f, 0.0f}, {0.0f, 1.0f},
-                                              {1.0f, 0.0f}, {1.0f, 1.0f}};
+constexpr static const float quadVec[] = {-1.0f, 1.0f,  -1.0f, -1.0f,
+                                          1.0f,  -1.0f, -1.0f, 1.0f,
+                                          1.0f,  -1.0f, 1.0f,  1.0f};
+constexpr static const float quadTex[] = {0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+                                          0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f};
 
 constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
 
@@ -40,12 +39,8 @@ RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
   }
   if (!_geometry) {
     _geometry = new Geometry();
-    _geometry->setAttribute(
-        0, new Attribute(new core::Buffer(sizeof(quadVec), quadVec),
-                         typeid(float), 2));
-    _geometry->setAttribute(
-        3, new Attribute(new core::Buffer(sizeof(quadTex), quadTex),
-                         typeid(float), 2));
+    _geometry->setAttribute(0, new Attribute(quadVec, 2));
+    _geometry->setAttribute(3, new Attribute(quadTex, 2));
     _geometry->setAttributeIndex(
         new AttributeIndex(new core::Buffer(sizeof(quadIndex), quadIndex)));
   }

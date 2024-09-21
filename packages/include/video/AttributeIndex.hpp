@@ -11,6 +11,9 @@ private:
 
 public:
   AttributeIndex(const core::AutoPtr<core::Buffer> &buffer);
+  AttributeIndex(const uint32_t count, const uint32_t *buffer);
+  template <uint32_t N>
+  AttributeIndex(const uint32_t (&buffer)[N]) : AttributeIndex(N, buffer) {}
   const uint32_t getIndicesCount() const;
   void write(uint32_t offset, uint32_t size, const uint32_t *data);
   const core::AutoPtr<gl::Buffer> &getElementBufferObject() const;

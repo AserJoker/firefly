@@ -1,6 +1,7 @@
 #include "video/Attribute.hpp"
 #include "gl/Buffer.hpp"
 #include "gl/BufferUsage.hpp"
+#include <glm/glm.hpp>
 using namespace firefly;
 using namespace firefly::video;
 
@@ -31,6 +32,9 @@ Attribute::Attribute(uint32_t size, const void *buffer,
     _stride = sizeof(int16_t) * itemSize;
   } else if (type == typeid(uint16_t)) {
     _stride = sizeof(uint16_t) * itemSize;
+  } else {
+    throw std::runtime_error(
+        fmt::format("Failed to init attribute with type '{}'", _itemType));
   }
   _vbo = new gl::Buffer(dynamic ? gl::BUFFER_USAGE::DYNAMIC_DRAW
                                 : gl::BUFFER_USAGE::STATIC_DRAW);

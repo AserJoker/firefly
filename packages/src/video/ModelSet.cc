@@ -278,18 +278,16 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
       typeid(float), 3);
   geometry->setAttribute(Geometry::ATTR_NORMAL, attrVertices);
   if (colors.empty()) {
-    core::AutoPtr attrColor = new Attribute(
-        new core::Buffer((uint32_t)colors.size() * sizeof(glm::vec4),
-                         colors.data()),
-        typeid(float), 4);
+    core::AutoPtr attrColor =
+        new Attribute((uint32_t)colors.size() * sizeof(glm::vec4),
+                      colors.data(), typeid(float), 4);
     geometry->setAttribute(Geometry::ATTR_COLOR, attrColor);
   }
   for (auto i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; i++) {
     if (!texcoords[i].empty()) {
-      core::AutoPtr attrTex = new Attribute(
-          new core::Buffer((uint32_t)texcoords[i].size() * sizeof(glm::vec2),
-                           texcoords[i].data()),
-          typeid(float), 2);
+      core::AutoPtr attrTex =
+          new Attribute((uint32_t)texcoords[i].size() * sizeof(glm::vec2),
+                        texcoords[i].data(), typeid(float), 2);
       geometry->setAttribute(Geometry::ATTR_TEXCOORD + i, attrTex);
     }
   }
@@ -299,10 +297,9 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
                          tangents.data()),
         typeid(float), 3);
     geometry->setAttribute(Geometry::ATTR_TANGENT, attrTangent);
-    core::AutoPtr attrBitangent = new Attribute(
-        new core::Buffer((uint32_t)bitangents.size() * sizeof(glm::vec3),
-                         bitangents.data()),
-        typeid(float), 3);
+    core::AutoPtr attrBitangent =
+        new Attribute((uint32_t)bitangents.size() * sizeof(glm::vec3),
+                      bitangents.data(), typeid(float), 3);
     geometry->setAttribute(Geometry::ATTR_BITANGENT, attrBitangent);
   }
   std::vector<uint32_t> indices;
@@ -311,8 +308,8 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
       indices.push_back(mesh->mFaces[i].mIndices[j]);
     }
   }
-  geometry->setAttributeIndex(new AttributeIndex(new core::Buffer(
-      (uint32_t)indices.size() * sizeof(uint32_t), indices.data())));
+  geometry->setAttributeIndex(new AttributeIndex(
+      (uint32_t)indices.size() * sizeof(uint32_t), indices.data()));
   return geometry;
 }
 static std::unordered_map<std::string, core::AutoPtr<Model>> parseModels(

@@ -31,13 +31,17 @@ public:
   Geometry();
   Geometry(const std::vector<core::AutoPtr<Attribute>> &attributes,
            const core::AutoPtr<AttributeIndex> &index);
+
   void setAttribute(uint32_t index, const core::AutoPtr<Attribute> &attribute);
+
   core::AutoPtr<Attribute> getAttribute(uint32_t index);
   const core::AutoPtr<Attribute> getAttribute(uint32_t index) const;
   void removeAttribute(uint32_t index);
   const std::unordered_map<uint32_t, core::AutoPtr<Attribute>> &
   getAttributes() const;
+
   void setAttributeIndex(const core::AutoPtr<AttributeIndex> &attrindex);
+
   const core::AutoPtr<AttributeIndex> &getAttributeIndex() const;
   core::AutoPtr<AttributeIndex> &getAttributeIndex();
   void computeBounding();
