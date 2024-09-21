@@ -1,6 +1,5 @@
 #include "video/ModelSet.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Buffer.hpp"
 #include "gl/TextureWrapMode.hpp"
 #include "runtime/Media.hpp"
 #include "video/Attribute.hpp"
@@ -267,15 +266,13 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
       bitangents.push_back({v.x, v.y, v.z});
     }
   }
-  core::AutoPtr<Attribute> attrVertices = new Attribute(
-      new core::Buffer((uint32_t)vertices.size() * sizeof(glm::vec3),
-                       vertices.data()),
-      typeid(float), 3);
+  core::AutoPtr<Attribute> attrVertices =
+      new Attribute((uint32_t)vertices.size() * sizeof(glm::vec3),
+                    vertices.data(), typeid(float), 3);
   geometry->setAttribute(Geometry::ATTR_POSITION, attrVertices);
-  core::AutoPtr<Attribute> attrNormals = new Attribute(
-      new core::Buffer((uint32_t)normals.size() * sizeof(glm::vec3),
-                       normals.data()),
-      typeid(float), 3);
+  core::AutoPtr<Attribute> attrNormals =
+      new Attribute((uint32_t)normals.size() * sizeof(glm::vec3),
+                    normals.data(), typeid(float), 3);
   geometry->setAttribute(Geometry::ATTR_NORMAL, attrVertices);
   if (colors.empty()) {
     core::AutoPtr attrColor =
@@ -292,10 +289,9 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
     }
   }
   if (!tangents.empty()) {
-    core::AutoPtr attrTangent = new Attribute(
-        new core::Buffer((uint32_t)tangents.size() * sizeof(glm::vec3),
-                         tangents.data()),
-        typeid(float), 3);
+    core::AutoPtr attrTangent =
+        new Attribute((uint32_t)tangents.size() * sizeof(glm::vec3),
+                      tangents.data(), typeid(float), 3);
     geometry->setAttribute(Geometry::ATTR_TANGENT, attrTangent);
     core::AutoPtr attrBitangent =
         new Attribute((uint32_t)bitangents.size() * sizeof(glm::vec3),
