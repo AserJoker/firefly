@@ -160,19 +160,24 @@ void GameApplication::onUnInitialize() {
 }
 
 void GameApplication::onKeyDown(input::Event_KeyDown &e) {
+  auto scope = _script->pushScope();
   script::Module_Event::emit(_script, "keyDown",
                              createNumber(_script, e.getScancode()));
+  _script->popScope(scope);
   if (e.getScancode() == SDL_SCANCODE_ESCAPE) {
     _mouse->releaseMouse();
   }
 }
 
 void GameApplication::onKeyUp(input::Event_KeyUp &e) {
+  auto scope = _script->pushScope();
   script::Module_Event::emit(_script, "keyUp",
                              createNumber(_script, e.getScancode()));
+  _script->popScope(scope);
 }
 
 void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
+  auto scope = _script->pushScope();
   auto pos = e.getPosition() - getWindow()->getWindowPosition();
   auto delta = e.getDelta();
   script::Module_Event::emit(
@@ -183,15 +188,19 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
           ->setField(_script, "y", createNumber(_script, pos.y))
           ->setField(_script, "dx", createNumber(_script, delta.x))
           ->setField(_script, "dy", createNumber(_script, delta.y)));
+  _script->popScope(scope);
 }
 
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
+  auto scope = _script->pushScope();
   script::Module_Event::emit(_script, "mouseDown",
                              createNumber(_script, e.getType()));
+  _script->popScope(scope);
   _mouse->captureMouse();
 }
 
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
+  auto scope = _script->pushScope();
   script::Module_Event::emit(
       _script, "mouseWheel",
       _script->createValue()
@@ -200,11 +209,14 @@ void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
           ->setField(_script, "y", createNumber(_script, e.getOffset().y))
           ->setField(_script, "dx", createNumber(_script, e.getDelta().x))
           ->setField(_script, "dy", createNumber(_script, e.getDelta().y)));
+  _script->popScope(scope);
 }
 
 void GameApplication::onClick(input::Event_Click &e) {
+  auto scope = _script->pushScope();
   script::Module_Event::emit(_script, "click",
                              createNumber(_script, e.getType()));
+  _script->popScope(scope);
 }
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
