@@ -1,6 +1,5 @@
 #include "video/RenderTarget.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Buffer.hpp"
 #include "exception/Exception.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
@@ -41,8 +40,7 @@ RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
     _geometry = new Geometry();
     _geometry->setAttribute(0, new Attribute(quadVec, 2));
     _geometry->setAttribute(3, new Attribute(quadTex, 2));
-    _geometry->setAttributeIndex(
-        new AttributeIndex(new core::Buffer(sizeof(quadIndex), quadIndex)));
+    _geometry->setAttributeIndex(new AttributeIndex(quadIndex));
   }
 }
 RenderTarget::RenderTarget(const glm::ivec2 &size, uint32_t attachment)
