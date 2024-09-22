@@ -13,38 +13,14 @@ Material::Material()
   enableAttribute(DIFFUSE_TEX);
 }
 
-const std::map<std::string, Material::TextureInfo>
+const std::unordered_map<std::string, Material::TextureInfo> &
 Material::getTextures() const {
-  std::map<std::string, Material::TextureInfo> textures;
-  for (auto &[name, info] : _textures) {
-    auto rpos = name.find_last_of('_');
-    if (_enableAttributes.contains(name) ||
-        (rpos != std::string::npos &&
-         _enableAttributes.contains(name.substr(0, rpos)))) {
-      textures[name] = info;
-    }
-  }
-  return textures;
+  return _textures;
 }
 
 void Material::setTexture(const std::string &name,
                           const Material::TextureInfo &texture) {
   _textures[name] = texture;
-}
-
-void Material::active(core::AutoPtr<gl::Constant> &constants) const {
-  for (auto &attribute : _enableAttributes) {
-    if (_attributes.contains(attribute)) {
-      _attributes.at(attribute)(constants);
-    }
-  }
-  auto index = 0;
-  auto textures = getTextures();
-  for (auto &[name, _] : textures) {
-    auto rpos = name.find_last_of('_');
-    constants->setField(name, index);
-    index++;
-  }
 }
 
 const glm::vec3 &Material::getAmbient() const { return _ambient; }
@@ -66,7 +42,7 @@ const std::string &Material::getName() const { return _name; }
 
 void Material::setAmbient(const glm::vec3 &color) {
   _ambient = color;
-  if (_attributes.contains(AMBIENT_COLOR)) {
+  if (!_attributes.contains(AMBIENT_COLOR)) {
     _attributes[AMBIENT_COLOR] =
         [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("ambient", _ambient);
@@ -75,7 +51,7 @@ void Material::setAmbient(const glm::vec3 &color) {
 }
 void Material::setDiffuse(const glm::vec3 &color) {
   _diffuse = color;
-  if (_attributes.contains(AMBIENT_COLOR)) {
+  if (!_attributes.contains(AMBIENT_COLOR)) {
     _attributes[AMBIENT_COLOR] =
         [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("diffuse", _diffuse);
@@ -84,7 +60,7 @@ void Material::setDiffuse(const glm::vec3 &color) {
 }
 void Material::setSpecular(const glm::vec3 &color) {
   _specular = color;
-  if (_attributes.contains(SPECULAR_COLOR)) {
+  if (!_attributes.contains(SPECULAR_COLOR)) {
     _attributes[SPECULAR_COLOR] =
         [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("specular", _specular);
@@ -93,7 +69,7 @@ void Material::setSpecular(const glm::vec3 &color) {
 }
 void Material::setEmissive(const glm::vec3 &color) {
   _emissive = color;
-  if (_attributes.contains(EMISSIVE_COLOR)) {
+  if (!_attributes.contains(EMISSIVE_COLOR)) {
     _attributes[EMISSIVE_COLOR] =
         [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("emissive", _emissive);
@@ -102,7 +78,7 @@ void Material::setEmissive(const glm::vec3 &color) {
 }
 void Material::setReflective(const glm::vec3 &color) {
   _reflective = color;
-  if (_attributes.contains(REFLECTIVE_COLOR)) {
+  if (!_attributes.contains(REFLECTIVE_COLOR)) {
     _attributes[REFLECTIVE_COLOR] =
         [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("reflective", _reflective);
@@ -111,7 +87,7 @@ void Material::setReflective(const glm::vec3 &color) {
 }
 void Material::setTransparent(const glm::vec3 &color) {
   _transparent = color;
-  if (_attributes.contains(TRANSPARENT_COLOR)) {
+  if (!_attributes.contains(TRANSPARENT_COLOR)) {
     _attributes[TRANSPARENT_COLOR] =
         [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("transparent", _transparent);
@@ -120,7 +96,7 @@ void Material::setTransparent(const glm::vec3 &color) {
 }
 void Material::setReflectivity(float value) {
   _reflectivity = value;
-  if (_attributes.contains(REFLECTIVITY)) {
+  if (!_attributes.contains(REFLECTIVITY)) {
     _attributes[REFLECTIVITY] =
         [this](core::AutoPtr<gl::Constant> constants) -> void {
       constants->setField("reflectivity", _reflectivity);
@@ -178,4 +154,8 @@ void Material::enableAttribute(const std::string &name) {
 }
 void Material::disableAttribute(const std::string &name) {
   _enableAttributes.erase(name);
+}
+const std::unordered_map<std::string, Material::Attribute> &
+Material::getAttributes() const {
+  return _attributes;
 }

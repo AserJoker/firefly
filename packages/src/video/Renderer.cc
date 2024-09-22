@@ -152,15 +152,18 @@ void Renderer::setShader(const std::string &name) {
 const std::string &Renderer::getShader() const { return _shaderName; }
 
 void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
-  material->active(_constants);
+  for (auto &[_, attribute] : material->getAttributes()) {
+    attribute(_constants);
+  }
   auto textures = material->getTextures();
   auto index = 0;
-  for (auto &[_, texture] : textures) {
+  for (auto &[name, texture] : textures) {
     auto path = fmt::format("texture::{}", texture.path);
     auto tex = gl::Texture2D::get(path, path, texture.mappingmodeU,
                                   texture.mappingmodeV);
     glActiveTexture(GL_TEXTURE0 + index);
     gl::Texture2D::bind(tex);
+    _constants->setField(name, index);
     index++;
   }
 

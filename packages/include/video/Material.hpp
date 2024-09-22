@@ -6,7 +6,6 @@
 #include "gl/TextureWrapMode.hpp"
 #include <functional>
 #include <glm/glm.hpp>
-#include <map>
 #include <set>
 #include <unordered_map>
 
@@ -34,7 +33,7 @@ public:
     bool useAlpha;
     bool invert;
   };
-
+  using Attribute = std::function<void(core::AutoPtr<gl::Constant>)>;
   inline static constexpr auto AMBIENT_COLOR = "ambient_color";
   inline static constexpr auto DIFFUSE_COLOR = "diffuse_color";
   inline static constexpr auto SPECULAR_COLOR = "specular_color";
@@ -70,9 +69,7 @@ public:
 
 private:
   std::unordered_map<std::string, TextureInfo> _textures;
-  std::unordered_map<std::string,
-                     std::function<void(core::AutoPtr<gl::Constant>)>>
-      _attributes;
+  std::unordered_map<std::string, Attribute> _attributes;
 
   std::set<std::string> _enableAttributes;
 
@@ -101,7 +98,7 @@ private:
 
 public:
   Material();
-  const std::map<std::string, TextureInfo> getTextures() const;
+  const std::unordered_map<std::string, TextureInfo> &getTextures() const;
   void setTexture(const std::string &name, const TextureInfo &texture);
 
   const glm::vec3 &getAmbient() const;
@@ -134,8 +131,6 @@ public:
   void setShininessStrength(float value);
   void setName(const std::string &name);
 
-  void active(core::AutoPtr<gl::Constant> &constants) const;
-
   const bool &isBlend() const;
   void setBlend(bool value);
 
@@ -153,5 +148,7 @@ public:
 
   void enableAttribute(const std::string &name);
   void disableAttribute(const std::string &name);
+
+  const std::unordered_map<std::string, Attribute> &getAttributes() const;
 };
 } // namespace firefly::video
