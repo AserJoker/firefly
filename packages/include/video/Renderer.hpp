@@ -1,7 +1,6 @@
 #pragma once
 #include "Camera.hpp"
 #include "Geometry.hpp"
-#include "Light.hpp"
 #include "Material.hpp"
 #include "ModelSet.hpp"
 #include "RenderObject.hpp"
@@ -25,8 +24,6 @@ private:
   std::list<core::AutoPtr<RenderObject>> _normalRenderList;
   std::list<core::AutoPtr<RenderObject>> _blendRenderList;
 
-  core::AutoPtr<Light> _light;
-
   glm::ivec4 _viewport;
 
   core::AutoPtr<RenderTarget> _deferred;
@@ -46,9 +43,6 @@ public:
 
   const core::AutoPtr<gl::Constant> &getConstants() const;
   core::AutoPtr<gl::Constant> &getConstants();
-
-  core::AutoPtr<Light> &getLight();
-  const core::AutoPtr<Light> &getLight() const;
 
   void setViewport(const glm::ivec4 &viewport);
   const glm::ivec4 &getViewport() const;

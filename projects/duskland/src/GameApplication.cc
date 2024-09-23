@@ -118,9 +118,8 @@ void GameApplication::onInitialize() {
   script::Module_Event::emit(_script, "gameLoaded");
 
   quadMaterial = new video::Material();
-  quadMaterial->setTexture(
-      "diffuse_texture", "001-Fighter01.png",
-      glm::translate(glm::mat4(1.0f), {0.25f, 0.0f, 0.0f}));
+  quadMaterial->setName("quad");
+  quadMaterial->setTexture("diffuse_texture", "001-Fighter01.png123");
   quadMaterial->setDepthTest(true);
   quadMaterial->setBlend(true);
   quad = new video::Geometry();
@@ -134,6 +133,7 @@ void GameApplication::onInitialize() {
   auto size = getWindow()->getSize();
   _renderer->setShader("2d");
   camera = new video::OrthoCamera({0.0f, 0.f, getWindow()->getSize()});
+  glClearColor(0.2, 0.3, 0.2, 1.0f);
   getWindow()->setSwapInterval(0);
   getWindow()->show();
 }

@@ -1,18 +1,22 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Singleton.hpp"
 #include "gl/Constant.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
+#include "gl/PixelFormat.hpp"
 #include "gl/ShaderType.hpp"
 #include "gl/Texture2D.hpp"
+#include "gl/TextureFilter.hpp"
+#include "runtime/Logger.hpp"
 #include "video/Camera.hpp"
 #include "video/Geometry.hpp"
-#include "video/Light.hpp"
 #include "video/Material.hpp"
 #include "video/RenderObject.hpp"
 #include "video/RenderTarget.hpp"
 #include "video/Shader.hpp"
 #include <concurrencysal.h>
+#include <exception>
 #include <fmt/format.h>
 #include <glm/ext/matrix_transform.hpp>
 #include <unordered_map>
@@ -61,9 +65,11 @@ constexpr static const char *internalBasicFragment =
     "    gl_FragColor = texture(attachment_0, vertexTexcoord).rgba;\n\r"
     "}\n\r";
 
+constexpr static const uint32_t internalTextureData[] = {
+    0xff777777, 0xffffffff, 0xffffffff, 0xff777777};
+
 Renderer::Renderer() : _shaderName("internal") {
   _constants = new gl::Constant();
-  _light = new Light();
   _constants->setField("model", glm::mat4(1.0f));
 }
 void Renderer::initialize(const glm::ivec4 &viewport) {
@@ -86,6 +92,11 @@ void Renderer::initialize(const glm::ivec4 &viewport) {
   };
   core::AutoPtr<Shader> shader = new Shader(sources);
   Shader::set("internal", shader);
+  core::AutoPtr internalTexture = new gl::Texture2D(
+      2, 2, gl::PIXEL_FORMAT::RGBA, (void *)&internalTextureData[0]);
+  internalTexture->setMagnificationFilter(gl::TEXTURE_FILTER::NEAREST);
+  internalTexture->setMinifyingFilter(gl::TEXTURE_FILTER::NEAREST);
+  gl::Texture2D::set("internal", internalTexture);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
@@ -164,8 +175,19 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   auto index = 0;
   for (auto &[name, info] : textures) {
     auto path = fmt::format("texture::{}", info.path);
-    auto tex =
-        gl::Texture2D::get(path, path, info.mappingmodeU, info.mappingmodeV);
+    core::AutoPtr<gl::Texture2D> tex;
+    try {
+      tex =
+          gl::Texture2D::get(path, path, info.mappingmodeU, info.mappingmodeV);
+    } catch (std::exception &e) {
+      auto logger = core::Singleton<runtime::Logger>::instance();
+      logger->warn("Failed to load texture '{}.{}'\nCaused by:\n\t{}",
+                   material->getName(), name, e.what());
+    }
+    if (!tex) {
+      tex = gl::Texture2D::get("internal");
+      gl::Texture2D::set(path, tex);
+    }
     glActiveTexture(GL_TEXTURE0 + index);
     gl::Texture2D::bind(tex);
     _constants->setField(name, index);
@@ -205,10 +227,6 @@ const core::AutoPtr<gl::Constant> &Renderer::getConstants() const {
 }
 
 core::AutoPtr<gl::Constant> &Renderer::getConstants() { return _constants; }
-
-core::AutoPtr<Light> &Renderer::getLight() { return _light; }
-
-const core::AutoPtr<Light> &Renderer::getLight() const { return _light; }
 
 void Renderer::draw(const core::AutoPtr<Material> &material,
                     const core::AutoPtr<Geometry> &geometry,
@@ -253,7 +271,6 @@ void Renderer::setCamera(const core::AutoPtr<Camera> &camera) {
 }
 
 void Renderer::present() {
-  _light->active(_constants);
   std::list<core::AutoPtr<RenderTarget>> pipeline;
   if (_deferred != nullptr) {
     pipeline.push_back(_deferred);
