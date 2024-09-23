@@ -25,6 +25,9 @@ public:
   void setSourceRect(const glm::ivec4 &rect);
   void setRotation(const glm::ivec2 &center, float angle,
                    bool righthandle = false);
+  
+  void setVisible(bool visible);
+  void setBlend(float blend);
 
 protected:
   const core::AutoPtr<Geometry> &getGeometry() const override;

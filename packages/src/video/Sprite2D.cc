@@ -50,14 +50,13 @@ void Sprite2D::update() {
     const auto &y = _dstRect[1];
     const auto &w = _dstRect[2];
     const auto &h = _dstRect[3];
-    _matrixModel = glm::translate(glm::mat4(1.0f), {x * 1.0f, y * 1.0f, 0}) *
-                   glm::translate(glm::mat4(1.0f),
-                                  {_rotationCenter.x, _rotationCenter.y, 0.f}) *
-                   glm::rotate(glm::mat4(1.0f), _rotationAngle,
-                               {0, 0, _rotationCenter.z}) *
-                   glm::translate(glm::mat4(1.0f), {-_rotationCenter.x,
-                                                    -_rotationCenter.y, 0.f}) *
-                   glm::scale(glm::mat4(1.0f), {w, h, 1.0f});
+    _matrixModel =
+        glm::translate(glm::mat4(1.0f), {glm::vec2(_rotationCenter), 0.f}) *
+        glm::rotate(glm::mat4(1.0f), _rotationAngle,
+                    {0, 0, _rotationCenter.z}) *
+        glm::translate(glm::mat4(1.0f), {-glm::vec2(_rotationCenter), 0.f}) *
+        glm::translate(glm::mat4(1.0f), {x, y, 0}) *
+        glm::scale(glm::mat4(1.0f), {w, h, 1.0f});
   } while (false);
   do {
     const auto &x = _srcRect[0];
@@ -78,3 +77,7 @@ const core::AutoPtr<Material> &Sprite2D::getMaterial() const {
   return _material;
 }
 const glm::mat4 &Sprite2D::getModelMatrix() const { return _matrixModel; }
+void Sprite2D::setVisible(bool visible) { _material->setVisible(visible); }
+void Sprite2D::setBlend(float blend) {
+  _material->getTextures().at(Material::DIFFUSE_TEX).blend = blend;
+}

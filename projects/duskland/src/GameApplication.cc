@@ -52,6 +52,8 @@ core::AutoPtr<video::Sprite2D> sprite;
 int32_t xframe = 0;
 int32_t yframe = 0;
 float angle = 0.0f;
+float blend = 0.0f;
+float delta = 0.1;
 uint32_t dx = 0;
 uint32_t dy = 0;
 GameApplication::GameApplication(int argc, char *argv[])
@@ -105,7 +107,7 @@ void GameApplication::onInitialize() {
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
   sprite = new video::Sprite2D("001-Fighter01.png");
-  sprite->setRect({0, 0, 64, 96});
+  sprite->setRect({100 - 32, 100 - 48, 32, 48});
   sprite->setSourceRect({0, 0, 32, 48});
   _renderer->setShader("2d");
   camera = new video::OrthoCamera({0.0f, 0.f, getWindow()->getSize()});
@@ -156,6 +158,15 @@ void GameApplication::onMainLoop() {
       xframe = 0;
     }
     sprite->setSourceRect({xframe * 32, yframe * 48, 32, 48});
+
+    sprite->setBlend(blend);
+    blend += delta;
+    if (blend > 0.9f) {
+      delta = -0.1f;
+    }
+    if (blend < 0.1f) {
+      delta = 0.1f;
+    }
   }
   script::Module_Event::emit(_script, "update");
   _renderer->setCamera(camera);
