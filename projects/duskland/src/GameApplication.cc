@@ -147,9 +147,9 @@ void GameApplication::onMainLoop() {
     script::Module_Event::emit(_script, "tick");
   }
   script::Module_Event::emit(_script, "update");
-  _renderer->begin(camera);
+  _renderer->setCamera(camera);
   _renderer->draw(quadMaterial, quad, model);
-  _renderer->end();
+  _renderer->present();
   getWindow()->present();
 }
 

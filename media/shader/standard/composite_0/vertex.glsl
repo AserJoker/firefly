@@ -3,8 +3,9 @@ layout(location = 0) in vec2 position;
 layout(location = 3) in vec2 texcoord;
 
 out vec2 vertexTexcoord;
+uniform mat4 diffuse_texture_coord_matrix;
 
 void main() {
-    vertexTexcoord = texcoord;
+    vertexTexcoord = (diffuse_texture_coord_matrix * vec4(texcoord, 0.0, 1.0)).xy;
     gl_Position = vec4(position, 0.0, 1.0);
 }

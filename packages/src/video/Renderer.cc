@@ -28,17 +28,20 @@ constexpr static const char *internalGBufferVertex =
     "uniform mat4 projection;\n\r"
     "uniform mat4 view;\n\r"
     "uniform mat4 model;\n\r"
+    "uniform mat4 diffuse_texture_coord_matrix;\n\r"
     "void main() {\n\r"
     "gl_Position = projection * view * model * vec4(position, 1.0);\n\r"
-    "vertexTexcoord = coord;\n\r"
+    "vertexTexcoord = (diffuse_texture_coord_matrix * "
+    "vec4(coord,0.0,1.0)).xy;\n\r"
     "}\n\r";
 constexpr static const char *internalGBufferFragment =
     "#version 330 core\n\r"
     "in vec2 vertexTexcoord;\n\r"
     "uniform sampler2D diffuse_texture;\n\r"
+    "uniform float diffuse_texture_blend;\n\r"
     "void main() {\n\r"
-    "    vec3 col = texture(diffuse_texture, vertexTexcoord).rgb;\n\r"
-    "    gl_FragColor = vec4(col, 1.0);\n\r"
+    "    vec4 col = texture(diffuse_texture, vertexTexcoord).rgba;\n\r"
+    "    gl_FragColor = col * diffuse_texture_blend;\n\r"
     "}\n\r";
 
 constexpr static const char *internalBasicVertex =
@@ -55,8 +58,7 @@ constexpr static const char *internalBasicFragment =
     "in vec2 vertexTexcoord;\n\r"
     "uniform sampler2D attachment_0;\n\r"
     "void main() {\n\r"
-    "    vec3 col = texture(attachment_0, vertexTexcoord).rgb;\n\r"
-    "    gl_FragColor = vec4(col, 1.0);\n\r"
+    "    gl_FragColor = texture(attachment_0, vertexTexcoord).rgba;\n\r"
     "}\n\r";
 
 Renderer::Renderer() : _shaderName("internal") {
@@ -122,6 +124,8 @@ void Renderer::setShader(const std::string &name) {
   if (_shaderName == name) {
     return;
   }
+  _deferred = nullptr;
+  _shaderRenderTargets.clear();
   _shaderName = name;
   auto shader = Shader::get(name, fmt::format("shader::{}", name));
   auto &programs = shader->getPrograms();
@@ -240,7 +244,7 @@ void Renderer::draw(const core::AutoPtr<ModelSet> &modelset,
   }
 }
 
-void Renderer::begin(const core::AutoPtr<Camera> &camera) {
+void Renderer::setCamera(const core::AutoPtr<Camera> &camera) {
   if (camera != nullptr) {
     _constants->setField("projection", camera->getProjectionMatrix());
     _constants->setField("view", camera->getViewMatrix());
@@ -248,10 +252,25 @@ void Renderer::begin(const core::AutoPtr<Camera> &camera) {
   }
 }
 
-void Renderer::end() {
+void Renderer::present() {
   _light->active(_constants);
+  std::list<core::AutoPtr<RenderTarget>> pipeline;
   if (_deferred != nullptr) {
-    _deferred->active();
+    pipeline.push_back(_deferred);
+  }
+  for (auto it = _shaderRenderTargets.begin(); it != _shaderRenderTargets.end();
+       it++) {
+    pipeline.push_back(*it);
+  }
+  if (_renderTarget != nullptr) {
+    pipeline.push_back(_renderTarget);
+  }
+  core::AutoPtr<RenderTarget> current;
+  if (pipeline.size()) {
+    current = *pipeline.begin();
+  }
+  if (current != nullptr) {
+    current->active();
   }
   {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -275,10 +294,10 @@ void Renderer::end() {
     }
     _blendRenderList.clear();
   }
-  auto current = _deferred;
-  if (_shaderRenderTargets.size()) {
-    for (auto it = _shaderRenderTargets.begin();
-         it != _shaderRenderTargets.end(); it++) {
+  if (_shaderRenderTargets.size() > 1) {
+    auto it = pipeline.begin();
+    it++;
+    while (it != pipeline.end()) {
       auto &next = *it;
       if (activeShader(_shaderName, current->getStage())) {
         next->active();
@@ -287,19 +306,18 @@ void Renderer::end() {
         current->draw(_shader);
         current = next;
       }
+      it++;
     }
   }
-  if (!_renderTarget) {
+  if (current != nullptr) {
     gl::FrameBuffer::bind(nullptr);
     glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
-  } else {
-    _renderTarget->active();
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    if (!activeShader(_shaderName, current->getStage())) {
+      activeShader("internal", "basic");
+    }
+    current->draw(_shader);
   }
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  if (!activeShader(_shaderName, current->getStage())) {
-    activeShader("internal", "basic");
-  }
-  current->draw(_shader);
 }
 
 void Renderer::setRenderTarget(const core::AutoPtr<RenderTarget> &target) {
