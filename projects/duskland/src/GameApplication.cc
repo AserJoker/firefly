@@ -118,7 +118,9 @@ void GameApplication::onInitialize() {
   script::Module_Event::emit(_script, "gameLoaded");
 
   quadMaterial = new video::Material();
-  quadMaterial->setTexture("diffuse_texture", {.path = "001-Fighter01.png"});
+  quadMaterial->setTexture(
+      "diffuse_texture", "001-Fighter01.png",
+      glm::translate(glm::mat4(1.0f), {0.25f, 0.0f, 0.0f}));
   quadMaterial->setDepthTest(true);
   quadMaterial->setBlend(true);
   quad = new video::Geometry();

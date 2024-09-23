@@ -15,6 +15,8 @@
 #include <assimp/texture.h>
 #include <assimp/types.h>
 #include <cstdint>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/fwd.hpp>
 #include <unordered_map>
 #include <vector>
 using namespace firefly;
@@ -150,24 +152,6 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
           } else {
             info.blend = 1.0f;
           }
-          if (mat->Get(AI_MATKEY_TEXOP((aiTextureType)type, i), ivalue) ==
-              AI_SUCCESS) {
-            info.op = (Material::TEXTURE_OPERATOR)ivalue;
-          } else {
-            info.op = Material::TEXTURE_OPERATOR::ADD;
-          }
-          if (mat->Get(AI_MATKEY_MAPPING((aiTextureType)type, i), ivalue) ==
-              AI_SUCCESS) {
-            info.mapping = ivalue;
-          } else {
-            info.mapping = 0;
-          }
-          if (mat->Get(AI_MATKEY_UVWSRC((aiTextureType)type, i), ivalue) ==
-              AI_SUCCESS) {
-            info.uvwsrc = ivalue;
-          } else {
-            info.uvwsrc = 0;
-          }
           if (mat->Get(AI_MATKEY_MAPPINGMODE_U((aiTextureType)type, i),
                        ivalue) == AI_SUCCESS) {
             switch (ivalue) {
@@ -209,24 +193,18 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
           glm::vec3 position;
           if (mat->Get(AI_MATKEY_TEXMAP_AXIS((aiTextureType)type, i),
                        position) == AI_SUCCESS) {
-            info.texmapAxis = {position.x, position.y, position.z};
+            info.textureCoordMatrix = glm::translate(
+                glm::mat4(1.0f), {position.x, position.y, position.z});
+          } else {
+            info.textureCoordMatrix = glm::mat4(1.0f);
           }
-          if (mat->Get(AI_MATKEY_TEXFLAGS((aiTextureType)type, i), ivalue) ==
-              AI_SUCCESS) {
-            if (ivalue & aiTextureFlags_Invert) {
-              info.invert = true;
-            } else {
-              info.invert = false;
-            }
-            if (ivalue & aiTextureFlags_UseAlpha) {
-              info.useAlpha = true;
-            } else {
-              info.useAlpha = false;
-            }
-          }
-          material->setTexture(fmt::format("{}_{}", name, i), info);
+          material->setTexture(fmt::format("{}_{}", name, i), info.path,
+                               info.textureCoordMatrix, info.blend,
+                               info.mappingmodeU, info.mappingmodeV);
           if (i == 0) {
-            material->setTexture(name, info);
+            material->setTexture(name, info.path, info.textureCoordMatrix,
+                                 info.blend, info.mappingmodeU,
+                                 info.mappingmodeV);
           }
         }
       }

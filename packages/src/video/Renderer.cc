@@ -13,6 +13,7 @@
 #include "video/RenderTarget.hpp"
 #include "video/Shader.hpp"
 #include <concurrencysal.h>
+#include <fmt/format.h>
 #include <glm/ext/matrix_transform.hpp>
 #include <unordered_map>
 
@@ -157,13 +158,16 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   }
   auto textures = material->getTextures();
   auto index = 0;
-  for (auto &[name, texture] : textures) {
-    auto path = fmt::format("texture::{}", texture.path);
-    auto tex = gl::Texture2D::get(path, path, texture.mappingmodeU,
-                                  texture.mappingmodeV);
+  for (auto &[name, info] : textures) {
+    auto path = fmt::format("texture::{}", info.path);
+    auto tex =
+        gl::Texture2D::get(path, path, info.mappingmodeU, info.mappingmodeV);
     glActiveTexture(GL_TEXTURE0 + index);
     gl::Texture2D::bind(tex);
     _constants->setField(name, index);
+    _constants->setField(fmt::format("{}_blend", name), info.blend);
+    _constants->setField(fmt::format("{}_coord_matrix", name),
+                         info.textureCoordMatrix);
     index++;
   }
 

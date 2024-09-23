@@ -12,27 +12,14 @@
 namespace firefly::video {
 class Material : public core::Object, public core::Cache<Material> {
 public:
-  enum class TEXTURE_OPERATOR {
-    MUL = 0,
-    ADD = 1,
-    SUB = 2,
-    DIV = 3,
-    SMOOTH_ADD = 4,
-    SIGNED_ADD = 5
-  };
-
   struct TextureInfo {
     std::string path;
     float blend;
-    TEXTURE_OPERATOR op;
-    int mapping;
-    int uvwsrc;
     gl::TEXTURE_WRAP_MODE mappingmodeU;
     gl::TEXTURE_WRAP_MODE mappingmodeV;
-    glm::vec3 texmapAxis;
-    bool useAlpha;
-    bool invert;
+    glm::mat4 textureCoordMatrix;
   };
+
   using Attribute = std::function<void(core::AutoPtr<gl::Constant>)>;
   inline static constexpr auto AMBIENT_COLOR = "ambient_color";
   inline static constexpr auto DIFFUSE_COLOR = "diffuse_color";
@@ -99,7 +86,11 @@ private:
 public:
   Material();
   const std::unordered_map<std::string, TextureInfo> &getTextures() const;
-  void setTexture(const std::string &name, const TextureInfo &texture);
+  void setTexture(
+      const std::string &name, const std::string &path,
+      const glm::mat4 &textureCoordMatrix = glm::mat4(1.0f), float blend = 1.0f,
+      gl::TEXTURE_WRAP_MODE mappingmodeU = gl::TEXTURE_WRAP_MODE::REPEAT,
+      gl::TEXTURE_WRAP_MODE mappingmodeV = gl::TEXTURE_WRAP_MODE::REPEAT);
 
   const glm::vec3 &getAmbient() const;
   const glm::vec3 &getDiffuse() const;

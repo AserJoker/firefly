@@ -18,9 +18,12 @@ Material::getTextures() const {
   return _textures;
 }
 
-void Material::setTexture(const std::string &name,
-                          const Material::TextureInfo &texture) {
-  _textures[name] = texture;
+void Material::setTexture(const std::string &name, const std::string &path,
+                          const glm::mat4 &textureCoordMatrix, float blend,
+                          gl::TEXTURE_WRAP_MODE mappingmodeU,
+                          gl::TEXTURE_WRAP_MODE mappingmodeV) {
+  _textures[name] = {path, blend, mappingmodeU, mappingmodeV,
+                     textureCoordMatrix};
 }
 
 const glm::vec3 &Material::getAmbient() const { return _ambient; }
