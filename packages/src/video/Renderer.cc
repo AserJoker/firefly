@@ -1,6 +1,5 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Singleton.hpp"
 #include "gl/Constant.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
@@ -8,15 +7,13 @@
 #include "gl/ShaderType.hpp"
 #include "gl/Texture2D.hpp"
 #include "gl/TextureFilter.hpp"
-#include "runtime/Logger.hpp"
 #include "video/Camera.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
-#include "video/RenderObject.hpp"
 #include "video/RenderTarget.hpp"
+#include "video/Renderable.hpp"
 #include "video/Shader.hpp"
 #include <concurrencysal.h>
-#include <exception>
 #include <fmt/format.h>
 #include <glm/ext/matrix_transform.hpp>
 #include <unordered_map>
@@ -68,6 +65,14 @@ constexpr static const char *internalBasicFragment =
 constexpr static const uint32_t internalTextureData[] = {
     0xff777777, 0xffffffff, 0xffffffff, 0xff777777};
 
+constexpr static const float quadVec[] = {0.f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+                                          0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f};
+
+constexpr static const float quadTex[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+                                          0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f};
+
+constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
+
 Renderer::Renderer() : _shaderName("internal") {
   _constants = new gl::Constant();
   _constants->setField("model", glm::mat4(1.0f));
@@ -97,6 +102,15 @@ void Renderer::initialize(const glm::ivec4 &viewport) {
   internalTexture->setMagnificationFilter(gl::TEXTURE_FILTER::NEAREST);
   internalTexture->setMinifyingFilter(gl::TEXTURE_FILTER::NEAREST);
   gl::Texture2D::set("internal", internalTexture);
+
+  core::AutoPtr quadGeometry = new Geometry();
+  quadGeometry->setAttribute(Geometry::ATTR_POSITION,
+                             new Attribute(quadVec, 2));
+  quadGeometry->setAttribute(Geometry::ATTR_TEXCOORD,
+                             new Attribute(quadTex, 2));
+  quadGeometry->setAttributeIndex(new AttributeIndex(quadIndex));
+  Geometry::set("quad", quadGeometry);
+
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
@@ -174,20 +188,7 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   auto textures = material->getTextures();
   auto index = 0;
   for (auto &[name, info] : textures) {
-    auto path = fmt::format("texture::{}", info.path);
-    core::AutoPtr<gl::Texture2D> tex;
-    try {
-      tex =
-          gl::Texture2D::get(path, path, info.mappingmodeU, info.mappingmodeV);
-    } catch (std::exception &e) {
-      auto logger = core::Singleton<runtime::Logger>::instance();
-      logger->warn("Failed to load texture '{}.{}'\nCaused by:\n\t{}",
-                   material->getName(), name, e.what());
-    }
-    if (!tex) {
-      tex = gl::Texture2D::get("internal");
-      gl::Texture2D::set(path, tex);
-    }
+    core::AutoPtr<gl::Texture2D> tex = info.texture;
     glActiveTexture(GL_TEXTURE0 + index);
     gl::Texture2D::bind(tex);
     _constants->setField(name, index);
@@ -232,35 +233,24 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
                     const core::AutoPtr<Geometry> &geometry,
                     const glm::mat4 &model) {
   if (!material->isBlend()) {
-    _normalRenderList.push_back(new RenderObject(geometry, material, model));
+    _normalRenderList.push_back({geometry, material, model});
   } else {
-    core::AutoPtr<RenderObject> rbo;
+    bool isInserted = false;
     for (auto it = _blendRenderList.begin(); it != _blendRenderList.end();
          it++) {
-      auto &m = (*it)->getModelMatrix();
+      auto &m = it->matrixModel;
       if (model[3][2] > m[3][2]) {
-        rbo = new RenderObject(geometry, material, model);
-        _blendRenderList.insert(it, rbo);
+        _blendRenderList.insert(it, {geometry, material, model});
+        isInserted = true;
         break;
       }
     }
-    if (!rbo) {
-      _blendRenderList.push_back(new RenderObject(geometry, material, model));
+    if (!isInserted) {
+      _blendRenderList.push_back({geometry, material, model});
     }
   }
 }
 
-void Renderer::draw(const core::AutoPtr<ModelSet> &modelset,
-                    const glm::mat4 &model) {
-  for (auto &[_, m] : modelset->getModels()) {
-    if (m->getMaterial()->isVisible()) {
-      draw(m->getMaterial(), m->getGeometry(), model);
-    }
-  }
-  for (auto &[_, child] : modelset->getChildren()) {
-    draw(child, model);
-  }
-}
 
 void Renderer::setCamera(const core::AutoPtr<Camera> &camera) {
   if (camera != nullptr) {
@@ -271,6 +261,12 @@ void Renderer::setCamera(const core::AutoPtr<Camera> &camera) {
 }
 
 void Renderer::present() {
+
+  for (auto &object : Renderable::_renderList) {
+    draw(object->getMaterial(), object->getGeometry(),
+         object->getModelMatrix());
+  }
+
   std::list<core::AutoPtr<RenderTarget>> pipeline;
   if (_deferred != nullptr) {
     pipeline.push_back(_deferred);
@@ -296,18 +292,18 @@ void Renderer::present() {
     }
     glDisable(GL_BLEND);
     for (auto &item : _normalRenderList) {
-      setMaterial(item->getMeterial());
-      _constants->setField("model", item->getModelMatrix());
+      setMaterial(item.material);
+      _constants->setField("model", item.matrixModel);
       _shader->setUniform(_constants);
-      item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
+      item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
     }
     _normalRenderList.clear();
     glEnable(GL_BLEND);
     for (auto &item : _blendRenderList) {
-      setMaterial(item->getMeterial());
-      _constants->setField("model", item->getModelMatrix());
+      setMaterial(item.material);
+      _constants->setField("model", item.matrixModel);
       _shader->setUniform(_constants);
-      item->getGeometry()->draw(gl::DRAW_MODE::TRIANGLES);
+      item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
     }
     _blendRenderList.clear();
   }

@@ -143,9 +143,12 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
         break;
       };
       Material::TextureInfo info{};
+      gl::TEXTURE_WRAP_MODE mappingmodeU;
+      gl::TEXTURE_WRAP_MODE mappingmodeV;
+      std::string path;
       for (uint32_t i = 0; i < count; i++) {
         if (mat->GetTexture((aiTextureType)type, i, &svalue) == AI_SUCCESS) {
-          info.path = svalue.C_Str();
+          path = svalue.C_Str();
           if (mat->Get(AI_MATKEY_TEXBLEND((aiTextureType)type, i), fvalue) ==
               AI_SUCCESS) {
             info.blend = fvalue;
@@ -156,39 +159,39 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
                        ivalue) == AI_SUCCESS) {
             switch (ivalue) {
             case aiTextureMapMode_Wrap:
-              info.mappingmodeU = gl::TEXTURE_WRAP_MODE::REPEAT;
+              mappingmodeU = gl::TEXTURE_WRAP_MODE::REPEAT;
               break;
             case aiTextureMapMode_Clamp:
-              info.mappingmodeU = gl::TEXTURE_WRAP_MODE::CLAMP_TO_EDGE;
+              mappingmodeU = gl::TEXTURE_WRAP_MODE::CLAMP_TO_EDGE;
               break;
             case aiTextureMapMode_Mirror:
-              info.mappingmodeU = gl::TEXTURE_WRAP_MODE::MIRRORED_REPEAT;
+              mappingmodeU = gl::TEXTURE_WRAP_MODE::MIRRORED_REPEAT;
               break;
             case aiTextureMapMode_Decal:
-              info.mappingmodeU = gl::TEXTURE_WRAP_MODE::CLAMP_TO_BORDER;
+              mappingmodeU = gl::TEXTURE_WRAP_MODE::CLAMP_TO_BORDER;
               break;
             }
           } else {
-            info.mappingmodeU = gl::TEXTURE_WRAP_MODE::REPEAT;
+            mappingmodeU = gl::TEXTURE_WRAP_MODE::REPEAT;
           }
           if (mat->Get(AI_MATKEY_MAPPINGMODE_V((aiTextureType)type, i),
                        ivalue) == AI_SUCCESS) {
             switch (ivalue) {
             case aiTextureMapMode_Wrap:
-              info.mappingmodeV = gl::TEXTURE_WRAP_MODE::REPEAT;
+              mappingmodeV = gl::TEXTURE_WRAP_MODE::REPEAT;
               break;
             case aiTextureMapMode_Clamp:
-              info.mappingmodeV = gl::TEXTURE_WRAP_MODE::CLAMP_TO_EDGE;
+              mappingmodeV = gl::TEXTURE_WRAP_MODE::CLAMP_TO_EDGE;
               break;
             case aiTextureMapMode_Mirror:
-              info.mappingmodeV = gl::TEXTURE_WRAP_MODE::MIRRORED_REPEAT;
+              mappingmodeV = gl::TEXTURE_WRAP_MODE::MIRRORED_REPEAT;
               break;
             case aiTextureMapMode_Decal:
-              info.mappingmodeV = gl::TEXTURE_WRAP_MODE::CLAMP_TO_BORDER;
+              mappingmodeV = gl::TEXTURE_WRAP_MODE::CLAMP_TO_BORDER;
               break;
             }
           } else {
-            info.mappingmodeV = gl::TEXTURE_WRAP_MODE::REPEAT;
+            mappingmodeV = gl::TEXTURE_WRAP_MODE::REPEAT;
           }
           glm::vec3 position;
           if (mat->Get(AI_MATKEY_TEXMAP_AXIS((aiTextureType)type, i),
@@ -198,13 +201,12 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
           } else {
             info.textureCoordMatrix = glm::mat4(1.0f);
           }
-          material->setTexture(fmt::format("{}_{}", name, i), info.path,
+          material->setTexture(fmt::format("{}_{}", name, i), path,
                                info.textureCoordMatrix, info.blend,
-                               info.mappingmodeU, info.mappingmodeV);
+                               mappingmodeU, mappingmodeV);
           if (i == 0) {
-            material->setTexture(name, info.path, info.textureCoordMatrix,
-                                 info.blend, info.mappingmodeU,
-                                 info.mappingmodeV);
+            material->setTexture(name, path, info.textureCoordMatrix,
+                                 info.blend, mappingmodeU, mappingmodeV);
           }
         }
       }

@@ -6,13 +6,14 @@
 #include "core/Object.hpp"
 #include "gl/DataType.hpp"
 #include "gl/PixelFormat.hpp"
+#include <glm/glm.hpp>
 namespace firefly::gl {
 class Texture2D : public core::Object, public core::Cache<Texture2D> {
 private:
   uint32_t _handle;
+  glm::ivec2 _size;
 
 public:
-  const uint32_t &getHandle() const;
   Texture2D(uint32_t handle = 0);
   Texture2D(const std::string &name,
             TEXTURE_WRAP_MODE swrap = TEXTURE_WRAP_MODE::REPEAT,
@@ -20,6 +21,7 @@ public:
   Texture2D(uint32_t width, uint32_t height, PIXEL_FORMAT format,
             void *data = 0);
   ~Texture2D() override;
+  const uint32_t &getHandle() const;
   void setImage(uint32_t level, PIXEL_FORMAT internalFormat, uint32_t width,
                 uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,
                 const void *data);
@@ -33,6 +35,7 @@ public:
   void setSWrap(TEXTURE_WRAP_MODE mode);
   void setTWrap(TEXTURE_WRAP_MODE mode);
   void setRWrap(TEXTURE_WRAP_MODE mode);
+  const glm::ivec2 &getSize() const;
 
 public:
   static void bind(const core::AutoPtr<Texture2D> &tex);

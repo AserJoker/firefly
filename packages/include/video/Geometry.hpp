@@ -1,5 +1,6 @@
 #pragma once
 #include "core/AutoPtr.hpp"
+#include "core/Cache.hpp"
 #include "core/Object.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/VertexArray.hpp"
@@ -9,7 +10,7 @@
 #include <unordered_map>
 #include <vector>
 namespace firefly::video {
-class Geometry : public core::Object {
+class Geometry : public core::Object, public core::Cache<Geometry> {
 public:
   struct Bounding {
     float left, right, top, bottom, front, back;

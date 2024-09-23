@@ -2,8 +2,6 @@
 #include "Camera.hpp"
 #include "Geometry.hpp"
 #include "Material.hpp"
-#include "ModelSet.hpp"
-#include "RenderObject.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "gl/Constant.hpp"
@@ -14,15 +12,21 @@
 
 namespace firefly::video {
 class Renderer : public core::Object {
-public:
+private:
+  struct RenderItem {
+    core::AutoPtr<Geometry> geometry;
+    core::AutoPtr<Material> material;
+    glm::mat4 matrixModel;
+  };
+
 private:
   std::string _shaderName;
   core::AutoPtr<gl::Program> _shader;
 
   core::AutoPtr<gl::Constant> _constants;
 
-  std::list<core::AutoPtr<RenderObject>> _normalRenderList;
-  std::list<core::AutoPtr<RenderObject>> _blendRenderList;
+  std::list<RenderItem> _normalRenderList;
+  std::list<RenderItem> _blendRenderList;
 
   glm::ivec4 _viewport;
 
@@ -30,8 +34,13 @@ private:
   std::list<core::AutoPtr<RenderTarget>> _shaderRenderTargets;
   core::AutoPtr<RenderTarget> _renderTarget;
 
+private:
+  void draw(const core::AutoPtr<Material> &material,
+            const core::AutoPtr<Geometry> &geometry, const glm::mat4 &matrix);
+
 public:
   Renderer();
+  void setRenderTarget(const core::AutoPtr<RenderTarget> &target);
   using core::Object::initialize;
   void initialize(const glm::ivec4 &viewport);
 
@@ -49,14 +58,7 @@ public:
 
   core::AutoPtr<gl::Program> getShaderProgram();
 
-  void draw(const core::AutoPtr<Material> &material,
-            const core::AutoPtr<Geometry> &geometry, const glm::mat4 &matrix);
-
-  void draw(const core::AutoPtr<ModelSet> &modelset, const glm::mat4 &model);
-
   void setCamera(const core::AutoPtr<Camera> &camera = nullptr);
   void present();
-
-  void setRenderTarget(const core::AutoPtr<RenderTarget> &target);
 };
 } // namespace firefly::video

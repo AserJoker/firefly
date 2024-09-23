@@ -3,6 +3,7 @@
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
 #include "gl/Constant.hpp"
+#include "gl/Texture2D.hpp"
 #include "gl/TextureWrapMode.hpp"
 #include <functional>
 #include <glm/glm.hpp>
@@ -13,10 +14,8 @@ namespace firefly::video {
 class Material : public core::Object, public core::Cache<Material> {
 public:
   struct TextureInfo {
-    std::string path;
+    core::AutoPtr<gl::Texture2D> texture;
     float blend;
-    gl::TEXTURE_WRAP_MODE mappingmodeU;
-    gl::TEXTURE_WRAP_MODE mappingmodeV;
     glm::mat4 textureCoordMatrix;
   };
 
@@ -86,11 +85,16 @@ private:
 public:
   Material();
   const std::unordered_map<std::string, TextureInfo> &getTextures() const;
+  std::unordered_map<std::string, TextureInfo> &getTextures();
   void setTexture(
       const std::string &name, const std::string &path,
       const glm::mat4 &textureCoordMatrix = glm::mat4(1.0f), float blend = 1.0f,
       gl::TEXTURE_WRAP_MODE mappingmodeU = gl::TEXTURE_WRAP_MODE::REPEAT,
       gl::TEXTURE_WRAP_MODE mappingmodeV = gl::TEXTURE_WRAP_MODE::REPEAT);
+  void setTexture(const std::string &name,
+                  const core::AutoPtr<gl::Texture2D> &tex,
+                  const glm::mat4 &textureCoordMatrix = glm::mat4(1.0f),
+                  float blend = 1.0f);
 
   const glm::vec3 &getAmbient() const;
   const glm::vec3 &getDiffuse() const;

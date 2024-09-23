@@ -1,6 +1,8 @@
 #include "video/Material.hpp"
 #include "core/AutoPtr.hpp"
 #include "gl/Constant.hpp"
+#include "gl/Texture2D.hpp"
+#include "runtime/Logger.hpp"
 using namespace firefly;
 using namespace firefly::video;
 Material::Material()
@@ -17,13 +19,33 @@ const std::unordered_map<std::string, Material::TextureInfo> &
 Material::getTextures() const {
   return _textures;
 }
-
+std::unordered_map<std::string, Material::TextureInfo> &
+Material::getTextures() {
+  return _textures;
+}
 void Material::setTexture(const std::string &name, const std::string &path,
                           const glm::mat4 &textureCoordMatrix, float blend,
                           gl::TEXTURE_WRAP_MODE mappingmodeU,
                           gl::TEXTURE_WRAP_MODE mappingmodeV) {
-  _textures[name] = {path, blend, mappingmodeU, mappingmodeV,
-                     textureCoordMatrix};
+  auto p = fmt::format("texture::{}", path);
+  core::AutoPtr<gl::Texture2D> tex;
+  try {
+    tex = gl::Texture2D::get(path, p, mappingmodeU, mappingmodeV);
+  } catch (std::exception &e) {
+    auto logger = core::Singleton<runtime::Logger>::instance();
+    logger->warn("Failed to load texture '{}.{}'\nCaused by:\n\t{}", _name,
+                 name, e.what());
+  }
+  if (!tex) {
+    tex = gl::Texture2D::get("internal");
+    gl::Texture2D::set(path, tex);
+  }
+  setTexture(name, tex, textureCoordMatrix, blend);
+}
+void Material::setTexture(const std::string &name,
+                          const core::AutoPtr<gl::Texture2D> &tex,
+                          const glm::mat4 &textureCoordMatrix, float blend) {
+  _textures[name] = {tex, blend, textureCoordMatrix};
 }
 
 const glm::vec3 &Material::getAmbient() const { return _ambient; }

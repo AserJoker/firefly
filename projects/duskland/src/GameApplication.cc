@@ -27,13 +27,10 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
-#include "video/Attribute.hpp"
-#include "video/AttributeIndex.hpp"
 #include "video/Camera.hpp"
-#include "video/Geometry.hpp"
-#include "video/Material.hpp"
 #include "video/OrthoCamera.hpp"
 #include "video/Renderer.hpp"
+#include "video/Sprite2D.hpp"
 #include <SDL_image.h>
 #include <fmt/format.h>
 #include <glad/glad.h>
@@ -50,22 +47,13 @@
 
 using namespace firefly;
 using namespace duskland;
-
-core::AutoPtr<video::Geometry> quad;
-core::AutoPtr<video::Material> quadMaterial;
-
-constexpr static const glm::vec2 quadVec[] = {{0.f, 0.0f},      {128.0f, 0.0f},
-                                              {0.0f, 192.0f},   {0.0f, 192.0f},
-                                              {128.0f, 192.0f}, {128.0f, 0.0f}};
-
-constexpr static const glm::vec2 quadTex[] = {{0.0f, 0.0f}, {1.0f, 0.0f},
-                                              {0.0f, 1.0f}, {0.0f, 1.0f},
-                                              {1.0f, 1.0f}, {1.0f, 0.0f}};
-
-constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
-
-glm::mat4 model = glm::translate(glm::mat4(1.0f), {0, 0, 0.0f});
 core::AutoPtr<video::Camera> camera;
+core::AutoPtr<video::Sprite2D> sprite;
+int32_t xframe = 0;
+int32_t yframe = 0;
+float angle = 0.0f;
+uint32_t dx = 0;
+uint32_t dy = 0;
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 
@@ -116,21 +104,9 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-
-  quadMaterial = new video::Material();
-  quadMaterial->setName("quad");
-  quadMaterial->setTexture("diffuse_texture", "001-Fighter01.png123");
-  quadMaterial->setDepthTest(true);
-  quadMaterial->setBlend(true);
-  quad = new video::Geometry();
-  quad->setAttribute(
-      video::Geometry::ATTR_POSITION,
-      new video::Attribute(sizeof(quadVec), quadVec, typeid(float), 2));
-  quad->setAttribute(
-      video::Geometry::ATTR_TEXCOORD,
-      new video::Attribute(sizeof(quadTex), quadTex, typeid(float), 2));
-  quad->setAttributeIndex(new video::AttributeIndex(quadIndex));
-  auto size = getWindow()->getSize();
+  sprite = new video::Sprite2D("001-Fighter01.png");
+  sprite->setRect({0, 0, 64, 96});
+  sprite->setSourceRect({0, 0, 32, 48});
   _renderer->setShader("2d");
   camera = new video::OrthoCamera({0.0f, 0.f, getWindow()->getSize()});
   glClearColor(0.2, 0.3, 0.2, 1.0f);
@@ -142,13 +118,47 @@ void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   static auto time = SDL_GetTicks();
   auto now = SDL_GetTicks();
-  if (now - time > 50) {
+  if (_keyboard->getKeyState(SDL_SCANCODE_A)) {
+    dx = -1;
+  } else if (_keyboard->getKeyState(SDL_SCANCODE_D)) {
+    dx = 1;
+  } else {
+    dx = 0;
+  }
+  if (_keyboard->getKeyState(SDL_SCANCODE_W)) {
+    dy = 1;
+  } else if (_keyboard->getKeyState(SDL_SCANCODE_S)) {
+    dy = -1;
+  } else {
+    dy = 0;
+  }
+  if (now - time > 100) {
     time = now;
     script::Module_Event::emit(_script, "tick");
+    if (dy == 1) {
+      yframe = 3;
+    }
+    if (dy == -1) {
+      yframe = 0;
+    }
+    if (dx == 1) {
+      yframe = 2;
+    }
+    if (dx == -1) {
+      yframe = 1;
+    }
+    if (dx != 0 || dy != 0) {
+      xframe++;
+      if (xframe == 4) {
+        xframe = 0;
+      }
+    } else {
+      xframe = 0;
+    }
+    sprite->setSourceRect({xframe * 32, yframe * 48, 32, 48});
   }
   script::Module_Event::emit(_script, "update");
   _renderer->setCamera(camera);
-  _renderer->draw(quadMaterial, quad, model);
   _renderer->present();
   getWindow()->present();
 }
