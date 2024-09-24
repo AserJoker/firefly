@@ -49,8 +49,8 @@ public:
   bool isVisible() const;
   void setVisible(bool visible);
 
-  bool isBlend() const;
   void setBlend(float blend);
+  float getBlend() const;
   const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &getBlendFunc() const;
   void setBlendFunc(gl::BLEND_FUNC dst, gl::BLEND_FUNC src);
 

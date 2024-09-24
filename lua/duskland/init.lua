@@ -1,17 +1,23 @@
 local video = require 'video'
 local input = require 'input'
+
 require'event'.on('gameLoaded', function()
     local sprite = video.createSprite2D("001-Fighter01.png")
     local tile = video.createSprite2D("001-Grassland01.png")
+
     sprite:setZIndex(1)
+    sprite:setBlend(0.5)
+
     sprite:setRect({x = 0, y = 0, width = 32, height = 48})
     sprite:setSourceRect({x = 0, y = 0, width = 32, height = 48})
+
     local x = 0
     local y = 0
     local xframe = 0
     local yframe = 0
     local dx = 0
     local dy = 0
+
     require'event'.on('tick', function()
         if input.getKeyState(input.SCANCODE.A) then
             dx = -1
@@ -47,6 +53,7 @@ require'event'.on('gameLoaded', function()
         sprite:setRect({x = x, y = y, width = 32, height = 48})
         tile:getZIndex()
     end)
+
     require'event'.on('update', function(time)
         x = time / 10.0 * dx + x
         y = time / 10.0 * dy + y

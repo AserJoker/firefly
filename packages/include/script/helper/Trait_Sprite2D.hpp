@@ -16,6 +16,8 @@ private:
   static FUNC_DEF(isVisible);
   static FUNC_DEF(setZIndex);
   static FUNC_DEF(getZIndex);
+  static FUNC_DEF(setBlend);
+  static FUNC_DEF(getBlend);
 
 public:
   static void initialize(core::AutoPtr<Script> ctx);

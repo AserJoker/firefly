@@ -47,6 +47,12 @@ function Sprite2D:setZIndex(zIndex) end
 --- @return integer
 function Sprite2D:getZIndex() end
 
+--- @param alpha number
+function Sprite2D:setBlend(alpha) end
+
+--- @return number
+function Sprite2D:getBlend() end
+
 --- @param path string
 --- @return Sprite2D
 function createSprite2D(path) end

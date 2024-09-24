@@ -137,6 +137,21 @@ FUNC_DEF(Trait_Sprite2D::getZIndex) {
   return {createNumber(ctx, sprite->getZIndex())};
 }
 
+FUNC_DEF(Trait_Sprite2D::setBlend) {
+  VALIDATE_ARGS(setBlend, 2);
+  auto self = args[0];
+  auto sprite = self->getOpaque().cast<video::Sprite2D>();
+  sprite->setBlend(args[1]->toNumber(ctx));
+  return {};
+}
+
+FUNC_DEF(Trait_Sprite2D::getBlend) {
+  VALIDATE_ARGS(getBlend, 1);
+  auto self = args[0];
+  auto sprite = self->getOpaque().cast<video::Sprite2D>();
+  return {createNumber(ctx, sprite->getBlend())};
+}
+
 void Trait_Sprite2D::initialize(core::AutoPtr<Script> ctx) {
   auto global = ctx->getNativeGlobal();
   auto Sprite2D = ctx->createValue()
@@ -152,7 +167,9 @@ void Trait_Sprite2D::initialize(core::AutoPtr<Script> ctx) {
                       ->setFunctionField(ctx, setVisible)
                       ->setFunctionField(ctx, isVisible)
                       ->setFunctionField(ctx, setZIndex)
-                      ->setFunctionField(ctx, getZIndex);
+                      ->setFunctionField(ctx, getZIndex)
+                      ->setFunctionField(ctx, setBlend)
+                      ->setFunctionField(ctx, getBlend);
   global->setField(ctx, "Sprite2D", Sprite2D);
 }
 

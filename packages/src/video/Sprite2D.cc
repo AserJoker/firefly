@@ -114,8 +114,9 @@ bool Sprite2D::isVisible() const { return _material->isVisible(); }
 void Sprite2D::setBlend(float blend) {
   _material->getTextures().at(Material::DIFFUSE_TEX).blend = blend;
 }
-
-bool Sprite2D::isBlend() const { return _material->isBlend(); }
+float Sprite2D::getBlend() const {
+  return _material->getTextures().at(Material::DIFFUSE_TEX).blend;
+}
 
 void Sprite2D::setBlendFunc(gl::BLEND_FUNC dst, gl::BLEND_FUNC src) {
   _material->setBlendFunc({dst, src});
