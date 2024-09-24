@@ -205,14 +205,6 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
     glDisable(GL_STENCIL_TEST);
   }
 
-  if (material->isAlphaTest()) {
-    glEnable(GL_ALPHA_TEST);
-    auto &func = material->getAlphaFunc();
-    glAlphaFunc((GLenum)func.first, func.second);
-  } else {
-    glDisable(GL_ALPHA_TEST);
-  }
-
   if (material->isWireframe()) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   } else {
