@@ -54,11 +54,9 @@ Sprite2D::Sprite2D(const std::string &path)
   auto texSize = tex->getSize();
   _dstRect = {0, 0, texSize};
   _srcRect = {0, 0, texSize};
-  _matrixModel = glm::scale(glm::mat4(1.0f), {texSize, 1.0f});
   _material->setBlend(true);
   _material->setDepthTest(true);
-  _material->getTextures().at(Material::DIFFUSE_TEX).textureCoordMatrix =
-      glm::scale(glm::mat4(1.0f), {texSize, 1.0f});
+  update();
 }
 
 void Sprite2D::setTexture(const std::string &path) {

@@ -12,7 +12,7 @@ using namespace firefly::script;
 using exception::ValidateException;
 void Module_Media::open(core::AutoPtr<Script> ctx) {
   auto exports = ctx->createValue()->setObject(ctx);
-  exports->setFunctionField(ctx, &query)->setFunctionField(ctx, createBuffer);
+  exports->setFunctionField(ctx, query)->setFunctionField(ctx, createBuffer);
   ctx->registerModule("media", exports);
 }
 FUNC_DEF(Module_Media::query) {

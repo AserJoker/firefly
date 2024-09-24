@@ -25,7 +25,8 @@ void Module_Video::open(core::AutoPtr<Script> ctx) {
           ->setField(ctx, "RGBA", ctx->createValue()->setNumber(ctx, 1))
           ->setField(ctx, "GRAY", ctx->createValue()->setNumber(ctx, 2));
 
-  exports->setField(ctx, "format", format)->setFunction(ctx, createSprite2D);
+  exports->setField(ctx, "format", format)
+      ->setFunctionField(ctx, createSprite2D);
 
   ctx->registerModule("video", exports);
 }

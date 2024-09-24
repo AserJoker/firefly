@@ -32,6 +32,7 @@
 #include "video/OrthoCamera.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_image.h>
+#include <SDL_timer.h>
 #include <fmt/format.h>
 #include <glad/glad.h>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -103,9 +104,6 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  // sprite = new video::Sprite2D("001-Fighter01.png");
-  // sprite->setRect({100 - 32, 100 - 48, 32, 48});
-  // sprite->setSourceRect({0, 0, 32, 48});
   _renderer->setShader("2d");
   camera = new video::OrthoCamera({0.0f, 0.f, getWindow()->getSize()});
   glClearColor(0.2, 0.3, 0.2, 1.0f);
@@ -116,12 +114,17 @@ bool show_demo_window = true;
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   static auto time = SDL_GetTicks();
+  static auto timePreFrame = SDL_GetTicks();
   auto now = SDL_GetTicks();
-  if (now - time > 100) {
+  if (now - time > 50) {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
-  script::Module_Event::emit(_script, "update");
+  auto scope = _script->pushScope();
+  script::Module_Event::emit(_script, "update",
+                             createNumber(_script, now - timePreFrame));
+  _script->popScope(scope);
+  timePreFrame = now;
   _renderer->setCamera(camera);
   _renderer->present();
   getWindow()->present();
