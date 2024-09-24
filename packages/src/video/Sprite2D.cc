@@ -16,11 +16,11 @@ void Sprite2D::update() {
     const auto &w = _dstRect[2];
     const auto &h = _dstRect[3];
     _matrixModel =
-        glm::translate(glm::mat4(1.0f), {glm::vec2(_rotationCenter), 0.f}) *
+        glm::translate(glm::mat4(1.0f), {glm::vec2(_rotationCenter), 0}) *
         glm::rotate(glm::mat4(1.0f), _rotationAngle,
                     {0, 0, _rotationCenter.z}) *
         glm::translate(glm::mat4(1.0f), {-glm::vec2(_rotationCenter), 0.f}) *
-        glm::translate(glm::mat4(1.0f), {x, y, 0}) *
+        glm::translate(glm::mat4(1.0f), {x, y, _zIndex * 100}) *
         glm::scale(glm::mat4(1.0f), {w, h, 1.0f});
   } while (false);
   do {
@@ -47,7 +47,7 @@ const core::AutoPtr<Material> &Sprite2D::getMaterial() const {
 const glm::mat4 &Sprite2D::getModelMatrix() const { return _matrixModel; }
 
 Sprite2D::Sprite2D(const std::string &path)
-    : _rotationAngle(0.0f), _matrixModel(1.0f) {
+    : _rotationAngle(0.0f), _matrixModel(1.0f), _zIndex(0) {
   _material = new Material();
   setTexture(path);
   auto tex = getTexture();
@@ -98,6 +98,12 @@ const std::tuple<glm::ivec2, float, bool> Sprite2D::getRotation() const {
           _rotationAngle,
           _rotationCenter.z == -1 ? true : false};
 }
+
+void Sprite2D::setZIndex(int32_t zIndex) {
+  _zIndex = zIndex;
+  update();
+}
+int32_t Sprite2D::getZIndex() const { return _zIndex; }
 
 void Sprite2D::setVisible(bool visible) { _material->setVisible(visible); }
 

@@ -17,6 +17,7 @@ private:
   float _rotationAngle;
   glm::mat4 _matrixModel;
   core::AutoPtr<Material> _material;
+  int32_t _zIndex;
 
   void update();
 
@@ -41,6 +42,9 @@ public:
   void setRotation(const glm::ivec2 &center, float angle,
                    bool righthandle = false);
   const std::tuple<glm::ivec2, float, bool> getRotation() const;
+
+  void setZIndex(int32_t zIndex);
+  int32_t getZIndex() const;
 
   bool isVisible() const;
   void setVisible(bool visible);

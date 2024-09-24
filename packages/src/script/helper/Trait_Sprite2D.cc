@@ -122,6 +122,21 @@ FUNC_DEF(Trait_Sprite2D::isVisible) {
   return {createBoolean(ctx, sprite->isVisible())};
 }
 
+FUNC_DEF(Trait_Sprite2D::setZIndex) {
+  VALIDATE_ARGS(setZIndex, 2);
+  auto self = args[0];
+  auto sprite = self->getOpaque().cast<video::Sprite2D>();
+  sprite->setZIndex(args[1]->toNumber(ctx));
+  return {};
+}
+
+FUNC_DEF(Trait_Sprite2D::getZIndex) {
+  VALIDATE_ARGS(getZIndex, 1);
+  auto self = args[0];
+  auto sprite = self->getOpaque().cast<video::Sprite2D>();
+  return {createNumber(ctx, sprite->getZIndex())};
+}
+
 void Trait_Sprite2D::initialize(core::AutoPtr<Script> ctx) {
   auto global = ctx->getNativeGlobal();
   auto Sprite2D = ctx->createValue()
@@ -135,7 +150,9 @@ void Trait_Sprite2D::initialize(core::AutoPtr<Script> ctx) {
                       ->setFunctionField(ctx, getSourceRect)
                       ->setFunctionField(ctx, getRotation)
                       ->setFunctionField(ctx, setVisible)
-                      ->setFunctionField(ctx, isVisible);
+                      ->setFunctionField(ctx, isVisible)
+                      ->setFunctionField(ctx, setZIndex)
+                      ->setFunctionField(ctx, getZIndex);
   global->setField(ctx, "Sprite2D", Sprite2D);
 }
 

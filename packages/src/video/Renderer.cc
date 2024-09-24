@@ -237,19 +237,7 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
   if (!material->isBlend()) {
     _normalRenderList.push_back({geometry, material, model});
   } else {
-    bool isInserted = false;
-    for (auto it = _blendRenderList.begin(); it != _blendRenderList.end();
-         it++) {
-      auto &m = it->matrixModel;
-      if (model[3][2] > m[3][2]) {
-        _blendRenderList.insert(it, {geometry, material, model});
-        isInserted = true;
-        break;
-      }
-    }
-    if (!isInserted) {
-      _blendRenderList.push_back({geometry, material, model});
-    }
+    _blendRenderList.push_back({geometry, material, model});
   }
 }
 

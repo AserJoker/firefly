@@ -41,8 +41,14 @@ function Sprite2D:setVisible(visible) end
 --- @return boolean
 function Sprite2D:isVisible() end
 
+--- @param zIndex integer
+function Sprite2D:setZIndex(zIndex) end
+
+--- @return integer
+function Sprite2D:getZIndex() end
+
 --- @param path string
 --- @return Sprite2D
 function createSprite2D(path) end
 
-return {createSprite2D = createSprite2D, format = format}
+return {createSprite2D = createSprite2D}

@@ -1,7 +1,9 @@
 local video = require 'video'
 local input = require 'input'
 require'event'.on('gameLoaded', function()
+    local tile = video.createSprite2D("001-Grassland01.png")
     local sprite = video.createSprite2D("001-Fighter01.png")
+    sprite:setZIndex(1)
     sprite:setRect({x = 0, y = 0, width = 32, height = 48})
     sprite:setSourceRect({x = 0, y = 0, width = 32, height = 48})
     local x = 0
@@ -43,6 +45,7 @@ require'event'.on('gameLoaded', function()
             height = 48
         })
         sprite:setRect({x = x, y = y, width = 32, height = 48})
+        tile:getZIndex()
     end)
     require'event'.on('update', function(time)
         x = time / 10.0 * dx + x

@@ -18,15 +18,7 @@ FUNC_DEF(Module_Video::createSprite2D) {
 void Module_Video::open(core::AutoPtr<Script> ctx) {
   auto exports = ctx->createValue()->setObject(ctx);
 
-  auto format =
-      ctx->createValue()
-          ->setObject(ctx)
-          ->setField(ctx, "RGB", ctx->createValue()->setNumber(ctx, 0))
-          ->setField(ctx, "RGBA", ctx->createValue()->setNumber(ctx, 1))
-          ->setField(ctx, "GRAY", ctx->createValue()->setNumber(ctx, 2));
-
-  exports->setField(ctx, "format", format)
-      ->setFunctionField(ctx, createSprite2D);
+  exports->setFunctionField(ctx, createSprite2D);
 
   ctx->registerModule("video", exports);
 }

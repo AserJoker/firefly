@@ -10,5 +10,5 @@ uniform mat4 diffuse_texture_coord_matrix;
 
 void main() {
     vertexTexcoord = (diffuse_texture_coord_matrix * vec4(texcoord, 0.0, 1.0)).xy;
-    gl_Position = projection * model * vec4(position.x, position.y, 0.0, 1.0);
+    gl_Position = projection * model * vec4(position, 0.0, 1.0);
 }
