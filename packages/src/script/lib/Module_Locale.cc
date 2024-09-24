@@ -6,8 +6,21 @@ using namespace firefly::script;
 
 FUNC_DEF(Module_Locale::i18n) {
   auto locale = core::Singleton<runtime::Locale>::instance();
-  return {
-      ctx->createValue()->setString(ctx, locale->i18n(args[0]->toString(ctx)))};
+  auto fmt = locale->i18n(args[0]->toString(ctx));
+  if (args.size() > 1) {
+    auto obj = args[1];
+    const auto &keys = obj->getKeys(ctx);
+    for (auto &key : keys) {
+      auto fmtKey = fmt::format("{{{}}}", key);
+      auto pos = fmt.find(fmtKey);
+      while (pos != std::string::npos) {
+        fmt = fmt.replace(pos, fmtKey.length(),
+                          obj->getField(ctx, key)->toString(ctx));
+        pos = fmt.find(fmtKey);
+      }
+    }
+  }
+  return {ctx->createValue()->setString(ctx, fmt)};
 }
 FUNC_DEF(Module_Locale::setLang) {
   auto locale = core::Singleton<runtime::Locale>::instance();

@@ -1,8 +1,9 @@
 --- @meta
 --- @module 'locale'
 --- @param key string
+--- @param args table<string,string>|nil
 --- @return string
-local function i18n(key) end
+local function i18n(key, args) end
 
 --- @return string
 local function getLang() end

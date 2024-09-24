@@ -1,16 +1,18 @@
 local video = require 'video'
 local input = require 'input'
+local runtime = require 'runtime'
+local locale = require 'locale'
 
 require'event'.on('gameLoaded', function()
+    local title = locale.i18n("duskland.system.title")
+    runtime.setWindowTitle(title)
     local sprite = video.createSprite2D("001-Fighter01.png")
     local tile = video.createSprite2D("001-Grassland01.png")
 
     sprite:setZIndex(1)
-    sprite:setBlend(0.5)
 
     sprite:setRect({x = 0, y = 0, width = 32, height = 48})
     sprite:setSourceRect({x = 0, y = 0, width = 32, height = 48})
-
     local x = 0
     local y = 0
     local xframe = 0
