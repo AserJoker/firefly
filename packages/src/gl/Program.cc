@@ -329,7 +329,6 @@ void Program::setUniform(core::AutoPtr<Constant> &constants) {
       this->bindUniformBlock(name, block->getIndex());
     } break;
     }
-    auto err = glGetError();
   }
   _constantBitmap->clear();
 }

@@ -12,16 +12,34 @@ local Sprite2D = {}
 --- @param path string
 function Sprite2D:setTexture(path) end
 
---- @param rect {x:number,y:number,width:number,height:number}
+--- @return {width:integer,height:integer}
+function Sprite2D:getTextureSize() end
+
+--- @param rect {x:integer,y:integer,width:integer,height:integer}
 function Sprite2D:setRect(rect) end
 
---- @param rect {x:number,y:number,width:number,height:number}
+--- @return {x:integer,y:integer,width:integer,height:integer}
+function Sprite2D:getRect() end
+
+--- @param rect {x:integer,y:integer,width:integer,height:integer}
 function Sprite2D:setSourceRect(rect) end
 
---- @param center {x:number,y:number}
+--- @return {x:integer,y:integer,width:integer,height:integer}
+function Sprite2D:getSourceRect() end
+
+--- @param center {x:integer,y:integer}
 --- @param angle number
 --- @param righthandle boolean|nil
 function Sprite2D:setRotation(center, angle, righthandle) end
+
+--- @return {center:{x:integer,y:integer},angle:number,righthandle:boolean}
+function Sprite2D:getRotation() end
+
+--- @param visible boolean
+function Sprite2D:setVisible(visible) end
+
+--- @return boolean
+function Sprite2D:isVisible() end
 
 --- @param path string
 --- @return Sprite2D
