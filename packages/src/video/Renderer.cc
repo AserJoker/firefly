@@ -274,7 +274,9 @@ void Renderer::present() {
   if (current != nullptr) {
     current->active();
   }
-
+  _blendRenderList.sort([](auto &a, auto &b) -> bool {
+    return a.matrixModel[3][2] < b.matrixModel[3][2];
+  });
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   if (!activeShader(_shaderName, "gbuffer")) {
     activeShader("internal", "basic");

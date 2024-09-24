@@ -20,7 +20,7 @@ void Sprite2D::update() {
         glm::rotate(glm::mat4(1.0f), _rotationAngle,
                     {0, 0, _rotationCenter.z}) *
         glm::translate(glm::mat4(1.0f), {-glm::vec2(_rotationCenter), 0.f}) *
-        glm::translate(glm::mat4(1.0f), {x, y, _zIndex * 100}) *
+        glm::translate(glm::mat4(1.0f), {x, y, _zIndex}) *
         glm::scale(glm::mat4(1.0f), {w, h, 1.0f});
   } while (false);
   do {
@@ -55,7 +55,9 @@ Sprite2D::Sprite2D(const std::string &path)
   _dstRect = {0, 0, texSize};
   _srcRect = {0, 0, texSize};
   _material->setBlend(true);
-  _material->setDepthTest(true);
+  _material->setDepthTest(false);
+  _material->setBlendFunc(
+      {gl::BLEND_FUNC::SRC_ALPHA, gl::BLEND_FUNC::ONE_MINUS_SRC_ALPHA});
   update();
 }
 
