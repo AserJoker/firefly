@@ -59,7 +59,8 @@ int LuaBridge::luaObjectGet(lua_State *state) {
   auto self =
       ctx->getNativeGlobal()->getField(ctx, "$objects")->getIndex(ctx, handle);
   if (lua_type(state, key_idx) == LUA_TSTRING) {
-    auto field = self->getField(ctx, lua_tostring(state, key_idx));
+    auto name = lua_tostring(state, key_idx);
+    auto field = self->getField(ctx, name);
     bridge->dump(state, field);
   } else {
     auto field =

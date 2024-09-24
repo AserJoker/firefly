@@ -110,8 +110,6 @@ void Renderer::initialize(const glm::ivec4 &viewport) {
                              new Attribute(quadTex, 2));
   quadGeometry->setAttributeIndex(new AttributeIndex(quadIndex));
   Geometry::set("quad", quadGeometry);
-
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 void Renderer::setViewport(const glm::ivec4 &viewport) {
@@ -122,9 +120,6 @@ void Renderer::setViewport(const glm::ivec4 &viewport) {
   }
   for (auto &attr : _shaderRenderTargets) {
     attr->resize({_viewport.z, _viewport.w});
-  }
-  if (_renderTarget != nullptr) {
-    _renderTarget->resize({_viewport.z, _viewport.w});
   }
 }
 
@@ -212,6 +207,8 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
 
   if (material->isAlphaTest()) {
     glEnable(GL_ALPHA_TEST);
+    auto &func = material->getAlphaFunc();
+    glAlphaFunc((GLenum)func.first, func.second);
   } else {
     glDisable(GL_ALPHA_TEST);
   }
@@ -220,6 +217,11 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
   } else {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  }
+
+  if (material->isBlend()) {
+    auto &func = material->getBlendFunc();
+    glBlendFunc((GLenum)func.first, (GLenum)func.second);
   }
 }
 
@@ -250,7 +252,6 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
     }
   }
 }
-
 
 void Renderer::setCamera(const core::AutoPtr<Camera> &camera) {
   if (camera != nullptr) {
@@ -285,28 +286,28 @@ void Renderer::present() {
   if (current != nullptr) {
     current->active();
   }
-  {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    if (!activeShader(_shaderName, "gbuffer")) {
-      activeShader("internal", "basic");
-    }
-    glDisable(GL_BLEND);
-    for (auto &item : _normalRenderList) {
-      setMaterial(item.material);
-      _constants->setField("model", item.matrixModel);
-      _shader->setUniform(_constants);
-      item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
-    }
-    _normalRenderList.clear();
-    glEnable(GL_BLEND);
-    for (auto &item : _blendRenderList) {
-      setMaterial(item.material);
-      _constants->setField("model", item.matrixModel);
-      _shader->setUniform(_constants);
-      item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
-    }
-    _blendRenderList.clear();
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  if (!activeShader(_shaderName, "gbuffer")) {
+    activeShader("internal", "basic");
   }
+  glDisable(GL_BLEND);
+  for (auto &item : _normalRenderList) {
+    setMaterial(item.material);
+    _constants->setField("model", item.matrixModel);
+    _shader->setUniform(_constants);
+    item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
+  }
+  _normalRenderList.clear();
+  glEnable(GL_BLEND);
+  for (auto &item : _blendRenderList) {
+    setMaterial(item.material);
+    _constants->setField("model", item.matrixModel);
+    _shader->setUniform(_constants);
+    item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
+  }
+  _blendRenderList.clear();
+
   if (_shaderRenderTargets.size() > 1) {
     auto it = pipeline.begin();
     it++;

@@ -17,12 +17,10 @@ FUNC_DEF(Trait_Resource::read) {
   return {Trait_Buffer::create(ctx, buffer)};
 }
 void Trait_Resource::initialize(core::AutoPtr<Script> ctx) {
-  auto scope = ctx->pushScope();
   auto global = ctx->getNativeGlobal();
   auto Resource = ctx->createValue()->setObject(ctx)->setField(
       ctx, "read", ctx->createValue()->setFunction(ctx, read));
   global->setField(ctx, "Resource", Resource);
-  ctx->popScope(scope);
 }
 core::AutoPtr<Value>
 Trait_Resource::create(core::AutoPtr<Script> ctx,

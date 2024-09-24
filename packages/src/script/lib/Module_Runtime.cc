@@ -15,7 +15,6 @@ using namespace firefly;
 using namespace firefly::script;
 using exception::ValidateException;
 void Module_Runtime::open(core::AutoPtr<Script> ctx) {
-  auto scope = ctx->pushScope();
   auto exports = ctx->createValue()->setObject(ctx);
   exports->setFunctionField(ctx, setWindowTitle);
   exports->setFunctionField(ctx, getWindowTitle);
@@ -28,7 +27,6 @@ void Module_Runtime::open(core::AutoPtr<Script> ctx) {
   exports->setFunctionField(ctx, getSaveInfo);
   exports->setFunctionField(ctx, createProperties);
   ctx->registerModule("runtime", exports);
-  ctx->popScope(scope);
 }
 FUNC_DEF(Module_Runtime::setWindowTitle) {
   VALIDATE_ARGS(setWindowTitle, 1);

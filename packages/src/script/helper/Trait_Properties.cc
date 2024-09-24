@@ -3,7 +3,6 @@
 using namespace firefly;
 using namespace firefly::script;
 void Trait_Properties::initialize(core::AutoPtr<Script> ctx) {
-  auto scope = ctx->pushScope();
   auto global = ctx->getNativeGlobal();
   auto Properties = ctx->createValue()
                         ->setObject(ctx)
@@ -12,7 +11,6 @@ void Trait_Properties::initialize(core::AutoPtr<Script> ctx) {
                         ->setFunctionField(ctx, removeKey)
                         ->setFunctionField(ctx, store);
   global->setField(ctx, "Properties", Properties);
-  ctx->popScope(scope);
 }
 core::AutoPtr<Value>
 Trait_Properties::create(core::AutoPtr<Script> ctx,

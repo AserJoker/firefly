@@ -29,7 +29,6 @@ FUNC_DEF(Module_Locale::getLanguages) {
 }
 
 void Module_Locale::open(core::AutoPtr<Script> ctx) {
-  auto scope = ctx->pushScope();
   auto exports = ctx->createValue()->setObject(ctx);
   exports->setField(ctx, "i18n", ctx->createValue()->setFunction(ctx, i18n));
   exports->setField(ctx, "setLang",
@@ -39,5 +38,4 @@ void Module_Locale::open(core::AutoPtr<Script> ctx) {
   exports->setField(ctx, "getLanguages",
                     ctx->createValue()->setFunction(ctx, getLanguages));
   ctx->registerModule("locale", exports);
-  ctx->popScope(scope);
 }

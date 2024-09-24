@@ -2,9 +2,11 @@
 #include "core/AutoPtr.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
+#include "gl/BlendFunc.hpp"
 #include "gl/Constant.hpp"
 #include "gl/Texture2D.hpp"
 #include "gl/TextureWrapMode.hpp"
+#include "gl/AlphaFunc.hpp"
 #include <functional>
 #include <glm/glm.hpp>
 #include <set>
@@ -76,10 +78,12 @@ private:
   float _shininessStrength;
 
   bool _alphaTest;
+  std::pair<gl::ALPHA_FUNC, float> _alphaFunc;
   bool _depthTest;
   bool _stencilTest;
 
   bool _blend;
+  std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> _blendFunc;
   bool _visible;
 
 public:
@@ -129,6 +133,9 @@ public:
   const bool &isBlend() const;
   void setBlend(bool value);
 
+  const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &getBlendFunc() const;
+  void setBlendFunc(const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &func);
+
   const bool &isVisible() const;
   void setVisible(bool value);
 
@@ -140,6 +147,8 @@ public:
 
   const bool &isAlphaTest() const;
   void setAlphaTest(bool value);
+  const std::pair<gl::ALPHA_FUNC, float>& getAlphaFunc() const;
+  void setAlphaFunc(const std::pair<gl::ALPHA_FUNC, float>& func);
 
   void enableAttribute(const std::string &name);
   void disableAttribute(const std::string &name);

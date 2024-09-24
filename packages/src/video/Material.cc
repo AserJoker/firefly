@@ -1,5 +1,7 @@
 #include "video/Material.hpp"
 #include "core/AutoPtr.hpp"
+#include "gl/AlphaFunc.hpp"
+#include "gl/BlendFunc.hpp"
 #include "gl/Constant.hpp"
 #include "gl/Texture2D.hpp"
 #include "runtime/Logger.hpp"
@@ -10,7 +12,11 @@ Material::Material()
       _reflective(0.0f), _transparent(0.0f), _reflectivity(0.0f),
       _wireframe(false), _cullBackface(false), _blendAdd(false), _opacity(1.0f),
       _shininess(0.0f), _shininessStrength(1.0f), _alphaTest(false),
-      _depthTest(true), _stencilTest(false), _blend(false), _visible(true) {
+      _alphaFunc({gl::ALPHA_FUNC::ALWAYS, 0.0f}), _depthTest(true),
+      _stencilTest(false), _blend(false),
+      _blendFunc(
+          {gl::BLEND_FUNC::SRC_ALPHA, gl::BLEND_FUNC::ONE_MINUS_SRC_ALPHA}),
+      _visible(true) {
 
   enableAttribute(DIFFUSE_TEX);
 }
@@ -164,6 +170,15 @@ void Material::setName(const std::string &name) { _name = name; }
 const bool &Material::isBlend() const { return _blend; }
 void Material::setBlend(bool value) { _blend = value; }
 
+const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &
+Material::getBlendFunc() const {
+  return _blendFunc;
+}
+void Material::setBlendFunc(
+    const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &func) {
+  _blendFunc = func;
+}
+
 const bool &Material::isVisible() const { return _visible; }
 void Material::setVisible(bool value) { _visible = value; }
 
@@ -175,6 +190,14 @@ void Material::setDepthTest(bool value) { _depthTest = value; }
 
 const bool &Material::isAlphaTest() const { return _alphaTest; }
 void Material::setAlphaTest(bool value) { _alphaTest = value; }
+
+const std::pair<gl::ALPHA_FUNC, float> &Material::getAlphaFunc() const {
+  return _alphaFunc;
+}
+void Material::setAlphaFunc(const std::pair<gl::ALPHA_FUNC, float> &func) {
+  _alphaFunc = func;
+}
+
 void Material::enableAttribute(const std::string &name) {
   _enableAttributes.insert(name);
 }

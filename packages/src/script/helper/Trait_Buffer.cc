@@ -188,7 +188,6 @@ FUNC_DEF(Trait_Buffer::toString) {
 
 void Trait_Buffer::initialize(core::AutoPtr<Script> ctx) {
 
-  auto scope = ctx->pushScope();
   auto global = ctx->getNativeGlobal();
   auto Buffer =
       ctx->createValue()
@@ -220,7 +219,6 @@ void Trait_Buffer::initialize(core::AutoPtr<Script> ctx) {
           ->setField(ctx, "toString",
                      ctx->createValue()->setFunction(ctx, toString));
   global->setField(ctx, "Buffer", Buffer);
-  ctx->popScope(scope);
 }
 
 core::AutoPtr<Value> Trait_Buffer::create(core::AutoPtr<Script> ctx,

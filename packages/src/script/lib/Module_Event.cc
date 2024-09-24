@@ -5,14 +5,12 @@
 using namespace firefly;
 using namespace firefly::script;
 void Module_Event::open(core::AutoPtr<Script> ctx) {
-  auto scope = ctx->pushScope();
   ctx->getNativeGlobal()->setField(ctx, "$events",
                                    ctx->createValue()->setObject(ctx));
   auto exports = ctx->createValue()->setObject(ctx);
   exports->setField(ctx, "on", ctx->createValue()->setFunction(ctx, on));
   exports->setField(ctx, "emit", ctx->createValue()->setFunction(ctx, emit2));
   ctx->registerModule("event", exports);
-  ctx->popScope(scope);
 }
 FUNC_DEF(Module_Event::on) {
   auto event = args[0]->toString(ctx);

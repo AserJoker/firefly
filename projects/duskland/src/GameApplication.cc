@@ -16,6 +16,7 @@
 #include "script/helper/Trait_Promise.hpp"
 #include "script/helper/Trait_Properties.hpp"
 #include "script/helper/Trait_Resource.hpp"
+#include "script/helper/Trait_Sprite2D.hpp"
 #include "script/lib/Module_Array.hpp"
 #include "script/lib/Module_Co.hpp"
 #include "script/lib/Module_Database.hpp"
@@ -30,7 +31,6 @@
 #include "video/Camera.hpp"
 #include "video/OrthoCamera.hpp"
 #include "video/Renderer.hpp"
-#include "video/Sprite2D.hpp"
 #include <SDL_image.h>
 #include <fmt/format.h>
 #include <glad/glad.h>
@@ -48,14 +48,7 @@
 using namespace firefly;
 using namespace duskland;
 core::AutoPtr<video::Camera> camera;
-core::AutoPtr<video::Sprite2D> sprite;
-int32_t xframe = 0;
-int32_t yframe = 0;
-float angle = 0.0f;
-float blend = 0.0f;
-float delta = 0.1;
-uint32_t dx = 0;
-uint32_t dy = 0;
+
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 
@@ -67,6 +60,8 @@ void GameApplication::initScript() {
   script::Trait_Resource::initialize(_script);
   script::Trait_Properties::initialize(_script);
   script::Trait_Promise::initialize(_script);
+  script::Trait_Sprite2D::initialize(_script);
+
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);
   script::Module_Event::open(_script);
@@ -80,11 +75,13 @@ void GameApplication::initScript() {
   script::Module_Co::open(_script);
   _script->eval("require('duskland')");
 }
+
 void GameApplication::initLocale() {
   _locale->scan();
   _locale->setDefaultLang("en_US");
   _locale->setLang("en_US");
 }
+
 void GameApplication::initEvent() {
   _eventbus->on(this, &GameApplication::onKeyDown);
   _eventbus->on(this, &GameApplication::onKeyUp);
@@ -106,9 +103,9 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  sprite = new video::Sprite2D("001-Fighter01.png");
-  sprite->setRect({100 - 32, 100 - 48, 32, 48});
-  sprite->setSourceRect({0, 0, 32, 48});
+  // sprite = new video::Sprite2D("001-Fighter01.png");
+  // sprite->setRect({100 - 32, 100 - 48, 32, 48});
+  // sprite->setSourceRect({0, 0, 32, 48});
   _renderer->setShader("2d");
   camera = new video::OrthoCamera({0.0f, 0.f, getWindow()->getSize()});
   glClearColor(0.2, 0.3, 0.2, 1.0f);
@@ -120,53 +117,9 @@ void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   static auto time = SDL_GetTicks();
   auto now = SDL_GetTicks();
-  if (_keyboard->getKeyState(SDL_SCANCODE_A)) {
-    dx = -1;
-  } else if (_keyboard->getKeyState(SDL_SCANCODE_D)) {
-    dx = 1;
-  } else {
-    dx = 0;
-  }
-  if (_keyboard->getKeyState(SDL_SCANCODE_W)) {
-    dy = 1;
-  } else if (_keyboard->getKeyState(SDL_SCANCODE_S)) {
-    dy = -1;
-  } else {
-    dy = 0;
-  }
   if (now - time > 100) {
     time = now;
     script::Module_Event::emit(_script, "tick");
-    if (dy == 1) {
-      yframe = 3;
-    }
-    if (dy == -1) {
-      yframe = 0;
-    }
-    if (dx == 1) {
-      yframe = 2;
-    }
-    if (dx == -1) {
-      yframe = 1;
-    }
-    if (dx != 0 || dy != 0) {
-      xframe++;
-      if (xframe == 4) {
-        xframe = 0;
-      }
-    } else {
-      xframe = 0;
-    }
-    sprite->setSourceRect({xframe * 32, yframe * 48, 32, 48});
-
-    sprite->setBlend(blend);
-    blend += delta;
-    if (blend > 0.9f) {
-      delta = -0.1f;
-    }
-    if (blend < 0.1f) {
-      delta = 0.1f;
-    }
   }
   script::Module_Event::emit(_script, "update");
   _renderer->setCamera(camera);
