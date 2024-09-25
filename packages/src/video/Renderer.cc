@@ -76,6 +76,7 @@ constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
 Renderer::Renderer() : _shaderName("internal") {
   _constants = new gl::Constant();
   _constants->setField("model", glm::mat4(1.0f));
+  _constants->setField("projection", glm::mat4(1.0f));
 }
 void Renderer::initialize(const glm::ivec4 &viewport) {
   setViewport(viewport);

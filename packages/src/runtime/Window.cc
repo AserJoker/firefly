@@ -1,13 +1,14 @@
 #include "runtime/Window.hpp"
+#include "core/Singleton.hpp"
 #include "exception/GLADException.hpp"
 #include "exception/SDLException.hpp"
+#include "runtime/Logger.hpp"
 #include <SDL2/SDL.h>
 #include <SDL_video.h>
 #include <glad/glad.h>
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
-#include <iostream>
 
 using namespace firefly;
 using namespace firefly::runtime;
@@ -21,79 +22,76 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id,
   // ignore non-significant error/warning codes
   if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
     return;
-
-  std::cout << "---------------" << std::endl;
-  std::cout << "Debug message (" << id << "): " << message << std::endl;
+  auto logger = core::Singleton<Logger>::instance();
+  logger->warn("---------------");
+  logger->warn("Debug message ({}): {}", id, message);
 
   switch (source) {
   case GL_DEBUG_SOURCE_API:
-    std::cout << "Source: API";
+    logger->warn("Source: API");
     break;
   case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-    std::cout << "Source: Window System";
+    logger->warn("Source: Window System");
     break;
   case GL_DEBUG_SOURCE_SHADER_COMPILER:
-    std::cout << "Source: Shader Compiler";
+    logger->warn("Source: Shader Compiler");
     break;
   case GL_DEBUG_SOURCE_THIRD_PARTY:
-    std::cout << "Source: Third Party";
+    logger->warn("Source: Third Party");
     break;
   case GL_DEBUG_SOURCE_APPLICATION:
-    std::cout << "Source: Application";
+    logger->warn("Source: Application");
     break;
   case GL_DEBUG_SOURCE_OTHER:
-    std::cout << "Source: Other";
+    logger->warn("Source: Other");
     break;
   }
-  std::cout << std::endl;
 
   switch (type) {
   case GL_DEBUG_TYPE_ERROR:
-    std::cout << "Type: Error";
+    logger->warn("Type: Error");
     break;
   case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-    std::cout << "Type: Deprecated Behaviour";
+    logger->warn("Type: Deprecated Behaviour");
     break;
   case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-    std::cout << "Type: Undefined Behaviour";
+    logger->warn("Type: Undefined Behaviour");
     break;
   case GL_DEBUG_TYPE_PORTABILITY:
-    std::cout << "Type: Portability";
+    logger->warn("Type: Portability");
     break;
   case GL_DEBUG_TYPE_PERFORMANCE:
-    std::cout << "Type: Performance";
+    logger->warn("Type: Performance");
     break;
   case GL_DEBUG_TYPE_MARKER:
-    std::cout << "Type: Marker";
+    logger->warn("Type: Marker");
     break;
   case GL_DEBUG_TYPE_PUSH_GROUP:
-    std::cout << "Type: Push Group";
+    logger->warn("Type: Push Group");
     break;
   case GL_DEBUG_TYPE_POP_GROUP:
-    std::cout << "Type: Pop Group";
+    logger->warn("Type: Pop Group");
     break;
   case GL_DEBUG_TYPE_OTHER:
-    std::cout << "Type: Other";
+    logger->warn("Type: Other");
     break;
   }
-  std::cout << std::endl;
 
   switch (severity) {
   case GL_DEBUG_SEVERITY_HIGH:
-    std::cout << "Severity: high";
+    logger->warn("Severity: high");
     break;
   case GL_DEBUG_SEVERITY_MEDIUM:
-    std::cout << "Severity: medium";
+    logger->warn("Severity: medium");
     break;
   case GL_DEBUG_SEVERITY_LOW:
-    std::cout << "Severity: low";
+    logger->warn("Severity: low");
     break;
   case GL_DEBUG_SEVERITY_NOTIFICATION:
-    std::cout << "Severity: notification";
+    logger->warn("Severity: notification");
     break;
   }
-  std::cout << std::endl;
-  std::cout << std::endl;
+  logger->warn("---------------");
 }
 
 Window::Window(const std::string &title, int width, int height) {

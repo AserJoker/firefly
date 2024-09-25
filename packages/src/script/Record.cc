@@ -12,6 +12,7 @@ void Record::setField(core::AutoPtr<Script> ctx, const std::string &name,
     if (_fields[name] == field->getAtom()) {
       return;
     }
+    _fields[name]->addParent(ctx->getCurrentScope()->getRoot());
     _fields[name]->removeParent(_self);
   }
   field->getAtom()->addParent(_self);
@@ -27,6 +28,7 @@ core::AutoPtr<Value> Record::getField(core::AutoPtr<Script> ctx,
 }
 void Record::removeField(core::AutoPtr<Script> ctx, const std::string &name) {
   if (_fields.contains(name)) {
+    _fields[name]->addParent(ctx->getCurrentScope()->getRoot());
     _fields[name]->removeParent(_self);
     _fields.erase(name);
   }

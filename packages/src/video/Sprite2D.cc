@@ -47,7 +47,8 @@ const core::AutoPtr<Material> &Sprite2D::getMaterial() const {
 const glm::mat4 &Sprite2D::getModelMatrix() const { return _matrixModel; }
 
 Sprite2D::Sprite2D(const std::string &path)
-    : _rotationAngle(0.0f), _matrixModel(1.0f), _zIndex(0) {
+    : _rotationAngle(0.0f), _matrixModel(1.0f), _zIndex(0),
+      _rotationCenter(0.0f, 0.0f, 1.0f) {
   _material = new Material();
   setTexture(path);
   auto tex = getTexture();

@@ -420,7 +420,7 @@ core::AutoPtr<Value> LuaBridge::load(lua_State *state, int index) {
       value->setObject(ctx);
       value->setRawField(ctx, "$handle",
                          ctx->createValue()->setNumber(ctx, obj_idx));
-      value->setMetadata(getObjectMetadata());
+      value->setMetadata(ctx, getObjectMetadata());
       lua_getglobal(state, "$objects");
       auto objects = lua_gettop(state);
       lua_pushvalue(state, index);
@@ -433,7 +433,7 @@ core::AutoPtr<Value> LuaBridge::load(lua_State *state, int index) {
     value->setObject(ctx);
     value->setRawField(ctx, "$handle",
                        ctx->createValue()->setNumber(ctx, func_idx));
-    value->setMetadata(getFunctionMetadata());
+    value->setMetadata(ctx, getFunctionMetadata());
     lua_getglobal(state, "$functions");
     auto objects = lua_gettop(state);
     lua_pushvalue(state, index);

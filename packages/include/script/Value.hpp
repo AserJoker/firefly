@@ -120,7 +120,8 @@ public:
   uint32_t getRawLength(core::AutoPtr<Script> ctx);
 
   core::AutoPtr<Value> getMetadata(core::AutoPtr<Script> ctx);
-  core::AutoPtr<Value> setMetadata(core::AutoPtr<Value> value);
+  core::AutoPtr<Value> setMetadata(core::AutoPtr<Script> ctx,
+                                   core::AutoPtr<Value> value);
   core::AutoPtr<Value> setOpaque(core::AutoPtr<core::Object> obj);
   core::AutoPtr<core::Object> getOpaque();
   core::AutoPtr<Value> arithmetic(core::AutoPtr<Script> ctx,

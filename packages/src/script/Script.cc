@@ -16,7 +16,7 @@ Script::Script() {
   _current = _root;
   _bridge = core::Singleton<Bridge>::instance();
 }
-Script::~Script() {}
+Script::~Script() {  }
 void Script::dispose() {
   if (_bridge != nullptr) {
     _bridge->dispose();

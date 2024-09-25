@@ -338,7 +338,8 @@ uint32_t Value::getLength(core::AutoPtr<Script> ctx) {
 core::AutoPtr<Value> Value::getMetadata(core::AutoPtr<Script> ctx) {
   return ctx->createValue(_atom->_metadata);
 }
-core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Value> value) {
+core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Script> ctx,
+                                        core::AutoPtr<Value> value) {
   if (_atom->_metadata == value->getAtom()) {
     return this;
   }
@@ -354,6 +355,7 @@ core::AutoPtr<Value> Value::setMetadata(core::AutoPtr<Value> value) {
   }
   metadata = value->getAtom();
   if (_atom->_metadata) {
+    _atom->_metadata->addParent(ctx->getCurrentScope()->getRoot());
     _atom->_metadata->removeParent(_atom);
   }
   _atom->_metadata = metadata;

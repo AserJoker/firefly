@@ -15,11 +15,13 @@ void Array::setIndex(core::AutoPtr<Script> ctx, int index,
       _items.push_back(nullptr);
     }
     if (_items[index]) {
+      _items[index]->addParent(ctx->getCurrentScope()->getRoot());
       _items[index]->removeParent(_self);
     }
-    _items[index] = value->getAtom();
+    _items[index] = atom;
   } else {
     if (index < _items.size()) {
+      _items[index]->addParent(ctx->getCurrentScope()->getRoot());
       _items[index]->removeParent(_self);
       _items[index] = nullptr;
     }

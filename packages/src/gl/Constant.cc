@@ -110,6 +110,7 @@ const CONSTANT_TYPE Constant::getFieldType(const std::string &name) {
 void Constant::sync(core::AutoPtr<Constant> &another) {
   for (auto &[name, value] : _bitmap->getData()) {
     auto &field = _fields[name];
+    auto &type = _metadata[name];
     another->setField(name, _metadata.at(name), field);
   }
   _bitmap->clear();

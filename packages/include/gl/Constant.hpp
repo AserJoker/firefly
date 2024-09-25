@@ -4,8 +4,9 @@
 #include "core/AutoPtr.hpp"
 #include "core/Bitmap.hpp"
 #include "core/Object.hpp"
+#include "gl/ConstantType.hpp"
 #include <any>
-#include <glm/fwd.hpp>
+#include <glm/glm.hpp>
 #include <unordered_map>
 namespace firefly::gl {
 class Constant : public core::Object {
