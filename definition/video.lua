@@ -6,6 +6,13 @@
 --- @field GRAY number
 local format = {}
 
+--- @class Rect
+--- @field x integer
+--- @field y integer
+--- @field width integer
+--- @field height integer
+local Rect = {}
+
 --- @class Sprite2D
 local Sprite2D = {}
 
@@ -15,16 +22,16 @@ function Sprite2D:setTexture(path) end
 --- @return {width:integer,height:integer}
 function Sprite2D:getTextureSize() end
 
---- @param rect {x:integer,y:integer,width:integer,height:integer}
+--- @param rect Rect
 function Sprite2D:setRect(rect) end
 
---- @return {x:integer,y:integer,width:integer,height:integer}
+--- @return Rect
 function Sprite2D:getRect() end
 
---- @param rect {x:integer,y:integer,width:integer,height:integer}
+--- @param rect Rect
 function Sprite2D:setSourceRect(rect) end
 
---- @return {x:integer,y:integer,width:integer,height:integer}
+--- @return Rect
 function Sprite2D:getSourceRect() end
 
 --- @param center {x:integer,y:integer}
@@ -57,4 +64,29 @@ function Sprite2D:getBlend() end
 --- @return Sprite2D
 function createSprite2D(path) end
 
-return {createSprite2D = createSprite2D}
+--- @param shaderName string
+function setShader(shaderName) end
+
+--- @class Node
+local Node = {};
+
+---@param child Node
+function Node:appendChild(child) end
+
+---@param child Node
+function Node:removeChild(child) end
+
+---@return Node
+function Node:getParent() end
+
+--- @class Camera:Node
+local Camera = {};
+
+--- @return Camera
+function createOrthoCamera() end
+
+return {
+    createSprite2D = createSprite2D,
+    setShader = setShader,
+    createOrthoCamera = createOrthoCamera
+}

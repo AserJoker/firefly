@@ -27,9 +27,10 @@ protected:
   const glm::mat4 &getModelMatrix() const override;
 
 public:
-  Sprite2D(const std::string &path);
+  Sprite2D(const std::string &path = "");
 
   void setTexture(const std::string &path);
+  void setTexture(const core::AutoPtr<gl::Texture2D> &texture);
   core::AutoPtr<gl::Texture2D> &getTexture();
   const core::AutoPtr<gl::Texture2D> &getTexture() const;
 

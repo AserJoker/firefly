@@ -19,4 +19,4 @@ const glm::mat4 &Camera::getProjectionMatrix() const { return _projection; }
 const glm::mat4 Camera::getViewMatrix() const {
   return glm::lookAt(_position, _position + _front, _up);
 }
-void Camera::setViewport(const glm::ivec4 &viewport) {}
+void Camera::setViewport(const glm::ivec4 &viewport) { _viewport = viewport; }

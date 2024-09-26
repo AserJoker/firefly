@@ -1,5 +1,4 @@
 #pragma once
-#include "Camera.hpp"
 #include "Geometry.hpp"
 #include "Material.hpp"
 #include "core/AutoPtr.hpp"
@@ -32,15 +31,12 @@ private:
 
   core::AutoPtr<RenderTarget> _deferred;
   std::list<core::AutoPtr<RenderTarget>> _shaderRenderTargets;
-  core::AutoPtr<RenderTarget> _renderTarget;
 
 private:
-  void draw(const core::AutoPtr<Material> &material,
-            const core::AutoPtr<Geometry> &geometry, const glm::mat4 &matrix);
-
 public:
   Renderer();
-  void setRenderTarget(const core::AutoPtr<RenderTarget> &target);
+  void draw(const core::AutoPtr<Material> &material,
+            const core::AutoPtr<Geometry> &geometry, const glm::mat4 &matrix);
   using core::Object::initialize;
   void initialize(const glm::ivec4 &viewport);
 
@@ -58,7 +54,6 @@ public:
 
   core::AutoPtr<gl::Program> getShaderProgram();
 
-  void setCamera(const core::AutoPtr<Camera> &camera = nullptr);
   void present();
 };
 } // namespace firefly::video

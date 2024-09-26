@@ -1,19 +1,13 @@
 #pragma once
 #include "Geometry.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Object.hpp"
 #include "video/Material.hpp"
+#include "video/Node.hpp"
 #include <glm/glm.hpp>
-#include <list>
 namespace firefly::video {
-class Renderable : public core::Object {
-private:
-  friend class Renderer;
-  static std::list<Renderable *> _renderList;
-
+class Renderable : public Node {
 public:
-  Renderable();
-  ~Renderable() override;
+  void onTick() override;
 
 protected:
   virtual const core::AutoPtr<Geometry> &getGeometry() const = 0;

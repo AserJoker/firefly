@@ -28,9 +28,9 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
-#include "video/Camera.hpp"
-#include "video/OrthoCamera.hpp"
-#include "video/Renderer.hpp"
+#include "video/RenderTarget.hpp"
+#include "video/Scene.hpp"
+#include "video/Sprite2D.hpp"
 #include <SDL_image.h>
 #include <SDL_timer.h>
 #include <fmt/format.h>
@@ -48,7 +48,8 @@
 
 using namespace firefly;
 using namespace duskland;
-core::AutoPtr<video::Camera> camera;
+
+core::AutoPtr<video::Scene> scene;
 
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
@@ -104,13 +105,25 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  _renderer->setShader("2d");
-  camera = new video::OrthoCamera({0.0f, 0.f, getWindow()->getSize()});
-  glClearColor(0.2, 0.3, 0.2, 1.0f);
-  getWindow()->setSwapInterval(0);
+  scene = new video::Scene();
+  core::AutoPtr preview = new video::Sprite2D();
+  core::AutoPtr rt = new video::RenderTarget({128, 192});
+  core::AutoPtr rtScene = new video::Scene();
+  preview->setTexture(rt->getAttachments()[0]);
+  preview->setRect({128, 0, 128, 192});
+  preview->setSourceRect({0, 0, 128, 192});
+  core::AutoPtr sprite = new video::Sprite2D("001-Fighter01.png");
+  core::AutoPtr sprite2 = new video::Sprite2D("001-Fighter01.png");
+  sprite->setRect({0, 0, 128, 192});
+  rtScene->appendChild(sprite);
+  rt->appendChild(rtScene);
+  scene->appendChild(rt);
+  scene->appendChild(preview);
+  // scene->appendChild(sprite2);
+  glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   getWindow()->show();
 }
-bool show_demo_window = true;
+
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   static auto time = SDL_GetTicks();
@@ -125,8 +138,7 @@ void GameApplication::onMainLoop() {
                              createNumber(_script, now - timePreFrame));
   _script->popScope(scope);
   timePreFrame = now;
-  _renderer->setCamera(camera);
-  _renderer->present();
+  scene->onTick();
   getWindow()->present();
 }
 
@@ -143,9 +155,6 @@ void GameApplication::onKeyDown(input::Event_KeyDown &e) {
   script::Module_Event::emit(_script, "keyDown",
                              createNumber(_script, e.getScancode()));
   _script->popScope(scope);
-  if (e.getScancode() == SDL_SCANCODE_ESCAPE) {
-    _mouse->releaseMouse();
-  }
 }
 
 void GameApplication::onKeyUp(input::Event_KeyUp &e) {
@@ -175,7 +184,6 @@ void GameApplication::onMouseDown(input::Event_MouseDown &e) {
   script::Module_Event::emit(_script, "mouseDown",
                              createNumber(_script, e.getType()));
   _script->popScope(scope);
-  _mouse->captureMouse();
 }
 
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
@@ -200,5 +208,12 @@ void GameApplication::onClick(input::Event_Click &e) {
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
   _renderer->setViewport({0, 0, e.getSize()});
-  camera->setViewport({0, 0, e.getSize()});
+  auto scope = _script->pushScope();
+  script::Module_Event::emit(
+      _script, "resize",
+      _script->createValue()
+          ->setObject(_script)
+          ->setField(_script, "width", createNumber(_script, e.getSize().x))
+          ->setField(_script, "height", createNumber(_script, e.getSize().y)));
+  _script->popScope(scope);
 }

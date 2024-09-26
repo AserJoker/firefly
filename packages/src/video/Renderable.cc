@@ -1,6 +1,10 @@
 #include "video/Renderable.hpp"
+#include "core/Singleton.hpp"
+#include "video/Renderer.hpp"
 using namespace firefly;
 using namespace firefly::video;
-std::list<Renderable *> Renderable::_renderList;
-Renderable::Renderable() { _renderList.push_back(this); }
-Renderable::~Renderable() { std::erase(_renderList, this); }
+void Renderable::onTick() {
+  auto renderer = core::Singleton<Renderer>::instance();
+  renderer->draw(getMaterial(), getGeometry(), getModelMatrix());
+  Node::onTick();
+}

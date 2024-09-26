@@ -6,6 +6,8 @@ local locale = require 'locale'
 require'event'.on('gameLoaded', function()
     local title = locale.i18n("duskland.system.title")
     runtime.setWindowTitle(title)
+
+    video.setShader("2d");
     local sprite = video.createSprite2D("001-Fighter01.png")
     local tile = video.createSprite2D("001-Grassland01.png")
 

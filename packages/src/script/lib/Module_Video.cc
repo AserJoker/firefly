@@ -1,8 +1,10 @@
 #include "script/lib/Module_Video.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Singleton.hpp"
 #include "exception/ValidateException.hpp"
 #include "script/Script.hpp"
 #include "script/helper/Trait_Sprite2D.hpp"
+#include "video/Renderer.hpp"
 #include "video/Sprite2D.hpp"
 using namespace firefly;
 using namespace firefly::script;
@@ -15,10 +17,19 @@ FUNC_DEF(Module_Video::createSprite2D) {
   return {Trait_Sprite2D::create(ctx, sprite)};
 }
 
+FUNC_DEF(Module_Video::setShader) {
+  VALIDATE_ARGS(setShader, 1);
+  auto name = args[0]->toString(ctx);
+  auto renderer = core::Singleton<video::Renderer>::instance();
+  renderer->setShader(name);
+  return {};
+}
+
 void Module_Video::open(core::AutoPtr<Script> ctx) {
   auto exports = ctx->createValue()->setObject(ctx);
 
-  exports->setFunctionField(ctx, createSprite2D);
+  exports->setFunctionField(ctx, createSprite2D)
+      ->setFunctionField(ctx, setShader);
 
   ctx->registerModule("video", exports);
 }

@@ -9,6 +9,9 @@
 #include "video/Attribute.hpp"
 #include "video/AttributeIndex.hpp"
 #include "video/Geometry.hpp"
+#include <SDL_image.h>
+#include <SDL_pixels.h>
+#include <SDL_surface.h>
 #include <vector>
 using namespace firefly;
 using namespace firefly::video;
@@ -28,7 +31,7 @@ RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
   std::vector<core::AutoPtr<gl::Texture2D>> textures;
   for (uint32_t i = 0; i < attachment; i++) {
     core::AutoPtr texture =
-        new gl::Texture2D(size.x, size.y, gl::PIXEL_FORMAT::RGB);
+        new gl::Texture2D(size.x, size.y, gl::PIXEL_FORMAT::RGBA);
     textures.push_back(texture);
   }
   _frame->bindAttachments(textures);
@@ -47,7 +50,6 @@ RenderTarget::RenderTarget(const glm::ivec2 &size, uint32_t attachment)
     : RenderTarget("basic", size, attachment) {}
 void RenderTarget::active() {
   gl::FrameBuffer::bind(_frame);
-  glViewport(0, 0, _size.x, _size.y);
   auto attachmentBuffers = _frame->getAttachmentBuffers();
   glDrawBuffers(attachmentBuffers.size(), attachmentBuffers.data());
 }
@@ -64,7 +66,7 @@ const core::AutoPtr<gl::FrameBuffer> &RenderTarget::getFrameBuffer() const {
   return _frame;
 }
 
-void RenderTarget::draw(core::AutoPtr<gl::Program> &program) {
+void RenderTarget::draw(core::AutoPtr<gl::Program> program) {
   auto attachments = _frame->getAttachments();
   for (size_t i = 0; i < attachments.size(); i++) {
     program->setUniform(fmt::format("attachment_{}", i), (int)i);
@@ -91,4 +93,11 @@ void RenderTarget::resize(const glm::ivec2 &size) {
     throw exception::RuntimeException<"Check Framebuffer">(
         "Failed to check framebuffer");
   }
+}
+void RenderTarget::onTick() {
+  active();
+  glClearColor(0, 0, 0, 0);
+  Node::onTick();
+  gl::FrameBuffer::bind(nullptr);
+  glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
 }

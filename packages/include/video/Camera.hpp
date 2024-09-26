@@ -9,6 +9,9 @@ private:
   glm::vec3 _front;
   glm::vec3 _up;
 
+protected:
+  glm::ivec4 _viewport;
+
 public:
   Camera(const glm::mat4 &projection, const glm::vec3 &position,
          const glm::vec3 &front, const glm::vec3 &up);

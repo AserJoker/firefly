@@ -1,6 +1,8 @@
 #include "video/Sprite2D.hpp"
+#include "core/AutoPtr.hpp"
 #include "gl/AlphaFunc.hpp"
 #include "gl/BlendFunc.hpp"
+#include "gl/Texture2D.hpp"
 #include "gl/TextureFilter.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
@@ -9,6 +11,9 @@ using namespace firefly;
 using namespace firefly::video;
 
 void Sprite2D::update() {
+  if (!_material->getTextures().contains(Material::DIFFUSE_TEX)) {
+    return;
+  }
   const auto &size = getTexture()->getSize();
   do {
     const auto &x = _dstRect[0];
@@ -21,7 +26,7 @@ void Sprite2D::update() {
                     {0, 0, _rotationCenter.z}) *
         glm::translate(glm::mat4(1.0f), {-glm::vec2(_rotationCenter), 0.f}) *
         glm::translate(glm::mat4(1.0f), {x, y, _zIndex}) *
-        glm::scale(glm::mat4(1.0f), {w, h, 1.0f});
+        glm::scale(glm::mat4(1.0f), {w, h, 1.0});
   } while (false);
   do {
     const auto &x = _srcRect[0];
@@ -50,22 +55,27 @@ Sprite2D::Sprite2D(const std::string &path)
     : _rotationAngle(0.0f), _matrixModel(1.0f), _zIndex(0),
       _rotationCenter(0.0f, 0.0f, 1.0f) {
   _material = new Material();
-  setTexture(path);
-  auto tex = getTexture();
-  auto texSize = tex->getSize();
-  _dstRect = {0, 0, texSize};
-  _srcRect = {0, 0, texSize};
   _material->setBlend(true);
   _material->setDepthTest(false);
   _material->setBlendFunc(
       {gl::BLEND_FUNC::SRC_ALPHA, gl::BLEND_FUNC::ONE_MINUS_SRC_ALPHA});
-  update();
+  if (!path.empty()) {
+    setTexture(path);
+    auto tex = getTexture();
+    auto texSize = tex->getSize();
+    _dstRect = {0, 0, texSize};
+    _srcRect = {0, 0, texSize};
+    update();
+  }
 }
 
 void Sprite2D::setTexture(const std::string &path) {
   _material->setTexture(Material::DIFFUSE_TEX, path);
   getTexture()->setMinifyingFilter(gl::TEXTURE_FILTER::NEAREST);
   getTexture()->setMagnificationFilter(gl::TEXTURE_FILTER::NEAREST);
+}
+void Sprite2D::setTexture(const core::AutoPtr<gl::Texture2D> &texture) {
+  _material->setTexture(Material::DIFFUSE_TEX, texture);
 }
 
 core::AutoPtr<gl::Texture2D> &Sprite2D::getTexture() {

@@ -7,11 +7,9 @@
 #include "gl/ShaderType.hpp"
 #include "gl/Texture2D.hpp"
 #include "gl/TextureFilter.hpp"
-#include "video/Camera.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
 #include "video/RenderTarget.hpp"
-#include "video/Renderable.hpp"
 #include "video/Shader.hpp"
 #include <concurrencysal.h>
 #include <fmt/format.h>
@@ -234,21 +232,7 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
   }
 }
 
-void Renderer::setCamera(const core::AutoPtr<Camera> &camera) {
-  if (camera != nullptr) {
-    _constants->setField("projection", camera->getProjectionMatrix());
-    _constants->setField("view", camera->getViewMatrix());
-    _constants->setField("cameraPosition", camera->getPosition());
-  }
-}
-
 void Renderer::present() {
-
-  for (auto &object : Renderable::_renderList) {
-    draw(object->getMaterial(), object->getGeometry(),
-         object->getModelMatrix());
-  }
-
   std::list<core::AutoPtr<RenderTarget>> pipeline;
   if (_deferred != nullptr) {
     pipeline.push_back(_deferred);
@@ -256,9 +240,6 @@ void Renderer::present() {
   for (auto it = _shaderRenderTargets.begin(); it != _shaderRenderTargets.end();
        it++) {
     pipeline.push_back(*it);
-  }
-  if (_renderTarget != nullptr) {
-    pipeline.push_back(_renderTarget);
   }
   core::AutoPtr<RenderTarget> current;
   if (pipeline.size()) {
@@ -315,8 +296,4 @@ void Renderer::present() {
     }
     current->draw(_shader);
   }
-}
-
-void Renderer::setRenderTarget(const core::AutoPtr<RenderTarget> &target) {
-  _renderTarget = target;
 }
