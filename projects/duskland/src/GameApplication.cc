@@ -110,7 +110,7 @@ void GameApplication::onInitialize() {
   core::AutoPtr rt = new video::RenderTarget({128, 192});
   core::AutoPtr rtScene = new video::Scene();
   preview->setTexture(rt->getAttachments()[0]);
-  preview->setRect({128, 0, 128, 192});
+  preview->setRect({128, 192, 128, 192});
   preview->setSourceRect({0, 0, 128, 192});
   core::AutoPtr sprite = new video::Sprite2D("001-Fighter01.png");
   core::AutoPtr sprite2 = new video::Sprite2D("001-Fighter01.png");
@@ -119,7 +119,7 @@ void GameApplication::onInitialize() {
   rt->appendChild(rtScene);
   scene->appendChild(rt);
   scene->appendChild(preview);
-  // scene->appendChild(sprite2);
+  scene->appendChild(sprite2);
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   getWindow()->show();
 }

@@ -2,6 +2,7 @@
 #include "TextureFilter.hpp"
 #include "TextureWrapMode.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Buffer.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
 #include "gl/DataType.hpp"
@@ -25,6 +26,7 @@ public:
   void setImage(uint32_t level, PIXEL_FORMAT internalFormat, uint32_t width,
                 uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,
                 const void *data);
+  core::AutoPtr<core::Buffer> getImage(uint32_t level);
   void setSubImage(uint32_t level, uint32_t x, uint32_t y, uint32_t width,
                    uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,
                    const void *data);

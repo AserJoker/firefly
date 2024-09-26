@@ -11,6 +11,7 @@
 #include "video/Geometry.hpp"
 #include <SDL_image.h>
 #include <SDL_pixels.h>
+#include <SDL_rwops.h>
 #include <SDL_surface.h>
 #include <vector>
 using namespace firefly;
@@ -100,4 +101,13 @@ void RenderTarget::onTick() {
   Node::onTick();
   gl::FrameBuffer::bind(nullptr);
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
+  // auto texture = _frame->getAttachments()[0];
+  // auto size = texture->getSize();
+  // void *buffer = ::operator new(size.x * size.y * 4);
+  // gl::Texture2D::bind(_frame->getAttachments()[0]);
+  // glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+  // auto surface = SDL_CreateRGBSurfaceWithFormatFrom(
+  //     buffer, size.x, size.y, 4, 4 * size.x, SDL_PIXELFORMAT_RGBA32);
+  // IMG_SavePNG(surface, "1.png");
+  // exit(0);
 }
