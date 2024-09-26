@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene camera="ortho">
+    <render-target id="mask" width="1024" height="768">
+        <scene>
+            <sprite-2d src="001-Fighter01.png"></sprite-2d>
+        </scene>
+    </render-target>
+    <sprite-2d src="$mask" x="128" y="192"/>
+</scene>

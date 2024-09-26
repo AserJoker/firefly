@@ -9,10 +9,17 @@ require'event'.on('gameLoaded', function()
 
     video.setShader("2d");
     local sprite = video.createSprite2D("001-Fighter01.png")
-    local tile = video.createSprite2D("001-Grassland01.png")
+    local sprite2 = video.createSprite2D("001-Grassland01.png")
+    local subscene = video.createScene();
+    local renderTarget = video.createRenderTarget({width = 128, height = 192})
+    local mask = video.createSprite2D(renderTarget)
+    mask:setRect({x = 128, y = 192, width = 128, height = 192})
+    subscene:appendChild(sprite2)
+    renderTarget:appendChild(subscene);
     local scene = video.createScene();
     scene:appendChild(sprite)
-    scene:appendChild(tile)
+    scene:appendChild(renderTarget)
+    scene:appendChild(mask)
     video.setScene(scene)
 
     sprite:setZIndex(1)

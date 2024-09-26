@@ -2,9 +2,12 @@
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "exception/ValidateException.hpp"
+#include "script/Atom.hpp"
 #include "script/Script.hpp"
+#include "script/helper/Trait_RenderTarget.hpp"
 #include "script/helper/Trait_Scene.hpp"
 #include "script/helper/Trait_Sprite2D.hpp"
+#include "video/RenderTarget.hpp"
 #include "video/Renderer.hpp"
 #include "video/Scene.hpp"
 #include "video/Sprite2D.hpp"
@@ -14,14 +17,32 @@ using exception::ValidateException;
 
 FUNC_DEF(Module_Video::createSprite2D) {
   VALIDATE_ARGS(createSprite2D, 1);
-  auto path = args[0]->toString(ctx);
-  core::AutoPtr<video::Sprite2D> sprite = new video::Sprite2D(path);
+  core::AutoPtr<video::Sprite2D> sprite;
+  if (args[0]->getType(ctx) == Atom::TYPE::STRING) {
+    auto path = args[0]->toString(ctx);
+    sprite = new video::Sprite2D(path);
+  } else {
+    auto renderTarget = args[0]->getOpaque().cast<video::RenderTarget>();
+    sprite = new video::Sprite2D();
+    auto texture = renderTarget->getAttachments()[0];
+    auto size = texture->getSize();
+    sprite->setTexture(texture);
+    sprite->setRect({0, 0, size});
+    sprite->setSourceRect({0, 0, size});
+  }
   return {Trait_Sprite2D::create(ctx, sprite)};
 }
 
 FUNC_DEF(Module_Video::createScene) {
   core::AutoPtr scene = new video::Scene();
   return {Trait_Scene::create(ctx, scene)};
+}
+
+FUNC_DEF(Module_Video::createRenderTarget) {
+  auto width = (uint32_t)args[0]->getField(ctx, "width")->toNumber(ctx);
+  auto height = (uint32_t)args[0]->getField(ctx, "height")->toNumber(ctx);
+  core::AutoPtr renderTarget = new video::RenderTarget({width, height});
+  return {Trait_RenderTarget::create(ctx, renderTarget)};
 }
 
 FUNC_DEF(Module_Video::setScene) {
@@ -49,6 +70,7 @@ void Module_Video::open(core::AutoPtr<Script> ctx) {
 
   exports->setFunctionField(ctx, createSprite2D)
       ->setFunctionField(ctx, createScene)
+      ->setFunctionField(ctx, createRenderTarget)
       ->setFunctionField(ctx, setShader)
       ->setFunctionField(ctx, setScene)
       ->setFunctionField(ctx, getScene);

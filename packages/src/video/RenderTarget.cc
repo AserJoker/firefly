@@ -1,5 +1,6 @@
 #include "video/RenderTarget.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Singleton.hpp"
 #include "exception/Exception.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
@@ -9,6 +10,7 @@
 #include "video/Attribute.hpp"
 #include "video/AttributeIndex.hpp"
 #include "video/Geometry.hpp"
+#include "video/Renderer.hpp"
 #include <SDL_image.h>
 #include <SDL_pixels.h>
 #include <SDL_rwops.h>
@@ -98,7 +100,10 @@ void RenderTarget::resize(const glm::ivec2 &size) {
 void RenderTarget::onTick() {
   active();
   glClearColor(0, 0, 0, 0);
+  auto renderer = core::Singleton<Renderer>::instance();
+  auto context = renderer->pushContext();
   Node::onTick();
+  renderer->popContext(context);
   gl::FrameBuffer::bind(nullptr);
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   // auto texture = _frame->getAttachments()[0];

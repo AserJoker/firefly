@@ -75,6 +75,7 @@ Renderer::Renderer() : _shaderName("internal") {
   _constants = new gl::Constant();
   _constants->setField("model", glm::mat4(1.0f));
   _constants->setField("projection", glm::mat4(1.0f));
+  _context = new RenderContext();
 }
 void Renderer::initialize(const glm::ivec4 &viewport) {
   setViewport(viewport);
@@ -226,10 +227,18 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
                     const core::AutoPtr<Geometry> &geometry,
                     const glm::mat4 &model) {
   if (!material->isBlend()) {
-    _normalRenderList.push_back({geometry, material, model});
+    _context->normalRenderList.push_back({geometry, material, model});
   } else {
-    _blendRenderList.push_back({geometry, material, model});
+    _context->blendRenderList.push_back({geometry, material, model});
   }
+}
+core::AutoPtr<Renderer::RenderContext> Renderer::pushContext() {
+  auto context = _context;
+  _context = new RenderContext();
+  return context;
+}
+void Renderer::popContext(const core::AutoPtr<Renderer::RenderContext> &ctx) {
+  _context = ctx;
 }
 
 void Renderer::present() {
@@ -248,7 +257,7 @@ void Renderer::present() {
   if (current != nullptr) {
     current->active();
   }
-  _blendRenderList.sort([](auto &a, auto &b) -> bool {
+  _context->blendRenderList.sort([](auto &a, auto &b) -> bool {
     return a.matrixModel[3][2] < b.matrixModel[3][2];
   });
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -256,21 +265,21 @@ void Renderer::present() {
     activeShader("internal", "basic");
   }
   glDisable(GL_BLEND);
-  for (auto &item : _normalRenderList) {
+  for (auto &item : _context->normalRenderList) {
     setMaterial(item.material);
     _constants->setField("model", item.matrixModel);
     _shader->setUniform(_constants);
     item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
   }
-  _normalRenderList.clear();
+  _context->normalRenderList.clear();
   glEnable(GL_BLEND);
-  for (auto &item : _blendRenderList) {
+  for (auto &item : _context->blendRenderList) {
     setMaterial(item.material);
     _constants->setField("model", item.matrixModel);
     _shader->setUniform(_constants);
     item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
   }
-  _blendRenderList.clear();
+  _context->blendRenderList.clear();
 
   if (_shaderRenderTargets.size() > 1) {
     auto it = pipeline.begin();

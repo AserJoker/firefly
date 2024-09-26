@@ -34,11 +34,14 @@ local Scene = {};
 --- @param type "ortho"|"perspective"
 function Scene:setCamera(type) end
 
+--- @class RenderTarget:Node
+local RenderTarget = {}
+
 --- @class Sprite2D:Node
 local Sprite2D = {}
 
---- @param path string
-function Sprite2D:setTexture(path) end
+--- @param src string
+function Sprite2D:setTexture(src) end
 
 --- @return {width:integer,height:integer}
 function Sprite2D:getTextureSize() end
@@ -81,7 +84,7 @@ function Sprite2D:setBlend(alpha) end
 --- @return number
 function Sprite2D:getBlend() end
 
---- @param path string
+--- @param path string|RenderTarget
 --- @return Sprite2D
 function createSprite2D(path) end
 
@@ -94,10 +97,15 @@ function setScene(scene) end
 --- @return Scene
 function getScene() end
 
+--- @param size {width:integer,height:integer}
+--- @return RenderTarget
+function createRenderTarget(size) end
+
 return {
     createSprite2D = createSprite2D,
     setShader = setShader,
     createScene = createScene,
     setScene = setScene,
-    getScene = getScene
+    getScene = getScene,
+    createRenderTarget = createRenderTarget
 }

@@ -17,6 +17,10 @@ private:
     core::AutoPtr<Material> material;
     glm::mat4 matrixModel;
   };
+  struct RenderContext : public core::Object {
+    std::list<RenderItem> normalRenderList;
+    std::list<RenderItem> blendRenderList;
+  };
 
 private:
   std::string _shaderName;
@@ -24,8 +28,7 @@ private:
 
   core::AutoPtr<gl::Constant> _constants;
 
-  std::list<RenderItem> _normalRenderList;
-  std::list<RenderItem> _blendRenderList;
+  core::AutoPtr<RenderContext> _context;
 
   glm::ivec4 _viewport;
 
@@ -55,5 +58,7 @@ public:
   core::AutoPtr<gl::Program> getShaderProgram();
 
   void present();
+  core::AutoPtr<RenderContext> pushContext();
+  void popContext(const core::AutoPtr<RenderContext> &ctx);
 };
 } // namespace firefly::video

@@ -16,6 +16,7 @@
 #include "script/helper/Trait_Node.hpp"
 #include "script/helper/Trait_Promise.hpp"
 #include "script/helper/Trait_Properties.hpp"
+#include "script/helper/Trait_RenderTarget.hpp"
 #include "script/helper/Trait_Resource.hpp"
 #include "script/helper/Trait_Scene.hpp"
 #include "script/helper/Trait_Sprite2D.hpp"
@@ -63,6 +64,7 @@ void GameApplication::initScript() {
   script::Trait_Node::initialize(_script);
   script::Trait_Sprite2D::initialize(_script);
   script::Trait_Scene::initialize(_script);
+  script::Trait_RenderTarget::initialize(_script);
 
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);
