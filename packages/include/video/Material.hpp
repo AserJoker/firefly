@@ -2,15 +2,16 @@
 #include "core/AutoPtr.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
+#include "gl/AlphaFunc.hpp"
 #include "gl/BlendFunc.hpp"
 #include "gl/Constant.hpp"
 #include "gl/Texture2D.hpp"
 #include "gl/TextureWrapMode.hpp"
-#include "gl/AlphaFunc.hpp"
 #include <functional>
 #include <glm/glm.hpp>
 #include <set>
 #include <unordered_map>
+
 
 namespace firefly::video {
 class Material : public core::Object, public core::Cache<Material> {
@@ -86,6 +87,8 @@ private:
   std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> _blendFunc;
   bool _visible;
 
+  uint32_t _instanced;
+
 public:
   Material();
   const std::unordered_map<std::string, TextureInfo> &getTextures() const;
@@ -114,6 +117,7 @@ public:
   const float &getShininess() const;
   const float &getShininessStrength() const;
   const std::string &getName() const;
+  const uint32_t& getInstanced() const;
 
   void setAmbient(const glm::vec3 &color);
   void setDiffuse(const glm::vec3 &color);
@@ -129,6 +133,7 @@ public:
   void setShininess(float value);
   void setShininessStrength(float value);
   void setName(const std::string &name);
+  void setInstanced(uint32_t instanced);
 
   const bool &isBlend() const;
   void setBlend(bool value);
@@ -147,8 +152,8 @@ public:
 
   const bool &isAlphaTest() const;
   void setAlphaTest(bool value);
-  const std::pair<gl::ALPHA_FUNC, float>& getAlphaFunc() const;
-  void setAlphaFunc(const std::pair<gl::ALPHA_FUNC, float>& func);
+  const std::pair<gl::ALPHA_FUNC, float> &getAlphaFunc() const;
+  void setAlphaFunc(const std::pair<gl::ALPHA_FUNC, float> &func);
 
   void enableAttribute(const std::string &name);
   void disableAttribute(const std::string &name);

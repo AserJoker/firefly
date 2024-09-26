@@ -50,6 +50,7 @@ public:
   const Bounding &getBounding() const;
   const BoundingShpere &getBoundingSphere() const;
   virtual void draw(gl::DRAW_MODE mode) const;
+  virtual void drawInstanced(gl::DRAW_MODE mode, uint32_t count) const;
 
 public:
   static constexpr const uint32_t ATTR_POSITION = 0;

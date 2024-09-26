@@ -16,7 +16,7 @@ Material::Material()
       _stencilTest(false), _blend(false),
       _blendFunc(
           {gl::BLEND_FUNC::SRC_ALPHA, gl::BLEND_FUNC::ONE_MINUS_SRC_ALPHA}),
-      _visible(true) {
+      _visible(true), _instanced(1) {
 
   enableAttribute(DIFFUSE_TEX);
 }
@@ -81,6 +81,9 @@ void Material::setAmbient(const glm::vec3 &color) {
     };
   }
 }
+
+const uint32_t &Material::getInstanced() const { return _instanced; }
+
 void Material::setDiffuse(const glm::vec3 &color) {
   _diffuse = color;
   if (!_attributes.contains(AMBIENT_COLOR)) {
@@ -90,6 +93,7 @@ void Material::setDiffuse(const glm::vec3 &color) {
     };
   }
 }
+
 void Material::setSpecular(const glm::vec3 &color) {
   _specular = color;
   if (!_attributes.contains(SPECULAR_COLOR)) {
@@ -166,6 +170,8 @@ void Material::setShininessStrength(float value) {
   }
 }
 void Material::setName(const std::string &name) { _name = name; }
+
+void Material::setInstanced(uint32_t instanced) { _instanced = instanced; }
 
 const bool &Material::isBlend() const { return _blend; }
 void Material::setBlend(bool value) { _blend = value; }

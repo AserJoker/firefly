@@ -176,3 +176,17 @@ void Geometry::draw(gl::DRAW_MODE mode) const {
                    0);
   }
 }
+void Geometry::drawInstanced(gl::DRAW_MODE mode, uint32_t count) const {
+  if (!_attributes.contains(Geometry::ATTR_POSITION)) {
+    return;
+  }
+  gl::VertexArray::bind(_vao);
+  if (!_attrIndex) {
+    glDrawArraysInstanced(
+        (GLenum)mode, 0,
+        _attributes.at(Geometry::ATTR_POSITION)->getItemCount(), count);
+  } else {
+    glDrawElementsInstanced((GLenum)mode, _attrIndex->getIndicesCount(),
+                            GL_UNSIGNED_INT, 0, count);
+  }
+}

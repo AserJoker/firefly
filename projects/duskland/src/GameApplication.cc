@@ -57,6 +57,7 @@ void GameApplication::initScript() {
   _script->setBridge(new script::LuaBridge());
   _script->eval(
       "package.path = package.path..';./mods/?/lua/init.lua;./lua/?/init.lua'");
+  auto scope = _script->pushScope();
   script::Trait_Buffer::initialize(_script);
   script::Trait_Resource::initialize(_script);
   script::Trait_Properties::initialize(_script);
@@ -78,6 +79,8 @@ void GameApplication::initScript() {
   script::Module_Video::open(_script);
   script::Module_Co::open(_script);
   _script->eval("require('duskland')");
+  _script->popScope(scope);
+  _script->gc();
 }
 
 void GameApplication::initLocale() {

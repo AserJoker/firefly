@@ -269,7 +269,12 @@ void Renderer::present() {
     setMaterial(item.material);
     _constants->setField("model", item.matrixModel);
     _shader->setUniform(_constants);
-    item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
+    auto instanced = item.material->getInstanced();
+    if (instanced > 1) {
+      item.geometry->drawInstanced(gl::DRAW_MODE::TRIANGLES, instanced);
+    } else {
+      item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
+    }
   }
   _context->normalRenderList.clear();
   glEnable(GL_BLEND);
@@ -277,7 +282,12 @@ void Renderer::present() {
     setMaterial(item.material);
     _constants->setField("model", item.matrixModel);
     _shader->setUniform(_constants);
-    item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
+    auto instanced = item.material->getInstanced();
+    if (instanced > 1) {
+      item.geometry->drawInstanced(gl::DRAW_MODE::TRIANGLES, instanced);
+    } else {
+      item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
+    }
   }
   _context->blendRenderList.clear();
 
