@@ -1,20 +1,14 @@
 #pragma once
 
-#include "AutoPtr.hpp"
-#include "core/AutoPtr.hpp"
 #include <cstdint>
 #include <fmt/core.h>
 #include <string>
-#include <unordered_map>
 
 namespace firefly::core {
 class Object {
 private:
   uint32_t _ref;
   std::string _identity;
-  uint32_t _version;
-
-  std::unordered_map<std::string, core::AutoPtr<Object>> _metadata;
 
 public:
   inline const uint32_t &addRef() { return ++_ref; }
@@ -25,19 +19,12 @@ public:
 
   inline const std::string getIdentity() const { return _identity; }
 
-  Object() : _ref(0), _version(0) {
+  Object() : _ref(0) {
     _identity = fmt::format("[0x{:x}]", (ptrdiff_t)this);
   };
 
   virtual void initialize() {}
   virtual ~Object() = default;
 
-  constexpr inline void setVersion(uint32_t version) { _version = version; }
-  constexpr inline const uint32_t &getVersion() const { return _version; }
-
-  void setMetadata(const std::string &name,
-                   const core::AutoPtr<Object> &data) const;
-  core::AutoPtr<Object> getMetadata(const std::string &name);
-  const core::AutoPtr<Object> getMetadata(const std::string &name) const;
 };
 } // namespace firefly::core

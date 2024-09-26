@@ -4,6 +4,7 @@
 
 #include "runtime/CmdLine.hpp"
 #include <fmt/format.h>
+#include <algorithm>
 
 
 using namespace firefly::runtime;
