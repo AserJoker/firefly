@@ -1,4 +1,5 @@
 #include "video/Scene.hpp"
+#include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "runtime/Application.hpp"
 #include "video/OrthoCamera.hpp"
@@ -10,6 +11,8 @@
 #include <glm/fwd.hpp>
 using namespace firefly;
 using namespace firefly::video;
+
+core::AutoPtr<Scene> Scene::scene = nullptr;
 
 core::AutoPtr<RenderTarget> Scene::getRenderTarget() {
   auto parent = getParent();

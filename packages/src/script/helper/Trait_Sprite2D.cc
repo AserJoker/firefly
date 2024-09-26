@@ -1,6 +1,7 @@
 #include "script/helper/Trait_Sprite2D.hpp"
 #include "exception/ValidateException.hpp"
 #include "script/Script.hpp"
+#include "script/helper/Trait_Node.hpp"
 #include "video/Sprite2D.hpp"
 using namespace firefly;
 using namespace firefly::script;
@@ -177,10 +178,10 @@ core::AutoPtr<Value>
 Trait_Sprite2D::create(core::AutoPtr<Script> ctx,
                        core::AutoPtr<video::Sprite2D> sprite) {
   auto global = ctx->getNativeGlobal();
-  auto Buffer = global->getField(ctx, "Sprite2D");
-  auto instance = ctx->createValue()->setObject(ctx)->setOpaque(sprite);
-  for (auto &field : Buffer->getKeys(ctx)) {
-    instance->setField(ctx, field, Buffer->getField(ctx, field));
+  auto Sprite2D = global->getField(ctx, "Sprite2D");
+  auto instance = Trait_Node::create(ctx, sprite);
+  for (auto &field : Sprite2D->getKeys(ctx)) {
+    instance->setField(ctx, field, Sprite2D->getField(ctx, field));
   }
   return instance;
 }

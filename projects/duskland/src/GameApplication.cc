@@ -13,9 +13,11 @@
 #include "script/Value.hpp"
 #include "script/bridge/LuaBridge.hpp"
 #include "script/helper/Trait_Buffer.hpp"
+#include "script/helper/Trait_Node.hpp"
 #include "script/helper/Trait_Promise.hpp"
 #include "script/helper/Trait_Properties.hpp"
 #include "script/helper/Trait_Resource.hpp"
+#include "script/helper/Trait_Scene.hpp"
 #include "script/helper/Trait_Sprite2D.hpp"
 #include "script/lib/Module_Array.hpp"
 #include "script/lib/Module_Co.hpp"
@@ -28,9 +30,7 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
-#include "video/RenderTarget.hpp"
 #include "video/Scene.hpp"
-#include "video/Sprite2D.hpp"
 #include <SDL_image.h>
 #include <SDL_timer.h>
 #include <fmt/format.h>
@@ -49,8 +49,6 @@
 using namespace firefly;
 using namespace duskland;
 
-core::AutoPtr<video::Scene> scene;
-
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 
@@ -62,7 +60,9 @@ void GameApplication::initScript() {
   script::Trait_Resource::initialize(_script);
   script::Trait_Properties::initialize(_script);
   script::Trait_Promise::initialize(_script);
+  script::Trait_Node::initialize(_script);
   script::Trait_Sprite2D::initialize(_script);
+  script::Trait_Scene::initialize(_script);
 
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);
@@ -105,21 +105,6 @@ void GameApplication::onInitialize() {
   _locale->reload();
   _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
-  scene = new video::Scene();
-  core::AutoPtr preview = new video::Sprite2D();
-  core::AutoPtr rt = new video::RenderTarget({128, 192});
-  core::AutoPtr rtScene = new video::Scene();
-  preview->setTexture(rt->getAttachments()[0]);
-  preview->setRect({128, 192, 128, 192});
-  preview->setSourceRect({0, 0, 128, 192});
-  core::AutoPtr sprite = new video::Sprite2D("001-Fighter01.png");
-  core::AutoPtr sprite2 = new video::Sprite2D("001-Fighter01.png");
-  sprite->setRect({0, 0, 128, 192});
-  rtScene->appendChild(sprite);
-  rt->appendChild(rtScene);
-  scene->appendChild(rt);
-  scene->appendChild(preview);
-  scene->appendChild(sprite2);
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   getWindow()->show();
 }
@@ -138,7 +123,9 @@ void GameApplication::onMainLoop() {
                              createNumber(_script, now - timePreFrame));
   _script->popScope(scope);
   timePreFrame = now;
-  scene->onTick();
+  if (video::Scene::scene != nullptr) {
+    video::Scene::scene->onTick();
+  }
   getWindow()->present();
 }
 

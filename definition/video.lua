@@ -13,7 +13,28 @@ local format = {}
 --- @field height integer
 local Rect = {}
 
---- @class Sprite2D
+--- @param shaderName string
+function setShader(shaderName) end
+
+--- @class Node
+local Node = {};
+
+---@param child Node
+function Node:appendChild(child) end
+
+---@param child Node
+function Node:removeChild(child) end
+
+---@return Node
+function Node:getParent() end
+
+--- @class Scene:Node
+local Scene = {};
+
+--- @param type "ortho"|"perspective"
+function Scene:setCamera(type) end
+
+--- @class Sprite2D:Node
 local Sprite2D = {}
 
 --- @param path string
@@ -64,29 +85,19 @@ function Sprite2D:getBlend() end
 --- @return Sprite2D
 function createSprite2D(path) end
 
---- @param shaderName string
-function setShader(shaderName) end
+--- @return Scene
+function createScene() end
 
---- @class Node
-local Node = {};
+--- @param scene Scene
+function setScene(scene) end
 
----@param child Node
-function Node:appendChild(child) end
-
----@param child Node
-function Node:removeChild(child) end
-
----@return Node
-function Node:getParent() end
-
---- @class Camera:Node
-local Camera = {};
-
---- @return Camera
-function createOrthoCamera() end
+--- @return Scene
+function getScene() end
 
 return {
     createSprite2D = createSprite2D,
     setShader = setShader,
-    createOrthoCamera = createOrthoCamera
+    createScene = createScene,
+    setScene = setScene,
+    getScene = getScene
 }

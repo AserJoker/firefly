@@ -6,6 +6,9 @@
 namespace firefly::video {
 class Scene : public Node {
 public:
+  static core::AutoPtr<Scene> scene;
+
+public:
   enum class CameraType { NIL, ORTHO, PERSPECTIVE };
 
 private:

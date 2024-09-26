@@ -10,6 +10,10 @@ require'event'.on('gameLoaded', function()
     video.setShader("2d");
     local sprite = video.createSprite2D("001-Fighter01.png")
     local tile = video.createSprite2D("001-Grassland01.png")
+    local scene = video.createScene();
+    scene:appendChild(sprite)
+    scene:appendChild(tile)
+    video.setScene(scene)
 
     sprite:setZIndex(1)
 
@@ -55,7 +59,6 @@ require'event'.on('gameLoaded', function()
             height = 48
         })
         sprite:setRect({x = x, y = y, width = 32, height = 48})
-        tile:getZIndex()
     end)
 
     require'event'.on('update', function(time)
