@@ -21,6 +21,9 @@ Material::Material()
   enableAttribute(DIFFUSE_TEX);
 }
 
+void Material::setShader(const std::string &shader) { _shader = shader; }
+const std::string &Material::getShader() const { return _shader; }
+
 const std::unordered_map<std::string, Material::TextureInfo> &
 Material::getTextures() const {
   return _textures;

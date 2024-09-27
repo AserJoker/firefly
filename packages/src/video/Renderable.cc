@@ -5,6 +5,6 @@ using namespace firefly;
 using namespace firefly::video;
 void Renderable::onTick() {
   auto renderer = core::Singleton<Renderer>::instance();
-  renderer->draw(getMaterial(), getGeometry(), getModelMatrix());
+  renderer->draw(getMaterial(), getGeometry(), getMatrixModel());
   Node::onTick();
 }

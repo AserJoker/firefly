@@ -51,9 +51,26 @@ void Geometry::setAttribute(uint32_t index,
   } else if (type == typeid(uint16_t).name()) {
     dtype = gl::DATA_TYPE::UNSIGNED_SHORT;
   }
-  _vao->setAttribute(index, dtype, attribute->getItemSize(),
-                     attribute->isNormalized(), attribute->getStride(), 0);
-  _vao->enableAttribute(index);
+  if (attribute->getItemSize() <= 4) {
+    _vao->setAttribute(index, dtype, attribute->getItemSize(),
+                       attribute->isNormalized(), attribute->getStride(), 0);
+    _vao->enableAttribute(index);
+  } else {
+    auto offset = 0;
+    auto idx = index;
+    auto valueSize = attribute->getStride() / attribute->getItemSize();
+    while (offset < valueSize) {
+      auto itemSize = 4;
+      if (offset + itemSize > valueSize) {
+        itemSize = valueSize - itemSize;
+      }
+      _vao->setAttribute(idx, dtype, itemSize, attribute->isNormalized(),
+                         valueSize * itemSize, offset * valueSize);
+      _vao->enableAttribute(idx);
+      idx++;
+      offset += itemSize;
+    }
+  }
 }
 core::AutoPtr<Attribute> Geometry::getAttribute(uint32_t index) {
   if (!_attributes.contains(index)) {
@@ -61,12 +78,19 @@ core::AutoPtr<Attribute> Geometry::getAttribute(uint32_t index) {
   }
   return _attributes.at(index);
 }
+
 const core::AutoPtr<Attribute> Geometry::getAttribute(uint32_t index) const {
   if (!_attributes.contains(index)) {
     return nullptr;
   }
   return _attributes.at(index);
 }
+
+void Geometry::setVertexAttribDivisor(uint32_t index, uint32_t divisor) {
+  gl::VertexArray::bind(_vao);
+  _vao->setVertexAttribDivisor(index, divisor);
+}
+
 void Geometry::removeAttribute(uint32_t index) {
   _attributes.erase(index);
   _vao->disableAttribute(index);

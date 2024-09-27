@@ -28,6 +28,16 @@ function Node:removeChild(child) end
 ---@return Node
 function Node:getParent() end
 
+--- @return string
+function Node:getId() end
+
+--- @param id string
+function Node:setId(id) end
+
+--- @param id string
+--- @return Node
+function Node:getChild(id) end
+
 --- @class Scene:Node
 local Scene = {};
 

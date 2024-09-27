@@ -177,6 +177,13 @@ void Renderer::setShader(const std::string &name) {
 const std::string &Renderer::getShader() const { return _shaderName; }
 
 void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
+  auto shader = material->getShader();
+  if (shader.empty()) {
+    shader = "gbuffer";
+  }
+  if (!activeShader(_shaderName, shader)) {
+    activeShader("internal", "basic");
+  }
   for (auto &[_, attribute] : material->getAttributes()) {
     attribute(_constants);
   }
@@ -261,9 +268,6 @@ void Renderer::present() {
     return a.matrixModel[3][2] < b.matrixModel[3][2];
   });
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  if (!activeShader(_shaderName, "gbuffer")) {
-    activeShader("internal", "basic");
-  }
   glDisable(GL_BLEND);
   for (auto &item : _context->normalRenderList) {
     setMaterial(item.material);

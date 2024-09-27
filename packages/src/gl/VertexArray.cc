@@ -53,6 +53,9 @@ void VertexArray::enableAttribute(uint32_t index) {
 void VertexArray::disableAttribute(uint32_t index) {
   glDisableVertexAttribArray(index);
 }
+void VertexArray::setVertexAttribDivisor(uint32_t index, uint32_t divisor) {
+  glVertexAttribDivisor(index, divisor);
+}
 void VertexArray::bind(const core::AutoPtr<VertexArray> &vao) {
   glBindVertexArray(vao->_handle);
 }

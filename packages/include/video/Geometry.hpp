@@ -37,6 +37,7 @@ public:
 
   core::AutoPtr<Attribute> getAttribute(uint32_t index);
   const core::AutoPtr<Attribute> getAttribute(uint32_t index) const;
+  void setVertexAttribDivisor(uint32_t index, uint32_t divisor = 1);
   void removeAttribute(uint32_t index);
   const std::unordered_map<uint32_t, core::AutoPtr<Attribute>> &
   getAttributes() const;

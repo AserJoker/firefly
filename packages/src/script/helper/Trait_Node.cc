@@ -28,13 +28,33 @@ FUNC_DEF(Trait_Node::getParent) {
   return {Trait_Node::create(ctx, self->getParent())};
 }
 
+FUNC_DEF(Trait_Node::getId) {
+  auto self = args[0]->getOpaque().cast<video::Node>();
+  return {ctx->createValue()->setString(ctx, self->getId())};
+}
+FUNC_DEF(Trait_Node::setId) {
+  auto self = args[0]->getOpaque().cast<video::Node>();
+  auto id = args[1]->toString(ctx);
+  self->setId(id);
+  return {};
+}
+FUNC_DEF(Trait_Node::getChild) {
+  auto self = args[0]->getOpaque().cast<video::Node>();
+  auto id = args[1]->toString(ctx);
+  auto child = self->getChild(id);
+  return {Trait_Node::create(ctx, child)};
+}
+
 void Trait_Node::initialize(core::AutoPtr<Script> ctx) {
   auto global = ctx->getNativeGlobal();
   auto Node = ctx->createValue()
                   ->setObject(ctx)
                   ->setFunctionField(ctx, appendChild)
                   ->setFunctionField(ctx, removeChild)
-                  ->setFunctionField(ctx, getParent);
+                  ->setFunctionField(ctx, getParent)
+                  ->setFunctionField(ctx, getId)
+                  ->setFunctionField(ctx, setId)
+                  ->setFunctionField(ctx, getChild);
   global->setField(ctx, "Node", Node);
 }
 

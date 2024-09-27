@@ -15,6 +15,7 @@ public:
                     bool normalized, uint32_t stride, uint32_t offset);
   void enableAttribute(uint32_t index);
   void disableAttribute(uint32_t index);
+  void setVertexAttribDivisor(uint32_t index, uint32_t divisor = 1);
 
 public:
   static void bind(const core::AutoPtr<VertexArray> &vao);

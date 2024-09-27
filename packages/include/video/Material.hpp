@@ -12,7 +12,6 @@
 #include <set>
 #include <unordered_map>
 
-
 namespace firefly::video {
 class Material : public core::Object, public core::Cache<Material> {
 public:
@@ -63,6 +62,7 @@ private:
   std::set<std::string> _enableAttributes;
 
   std::string _name;
+  std::string _shader;
 
   glm::vec3 _ambient;
   glm::vec3 _diffuse;
@@ -103,6 +103,9 @@ public:
                   const glm::mat4 &textureCoordMatrix = glm::mat4(1.0f),
                   float blend = 1.0f);
 
+  void setShader(const std::string &shader);
+  const std::string &getShader() const;
+
   const glm::vec3 &getAmbient() const;
   const glm::vec3 &getDiffuse() const;
   const glm::vec3 &getSpecular() const;
@@ -117,7 +120,7 @@ public:
   const float &getShininess() const;
   const float &getShininessStrength() const;
   const std::string &getName() const;
-  const uint32_t& getInstanced() const;
+  const uint32_t &getInstanced() const;
 
   void setAmbient(const glm::vec3 &color);
   void setDiffuse(const glm::vec3 &color);

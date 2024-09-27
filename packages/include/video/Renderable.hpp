@@ -12,6 +12,6 @@ public:
 protected:
   virtual const core::AutoPtr<Geometry> &getGeometry() const = 0;
   virtual const core::AutoPtr<Material> &getMaterial() const = 0;
-  virtual const glm::mat4 &getModelMatrix() const = 0;
+  virtual const glm::mat4 &getMatrixModel() const = 0;
 };
 } // namespace firefly::video

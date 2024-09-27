@@ -24,7 +24,7 @@ private:
 protected:
   const core::AutoPtr<Geometry> &getGeometry() const override;
   const core::AutoPtr<Material> &getMaterial() const override;
-  const glm::mat4 &getModelMatrix() const override;
+  const glm::mat4 &getMatrixModel() const override;
 
 public:
   Sprite2D(const std::string &path = "");
