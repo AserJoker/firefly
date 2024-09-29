@@ -59,13 +59,13 @@ void Geometry::setAttribute(uint32_t index,
     auto offset = 0;
     auto idx = index;
     auto valueSize = attribute->getStride() / attribute->getItemSize();
-    while (offset < valueSize) {
+    while (offset < attribute->getItemSize()) {
       auto itemSize = 4;
-      if (offset + itemSize > valueSize) {
+      if (offset + itemSize > attribute->getItemSize()) {
         itemSize = valueSize - itemSize;
       }
       _vao->setAttribute(idx, dtype, itemSize, attribute->isNormalized(),
-                         valueSize * itemSize, offset * valueSize);
+                         attribute->getStride(), offset * valueSize);
       _vao->enableAttribute(idx);
       idx++;
       offset += itemSize;

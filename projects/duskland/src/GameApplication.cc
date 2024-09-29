@@ -31,6 +31,7 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
+#include "video/ParticleGenerator.hpp"
 #include "video/Scene.hpp"
 #include <SDL_image.h>
 #include <SDL_timer.h>
@@ -49,6 +50,16 @@
 
 using namespace firefly;
 using namespace duskland;
+
+constexpr static const float quadVec[] = {0.f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+                                          0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f};
+
+constexpr static const float quadTex[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+                                          0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f};
+
+constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
+
+core::AutoPtr<video::Scene> scene;
 
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
@@ -112,6 +123,10 @@ void GameApplication::onInitialize() {
   script::Module_Event::emit(_script, "gameLoaded");
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   getWindow()->show();
+  srand((unsigned)time(NULL));
+  scene = new video::Scene();
+  core::AutoPtr paricle = new video::ParticleGenerator(20);
+  scene->appendChild(paricle);
 }
 
 void GameApplication::onMainLoop() {
@@ -128,8 +143,11 @@ void GameApplication::onMainLoop() {
                              createNumber(_script, now - timePreFrame));
   _script->popScope(scope);
   timePreFrame = now;
-  if (video::Scene::scene != nullptr) {
-    video::Scene::scene->onTick();
+  // if (video::Scene::scene != nullptr) {
+  //   video::Scene::scene->onTick();
+  // }
+  if (scene != nullptr) {
+    scene->onTick();
   }
   getWindow()->present();
 }

@@ -3,6 +3,7 @@
 #include "video/Attribute.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
+#include <chrono>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/geometric.hpp>
 using namespace firefly;
@@ -17,21 +18,18 @@ constexpr static const float quadTex[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
 constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
 ParticleGenerator::ParticleGenerator(uint32_t count) {
   _count = count;
-  _lifetime = 1.0f;
+  _lifetime = 5.0f;
   _particles.resize(count);
   for (auto i = 0; i < count; i++) {
     _particles[i].lifetime = 0.f;
-    _particles[i].color = {1, 1, 1, 1};
-    _particles[i].position = {0, 0, 0};
-    _particles[i].scale = {1.0f, 1.0f, 1.0f};
-    _particles[i].speed = {0.0f, 0.0f, 0.0f};
   }
   _matrixModel = glm::mat4(1.0f);
   _localCoords = true;
-  _initialVelocity = {0, 1, 0};
+  _initialVelocity = {0, 0.2, 0};
+  _linearAcceleration = 0.1;
   _initialScale = {1, 1, 0};
 
-  _position = {0, 0, 0};
+  _position = {100, 100, 0};
 
   _particleMatrixModels.resize(count);
   _particleMatrixTexcoords.resize(count);
@@ -43,50 +41,56 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
   _geometry->setAttribute(Geometry::ATTR_POSITION, new Attribute(quadVec, 3));
   _geometry->setAttribute(Geometry::ATTR_TEXCOORD, new Attribute(quadTex, 2));
 
-  core::AutoPtr<Attribute> model = new Attribute(
-      sizeof(glm::mat4) * _count, 0, typeid(float), 16, false, true);
-  _geometry->setAttribute(Geometry::ATTR_CUSTOM, model);
-  _geometry->setVertexAttribDivisor(Geometry::ATTR_CUSTOM);
-  _geometry->setVertexAttribDivisor(Geometry::ATTR_CUSTOM + 1);
-  _geometry->setVertexAttribDivisor(Geometry::ATTR_CUSTOM + 2);
-  _geometry->setVertexAttribDivisor(Geometry::ATTR_CUSTOM + 3);
+  _attributeModels = new Attribute(sizeof(glm::mat4) * _count, 0, typeid(float),
+                                   16, false, true);
+  _geometry->setAttribute(4, _attributeModels);
+  _geometry->setVertexAttribDivisor(4);
+  _geometry->setVertexAttribDivisor(4 + 1);
+  _geometry->setVertexAttribDivisor(4 + 2);
+  _geometry->setVertexAttribDivisor(4 + 3);
 
-  core::AutoPtr<Attribute> texModel = new Attribute(
-      sizeof(glm::mat4) * _count, 0, typeid(float), 16, false, true);
-  _geometry->setAttribute(Geometry::ATTR_CUSTOM + 4, texModel);
-  _geometry->setVertexAttribDivisor(Geometry::ATTR_CUSTOM + 4);
-  _geometry->setVertexAttribDivisor(Geometry::ATTR_CUSTOM + 5);
-  _geometry->setVertexAttribDivisor(Geometry::ATTR_CUSTOM + 6);
-  _geometry->setVertexAttribDivisor(Geometry::ATTR_CUSTOM + 7);
+  _attributeTexcoords = new Attribute(sizeof(glm::mat4) * _count, 0,
+                                      typeid(float), 16, false, true);
+  _geometry->setAttribute(8 + 4, _attributeTexcoords);
+  _geometry->setVertexAttribDivisor(8 + 4);
+  _geometry->setVertexAttribDivisor(8 + 5);
+  _geometry->setVertexAttribDivisor(8 + 6);
+  _geometry->setVertexAttribDivisor(8 + 7);
 }
 void ParticleGenerator::onTick() {
-  auto count = 0;
-  bool generator = false;
-  for (auto &p : _particles) {
-    if (!generator && p.lifetime <= 0) {
-      p.lifetime = _lifetime;
-      p.position = _position;
-      p.speed = _initialVelocity;
-      p.color = {1.0f, 1.0f, 1.0f, 1.0f};
-      p.scale = _initialScale;
-      generator = true;
-    } else {
-      p.position += p.speed;
+  using namespace std::chrono;
+  static auto clock = system_clock::now();
+  if (system_clock::now() - clock > 50ms) {
+    auto count = 0;
+    bool generator = false;
+    for (auto &p : _particles) {
+      if (!generator && p.lifetime <= 0) {
+        p.lifetime = _lifetime;
+        p.position = _position;
+        p.speed = _initialVelocity;
+        p.color = {1.0f, 1.0f, 1.0f, 1.0f};
+        p.scale = _initialScale;
+        generator = true;
+      } else {
+        p.speed *= 1 + _linearAcceleration;
+        p.position += p.speed;
+      }
+      if (p.lifetime > 0) {
+        _particleMatrixModels[count] =
+            glm::translate(glm::mat4(1.0f), p.position) *
+            glm::scale(glm::mat4(1.0f), p.scale);
+        _particleMatrixTexcoords[count] = (1.0f);
+        count++;
+      }
+      p.lifetime -= 0.1;
     }
-    if (p.lifetime > 0) {
-      _particleMatrixModels[count] =
-          (glm::scale(glm::mat4(1.0f), p.scale) *
-           glm::translate(glm::mat4(1.0f), p.position));
-      _particleMatrixTexcoords[count] = (1.0f);
-      count++;
-    }
-    p.lifetime -= 0.1;
+    _attributeModels->write(0, sizeof(glm::mat4) * count,
+                            _particleMatrixModels.data());
+    _attributeTexcoords->write(0, sizeof(glm::mat4) * count,
+                               _particleMatrixTexcoords.data());
+    _material->setInstanced(count);
+    clock = system_clock::now();
   }
-  _attributeModels->write(0, sizeof(glm::mat4) * count,
-                          _particleMatrixModels.data());
-  _attributeTexcoords->write(0, sizeof(glm::mat4) * count,
-                             _particleMatrixTexcoords.data());
-  _material->setInstanced(count);
   Renderable::onTick();
 }
 
@@ -105,3 +109,12 @@ void ParticleGenerator::setTexture(const core::AutoPtr<gl::Texture2D> &tex,
 const core::AutoPtr<gl::Texture2D> &ParticleGenerator::getTexture() const {
   return _material->getTextures().at(Material::DIFFUSE_TEX).texture;
 }
+const core::AutoPtr<Geometry> &ParticleGenerator::getGeometry() const {
+  return _geometry;
+}
+const core::AutoPtr<Material> &ParticleGenerator::getMaterial() const {
+  return _material;
+};
+const glm::mat4 &ParticleGenerator::getMatrixModel() const {
+  return _matrixModel;
+};

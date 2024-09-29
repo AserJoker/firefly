@@ -34,6 +34,7 @@ private:
   bool _localCoords;
   glm::vec3 _initialVelocity;
   float _lifetime;
+  float _linearAcceleration;
 
   glm::vec3 _position;
   glm::vec3 _initialScale;
