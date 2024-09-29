@@ -15,14 +15,10 @@ struct Atom {
   Atom *_metadata;
   std::any _value;
   TYPE _type;
-  bool _marked;
-  bool _disposed;
   Atom() {
     _type = TYPE::NIL;
     _value = nullptr;
     _metadata = nullptr;
-    _marked = false;
-    _disposed = false;
   }
   void addParent(Atom *parent) {
     parent->_children.push_back(this);

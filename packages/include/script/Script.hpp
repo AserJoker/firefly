@@ -26,9 +26,10 @@ private:
   core::AutoPtr<Scope> _root;
   core::AutoPtr<Scope> _current;
   core::AutoPtr<Bridge> _bridge;
+  std::unordered_map<ptrdiff_t, Atom *> _destroyList;
 
-  static bool checkAlived(Atom *atom,
-                          const std::unordered_map<ptrdiff_t, Atom *> &alived);
+private:
+  bool isAlived(Atom *atom, const std::unordered_map<ptrdiff_t, Atom *> &cache);
 
 public:
   Script();
@@ -49,7 +50,7 @@ public:
   void registerModule(const std::string &name, core::AutoPtr<Value> exports);
   void gc();
 
-  static void gc(core::AutoPtr<Script> ctx, Atom *atom);
+  void destroy(Atom *atom);
 };
 #define FUNC_DEF(name)                                                         \
   Value::Stack name(core::AutoPtr<Script> ctx, Value::Stack args)

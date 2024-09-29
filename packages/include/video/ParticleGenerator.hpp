@@ -31,21 +31,12 @@ private:
   glm::mat4 _matrixModel;
   uint32_t _count;
 
-  bool _random;
   bool _localCoords;
-  float _spread;
-  float _flatness;
   glm::vec3 _initialVelocity;
-  float _angularVelocity;
-  float _spinVelocity;
-  float _linerAcceleration;
-  float _radialAcceleration;
-  float _tangentialAcceleration;
   float _lifetime;
-  glm::vec3 _damping;
-  glm::vec3 _scale;
 
   glm::vec3 _position;
+  glm::vec3 _initialScale;
 
 protected:
   const core::AutoPtr<Geometry> &getGeometry() const override;

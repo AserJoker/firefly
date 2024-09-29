@@ -1,3 +1,4 @@
+
 #define _CRT_SECURE_NO_WARNINGS
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
@@ -7,12 +8,13 @@
 #include <clocale>
 #include <exception>
 #include <iostream>
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
-using namespace duskland;
 using namespace firefly;
+using namespace duskland;
 
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, NULL);

@@ -5,7 +5,7 @@
 #include "script/Scope.hpp"
 #include "script/Value.hpp"
 #include <cstddef>
-#include <queue>
+#include <list>
 #include <unordered_map>
 #include <vector>
 
@@ -16,14 +16,20 @@ Script::Script() {
   _current = _root;
   _bridge = core::Singleton<Bridge>::instance();
 }
-Script::~Script() {  }
+Script::~Script() {}
 void Script::dispose() {
   if (_bridge != nullptr) {
     _bridge->dispose();
     _bridge = nullptr;
-    gc(this, _root->getRoot());
-    _root = nullptr;
   }
+  auto global = _root->getRoot();
+  while (!global->_children.empty()) {
+    auto it = *global->_children.begin();
+    it->removeParent(global);
+    destroy(it);
+  }
+  delete _root->getRoot();
+  _root = nullptr;
 }
 
 void Script::setBridge(core::AutoPtr<Bridge> bridge) {
@@ -71,107 +77,18 @@ core::AutoPtr<Scope> Script::pushScope() {
 }
 void Script::popScope(core::AutoPtr<Scope> scope) {
   _current = scope;
-  for (auto &sco : _current->getChildren()) {
-    auto atom = sco->getRoot();
-    gc(this, atom);
-  }
+  auto children = _current->getChildren();
   _current->getChildren().clear();
+  for (auto &sco : children) {
+    auto atom = sco->getRoot();
+    atom->removeParent(_current->getRoot());
+  }
+  for (auto &sco : children) {
+    destroy(sco->getRoot());
+  }
 }
 core::AutoPtr<Scope> Script::getCurrentScope() { return _current; }
 core::AutoPtr<Scope> Script::getRootScope() { return _root; }
-bool Script::checkAlived(Atom *atom,
-                         const std::unordered_map<ptrdiff_t, Atom *> &alived) {
-  if (atom->_disposed) {
-    return false;
-  }
-  std::queue<Atom *> workflow;
-  workflow.push(atom);
-  std::unordered_map<ptrdiff_t, Atom *> cache;
-  while (!workflow.empty()) {
-    auto item = workflow.front();
-    workflow.pop();
-    if (alived.contains((ptrdiff_t)item)) {
-      return true;
-    }
-    if (cache.contains((ptrdiff_t)item) || item->_disposed) {
-      continue;
-    }
-    cache[(ptrdiff_t)item] = item;
-    for (auto &p : item->_parent) {
-      workflow.push(p);
-    }
-  }
-  return false;
-}
-void Script::gc(core::AutoPtr<Script> ctx, Atom *atom) {
-  static int level = 0;
-  level++;
-  atom->_disposed = true;
-  std::unordered_map<ptrdiff_t, Atom *> alived;
-  std::unordered_map<ptrdiff_t, Atom *> destroyed;
-  std::queue<Atom *> workflow;
-  workflow.push(atom);
-  if (atom != ctx->_root->getRoot()) {
-    auto root = ctx->_root->getRoot();
-    alived[(ptrdiff_t)root] = root;
-  }
-  while (!workflow.empty()) {
-    auto item = workflow.front();
-    workflow.pop();
-    auto addr = (ptrdiff_t)item;
-    if (alived.contains(addr) || destroyed.contains(addr)) {
-      continue;
-    }
-    if (checkAlived(item, alived)) {
-      item->_marked = false;
-      alived[(ptrdiff_t)item] = item;
-    } else {
-      if (!item->_marked) {
-        item->_marked = true;
-        destroyed[(ptrdiff_t)item] = item;
-        for (auto &c : item->_children) {
-          workflow.push(c);
-        }
-      }
-    }
-  }
-  for (auto &[_, item] : destroyed) {
-    if (item->_metadata) {
-      auto metadata = ctx->createValue(item->_metadata);
-      auto gc = metadata->getField(ctx, "gc");
-      if (gc->getType(ctx) != Atom::TYPE::NIL) {
-        gc->call(ctx, {new Value(item)});
-      }
-    }
-  }
-  level--;
-  if (level == 0) {
-    workflow.push(atom);
-    std::unordered_map<ptrdiff_t, Atom *> cache;
-    destroyed.clear();
-    while (!workflow.empty()) {
-      auto item = workflow.front();
-      workflow.pop();
-      if (cache.contains((ptrdiff_t)item)) {
-        continue;
-      }
-      if (item->_marked || atom == ctx->_root->getRoot()) {
-        for (auto &c : item->_children) {
-          std::erase(c->_parent, item);
-          workflow.push(c);
-        }
-        for (auto &p : item->_parent) {
-          std::erase(p->_children, item);
-        }
-        destroyed[(ptrdiff_t)item] = item;
-      }
-      cache[(ptrdiff_t)item] = item;
-    }
-    for (auto &[_, item] : destroyed) {
-      delete item;
-    }
-  }
-}
 void Script::store(const std::string &name, core::AutoPtr<Value> value) {
   _current->store(name, value);
 }
@@ -198,4 +115,97 @@ void Script::gc() {
   if (_bridge != nullptr) {
     _bridge->gc();
   }
+}
+
+bool Script::isAlived(Atom *atom,
+                      const std::unordered_map<ptrdiff_t, Atom *> &alived) {
+  std::list<Atom *> workflow = {atom};
+  std::unordered_map<ptrdiff_t, Atom *> cache;
+  while (!workflow.empty()) {
+    auto it = *workflow.begin();
+    workflow.erase(workflow.begin());
+    if (cache.contains((ptrdiff_t)it)) {
+      continue;
+    }
+    cache[(ptrdiff_t)it] = it;
+    if (alived.contains((ptrdiff_t)it) || it == _root->getRoot()) {
+      return true;
+    }
+    auto parents = it->_parent;
+    for (auto &p : parents) {
+      workflow.push_back(p);
+    }
+  }
+  return false;
+}
+void Script::destroy(Atom *atom) {
+  if (_destroyList.contains((ptrdiff_t)atom) || atom == _root->getRoot()) {
+    return;
+  }
+  static uint32_t destroyLevel = 0;
+  destroyLevel++;
+  auto root = _root->getRoot();
+  std::unordered_map<ptrdiff_t, Atom *> cache;
+  std::unordered_map<ptrdiff_t, Atom *> alived;
+  std::list<Atom *> destroyed;
+  std::list<Atom *> workflow = {atom};
+  while (!workflow.empty()) {
+    auto it = *workflow.begin();
+    workflow.erase(workflow.begin());
+    if (cache.contains((ptrdiff_t)it)) {
+      continue;
+    }
+    cache[(ptrdiff_t)it] = it;
+    if (isAlived(it, alived)) {
+      alived[(ptrdiff_t)it] = it;
+    } else {
+      _destroyList[(ptrdiff_t)it] = it;
+      destroyed.push_back(it);
+    }
+    for (auto &c : it->_children) {
+      if (c == root) {
+        c->removeParent(it);
+      } else {
+        workflow.push_back(c);
+      }
+    }
+  }
+  for (auto &c : destroyed) {
+    if (c->_metadata) {
+      auto scope = pushScope();
+      auto metadata = createValue(c->_metadata);
+      if (metadata->getType(this) != Atom::TYPE::NIL) {
+        auto gc = metadata->getField(this, "gc");
+        c->addParent(root);
+        if (gc->getType(this) != Atom::TYPE::NIL) {
+          auto obj = createValue(c);
+          gc->call(this, {obj});
+        }
+      }
+      popScope(scope);
+      c->removeParent(root);
+    }
+  }
+  if (destroyLevel == 1) {
+    alived = {{(ptrdiff_t)root, root}};
+    destroyed.clear();
+    for (auto &[_, c] : _destroyList) {
+      if (!isAlived(c, alived)) {
+        while (!c->_children.empty()) {
+          auto cc = *c->_children.begin();
+          cc->removeParent(c);
+        }
+        while (!c->_parent.empty()) {
+          auto p = *c->_parent.begin();
+          c->removeParent(p);
+        }
+        destroyed.push_back(c);
+      }
+    }
+    for (auto &c : destroyed) {
+      delete c;
+    }
+    _destroyList.clear();
+  }
+  destroyLevel--;
 }

@@ -27,18 +27,9 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
     _particles[i].speed = {0.0f, 0.0f, 0.0f};
   }
   _matrixModel = glm::mat4(1.0f);
-  _random = false;
   _localCoords = true;
-  _spread = 0.f;
-  _flatness = 0.f;
   _initialVelocity = {0, 1, 0};
-  _angularVelocity = 0.f;
-  _spinVelocity = 0.f;
-  _linerAcceleration = 0.f;
-  _radialAcceleration = 0.f;
-  _tangentialAcceleration = 0.f;
-  _damping = {0, 0, 0};
-  _scale = {1.0f, 1.0f, 1.0f};
+  _initialScale = {1, 1, 0};
 
   _position = {0, 0, 0};
 
@@ -77,17 +68,10 @@ void ParticleGenerator::onTick() {
       p.position = _position;
       p.speed = _initialVelocity;
       p.color = {1.0f, 1.0f, 1.0f, 1.0f};
-      p.scale = {1.0f, 1.0f, 1.0f};
+      p.scale = _initialScale;
       generator = true;
     } else {
-      auto d = glm::distance(p.position, _position);
-      auto vspeed = glm::cross(p.speed, {0, 0, 1});
-      p.speed += vspeed * _tangentialAcceleration;
-      p.speed *= _radialAcceleration * d;
-      p.speed *= _linerAcceleration;
-      p.speed -= _damping * d;
       p.position += p.speed;
-      p.scale += _scale;
     }
     if (p.lifetime > 0) {
       _particleMatrixModels[count] =
@@ -103,6 +87,7 @@ void ParticleGenerator::onTick() {
   _attributeTexcoords->write(0, sizeof(glm::mat4) * count,
                              _particleMatrixTexcoords.data());
   _material->setInstanced(count);
+  Renderable::onTick();
 }
 
 void ParticleGenerator::setTexture(const std::string &path, float blend,
