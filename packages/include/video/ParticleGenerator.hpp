@@ -32,9 +32,12 @@ private:
   uint32_t _count;
 
   bool _localCoords;
-  glm::vec3 _initialVelocity;
+  glm::vec3 _initialDirection;
+  float _initialVelocity;
   float _lifetime;
   float _linearAcceleration;
+  float _tangentialAcceleration;
+  float _radialAcceleration;
 
   glm::vec3 _position;
   glm::vec3 _initialScale;
@@ -52,6 +55,13 @@ public:
       gl::TEXTURE_WRAP_MODE mappingmodeV = gl::TEXTURE_WRAP_MODE::REPEAT);
   void setTexture(const core::AutoPtr<gl::Texture2D> &tex, float blend = 1.0f);
   const core::AutoPtr<gl::Texture2D> &getTexture() const;
+  void setDirection(const glm::vec3 &direction);
+  void setInitialVelocity(float value);
+  void setLinearAcceleration(float value);
+  void setTangentialAcceleration(float value);
+  void setRadialAcceleration(float value);
+  void setScale(const glm::vec3 &value);
+  void setPosition(const glm::vec3 &value);
   void onTick() override;
 };
 } // namespace firefly::video

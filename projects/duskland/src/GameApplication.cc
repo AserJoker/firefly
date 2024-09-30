@@ -126,6 +126,7 @@ void GameApplication::onInitialize() {
   srand((unsigned)time(NULL));
   scene = new video::Scene();
   core::AutoPtr paricle = new video::ParticleGenerator(20);
+  paricle->setTexture("star.png");
   scene->appendChild(paricle);
 }
 

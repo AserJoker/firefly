@@ -18,15 +18,18 @@ constexpr static const float quadTex[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
 constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
 ParticleGenerator::ParticleGenerator(uint32_t count) {
   _count = count;
-  _lifetime = 5.0f;
+  _lifetime = 1.0f;
   _particles.resize(count);
   for (auto i = 0; i < count; i++) {
     _particles[i].lifetime = 0.f;
   }
   _matrixModel = glm::mat4(1.0f);
   _localCoords = true;
-  _initialVelocity = {0, 0.2, 0};
+  _initialDirection = {0, 0.2, 0};
+  _initialVelocity = 0.1;
   _linearAcceleration = 0.1;
+  _tangentialAcceleration = 0.0f;
+  _radialAcceleration = 0.f;
   _initialScale = {1, 1, 0};
 
   _position = {100, 100, 0};
@@ -36,6 +39,8 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
   _material = new Material();
   _material->setShader("particle");
   _material->setInstanced(_count);
+  _material->setBlend(true);
+  _material->setDepthTest(false);
 
   _geometry = new Geometry();
   _geometry->setAttribute(Geometry::ATTR_POSITION, new Attribute(quadVec, 3));
@@ -57,22 +62,53 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
   _geometry->setVertexAttribDivisor(8 + 6);
   _geometry->setVertexAttribDivisor(8 + 7);
 }
+
+void ParticleGenerator::setDirection(const glm::vec3 &direction) {
+  _initialDirection = direction;
+}
+void ParticleGenerator::setInitialVelocity(float value) {
+  _initialVelocity = value;
+}
+void ParticleGenerator::setLinearAcceleration(float value) {
+  _linearAcceleration = value;
+}
+void ParticleGenerator::setTangentialAcceleration(float value) {
+  _tangentialAcceleration = value;
+}
+void ParticleGenerator::setRadialAcceleration(float value) {
+  _radialAcceleration = value;
+}
+void ParticleGenerator::setScale(const glm::vec3 &value) {
+  _initialScale = value;
+}
+void ParticleGenerator::setPosition(const glm::vec3 &value) {
+  _position = value;
+}
+
 void ParticleGenerator::onTick() {
   using namespace std::chrono;
   static auto clock = system_clock::now();
   if (system_clock::now() - clock > 50ms) {
     auto count = 0;
     bool generator = false;
+    static uint32_t fcount = 0;
     for (auto &p : _particles) {
-      if (!generator && p.lifetime <= 0) {
+      if (!generator && p.lifetime <= 0 && fcount % 10 == 0) {
         p.lifetime = _lifetime;
         p.position = _position;
-        p.speed = _initialVelocity;
+        p.speed = _initialVelocity * _initialDirection;
         p.color = {1.0f, 1.0f, 1.0f, 1.0f};
         p.scale = _initialScale;
         generator = true;
-      } else {
-        p.speed *= 1 + _linearAcceleration;
+      } else if (p.lifetime > 0) {
+        auto dis = glm::distance(_position, p.position);
+        auto vspeed = glm::normalize(glm::cross(p.speed, glm::vec3(0, 0, 1)));
+        auto acceleration = 1 + _linearAcceleration;
+        if (dis != 0) {
+          acceleration += _radialAcceleration / dis;
+        }
+        p.speed *= acceleration;
+        p.speed += _tangentialAcceleration * vspeed;
         p.position += p.speed;
       }
       if (p.lifetime > 0) {
@@ -82,8 +118,11 @@ void ParticleGenerator::onTick() {
         _particleMatrixTexcoords[count] = (1.0f);
         count++;
       }
-      p.lifetime -= 0.1;
+      if (fcount % 10 == 0) {
+        p.lifetime -= 0.1;
+      }
     }
+    fcount++;
     _attributeModels->write(0, sizeof(glm::mat4) * count,
                             _particleMatrixModels.data());
     _attributeTexcoords->write(0, sizeof(glm::mat4) * count,

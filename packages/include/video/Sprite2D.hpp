@@ -37,6 +37,18 @@ public:
   void setRect(const glm::ivec4 &rect);
   const glm::ivec4 &getRect() const;
 
+  void setPosition(const glm::ivec2 &position);
+  const glm::ivec2 getPosition() const;
+
+  void setSize(const glm::ivec2 &size);
+  const glm::ivec2 setSize() const;
+
+  void setSourcePosition(const glm::ivec2 &position);
+  const glm::ivec2 getSourcePosition() const;
+
+  void setSourceSize(const glm::ivec2 &size);
+  const glm::ivec2 getSourceSize() const;
+
   void setSourceRect(const glm::ivec4 &rect);
   const glm::ivec4 &getSourceRect() const;
 
