@@ -36,6 +36,8 @@ private:
   std::list<core::AutoPtr<RenderTarget>> _shaderRenderTargets;
 
 private:
+  void draw(const RenderItem &item);
+
 public:
   Renderer();
   void draw(const core::AutoPtr<Material> &material,

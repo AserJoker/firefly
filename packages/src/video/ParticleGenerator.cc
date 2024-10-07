@@ -46,21 +46,21 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
   _geometry->setAttribute(Geometry::ATTR_POSITION, new Attribute(quadVec, 3));
   _geometry->setAttribute(Geometry::ATTR_TEXCOORD, new Attribute(quadTex, 2));
 
-  _attributeModels = new Attribute(sizeof(glm::mat4) * _count, 0, typeid(float),
-                                   16, false, true);
+  _attributeModels =
+      new Attribute(sizeof(glm::mat4) * _count, 0, 16, false, true);
   _geometry->setAttribute(4, _attributeModels);
   _geometry->setVertexAttribDivisor(4);
   _geometry->setVertexAttribDivisor(4 + 1);
   _geometry->setVertexAttribDivisor(4 + 2);
   _geometry->setVertexAttribDivisor(4 + 3);
 
-  _attributeTexcoords = new Attribute(sizeof(glm::mat4) * _count, 0,
-                                      typeid(float), 16, false, true);
-  _geometry->setAttribute(8 + 4, _attributeTexcoords);
+  _attributeTexcoords =
+      new Attribute(sizeof(glm::mat4) * _count, 0, 16, false, true);
+  _geometry->setAttribute(8, _attributeTexcoords);
+  _geometry->setVertexAttribDivisor(8 + 1);
+  _geometry->setVertexAttribDivisor(8 + 2);
+  _geometry->setVertexAttribDivisor(8 + 3);
   _geometry->setVertexAttribDivisor(8 + 4);
-  _geometry->setVertexAttribDivisor(8 + 5);
-  _geometry->setVertexAttribDivisor(8 + 6);
-  _geometry->setVertexAttribDivisor(8 + 7);
 }
 
 void ParticleGenerator::setDirection(const glm::vec3 &direction) {
@@ -88,6 +88,7 @@ void ParticleGenerator::setPosition(const glm::vec3 &value) {
 void ParticleGenerator::onTick() {
   using namespace std::chrono;
   static auto clock = system_clock::now();
+  static auto zRay = glm::vec3(0, 0, 1);
   if (system_clock::now() - clock > 50ms) {
     auto count = 0;
     bool generator = false;
@@ -97,12 +98,13 @@ void ParticleGenerator::onTick() {
         p.lifetime = _lifetime;
         p.position = _position;
         p.speed = _initialVelocity * _initialDirection;
+        auto vspeed = glm::normalize(glm::cross(p.speed, zRay));
         p.color = {1.0f, 1.0f, 1.0f, 1.0f};
         p.scale = _initialScale;
         generator = true;
       } else if (p.lifetime > 0) {
         auto dis = glm::distance(_position, p.position);
-        auto vspeed = glm::normalize(glm::cross(p.speed, glm::vec3(0, 0, 1)));
+        auto vspeed = glm::normalize(glm::cross(p.speed, zRay));
         auto acceleration = 1 + _linearAcceleration;
         if (dis != 0) {
           acceleration += _radialAcceleration / dis;

@@ -237,6 +237,9 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
     _context->normalRenderList.push_back({geometry, material, model});
   } else {
     _context->blendRenderList.push_back({geometry, material, model});
+    _context->blendRenderList.sort([](auto &a, auto &b) -> bool {
+      return a.matrixModel[3][2] < b.matrixModel[3][2];
+    });
   }
 }
 core::AutoPtr<Renderer::RenderContext> Renderer::pushContext() {
@@ -247,15 +250,25 @@ core::AutoPtr<Renderer::RenderContext> Renderer::pushContext() {
 void Renderer::popContext(const core::AutoPtr<Renderer::RenderContext> &ctx) {
   _context = ctx;
 }
+void Renderer::draw(const Renderer::RenderItem &item) {
+  _constants->setField("model", item.matrixModel);
+  setMaterial(item.material);
+  _shader->setUniform(_constants);
+  auto instanced = item.material->getInstanced();
+  if (instanced > 1) {
+    item.geometry->drawInstanced(gl::DRAW_MODE::TRIANGLES, instanced);
+  } else {
+    item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
+  }
+}
 
 void Renderer::present() {
   std::list<core::AutoPtr<RenderTarget>> pipeline;
   if (_deferred != nullptr) {
     pipeline.push_back(_deferred);
   }
-  for (auto it = _shaderRenderTargets.begin(); it != _shaderRenderTargets.end();
-       it++) {
-    pipeline.push_back(*it);
+  for (auto &process : _shaderRenderTargets) {
+    pipeline.push_back(process);
   }
   core::AutoPtr<RenderTarget> current;
   if (pipeline.size()) {
@@ -264,34 +277,17 @@ void Renderer::present() {
   if (current != nullptr) {
     current->active();
   }
-  _context->blendRenderList.sort([](auto &a, auto &b) -> bool {
-    return a.matrixModel[3][2] < b.matrixModel[3][2];
-  });
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
   glDisable(GL_BLEND);
   for (auto &item : _context->normalRenderList) {
-    setMaterial(item.material);
-    _constants->setField("model", item.matrixModel);
-    _shader->setUniform(_constants);
-    auto instanced = item.material->getInstanced();
-    if (instanced > 1) {
-      item.geometry->drawInstanced(gl::DRAW_MODE::TRIANGLES, instanced);
-    } else {
-      item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
-    }
+    draw(item);
   }
   _context->normalRenderList.clear();
+
   glEnable(GL_BLEND);
   for (auto &item : _context->blendRenderList) {
-    setMaterial(item.material);
-    _constants->setField("model", item.matrixModel);
-    _shader->setUniform(_constants);
-    auto instanced = item.material->getInstanced();
-    if (instanced > 1) {
-      item.geometry->drawInstanced(gl::DRAW_MODE::TRIANGLES, instanced);
-    } else {
-      item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
-    }
+    draw(item);
   }
   _context->blendRenderList.clear();
 
@@ -309,8 +305,6 @@ void Renderer::present() {
       }
       it++;
     }
-  }
-  if (current != nullptr) {
     gl::FrameBuffer::bind(nullptr);
     glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);

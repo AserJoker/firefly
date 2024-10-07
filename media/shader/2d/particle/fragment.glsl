@@ -8,5 +8,5 @@ uniform float diffuse_texture_blend;
 void main() {
     vec4 color = texture(diffuse_texture, vertexTexcoord);
     color.a *= diffuse_texture_blend;
-    gl_FragColor = color;
+    gl_FragColor = vec4(1.0);
 }

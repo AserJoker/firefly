@@ -3,9 +3,29 @@
 #include "Value.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include <any>
+#include <cstddef>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace firefly::script {
+struct AnyValue {
+  std::any value;
+  AnyValue(const std::string &value) : value(std::string(value)) {}
+  AnyValue(const char *value) : value(std::string(value)) {}
+  AnyValue(std::string &&value)
+      : value(std::string(std::forward<std::string>(value))) {}
+  AnyValue(bool value) : value(value) {}
+  AnyValue(std::nullptr_t) : value(nullptr) {}
+  AnyValue(const Value::FunctionHandle &value) : value(value) {}
+  AnyValue(double value) : value(value) {}
+  AnyValue(float value) : value(double(value)) {}
+  AnyValue(uint32_t value) : value(double(value)) {}
+  AnyValue(int32_t value) : value(double(value)) {}
+};
+using AnyRecord = std::unordered_map<std::string, AnyValue>;
+using AnyArray = std::vector<AnyValue>;
 class Value;
 class Script : public core::Object {
 public:
@@ -41,6 +61,14 @@ public:
   core::AutoPtr<Bridge> getBridge();
   std::vector<core::AutoPtr<Value>> eval(const std::string &source);
   core::AutoPtr<Value> createValue(Atom *atom = nullptr);
+  core::AutoPtr<Value> createValue(const core::AutoPtr<Value> &value) {
+    return value;
+  }
+  core::AutoPtr<Value> createValue(AnyValue &&value);
+  core::AutoPtr<Value> createValue(const AnyValue &value);
+  core::AutoPtr<Value> createValue(const std::vector<AnyValue> &value);
+  core::AutoPtr<Value>
+  createValue(const std::unordered_map<std::string, AnyValue> &value);
   core::AutoPtr<Scope> pushScope();
   void popScope(core::AutoPtr<Scope> scope);
   core::AutoPtr<Scope> getCurrentScope();

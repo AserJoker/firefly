@@ -246,36 +246,31 @@ static core::AutoPtr<Geometry> parseGeometry(const aiMesh *mesh) {
       bitangents.push_back({v.x, v.y, v.z});
     }
   }
-  core::AutoPtr<Attribute> attrVertices =
-      new Attribute((uint32_t)vertices.size() * sizeof(glm::vec3),
-                    vertices.data(), typeid(float), 3);
+  core::AutoPtr<Attribute> attrVertices = new Attribute(
+      (uint32_t)vertices.size() * sizeof(glm::vec3), vertices.data(), 3);
   geometry->setAttribute(Geometry::ATTR_POSITION, attrVertices);
-  core::AutoPtr<Attribute> attrNormals =
-      new Attribute((uint32_t)normals.size() * sizeof(glm::vec3),
-                    normals.data(), typeid(float), 3);
+  core::AutoPtr<Attribute> attrNormals = new Attribute(
+      (uint32_t)normals.size() * sizeof(glm::vec3), normals.data(), 3);
   geometry->setAttribute(Geometry::ATTR_NORMAL, attrVertices);
   if (colors.empty()) {
-    core::AutoPtr attrColor =
-        new Attribute((uint32_t)colors.size() * sizeof(glm::vec4),
-                      colors.data(), typeid(float), 4);
+    core::AutoPtr attrColor = new Attribute(
+        (uint32_t)colors.size() * sizeof(glm::vec4), colors.data(), 4);
     geometry->setAttribute(Geometry::ATTR_COLOR, attrColor);
   }
   for (auto i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; i++) {
     if (!texcoords[i].empty()) {
       core::AutoPtr attrTex =
           new Attribute((uint32_t)texcoords[i].size() * sizeof(glm::vec2),
-                        texcoords[i].data(), typeid(float), 2);
+                        texcoords[i].data(), 2);
       geometry->setAttribute(Geometry::ATTR_TEXCOORD + i, attrTex);
     }
   }
   if (!tangents.empty()) {
-    core::AutoPtr attrTangent =
-        new Attribute((uint32_t)tangents.size() * sizeof(glm::vec3),
-                      tangents.data(), typeid(float), 3);
+    core::AutoPtr attrTangent = new Attribute(
+        (uint32_t)tangents.size() * sizeof(glm::vec3), tangents.data(), 3);
     geometry->setAttribute(Geometry::ATTR_TANGENT, attrTangent);
-    core::AutoPtr attrBitangent =
-        new Attribute((uint32_t)bitangents.size() * sizeof(glm::vec3),
-                      bitangents.data(), typeid(float), 3);
+    core::AutoPtr attrBitangent = new Attribute(
+        (uint32_t)bitangents.size() * sizeof(glm::vec3), bitangents.data(), 3);
     geometry->setAttribute(Geometry::ATTR_BITANGENT, attrBitangent);
   }
   std::vector<uint32_t> indices;

@@ -32,25 +32,7 @@ void Geometry::setAttribute(uint32_t index,
   gl::VertexArray::bind(_vao);
   gl::Buffer::bind(gl::BUFFER_TARGET::ARRAY,
                    attribute->getVertexBufferObject());
-  gl::DATA_TYPE dtype;
-  auto &type = attribute->getItemType();
-  if (type == typeid(float).name()) {
-    dtype = gl::DATA_TYPE::FLOAT;
-  } else if (type == typeid(int32_t).name()) {
-    dtype = gl::DATA_TYPE::INT;
-  } else if (type == typeid(uint32_t).name()) {
-    dtype = gl::DATA_TYPE::UNSIGNED_INT;
-  } else if (type == typeid(double).name()) {
-    dtype = gl::DATA_TYPE::DOUBLE;
-  } else if (type == typeid(int8_t).name()) {
-    dtype = gl::DATA_TYPE::BTYE;
-  } else if (type == typeid(uint8_t).name()) {
-    dtype = gl::DATA_TYPE::UNSIGNED_BYTE;
-  } else if (type == typeid(int16_t).name()) {
-    dtype = gl::DATA_TYPE::SHORT;
-  } else if (type == typeid(uint16_t).name()) {
-    dtype = gl::DATA_TYPE::UNSIGNED_SHORT;
-  }
+  gl::DATA_TYPE dtype = gl::DATA_TYPE::FLOAT;
   if (attribute->getItemSize() <= 4) {
     _vao->setAttribute(index, dtype, attribute->getItemSize(),
                        attribute->isNormalized(), attribute->getStride(), 0);

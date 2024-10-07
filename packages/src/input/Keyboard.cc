@@ -17,12 +17,16 @@ void Keyboard::onEvent(runtime::Event_SDL &e) {
   auto bus = core::Singleton<runtime::EventBus>::instance();
   switch (event.type) {
   case SDL_KEYDOWN:
-    _bitmap[event.key.keysym.scancode] = true;
-    bus->emit<Event_KeyDown>(event.key.keysym.scancode);
+    if (!_bitmap[event.key.keysym.scancode]) {
+      _bitmap[event.key.keysym.scancode] = true;
+      bus->emit<Event_KeyDown>(event.key.keysym.scancode);
+    }
     break;
   case SDL_KEYUP:
-    _bitmap[event.key.keysym.scancode] = false;
-    bus->emit<Event_KeyUp>(event.key.keysym.scancode);
+    if (_bitmap[event.key.keysym.scancode]) {
+      _bitmap[event.key.keysym.scancode] = false;
+      bus->emit<Event_KeyUp>(event.key.keysym.scancode);
+    }
     break;
   }
 }

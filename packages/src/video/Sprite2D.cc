@@ -4,6 +4,7 @@
 #include "gl/BlendFunc.hpp"
 #include "gl/Texture2D.hpp"
 #include "gl/TextureFilter.hpp"
+#include "video/Animation.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
 #include <glm/ext/matrix_transform.hpp>
@@ -67,6 +68,8 @@ Sprite2D::Sprite2D(const std::string &path)
     _srcRect = {0, 0, texSize};
     update();
   }
+  _animation = new Animation();
+  appendChild(_animation);
 }
 
 void Sprite2D::setTexture(const std::string &path) {

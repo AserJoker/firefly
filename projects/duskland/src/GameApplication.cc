@@ -31,7 +31,6 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
-#include "video/ParticleGenerator.hpp"
 #include "video/Scene.hpp"
 #include <SDL_image.h>
 #include <SDL_timer.h>
@@ -47,6 +46,8 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_impl_sdl2.h>
 #include <lua.hpp>
+#include <string>
+#include <thread>
 
 using namespace firefly;
 using namespace duskland;
@@ -124,10 +125,6 @@ void GameApplication::onInitialize() {
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   getWindow()->show();
   srand((unsigned)time(NULL));
-  scene = new video::Scene();
-  core::AutoPtr paricle = new video::ParticleGenerator(20);
-  paricle->setTexture("star.png");
-  scene->appendChild(paricle);
 }
 
 void GameApplication::onMainLoop() {
@@ -139,18 +136,19 @@ void GameApplication::onMainLoop() {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
-  auto scope = _script->pushScope();
-  script::Module_Event::emit(_script, "update",
-                             createNumber(_script, now - timePreFrame));
-  _script->popScope(scope);
-  timePreFrame = now;
-  // if (video::Scene::scene != nullptr) {
-  //   video::Scene::scene->onTick();
-  // }
-  if (scene != nullptr) {
-    scene->onTick();
+  script::Module_Event::emit(_script, "update", now - timePreFrame);
+  if (now - timePreFrame > 4) {
+    getWindow()->setTitle(
+        fmt::format("duskland - {}", 1000.0f / (now - timePreFrame)));
+    timePreFrame = now;
+    if (video::Scene::scene != nullptr) {
+      video::Scene::scene->onTick();
+    }
+    getWindow()->present();
+  } else {
+    using namespace std::chrono;
+    std::this_thread::sleep_for(4ms);
   }
-  getWindow()->present();
 }
 
 void GameApplication::onUnInitialize() {
@@ -162,69 +160,41 @@ void GameApplication::onUnInitialize() {
 }
 
 void GameApplication::onKeyDown(input::Event_KeyDown &e) {
-  auto scope = _script->pushScope();
-  script::Module_Event::emit(_script, "keyDown",
-                             createNumber(_script, e.getScancode()));
-  _script->popScope(scope);
+  script::Module_Event::emit(_script, "keyDown", e.getScancode());
 }
 
 void GameApplication::onKeyUp(input::Event_KeyUp &e) {
-  auto scope = _script->pushScope();
-  script::Module_Event::emit(_script, "keyUp",
-                             createNumber(_script, e.getScancode()));
-  _script->popScope(scope);
+  script::Module_Event::emit(_script, "keyUp", e.getScancode());
 }
 
 void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
-  auto scope = _script->pushScope();
   auto pos = e.getPosition() - getWindow()->getWindowPosition();
   auto delta = e.getDelta();
   script::Module_Event::emit(
       _script, "mouseMotion",
-      _script->createValue()
-          ->setObject(_script)
-          ->setField(_script, "x", createNumber(_script, pos.x))
-          ->setField(_script, "y", createNumber(_script, pos.y))
-          ->setField(_script, "dx", createNumber(_script, delta.x))
-          ->setField(_script, "dy", createNumber(_script, delta.y)));
-  _script->popScope(scope);
+      script::AnyRecord{
+          {"x", pos.x}, {"y", pos.y}, {"dx", delta.x}, {"dy", delta.y}});
 }
 
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
-  auto scope = _script->pushScope();
-  script::Module_Event::emit(_script, "mouseDown",
-                             createNumber(_script, e.getType()));
-  _script->popScope(scope);
+  script::Module_Event::emit(_script, "mouseDown", e.getType());
 }
 
 void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
-  auto scope = _script->pushScope();
-  script::Module_Event::emit(
-      _script, "mouseWheel",
-      _script->createValue()
-          ->setObject(_script)
-          ->setField(_script, "x", createNumber(_script, e.getOffset().x))
-          ->setField(_script, "y", createNumber(_script, e.getOffset().y))
-          ->setField(_script, "dx", createNumber(_script, e.getDelta().x))
-          ->setField(_script, "dy", createNumber(_script, e.getDelta().y)));
-  _script->popScope(scope);
+  script::Module_Event::emit(_script, "mouseWheel",
+                             script::AnyRecord{{"x", e.getOffset().x},
+                                               {"y", e.getOffset().y},
+                                               {"dx", e.getDelta().x},
+                                               {"dy", e.getDelta().y}});
 }
 
 void GameApplication::onClick(input::Event_Click &e) {
-  auto scope = _script->pushScope();
-  script::Module_Event::emit(_script, "click",
-                             createNumber(_script, e.getType()));
-  _script->popScope(scope);
+  script::Module_Event::emit(_script, "click", e.getType());
 }
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
   _renderer->setViewport({0, 0, e.getSize()});
-  auto scope = _script->pushScope();
   script::Module_Event::emit(
       _script, "resize",
-      _script->createValue()
-          ->setObject(_script)
-          ->setField(_script, "width", createNumber(_script, e.getSize().x))
-          ->setField(_script, "height", createNumber(_script, e.getSize().y)));
-  _script->popScope(scope);
+      script::AnyRecord{{"width", e.getSize().x}, {"height", e.getSize().y}});
 }

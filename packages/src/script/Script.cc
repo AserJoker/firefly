@@ -70,6 +70,39 @@ core::AutoPtr<Value> Script::createValue(Atom *at) {
   }
   return new Value(atom);
 }
+
+core::AutoPtr<Value> Script::createValue(const AnyValue &value) {
+  auto val = createValue();
+  auto &type = value.value.type();
+  if (type == typeid(double)) {
+    val->setNumber(this, std::any_cast<double>(value.value));
+  } else if (type == typeid(bool)) {
+    val->setBoolean(this, std::any_cast<bool>(value.value));
+  } else if (type == typeid(std::string)) {
+    val->setString(this, std::any_cast<std::string>(value.value));
+  } else if (type == typeid(Value::FunctionHandle)) {
+    val->setFunction(this, std::any_cast<Value::FunctionHandle>(value.value));
+  }
+  return val;
+}
+core::AutoPtr<Value> Script::createValue(AnyValue &&value) {
+  return createValue(value);
+}
+core::AutoPtr<Value> Script::createValue(const std::vector<AnyValue> &value) {
+  auto arr = createValue()->setArray(this);
+  for (auto i = 0; i < value.size(); i++) {
+    arr->setIndex(this, i, createValue(value[i]));
+  }
+  return arr;
+}
+core::AutoPtr<Value>
+Script::createValue(const std::unordered_map<std::string, AnyValue> &value) {
+  auto obj = createValue()->setObject(this);
+  for (auto &[key, field] : value) {
+    obj->setField(this, key, createValue(field));
+  }
+  return obj;
+}
 core::AutoPtr<Scope> Script::pushScope() {
   core::AutoPtr<Scope> current = _current;
   _current = new Scope((Scope *)current.getRawPointer());
