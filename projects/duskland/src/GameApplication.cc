@@ -47,7 +47,6 @@
 #include <imgui_impl_sdl2.h>
 #include <lua.hpp>
 #include <string>
-#include <thread>
 
 using namespace firefly;
 using namespace duskland;
@@ -137,18 +136,11 @@ void GameApplication::onMainLoop() {
     script::Module_Event::emit(_script, "tick");
   }
   script::Module_Event::emit(_script, "update", now - timePreFrame);
-  if (now - timePreFrame > 4) {
-    getWindow()->setTitle(
-        fmt::format("duskland - {}", 1000.0f / (now - timePreFrame)));
-    timePreFrame = now;
-    if (video::Scene::scene != nullptr) {
-      video::Scene::scene->onTick();
-    }
-    getWindow()->present();
-  } else {
-    using namespace std::chrono;
-    std::this_thread::sleep_for(4ms);
+  timePreFrame = now;
+  if (video::Scene::scene != nullptr) {
+    video::Scene::scene->onTick();
   }
+  getWindow()->present();
 }
 
 void GameApplication::onUnInitialize() {
