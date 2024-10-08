@@ -85,11 +85,10 @@ FUNC_DEF(Trait_Sprite2D::setRotation) {
   auto self = args[0];
   auto center = args[1];
   auto angle = args[2]->toNumber(ctx);
-  bool righthandle = args.size() > 3 ? args[3]->toBoolean(ctx) : false;
   auto x = (uint32_t)center->getField(ctx, "x")->toNumber(ctx);
   auto y = (uint32_t)center->getField(ctx, "y")->toNumber(ctx);
   auto sprite = self->getOpaque().cast<video::Sprite2D>();
-  sprite->setRotation({x, y}, angle, righthandle);
+  sprite->setRotation({x, y}, angle);
   return {};
 }
 
@@ -97,14 +96,13 @@ FUNC_DEF(Trait_Sprite2D::getRotation) {
   VALIDATE_ARGS(getRotation, 1);
   auto self = args[0];
   auto sprite = self->getOpaque().cast<video::Sprite2D>();
-  auto &[center, angle, righthandle] = sprite->getRotation();
+  auto &[center, angle] = sprite->getRotation();
   auto rotation = ctx->createValue()->setObject(ctx);
   auto ct = ctx->createValue()->setObject(ctx);
   ct->setField(ctx, "x", createNumber(ctx, center[0]));
   ct->setField(ctx, "y", createNumber(ctx, center[1]));
   rotation->setField(ctx, "center", ct);
   rotation->setField(ctx, "angle", createNumber(ctx, angle));
-  rotation->setField(ctx, "righthandle", createBoolean(ctx, righthandle));
   return {rotation};
 }
 

@@ -2,8 +2,11 @@
 #include <SDL_timer.h>
 using namespace firefly;
 using namespace firefly::video;
+
 Animation::Animation(uint32_t fps) : _frameTimeout(1000.0f / fps) {}
+
 void Animation::setFPS(const uint32_t &fps) { _frameTimeout = 1000.0f / fps; }
+
 void Animation::start(const std::string &name) {
   if (!_activeActions.contains(name)) {
     _activeActions[name] = _actions[name];
@@ -12,6 +15,7 @@ void Animation::start(const std::string &name) {
   action.enable = true;
   action.frame = 0;
 }
+
 void Animation::stop(const std::string &name) {
   if (!_activeActions.contains(name)) {
     return;
@@ -19,6 +23,7 @@ void Animation::stop(const std::string &name) {
   auto &action = _activeActions[name];
   action.enable = false;
 }
+
 void Animation::resume(const std::string &name) {
   if (!_activeActions.contains(name)) {
     return;
@@ -26,8 +31,9 @@ void Animation::resume(const std::string &name) {
   auto &action = _activeActions[name];
   action.enable = true;
 }
+
 void Animation::onTick() {
-  auto now = SDL_GetTicks64();
+  auto now = SDL_GetTicks();
   if (now - _lastTick > _frameTimeout) {
     for (auto &[_, action] : _activeActions) {
       if (!action.enable) {
@@ -37,7 +43,7 @@ void Animation::onTick() {
       if (action.frame < action.start) {
         continue;
       }
-      action.onTick(now - _lastTick, action.frame++);
+      action.onTick(action.frame++);
       if (action.frame > action.end) {
         if (action.loop) {
           action.frame = action.start;
@@ -46,6 +52,6 @@ void Animation::onTick() {
         }
       }
     }
-    _lastTick = SDL_GetTicks64();
+    _lastTick = SDL_GetTicks();
   }
 }

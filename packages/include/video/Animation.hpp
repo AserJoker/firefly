@@ -7,7 +7,7 @@ namespace firefly::video {
 class Animation : public Node {
 private:
   struct Action {
-    std::function<void(uint64_t timestamp, uint32_t frame)> onTick;
+    std::function<void(uint32_t frame)> onTick;
     uint32_t frame;
     bool loop;
     uint32_t start;
@@ -23,27 +23,42 @@ private:
 
 public:
   Animation(uint32_t fps = 200);
-  template <class T>
-  void createAction(std::string name, T *attribute, T &&start, T &&end,
-                    uint32_t startFrame, uint32_t endFrame, bool loop = false) {
+
+  void createAction(const std::string &name, const std::string &attr,
+                    float start, float end, uint32_t startFrame,
+                    uint32_t endFrame, bool loop = false) {
     auto count = endFrame - startFrame;
     auto step = (end - start) / count;
     Action action{};
     action.frame = 0;
     action.loop = loop;
-    action.onTick = [=](uint32_t timestamp, uint32_t frame) -> void {
-      const_cast<T &>(*attribute) = start + step * (frame - start);
+    action.onTick = [=, this](uint32_t frame) -> void {
+      getParent()->setAttribute(attr, start + step * (frame - start));
     };
     action.start = startFrame;
     action.end = endFrame;
     action.enable = true;
     _actions[name] = action;
   }
-  template <class T>
-  void createAction(std::string name, T *attribute, T &&start, T &&end,
-                    uint32_t endFrame, bool loop = false) {
-    createAction(name, attribute, start, end, 0, endFrame, loop);
+
+  void createAction(const std::string &name, const std::string &attr,
+                    float step, uint32_t startFrame, uint32_t endFrame,
+                    bool loop = false) {
+    auto count = endFrame - startFrame;
+    Action action{};
+    action.frame = 0;
+    action.loop = loop;
+    auto attribute = getParent()->getAttribute(attr);
+    auto start = attribute.toNumber();
+    action.onTick = [=, this](uint32_t frame) -> void {
+      getParent()->setAttribute(attr, start + step * (frame - start));
+    };
+    action.start = startFrame;
+    action.end = endFrame;
+    action.enable = true;
+    _actions[name] = action;
   }
+
   void setFPS(const uint32_t &fps);
   void start(const std::string &name);
   void stop(const std::string &name);

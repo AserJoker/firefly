@@ -16,18 +16,23 @@ private:
   glm::ivec4 _srcRect;
   glm::ivec3 _rotationCenter;
   float _rotationAngle;
+  int32_t _zIndex;
+  std::string _texture;
+
   glm::mat4 _matrixModel;
   core::AutoPtr<Material> _material;
-  int32_t _zIndex;
 
   core::AutoPtr<Animation> _animation;
 
-  void update();
+  void updateModel();
+  void updateTexModel();
 
 protected:
   const core::AutoPtr<Geometry> &getGeometry() const override;
   const core::AutoPtr<Material> &getMaterial() const override;
   const glm::mat4 &getMatrixModel() const override;
+
+  void onAttrChange(const std::string &name) override;
 
 public:
   Sprite2D(const std::string &path = "");
@@ -39,6 +44,9 @@ public:
 
   void setRect(const glm::ivec4 &rect);
   const glm::ivec4 &getRect() const;
+
+  void setSourceRect(const glm::ivec4 &rect);
+  const glm::ivec4 &getSourceRect() const;
 
   void setPosition(const glm::ivec2 &position);
   const glm::ivec2 getPosition() const;
@@ -52,12 +60,8 @@ public:
   void setSourceSize(const glm::ivec2 &size);
   const glm::ivec2 getSourceSize() const;
 
-  void setSourceRect(const glm::ivec4 &rect);
-  const glm::ivec4 &getSourceRect() const;
-
-  void setRotation(const glm::ivec2 &center, float angle,
-                   bool righthandle = false);
-  const std::tuple<glm::ivec2, float, bool> getRotation() const;
+  void setRotation(const glm::ivec2 &center, float angle);
+  const std::tuple<glm::ivec2, float> getRotation() const;
 
   void setZIndex(int32_t zIndex);
   int32_t getZIndex() const;

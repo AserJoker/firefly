@@ -43,11 +43,13 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
   _material->setDepthTest(false);
 
   _geometry = new Geometry();
-  _geometry->setAttribute(Geometry::ATTR_POSITION, new Attribute(quadVec, 3));
-  _geometry->setAttribute(Geometry::ATTR_TEXCOORD, new Attribute(quadTex, 2));
+  _geometry->setAttribute(Geometry::ATTR_POSITION,
+                          new video::Attribute(quadVec, 3));
+  _geometry->setAttribute(Geometry::ATTR_TEXCOORD,
+                          new video::Attribute(quadTex, 2));
 
   _attributeModels =
-      new Attribute(sizeof(glm::mat4) * _count, 0, 16, false, true);
+      new video::Attribute(sizeof(glm::mat4) * _count, 0, 16, false, true);
   _geometry->setAttribute(4, _attributeModels);
   _geometry->setVertexAttribDivisor(4);
   _geometry->setVertexAttribDivisor(4 + 1);
@@ -55,7 +57,7 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
   _geometry->setVertexAttribDivisor(4 + 3);
 
   _attributeTexcoords =
-      new Attribute(sizeof(glm::mat4) * _count, 0, 16, false, true);
+      new video::Attribute(sizeof(glm::mat4) * _count, 0, 16, false, true);
   _geometry->setAttribute(8, _attributeTexcoords);
   _geometry->setVertexAttribDivisor(8 + 1);
   _geometry->setVertexAttribDivisor(8 + 2);

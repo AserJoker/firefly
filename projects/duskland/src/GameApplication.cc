@@ -128,14 +128,14 @@ void GameApplication::onInitialize() {
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
-  static auto time = SDL_GetTicks();
-  static auto timePreFrame = SDL_GetTicks();
-  auto now = SDL_GetTicks();
+  static auto time = SDL_GetTicks64();
+  static auto timePreFrame = SDL_GetTicks64();
+  auto now = SDL_GetTicks64();
   if (now - time > 50) {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
-  script::Module_Event::emit(_script, "update", now - timePreFrame);
+  script::Module_Event::emit(_script, "update", (uint32_t)(now - timePreFrame));
   timePreFrame = now;
   if (video::Scene::scene != nullptr) {
     video::Scene::scene->onTick();
