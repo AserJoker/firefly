@@ -7,6 +7,8 @@
 #include "video/Animation.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
+#include "video/Node.hpp"
+#include "video/Renderable.hpp"
 #include <glm/ext/matrix_transform.hpp>
 using namespace firefly;
 using namespace firefly::video;
@@ -65,6 +67,7 @@ void Sprite2D::onAttrChange(const std::string &name) {
   if (name.starts_with("source.") || name == "source") {
     updateTexModel();
   }
+  Renderable::onAttrChange(name);
 }
 
 Sprite2D::Sprite2D(const std::string &path)
@@ -99,11 +102,6 @@ Sprite2D::Sprite2D(const std::string &path)
     setRect({0, 0, texSize});
   }
   appendChild(_animation);
-  if (_texture == "001-Fighter01.png") {
-    _animation->setFPS(10);
-    _animation->createAction("move", "source.x", 0, 3 * 32, 0, 3, true);
-    _animation->start("move");
-  }
 }
 
 void Sprite2D::setTexture(const std::string &path) {

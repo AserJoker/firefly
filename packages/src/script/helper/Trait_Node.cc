@@ -44,6 +44,66 @@ FUNC_DEF(Trait_Node::getChild) {
   auto child = self->getChild(id);
   return {Trait_Node::create(ctx, child)};
 }
+FUNC_DEF(Trait_Node::beginAttrGroup) {
+  auto self = args[0]->getOpaque().cast<video::Node>();
+  auto key = args[1]->toString(ctx);
+  self->beginAttrGroup(key);
+  return {};
+}
+FUNC_DEF(Trait_Node::endAttrGroup) {
+  auto self = args[0]->getOpaque().cast<video::Node>();
+  self->endAttrGroup();
+  return {};
+}
+FUNC_DEF(Trait_Node::setAttribute) {
+  auto self = args[0]->getOpaque().cast<video::Node>();
+  auto key = args[1]->toString(ctx);
+  auto type = Atom::TYPE::NIL;
+  if (args.size() > 2) {
+    type = args[2]->getType(ctx);
+  }
+  auto res = false;
+  switch (type) {
+  case Atom::TYPE::NIL:
+    res = self->setAttribute(key, video::Node::AttrValue{});
+    break;
+  case Atom::TYPE::NUMBER:
+    res =
+        self->setAttribute(key, video::Node::AttrValue{args[2]->toNumber(ctx)});
+    break;
+  case Atom::TYPE::BOOLEAN:
+    res = self->setAttribute(key,
+                             video::Node::AttrValue{args[2]->toBoolean(ctx)});
+    break;
+  case Atom::TYPE::STRING:
+    res =
+        self->setAttribute(key, video::Node::AttrValue{args[2]->toString(ctx)});
+    break;
+  default:
+    break;
+  }
+  return {ctx->createValue(res)};
+}
+
+FUNC_DEF(Trait_Node::getAttribute) {
+  auto self = args[0]->getOpaque().cast<video::Node>();
+  auto key = args[1]->toString(ctx);
+  auto &attr = self->getAttribute(key);
+  switch (attr.type) {
+  case video::Node::BOOLEAN:
+    return {ctx->createValue(attr.boolean)};
+  case video::Node::STRING:
+    return {ctx->createValue(attr.string)};
+  case video::Node::I32:
+  case video::Node::U32:
+  case video::Node::F32:
+  case video::Node::F64:
+    return {ctx->createValue(attr.toNumber())};
+  case video::Node::NIL:
+    return {};
+  }
+  return {};
+}
 
 void Trait_Node::initialize(core::AutoPtr<Script> ctx) {
   auto global = ctx->getNativeGlobal();
@@ -54,7 +114,11 @@ void Trait_Node::initialize(core::AutoPtr<Script> ctx) {
                   ->setFunctionField(ctx, getParent)
                   ->setFunctionField(ctx, getId)
                   ->setFunctionField(ctx, setId)
-                  ->setFunctionField(ctx, getChild);
+                  ->setFunctionField(ctx, getChild)
+                  ->setFunctionField(ctx, getAttribute)
+                  ->setFunctionField(ctx, setAttribute)
+                  ->setFunctionField(ctx, beginAttrGroup)
+                  ->setFunctionField(ctx, endAttrGroup);
   global->setField(ctx, "Node", Node);
 }
 

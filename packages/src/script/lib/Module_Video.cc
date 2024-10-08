@@ -4,9 +4,11 @@
 #include "exception/ValidateException.hpp"
 #include "script/Atom.hpp"
 #include "script/Script.hpp"
+#include "script/helper/Trait_Animation.hpp"
 #include "script/helper/Trait_RenderTarget.hpp"
 #include "script/helper/Trait_Scene.hpp"
 #include "script/helper/Trait_Sprite2D.hpp"
+#include "video/Animation.hpp"
 #include "video/RenderTarget.hpp"
 #include "video/Renderer.hpp"
 #include "video/Scene.hpp"
@@ -44,6 +46,10 @@ FUNC_DEF(Module_Video::createRenderTarget) {
   core::AutoPtr renderTarget = new video::RenderTarget({width, height});
   return {Trait_RenderTarget::create(ctx, renderTarget)};
 }
+FUNC_DEF(Module_Video::createAnimation) {
+  core::AutoPtr animation = new video::Animation();
+  return {Trait_Animation::create(ctx, animation)};
+}
 
 FUNC_DEF(Module_Video::setScene) {
   auto scene = args[0]->getOpaque().cast<video::Scene>();
@@ -71,6 +77,7 @@ void Module_Video::open(core::AutoPtr<Script> ctx) {
   exports->setFunctionField(ctx, createSprite2D)
       ->setFunctionField(ctx, createScene)
       ->setFunctionField(ctx, createRenderTarget)
+      ->setFunctionField(ctx, createAnimation)
       ->setFunctionField(ctx, setShader)
       ->setFunctionField(ctx, setScene)
       ->setFunctionField(ctx, getScene);

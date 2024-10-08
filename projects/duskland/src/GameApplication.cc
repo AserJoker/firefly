@@ -12,6 +12,7 @@
 #include "script/Script.hpp"
 #include "script/Value.hpp"
 #include "script/bridge/LuaBridge.hpp"
+#include "script/helper/Trait_Animation.hpp"
 #include "script/helper/Trait_Buffer.hpp"
 #include "script/helper/Trait_Node.hpp"
 #include "script/helper/Trait_Promise.hpp"
@@ -51,16 +52,6 @@
 using namespace firefly;
 using namespace duskland;
 
-constexpr static const float quadVec[] = {0.f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-                                          0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f};
-
-constexpr static const float quadTex[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-                                          0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f};
-
-constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
-
-core::AutoPtr<video::Scene> scene;
-
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 
@@ -77,6 +68,7 @@ void GameApplication::initScript() {
   script::Trait_Sprite2D::initialize(_script);
   script::Trait_Scene::initialize(_script);
   script::Trait_RenderTarget::initialize(_script);
+  script::Trait_Animation::initialize(_script);
 
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);

@@ -152,9 +152,10 @@ private:
 
   std::list<std::string> _attrGroups;
   std::string _attrGroup;
+  uint32_t _changed;
 
 protected:
-  virtual void onAttrChange(const std::string &name) {};
+  virtual void onAttrChange(const std::string &name);
   template <class T>
   inline void defineAttribute(const std::string &name, T *field) {
     _attributes[name] = field;

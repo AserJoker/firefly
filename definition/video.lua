@@ -38,6 +38,20 @@ function Node:setId(id) end
 --- @return Node
 function Node:getChild(id) end
 
+--- @param key string
+--- @param value any
+--- @return boolean
+function Node:setAttribute(key, value) end
+
+--- @param key string
+--- @return any
+function Node:getAttribute(key) end
+
+--- @param name string
+function Node:beginAttrGroup(name) end
+
+function Node:endAttrGroup() end
+
 --- @class Scene:Node
 local Scene = {};
 
@@ -94,6 +108,45 @@ function Sprite2D:setBlend(alpha) end
 --- @return number
 function Sprite2D:getBlend() end
 
+--- @class Animation:Node
+local Animation = {}
+
+--- @param name string
+---@param attr string
+---@param step number
+---@param beginframe integer
+---@param endframe integer
+---@param loop boolean
+function Animation:createAction(name, attr, step, beginframe, endframe, loop) end
+
+--- @param name string
+---@param attr string
+---@param startvalue number
+---@param endvalue number
+---@param beginframe integer
+---@param endframe integer
+---@param loop boolean
+function Animation:createAction(name, attr, startvalue, endvalue, beginframe,
+                                endframe, loop) end
+
+--- @param name string
+function Animation:setGroup(name) end
+
+--- @param fps number
+function Animation:setFPS(fps) end
+
+--- @param name string
+function Animation:start(name) end
+
+--- @param name string
+function Animation:stop(name) end
+
+--- @param name string
+function Animation:resume(name) end
+
+--- @param name string
+function Animation:reset(name) end
+
 --- @param path string|RenderTarget
 --- @return Sprite2D
 function createSprite2D(path) end
@@ -111,11 +164,15 @@ function getScene() end
 --- @return RenderTarget
 function createRenderTarget(size) end
 
+--- @return Animation
+function createAnimation() end
+
 return {
     createSprite2D = createSprite2D,
     setShader = setShader,
     createScene = createScene,
     setScene = setScene,
     getScene = getScene,
-    createRenderTarget = createRenderTarget
+    createRenderTarget = createRenderTarget,
+    createAnimation = createAnimation
 }

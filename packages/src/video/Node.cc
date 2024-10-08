@@ -2,7 +2,7 @@
 #include "core/AutoPtr.hpp"
 using namespace firefly;
 using namespace firefly::video;
-Node::Node() : _parent(nullptr) {}
+Node::Node() : _parent(nullptr), _changed(0) {}
 void Node::setId(const std::string &id) { _id = id; }
 
 const std::string &Node::getId() const { return _id; }
@@ -22,6 +22,7 @@ void Node::appendChild(core::AutoPtr<Node> child) {
     _indexedChildren[child->getId()] = child;
   }
 }
+void Node::onAttrChange(const std::string &name) {}
 
 void Node::removeChild(core::AutoPtr<Node> child) {
   if (child->_parent != this) {
@@ -95,6 +96,7 @@ bool Node::setAttribute(const std::string &name, const Attr &value) {
   if (_attrGroup.empty()) {
     onAttrChange(currentName);
   }
+  _changed++;
   return true;
 }
 
@@ -132,6 +134,7 @@ bool Node::setAttribute(const std::string &name, const AttrValue &value) {
   if (_attrGroup.empty()) {
     onAttrChange(currentName);
   }
+  _changed++;
   return true;
 }
 const Node::AttrValue Node::getAttribute(const std::string &name) const {
@@ -166,6 +169,9 @@ void Node::beginAttrGroup(const std::string &name) {
   }
 }
 void Node::endAttrGroup() {
+  if (_attrGroup.empty()) {
+    return;
+  }
   if (!_attrGroup.empty()) {
     onAttrChange(_attrGroup);
     _attrGroup.clear();

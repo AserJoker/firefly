@@ -20,49 +20,23 @@ private:
 
   uint32_t _frameTimeout;
   uint64_t _lastTick;
+  std::string _group;
 
 public:
-  Animation(uint32_t fps = 200);
+  Animation(uint32_t fps = 200, const std::string &group = "");
 
   void createAction(const std::string &name, const std::string &attr,
                     float start, float end, uint32_t startFrame,
-                    uint32_t endFrame, bool loop = false) {
-    auto count = endFrame - startFrame;
-    auto step = (end - start) / count;
-    Action action{};
-    action.frame = 0;
-    action.loop = loop;
-    action.onTick = [=, this](uint32_t frame) -> void {
-      getParent()->setAttribute(attr, start + step * (frame - start));
-    };
-    action.start = startFrame;
-    action.end = endFrame;
-    action.enable = true;
-    _actions[name] = action;
-  }
-
+                    uint32_t endFrame, bool loop = false);
   void createAction(const std::string &name, const std::string &attr,
                     float step, uint32_t startFrame, uint32_t endFrame,
-                    bool loop = false) {
-    auto count = endFrame - startFrame;
-    Action action{};
-    action.frame = 0;
-    action.loop = loop;
-    auto attribute = getParent()->getAttribute(attr);
-    auto start = attribute.toNumber();
-    action.onTick = [=, this](uint32_t frame) -> void {
-      getParent()->setAttribute(attr, start + step * (frame - start));
-    };
-    action.start = startFrame;
-    action.end = endFrame;
-    action.enable = true;
-    _actions[name] = action;
-  }
-
+                    bool loop = false);
   void setFPS(const uint32_t &fps);
   void start(const std::string &name);
   void stop(const std::string &name);
   void resume(const std::string &name);
+  void reset(const std::string &name);
+  void setGroup(const std::string &name);
   void onTick() override;
 };
 }; // namespace firefly::video
