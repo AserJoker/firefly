@@ -4,7 +4,8 @@
 namespace firefly::script {
 class Trait_Animation {
 private:
-  static FUNC_DEF(createAction);
+  static FUNC_DEF(setAction);
+  static FUNC_DEF(removeAction);
   static FUNC_DEF(start);
   static FUNC_DEF(stop);
   static FUNC_DEF(resume);

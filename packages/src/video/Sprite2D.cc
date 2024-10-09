@@ -17,7 +17,6 @@ void Sprite2D::updateModel() {
   if (!_material->getTextures().contains(Material::DIFFUSE_TEX)) {
     return;
   }
-  const auto &size = getTexture()->getSize();
   const auto &x = _dstRect[0];
   const auto &y = _dstRect[1];
   const auto &w = _dstRect[2];

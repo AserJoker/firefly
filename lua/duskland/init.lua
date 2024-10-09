@@ -16,7 +16,7 @@ require'event'.on('gameLoaded', function()
 
     sprite:appendChild(animation)
 
-    animation:createAction("move", "source.x", 0, 32 * 3, 0, 3, true)
+    animation:setAction("move", "source.x", 0, 32 * 3, 0, 3, true)
     animation:setFPS(10)
 
     sprite:setZIndex(1)
@@ -29,6 +29,9 @@ require'event'.on('gameLoaded', function()
     require'event'.on("keyDown", function(scancode)
         if scancode == require'input'.SCANCODE.S then
             animation:start("move")
+        end
+        if scancode == require'input'.SCANCODE.A then
+            animation:removeAction("move")
         end
     end)
     require'event'.on("keyUp", function(scancode)

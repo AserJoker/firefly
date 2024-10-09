@@ -4,7 +4,7 @@
 using namespace firefly;
 using namespace firefly::script;
 
-FUNC_DEF(Trait_Animation::createAction) {
+FUNC_DEF(Trait_Animation::setAction) {
   auto self = args[0]->getOpaque().cast<video::Animation>();
   if (args.size() == 7) {
     auto name = args[1]->toString(ctx);
@@ -13,7 +13,7 @@ FUNC_DEF(Trait_Animation::createAction) {
     auto startFrame = (uint32_t)args[4]->toNumber(ctx);
     auto endFrame = (uint32_t)args[5]->toNumber(ctx);
     auto loop = args[6]->toBoolean(ctx);
-    self->createAction(name, attr, step, startFrame, endFrame, loop);
+    self->setAction(name, attr, step, startFrame, endFrame, loop);
   } else {
     auto name = args[1]->toString(ctx);
     auto attr = args[2]->toString(ctx);
@@ -22,9 +22,16 @@ FUNC_DEF(Trait_Animation::createAction) {
     auto startFrame = (uint32_t)args[5]->toNumber(ctx);
     auto endFrame = (uint32_t)args[6]->toNumber(ctx);
     auto loop = args[7]->toBoolean(ctx);
-    self->createAction(name, attr, startValue, finalValue, startFrame, endFrame,
-                       loop);
+    self->setAction(name, attr, startValue, finalValue, startFrame, endFrame,
+                    loop);
   }
+  return {};
+}
+
+FUNC_DEF(Trait_Animation::removeAction) {
+  auto self = args[0]->getOpaque().cast<video::Animation>();
+  auto name = args[1]->toString(ctx);
+  self->removeAction(name);
   return {};
 }
 
@@ -68,7 +75,8 @@ void Trait_Animation::initialize(core::AutoPtr<Script> ctx) {
   auto global = ctx->getNativeGlobal();
   auto Animation = ctx->createValue()
                        ->setObject(ctx)
-                       ->setFunctionField(ctx, createAction)
+                       ->setFunctionField(ctx, setAction)
+                       ->setFunctionField(ctx, removeAction)
                        ->setFunctionField(ctx, setGroup)
                        ->setFunctionField(ctx, setFPS)
                        ->setFunctionField(ctx, start)

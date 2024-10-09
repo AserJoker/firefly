@@ -112,22 +112,25 @@ function Sprite2D:getBlend() end
 local Animation = {}
 
 --- @param name string
----@param attr string
----@param step number
----@param beginframe integer
----@param endframe integer
----@param loop boolean
-function Animation:createAction(name, attr, step, beginframe, endframe, loop) end
+--- @param attr string
+--- @param step number
+--- @param beginframe integer
+--- @param endframe integer
+--- @param loop boolean
+function Animation:setAction(name, attr, step, beginframe, endframe, loop) end
 
 --- @param name string
----@param attr string
----@param startvalue number
----@param endvalue number
----@param beginframe integer
----@param endframe integer
----@param loop boolean
-function Animation:createAction(name, attr, startvalue, endvalue, beginframe,
-                                endframe, loop) end
+--- @param attr string
+--- @param startvalue number
+--- @param endvalue number
+--- @param beginframe integer
+--- @param endframe integer
+--- @param loop boolean
+function Animation:setAction(name, attr, startvalue, endvalue, beginframe,
+                             endframe, loop) end
+
+--- @param name string
+function Animation:removeAction(name) end
 
 --- @param name string
 function Animation:setGroup(name) end
