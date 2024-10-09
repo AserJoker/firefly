@@ -97,17 +97,18 @@ void Animation::onTick() {
       if (!action.enable) {
         continue;
       }
-      if (action.frame < action.start) {
-        continue;
-      }
-      action.onTick(action.frame++);
-      if (action.frame > action.end && action.end != 0) {
-        if (action.loop) {
-          action.frame = action.start;
-        } else {
-          action.enable = false;
+      if (action.frame >= action.start) {
+        if (action.frame > action.end && action.end != 0) {
+          if (action.loop) {
+            action.frame = action.start;
+          } else {
+            action.enable = false;
+            continue;
+          }
         }
+        action.onTick(action.frame);
       }
+      action.frame++;
     }
     if (isRemoveItem) {
       auto it = _actions.begin();
