@@ -62,6 +62,7 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
   defineAttribute("color.b", &_color.b);
   defineAttribute("zIndex", &_zIndex);
   defineAttribute("texture", &_texture);
+  defineAttribute("lifetime", &_lifetime);
 
   _particleMatrixModels.resize(count);
   _particleMatrixTexcoords.resize(count);
@@ -131,6 +132,7 @@ void ParticleGenerator::setGeneratorCount(uint32_t count) {
 void ParticleGenerator::setLocalCoord(bool value) { _localCoords = value; }
 
 void ParticleGenerator::setColor(const glm::vec3 &color) { _color = color; }
+void ParticleGenerator::setLifetime(float value) { _lifetime = value; }
 
 const glm::vec2 &ParticleGenerator::getDirection() const { return _direction; }
 
@@ -163,6 +165,8 @@ uint32_t ParticleGenerator::getGeneratorCount() const {
 }
 
 const glm::vec3 &ParticleGenerator::getColor() const { return _color; }
+
+float ParticleGenerator::getLifetime() const { return _lifetime; }
 
 bool ParticleGenerator::isLocalCoord() const { return _localCoords; }
 

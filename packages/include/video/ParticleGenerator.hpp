@@ -80,6 +80,7 @@ public:
   void setGeneratorCount(uint32_t count);
   void setLocalCoord(bool value);
   void setColor(const glm::vec3 &color);
+  void setLifetime(float value);
 
   const glm::vec2 &getDirection() const;
   float getSpeed() const;
@@ -93,6 +94,7 @@ public:
   uint32_t getGeneratorCount() const;
   bool isLocalCoord() const;
   const glm::vec3 &getColor() const;
+  float getLifetime() const;
 
   void generateParticle();
   void onTick() override;

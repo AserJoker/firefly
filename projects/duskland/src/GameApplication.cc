@@ -141,7 +141,7 @@ void GameApplication::onInitialize() {
   getWindow()->show();
   srand((unsigned)time(NULL));
   scene = new video::Scene();
-  pg = new video::ParticleGenerator(100);
+  pg = new video::ParticleGenerator(1000);
   pg->setTexture("star.png");
   pg->setScale({9, 9});
   pg->setRandomAngle(60);
@@ -150,6 +150,7 @@ void GameApplication::onInitialize() {
   pg->setRadialAcceleration(0.01f);
   // pg->setTangentialAcceleration(0.1f);
   pg->setLocalCoord(false);
+  pg->setLifetime(4);
   scene->appendChild(pg);
   cursor = new ConstantNode();
   scene->appendChild(cursor);
@@ -216,8 +217,9 @@ void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
 
 void GameApplication::onClick(input::Event_Click &e) {
   script::Module_Event::emit(_script, "click", e.getType());
-  scene->removeChild(pg);
-  pg = nullptr;
+  for (auto i = 0; i < 10; i++) {
+    pg->generateParticle();
+  }
 }
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
