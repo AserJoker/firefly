@@ -16,7 +16,7 @@ require'event'.on('gameLoaded', function()
 
     sprite:appendChild(animation)
 
-    animation:setAction("move", "source.x", 0, 32 * 3, 100, 103, true)
+    animation:setAction("move", "source.x", 0, 32 * 3, 0, 3, true)
     animation:setFPS(10)
 
     sprite:setZIndex(1)

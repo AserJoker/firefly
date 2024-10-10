@@ -197,6 +197,7 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
     _constants->setField(fmt::format("{}_blend", name), info.blend);
     _constants->setField(fmt::format("{}_coord_matrix", name),
                          info.textureCoordMatrix);
+    _constants->setField(fmt::format("{}_enable", name), true);
     index++;
   }
 

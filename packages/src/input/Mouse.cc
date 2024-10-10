@@ -10,7 +10,6 @@
 #include <SDL_video.h>
 #include <glm/fwd.hpp>
 
-
 using namespace firefly;
 using namespace firefly::input;
 Mouse::Mouse() : _captured(false) { _bus->on(this, &Mouse::onEvent); }
@@ -18,9 +17,10 @@ Mouse::Mouse() : _captured(false) { _bus->on(this, &Mouse::onEvent); }
 void Mouse::onEvent(runtime::Event_SDL &e) {
   auto &event = e.getEvent();
   if (event.type == SDL_MOUSEMOTION) {
-    glm::vec2 delta = {event.motion.xrel, event.motion.yrel};
-    _position += delta;
-    _bus->emit<Event_MouseMotion>(_position, delta);
+    glm::ivec2 delta = {event.motion.xrel, event.motion.yrel};
+    glm::ivec2 position;
+    SDL_GetMouseState(&position.x, &position.y);
+    _bus->emit<Event_MouseMotion>(position, delta);
     if (_captured) {
       auto win = SDL_GL_GetCurrentWindow();
       int w, h;
@@ -42,7 +42,11 @@ void Mouse::onEvent(runtime::Event_SDL &e) {
   }
 }
 
-const glm::vec2 &Mouse::getPosition() const { return _position; }
+const glm::ivec2 Mouse::getPosition() const {
+  glm::ivec2 position;
+  SDL_GetMouseState(&position.x, &position.y);
+  return position;
+}
 
 void Mouse::captureMouse() {
   SDL_SetRelativeMouseMode(SDL_TRUE);

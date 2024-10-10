@@ -32,8 +32,10 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
+#include "video/ParticleGenerator.hpp"
 #include "video/Scene.hpp"
 #include <SDL_image.h>
+#include <SDL_mouse.h>
 #include <SDL_timer.h>
 #include <fmt/format.h>
 #include <glad/glad.h>
@@ -51,6 +53,9 @@
 
 using namespace firefly;
 using namespace duskland;
+
+core::AutoPtr<video::Scene> scene;
+core::AutoPtr<video::ParticleGenerator> pg;
 
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
@@ -116,6 +121,17 @@ void GameApplication::onInitialize() {
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   getWindow()->show();
   srand((unsigned)time(NULL));
+  scene = new video::Scene();
+  pg = new video::ParticleGenerator(100);
+  pg->setTexture("star.png");
+  pg->setScale({9, 9});
+  pg->setRandomAngle(60);
+  pg->setSpeed(5.0f);
+  pg->setPosition({100, 100});
+  pg->setRadialAcceleration(0.01f);
+  // pg->setTangentialAcceleration(0.1f);
+  pg->setLocalCoord(false);
+  scene->appendChild(pg);
 }
 
 void GameApplication::onMainLoop() {
@@ -129,8 +145,11 @@ void GameApplication::onMainLoop() {
   }
   script::Module_Event::emit(_script, "update", (uint32_t)(now - timePreFrame));
   timePreFrame = now;
-  if (video::Scene::scene != nullptr) {
-    video::Scene::scene->onTick();
+  // if (video::Scene::scene != nullptr) {
+  //   video::Scene::scene->onTick();
+  // }
+  if (scene != nullptr) {
+    scene->onTick();
   }
   getWindow()->present();
 }
@@ -152,12 +171,13 @@ void GameApplication::onKeyUp(input::Event_KeyUp &e) {
 }
 
 void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
-  auto pos = e.getPosition() - getWindow()->getWindowPosition();
+  auto pos = e.getPosition();
   auto delta = e.getDelta();
   script::Module_Event::emit(
       _script, "mouseMotion",
       script::AnyRecord{
           {"x", pos.x}, {"y", pos.y}, {"dx", delta.x}, {"dy", delta.y}});
+  pg->setPosition(pos);
 }
 
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
