@@ -43,8 +43,8 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
   _color = {1, 1, 1};
   _zIndex = 0;
 
-  defineAttribute("position.x", &_position.x);
-  defineAttribute("position.y", &_position.y);
+  defineAttribute("position.x", &_current_position.x);
+  defineAttribute("position.y", &_current_position.y);
   defineAttribute("localCoords", &_localCoords);
   defineAttribute("direction.x", &_direction.x);
   defineAttribute("direction.y", &_direction.y);
@@ -115,12 +115,10 @@ void ParticleGenerator::setRadialAcceleration(float value) {
 }
 void ParticleGenerator::setScale(const glm::vec2 &value) { _scale = value; }
 void ParticleGenerator::setPosition(const glm::vec2 &value) {
-  if (_localCoords) {
-    for (auto &p : _particles) {
-      p.position += (value - _position);
-    }
-  }
-  _position = value;
+  beginAttrGroup("position");
+  setAttribute("x", value.x);
+  setAttribute("y", value.y);
+  endAttrGroup();
 }
 void ParticleGenerator::setDelay(uint32_t delay) { _delay = delay; }
 
@@ -269,5 +267,13 @@ const glm::mat4 &ParticleGenerator::getMatrixModel() const {
 void ParticleGenerator::onAttrChange(const std::string &name) {
   if (name == "texture") {
     _material->setTexture(Material::DIFFUSE_TEX, _texture);
+  }
+  if (name == "position" || name.starts_with("position.")) {
+    if (_localCoords) {
+      for (auto &p : _particles) {
+        p.position += (_current_position - _position);
+      }
+    }
+    _position = _current_position;
   }
 }

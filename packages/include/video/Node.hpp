@@ -4,7 +4,9 @@
 #include <fmt/format.h>
 #include <list>
 #include <sstream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 namespace firefly::video {
 
 class Node : public core::Object {
@@ -80,6 +82,31 @@ public:
       this->f64 = f64;
       this->type = F64;
     }
+    AttrValue(const Attr &attr) {
+      this->type = attr.type;
+      switch (attr.type) {
+      case BOOLEAN:
+        this->boolean = *attr.boolean;
+        break;
+      case STRING:
+        this->string = *attr.string;
+        break;
+      case I32:
+        this->i32 = *attr.i32;
+        break;
+      case U32:
+        this->u32 = *attr.u32;
+        break;
+      case F32:
+        this->f32 = *attr.f32;
+        break;
+      case F64:
+        this->f64 = *attr.f64;
+        break;
+      case NIL:
+        break;
+      }
+    }
     std::string toString() const {
       switch (type) {
       case BOOLEAN:
@@ -136,11 +163,16 @@ public:
         return f32 == 1;
       case F64:
         return f64 == 1;
-      case NIL:
-        return false;
+      default:
+        break;
       }
       return false;
     }
+  };
+
+  struct AttrBinding {
+    std::string attr;
+    Node *node;
   };
 
 private:
@@ -148,6 +180,9 @@ private:
   std::list<core::AutoPtr<Node>> _children;
   std::unordered_map<std::string, core::AutoPtr<Node>> _indexedChildren;
   std::unordered_map<std::string, Attr> _attributes;
+  std::unordered_map<std::string, std::vector<AttrBinding>> _bindings;
+  std::vector<Node *> _bindingHosts;
+  std::unordered_map<std::string, std::vector<std::string>> _attributeGroups;
   std::string _id;
 
   std::list<std::string> _attrGroups;
@@ -159,10 +194,17 @@ protected:
   template <class T>
   inline void defineAttribute(const std::string &name, T *field) {
     _attributes[name] = field;
+    auto pos = name.find_first_of('.');
+    if (pos != std::string::npos) {
+      auto groupName = name.substr(0, pos);
+      auto &group = this->_attributeGroups[groupName];
+      group.push_back(name);
+    }
   }
 
 public:
   Node();
+  ~Node() override;
   void setId(const std::string &id);
   const std::string &getId() const;
   core::AutoPtr<Node> getChild(const std::string &id);
@@ -176,6 +218,8 @@ public:
   bool setAttribute(const std::string &name, const Attr &value);
   bool setAttribute(const std::string &name, const AttrValue &value);
   void endAttrGroup();
+  void bindAttribute(const std::string name, core::AutoPtr<Node> host,
+                     const std::string &source);
   virtual void onTick();
 };
 }; // namespace firefly::video

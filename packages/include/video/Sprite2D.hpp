@@ -1,5 +1,4 @@
 #pragma once
-#include "Animation.hpp"
 #include "Renderable.hpp"
 #include "core/AutoPtr.hpp"
 #include "gl/AlphaFunc.hpp"
@@ -21,8 +20,6 @@ private:
 
   glm::mat4 _matrixModel;
   core::AutoPtr<Material> _material;
-
-  core::AutoPtr<Animation> _animation;
 
   void updateModel();
   void updateTexModel();

@@ -47,6 +47,7 @@ private:
   uint32_t _zIndex;
 
   glm::vec2 _position;
+  glm::vec2 _current_position;
   glm::vec2 _scale;
   std::string _texture;
 

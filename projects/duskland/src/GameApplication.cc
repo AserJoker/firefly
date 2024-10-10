@@ -32,6 +32,7 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
+#include "video/Node.hpp"
 #include "video/ParticleGenerator.hpp"
 #include "video/Scene.hpp"
 #include <SDL_image.h>
@@ -54,8 +55,26 @@
 using namespace firefly;
 using namespace duskland;
 
+class ConstantNode : public video::Node {
+private:
+  glm::ivec2 _position;
+
+public:
+  ConstantNode() {
+    defineAttribute("cursor.x", &_position.x);
+    defineAttribute("cursor.y", &_position.y);
+  }
+  void setPosition(const glm::ivec2 &cursor) {
+    beginAttrGroup("cursor");
+    setAttribute("x", cursor.x);
+    setAttribute("y", cursor.y);
+    endAttrGroup();
+  }
+};
+
 core::AutoPtr<video::Scene> scene;
 core::AutoPtr<video::ParticleGenerator> pg;
+core::AutoPtr<ConstantNode> cursor;
 
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
@@ -132,6 +151,9 @@ void GameApplication::onInitialize() {
   // pg->setTangentialAcceleration(0.1f);
   pg->setLocalCoord(false);
   scene->appendChild(pg);
+  cursor = new ConstantNode();
+  scene->appendChild(cursor);
+  pg->bindAttribute("position", cursor, "cursor");
 }
 
 void GameApplication::onMainLoop() {
@@ -177,7 +199,7 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
       _script, "mouseMotion",
       script::AnyRecord{
           {"x", pos.x}, {"y", pos.y}, {"dx", delta.x}, {"dy", delta.y}});
-  pg->setPosition(pos);
+  cursor->setPosition(pos);
 }
 
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
@@ -194,6 +216,8 @@ void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
 
 void GameApplication::onClick(input::Event_Click &e) {
   script::Module_Event::emit(_script, "click", e.getType());
+  scene->removeChild(pg);
+  pg = nullptr;
 }
 
 void GameApplication::onResize(runtime::Event_Resize &e) {

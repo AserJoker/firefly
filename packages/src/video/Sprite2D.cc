@@ -4,7 +4,6 @@
 #include "gl/BlendFunc.hpp"
 #include "gl/Texture2D.hpp"
 #include "gl/TextureFilter.hpp"
-#include "video/Animation.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
 #include "video/Node.hpp"
@@ -73,7 +72,6 @@ Sprite2D::Sprite2D(const std::string &path)
     : _rotationAngle(0.0f), _matrixModel(1.0f), _zIndex(0),
       _rotationCenter(0.0f, 0.0f, 1.0f) {
   _material = new Material();
-  _animation = new Animation();
 
   _material->setBlend(true);
   _material->setDepthTest(false);
@@ -100,7 +98,6 @@ Sprite2D::Sprite2D(const std::string &path)
     setRect({0, 0, texSize});
     setRect({0, 0, texSize});
   }
-  appendChild(_animation);
 }
 
 void Sprite2D::setTexture(const std::string &path) {

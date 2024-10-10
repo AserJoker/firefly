@@ -3,6 +3,28 @@
 using namespace firefly;
 using namespace firefly::video;
 Node::Node() : _parent(nullptr), _changed(0) {}
+Node::~Node() {
+  for (auto &host : _bindingHosts) {
+    for (auto &[_, group] : host->_bindings) {
+      for (auto it = group.begin(); it != group.end(); it++) {
+        if (it->node == this) {
+          group.erase(it);
+          break;
+        }
+      }
+    }
+  }
+  for (auto &[_, binding] : _bindings) {
+    for (auto &item : binding) {
+      auto it = std::find(item.node->_bindingHosts.begin(),
+                          item.node->_bindingHosts.end(), this);
+      if (it != item.node->_bindingHosts.end()) {
+        item.node->_bindingHosts.erase(it);
+      }
+    }
+  }
+  _bindingHosts.clear();
+}
 void Node::setId(const std::string &id) { _id = id; }
 
 const std::string &Node::getId() const { return _id; }
@@ -10,6 +32,9 @@ const std::string &Node::getId() const { return _id; }
 core::AutoPtr<Node> Node::getParent() { return _parent; }
 
 void Node::appendChild(core::AutoPtr<Node> child) {
+  if (child == nullptr) {
+    return;
+  }
   if (child->_parent == this) {
     return;
   }
@@ -22,9 +47,28 @@ void Node::appendChild(core::AutoPtr<Node> child) {
     _indexedChildren[child->getId()] = child;
   }
 }
-void Node::onAttrChange(const std::string &name) {}
+void Node::onAttrChange(const std::string &name) {
+  if (_bindings.contains(name)) {
+    auto &bindings = _bindings.at(name);
+    for (auto &binding : bindings) {
+      if (_attributes.contains(name)) {
+        binding.node->setAttribute(binding.attr, _attributes[name]);
+      } else {
+        auto &group = _attributeGroups[name];
+        for (auto &item : group) {
+          auto fieldName = item.substr(name.length());
+          binding.node->setAttribute(binding.attr + fieldName,
+                                     _attributes[item]);
+        }
+      }
+    }
+  }
+}
 
 void Node::removeChild(core::AutoPtr<Node> child) {
+  if (child == nullptr) {
+    return;
+  }
   if (child->_parent != this) {
     return;
   }
@@ -68,27 +112,25 @@ bool Node::setAttribute(const std::string &name, const Attr &value) {
     return false;
   }
   auto &current = _attributes.at(currentName);
-  if (current.type != value.type) {
-    return false;
-  }
+  AttrValue val(value);
   switch (current.type) {
   case BOOLEAN:
-    *current.boolean = *value.boolean;
+    *current.boolean = val.toBoolean();
     break;
   case STRING:
-    *current.string = *value.string;
+    *current.string = val.toString();
     break;
   case I32:
-    *current.i32 = *value.i32;
+    *current.i32 = val.type == I32 ? val.i32 : (int32_t)val.toNumber();
     break;
   case U32:
-    *current.u32 = *value.u32;
+    *current.u32 = val.type == U32 ? val.u32 : (uint32_t)val.toNumber();
     break;
   case F32:
-    *current.f32 = *value.f32;
+    *current.f32 = val.type == F32 ? val.f32 : (float)val.toNumber();
     break;
   case F64:
-    *current.f64 = *value.f64;
+    *current.f64 = val.type == F64 ? val.f64 : val.toNumber();
     break;
   case NIL:
     break;
@@ -179,4 +221,15 @@ void Node::endAttrGroup() {
     _attrGroup = *_attrGroups.rbegin();
     _attrGroups.pop_back();
   }
+}
+void Node::bindAttribute(const std::string name, core::AutoPtr<Node> host,
+                         const std::string &source) {
+
+  auto it = std::find(_bindingHosts.begin(), _bindingHosts.end(),
+                      host.getRawPointer());
+  if (it != _bindingHosts.end()) {
+    _bindingHosts.push_back((Node *)host.getRawPointer());
+  }
+  auto &group = host->_bindings[source];
+  group.push_back({name, this});
 }
