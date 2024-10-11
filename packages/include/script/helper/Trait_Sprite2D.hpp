@@ -1,6 +1,7 @@
 #pragma once
+#include "document/Sprite2D.hpp"
 #include "script/Script.hpp"
-#include "video/Sprite2D.hpp"
+
 namespace firefly::script {
 class Trait_Sprite2D {
 private:
@@ -22,6 +23,6 @@ private:
 public:
   static void initialize(core::AutoPtr<Script> ctx);
   static core::AutoPtr<Value> create(core::AutoPtr<Script> ctx,
-                                     core::AutoPtr<video::Sprite2D> sprite);
+                                     core::AutoPtr<document::Sprite2D> sprite);
 };
 }; // namespace firefly::script

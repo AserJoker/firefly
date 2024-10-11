@@ -3,7 +3,6 @@
 #include "script/Script.hpp"
 #include "script/Value.hpp"
 #include "script/helper/Trait_Node.hpp"
-#include "video/RenderTarget.hpp"
 using namespace firefly;
 using namespace firefly::script;
 void Trait_RenderTarget::initialize(core::AutoPtr<Script> ctx) {
@@ -14,7 +13,7 @@ void Trait_RenderTarget::initialize(core::AutoPtr<Script> ctx) {
 
 core::AutoPtr<Value> Trait_RenderTarget::create(
     core::AutoPtr<Script> ctx,
-    const core::AutoPtr<video::RenderTarget> &renderTarget) {
+    const core::AutoPtr<document::RenderTarget> &renderTarget) {
   auto global = ctx->getNativeGlobal();
   auto RenderTarget = global->getField(ctx, "RenderTarget");
   auto instance = Trait_Node::create(ctx, renderTarget);

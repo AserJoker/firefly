@@ -1,6 +1,5 @@
 #include "video/RenderTarget.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Singleton.hpp"
 #include "exception/Exception.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
@@ -10,7 +9,6 @@
 #include "video/Attribute.hpp"
 #include "video/AttributeIndex.hpp"
 #include "video/Geometry.hpp"
-#include "video/Renderer.hpp"
 #include <SDL_image.h>
 #include <SDL_pixels.h>
 #include <SDL_rwops.h>
@@ -96,23 +94,4 @@ void RenderTarget::resize(const glm::ivec2 &size) {
     throw exception::RuntimeException<"Check Framebuffer">(
         "Failed to check framebuffer");
   }
-}
-void RenderTarget::onTick() {
-  active();
-  glClearColor(0, 0, 0, 0);
-  auto renderer = core::Singleton<Renderer>::instance();
-  auto context = renderer->pushContext();
-  Node::onTick();
-  renderer->popContext(context);
-  gl::FrameBuffer::bind(nullptr);
-  glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
-  // auto texture = _frame->getAttachments()[0];
-  // auto size = texture->getSize();
-  // void *buffer = ::operator new(size.x * size.y * 4);
-  // gl::Texture2D::bind(_frame->getAttachments()[0]);
-  // glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
-  // auto surface = SDL_CreateRGBSurfaceWithFormatFrom(
-  //     buffer, size.x, size.y, 4, 4 * size.x, SDL_PIXELFORMAT_RGBA32);
-  // IMG_SavePNG(surface, "1.png");
-  // exit(0);
 }

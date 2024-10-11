@@ -1,6 +1,6 @@
 #pragma once
 #include "script/Script.hpp"
-#include "video/Animation.hpp"
+#include "document/Animation.hpp"
 namespace firefly::script {
 class Trait_Animation {
 private:
@@ -16,7 +16,7 @@ private:
 public:
   static core::AutoPtr<Value>
   create(core::AutoPtr<Script> ctx,
-         const core::AutoPtr<video::Animation> &animation);
+         const core::AutoPtr<document::Animation> &animation);
   static void initialize(core::AutoPtr<Script> ctx);
 };
 } // namespace firefly::script

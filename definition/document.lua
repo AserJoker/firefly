@@ -1,11 +1,5 @@
 --- @meta
---- @module 'video'
---- @class format
---- @field RGB number
---- @field RGBA number
---- @field GRAY number
-local format = {}
-
+--- @module 'document'
 --- @class Rect
 --- @field x integer
 --- @field y integer
@@ -51,6 +45,11 @@ function Node:getAttribute(key) end
 function Node:beginAttrGroup(name) end
 
 function Node:endAttrGroup() end
+
+--- @param name string
+--- @param host Node
+--- @param source string
+function Node:bindAttribute(name, host, source) end
 
 --- @class Scene:Node
 local Scene = {};

@@ -4,17 +4,16 @@
 #include "script/Script.hpp"
 #include "script/Value.hpp"
 #include "script/helper/Trait_Node.hpp"
-#include "video/Scene.hpp"
 using namespace firefly;
 using namespace firefly::script;
 
 FUNC_DEF(Trait_Scene::setCamera) {
-  auto scene = args[0]->getOpaque().cast<video::Scene>();
+  auto scene = args[0]->getOpaque().cast<document::Scene>();
   auto type = args[1]->toString(ctx);
   if (type == "ortho") {
-    scene->setCamera(video::Scene::CameraType::ORTHO);
+    scene->setCamera(document::Scene::CameraType::ORTHO);
   } else if (type == "perspective") {
-    scene->setCamera(video::Scene::CameraType::PERSPECTIVE);
+    scene->setCamera(document::Scene::CameraType::PERSPECTIVE);
   } else {
     throw exception::RuntimeException<"LuaException">(
         fmt::format("Unknown camera type:'{}'", type));
@@ -31,7 +30,7 @@ void Trait_Scene::initialize(core::AutoPtr<Script> ctx) {
 
 core::AutoPtr<Value>
 Trait_Scene::create(core::AutoPtr<Script> ctx,
-                    const core::AutoPtr<video::Scene> &scene) {
+                    const core::AutoPtr<document::Scene> &scene) {
   auto global = ctx->getNativeGlobal();
   auto Scene = global->getField(ctx, "Scene");
   auto instance = Trait_Node::create(ctx, scene);

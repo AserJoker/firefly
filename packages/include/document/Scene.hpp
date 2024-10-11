@@ -1,9 +1,10 @@
 #pragma once
 #include "core/AutoPtr.hpp"
+#include "document/Node.hpp"
+#include "document/RenderTarget.hpp"
 #include "video/Camera.hpp"
-#include "video/Node.hpp"
-#include "video/RenderTarget.hpp"
-namespace firefly::video {
+
+namespace firefly::document {
 class Scene : public Node {
 public:
   static core::AutoPtr<Scene> scene;
@@ -12,7 +13,7 @@ public:
   enum class CameraType { NIL, ORTHO, PERSPECTIVE };
 
 private:
-  core::AutoPtr<Camera> _camera;
+  core::AutoPtr<video::Camera> _camera;
   CameraType _cameraType;
 
 private:
@@ -25,4 +26,4 @@ public:
   void setCamera(CameraType type);
   CameraType getCameraType() const;
 };
-}; // namespace firefly::video
+}; // namespace firefly::document

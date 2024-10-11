@@ -1,17 +1,17 @@
 #pragma once
-#include "Geometry.hpp"
+#include "video/Geometry.hpp"
 #include "core/AutoPtr.hpp"
 #include "video/Material.hpp"
-#include "video/Node.hpp"
+#include "document/Node.hpp"
 #include <glm/glm.hpp>
-namespace firefly::video {
+namespace firefly::document {
 class Renderable : public Node {
 public:
   void onTick() override;
 
 protected:
-  virtual const core::AutoPtr<Geometry> &getGeometry() const = 0;
-  virtual const core::AutoPtr<Material> &getMaterial() const = 0;
+  virtual const core::AutoPtr<video::Geometry> &getGeometry() const = 0;
+  virtual const core::AutoPtr<video::Material> &getMaterial() const = 0;
   virtual const glm::mat4 &getMatrixModel() const = 0;
 };
 } // namespace firefly::video

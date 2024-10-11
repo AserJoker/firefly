@@ -1,16 +1,15 @@
-#include "video/Scene.hpp"
+#include "document/Scene.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "runtime/Application.hpp"
 #include "video/OrthoCamera.hpp"
 #include "video/PerspectiveCamera.hpp"
-#include "video/RenderTarget.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_video.h>
 #include <glm/ext/matrix_transform.hpp>
 #include <glm/fwd.hpp>
 using namespace firefly;
-using namespace firefly::video;
+using namespace firefly::document;
 
 core::AutoPtr<Scene> Scene::scene = nullptr;
 
@@ -30,7 +29,7 @@ glm::ivec4 Scene::getViewport() {
   while (parent != nullptr) {
     auto rt = parent.cast<RenderTarget>();
     if (rt != nullptr) {
-      return {0, 0, rt->getSize()};
+      return {0, 0, rt->getRenderTarget()->getSize()};
     }
     parent = parent->getParent();
   }
@@ -40,7 +39,7 @@ glm::ivec4 Scene::getViewport() {
   return {0, 0, size};
 }
 void Scene::onTick() {
-  auto renderer = core::Singleton<Renderer>::instance();
+  auto renderer = core::Singleton<video::Renderer>::instance();
   auto renderTarget = getRenderTarget();
   Node::onTick();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -66,10 +65,10 @@ void Scene::setCamera(CameraType type) {
   _cameraType = type;
   switch (type) {
   case CameraType::ORTHO:
-    _camera = core::Singleton<OrthoCamera>::instance();
+    _camera = core::Singleton<video::OrthoCamera>::instance();
     break;
   case CameraType::PERSPECTIVE:
-    _camera = core::Singleton<PerspectiveCamera>::instance();
+    _camera = core::Singleton<video::PerspectiveCamera>::instance();
     break;
   case CameraType::NIL:
     _camera = nullptr;

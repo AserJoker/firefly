@@ -1,6 +1,7 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
+#include "document/Scene.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_MouseDown.hpp"
@@ -21,9 +22,8 @@
 #include "script/helper/Trait_Resource.hpp"
 #include "script/helper/Trait_Scene.hpp"
 #include "script/helper/Trait_Sprite2D.hpp"
-#include "script/lib/Module_Array.hpp"
 #include "script/lib/Module_Co.hpp"
-#include "script/lib/Module_Database.hpp"
+#include "script/lib/Module_Document.hpp"
 #include "script/lib/Module_Event.hpp"
 #include "script/lib/Module_Input.hpp"
 #include "script/lib/Module_Locale.hpp"
@@ -32,9 +32,6 @@
 #include "script/lib/Module_Runtime.hpp"
 #include "script/lib/Module_Serialization.hpp"
 #include "script/lib/Module_Video.hpp"
-#include "video/Node.hpp"
-#include "video/ParticleGenerator.hpp"
-#include "video/Scene.hpp"
 #include <SDL_image.h>
 #include <SDL_mouse.h>
 #include <SDL_timer.h>
@@ -54,27 +51,6 @@
 
 using namespace firefly;
 using namespace duskland;
-
-class ConstantNode : public video::Node {
-private:
-  glm::ivec2 _position;
-
-public:
-  ConstantNode() {
-    defineAttribute("cursor.x", &_position.x);
-    defineAttribute("cursor.y", &_position.y);
-  }
-  void setPosition(const glm::ivec2 &cursor) {
-    beginAttrGroup("cursor");
-    setAttribute("x", cursor.x);
-    setAttribute("y", cursor.y);
-    endAttrGroup();
-  }
-};
-
-core::AutoPtr<video::Scene> scene;
-core::AutoPtr<video::ParticleGenerator> pg;
-core::AutoPtr<ConstantNode> cursor;
 
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
@@ -100,9 +76,8 @@ void GameApplication::initScript() {
   script::Module_Media::open(_script);
   script::Module_Runtime::open(_script);
   script::Module_Input::open(_script);
-  script::Module_Database::open(_script);
   script::Module_Serialization::open(_script);
-  script::Module_Array::open(_script);
+  script::Module_Document::open(_script);
   script::Module_Video::open(_script);
   script::Module_Co::open(_script);
   _script->eval("require('duskland')");
@@ -135,26 +110,9 @@ void GameApplication::onInitialize() {
   initScript();
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
-  _database->load();
   script::Module_Event::emit(_script, "gameLoaded");
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   getWindow()->show();
-  srand((unsigned)time(NULL));
-  scene = new video::Scene();
-  pg = new video::ParticleGenerator(1000);
-  pg->setTexture("star.png");
-  pg->setScale({9, 9});
-  pg->setRandomAngle(60);
-  pg->setSpeed(5.0f);
-  pg->setPosition({100, 100});
-  pg->setRadialAcceleration(0.01f);
-  // pg->setTangentialAcceleration(0.1f);
-  pg->setLocalCoord(false);
-  pg->setLifetime(4);
-  scene->appendChild(pg);
-  cursor = new ConstantNode();
-  scene->appendChild(cursor);
-  pg->bindAttribute("position", cursor, "cursor");
 }
 
 void GameApplication::onMainLoop() {
@@ -168,12 +126,10 @@ void GameApplication::onMainLoop() {
   }
   script::Module_Event::emit(_script, "update", (uint32_t)(now - timePreFrame));
   timePreFrame = now;
-  // if (video::Scene::scene != nullptr) {
-  //   video::Scene::scene->onTick();
-  // }
-  if (scene != nullptr) {
-    scene->onTick();
+  if (document::Scene::scene != nullptr) {
+    document::Scene::scene->onTick();
   }
+
   getWindow()->present();
 }
 
@@ -200,7 +156,6 @@ void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {
       _script, "mouseMotion",
       script::AnyRecord{
           {"x", pos.x}, {"y", pos.y}, {"dx", delta.x}, {"dy", delta.y}});
-  cursor->setPosition(pos);
 }
 
 void GameApplication::onMouseDown(input::Event_MouseDown &e) {
@@ -217,9 +172,6 @@ void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {
 
 void GameApplication::onClick(input::Event_Click &e) {
   script::Module_Event::emit(_script, "click", e.getType());
-  for (auto i = 0; i < 10; i++) {
-    pg->generateParticle();
-  }
 }
 
 void GameApplication::onResize(runtime::Event_Resize &e) {

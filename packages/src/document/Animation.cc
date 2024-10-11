@@ -1,10 +1,10 @@
-#include "video/Animation.hpp"
+#include "document/Animation.hpp"
 #include <SDL_timer.h>
 using namespace firefly;
-using namespace firefly::video;
+using namespace firefly::document;
 
 Animation::Animation(uint32_t fps, const std::string &group)
-    : _frameTimeout(1000.0f / fps), _group(group) {}
+    : _frameTimeout(1000 / fps), _group(group) {}
 void Animation::setAction(const std::string &name, const std::string &attr,
                           float step, uint32_t startFrame, uint32_t endFrame,
                           bool loop) {
@@ -12,13 +12,12 @@ void Animation::setAction(const std::string &name, const std::string &attr,
   Action action{};
   action.frame = 0;
   action.loop = loop;
-  action.onTick = [=, this](uint32_t frame) -> void {
-    static auto start = getParent()->getAttribute(attr).toNumber();
-    getParent()->setAttribute(attr, start + step * (frame - startFrame));
-  };
+  action.initialized = false;
+  action.step = step;
   action.start = startFrame;
   action.end = endFrame;
   action.enable = true;
+  action.attribute = attr;
   _actions[name] = action;
 }
 void Animation::setAction(const std::string &name, const std::string &attr,
@@ -29,13 +28,14 @@ void Animation::setAction(const std::string &name, const std::string &attr,
   Action action{};
   action.frame = 0;
   action.loop = loop;
-  action.onTick = [=, this](uint32_t frame) -> void {
-    getParent()->setAttribute(attr, start + step * (frame - startFrame));
-  };
+  action.initialized = true;
+  action.initValue = start;
+  action.step = step;
   action.start = startFrame;
   action.end = endFrame;
   action.enable = false;
   action.removed = false;
+  action.attribute = attr;
   _actions[name] = action;
 }
 void Animation::removeAction(const std::string &name) {
@@ -44,7 +44,10 @@ void Animation::removeAction(const std::string &name) {
     _actions[name].removed = true;
   }
 }
-void Animation::setFPS(const uint32_t &fps) { _frameTimeout = 1000.0f / fps; }
+void Animation::setSpeed(const uint32_t &speed) {
+  _frameTimeout = 1000 / speed;
+}
+
 void Animation::setGroup(const std::string &name) { _group = name; }
 
 void Animation::start(const std::string &name) {
@@ -77,7 +80,7 @@ void Animation::reset(const std::string &name) {
   }
   auto &action = _actions[name];
   action.enable = false;
-  action.onTick(action.start);
+  getParent()->setAttribute(action.attribute, action.initValue);
 }
 
 void Animation::onTick() {
@@ -106,7 +109,14 @@ void Animation::onTick() {
             continue;
           }
         }
-        action.onTick(action.frame);
+        if (!action.initialized) {
+          action.initValue =
+              getParent()->getAttribute(action.attribute).toFloat32();
+          action.initialized = true;
+        }
+        getParent()->setAttribute(
+            action.attribute,
+            action.initValue + action.step * (action.frame - action.start));
       }
       action.frame++;
     }

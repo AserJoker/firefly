@@ -1,7 +1,8 @@
-#include "video/Node.hpp"
+#include "document/Node.hpp"
+#include "core/Attribute.hpp"
 #include "core/AutoPtr.hpp"
 using namespace firefly;
-using namespace firefly::video;
+using namespace firefly::document;
 Node::Node() : _parent(nullptr), _changed(0) {}
 Node::~Node() {
   for (auto &host : _bindingHosts) {
@@ -103,7 +104,8 @@ const core::AutoPtr<Node> Node::getChild(const std::string &id) const {
   }
   return nullptr;
 }
-bool Node::setAttribute(const std::string &name, const Attr &value) {
+bool Node::setAttribute(const std::string &name,
+                        const core::PtrAttribute &value) {
   auto currentName = name;
   if (!_attrGroup.empty()) {
     currentName = _attrGroup + "." + name;
@@ -112,29 +114,7 @@ bool Node::setAttribute(const std::string &name, const Attr &value) {
     return false;
   }
   auto &current = _attributes.at(currentName);
-  AttrValue val(value);
-  switch (current.type) {
-  case BOOLEAN:
-    *current.boolean = val.toBoolean();
-    break;
-  case STRING:
-    *current.string = val.toString();
-    break;
-  case I32:
-    *current.i32 = val.type == I32 ? val.i32 : (int32_t)val.toNumber();
-    break;
-  case U32:
-    *current.u32 = val.type == U32 ? val.u32 : (uint32_t)val.toNumber();
-    break;
-  case F32:
-    *current.f32 = val.type == F32 ? val.f32 : (float)val.toNumber();
-    break;
-  case F64:
-    *current.f64 = val.type == F64 ? val.f64 : val.toNumber();
-    break;
-  case NIL:
-    break;
-  }
+  current = value.toAttribute();
   if (_attrGroup.empty()) {
     onAttrChange(currentName);
   }
@@ -142,7 +122,7 @@ bool Node::setAttribute(const std::string &name, const Attr &value) {
   return true;
 }
 
-bool Node::setAttribute(const std::string &name, const AttrValue &value) {
+bool Node::setAttribute(const std::string &name, const core::Attribute &value) {
   auto currentName = name;
   if (!_attrGroup.empty()) {
     currentName = _attrGroup + "." + name;
@@ -151,56 +131,19 @@ bool Node::setAttribute(const std::string &name, const AttrValue &value) {
     return false;
   }
   auto &current = _attributes.at(currentName);
-  switch (current.type) {
-  case BOOLEAN:
-    *current.boolean = value.toBoolean();
-    break;
-  case STRING:
-    *current.string = value.toString();
-    break;
-  case I32:
-    *current.i32 = value.type == I32 ? value.i32 : (int32_t)value.toNumber();
-    break;
-  case U32:
-    *current.u32 = value.type == U32 ? value.u32 : (uint32_t)value.toNumber();
-    break;
-  case F32:
-    *current.f32 = value.type == F32 ? value.f32 : (float)value.toNumber();
-    break;
-  case F64:
-    *current.f64 = value.toNumber();
-    break;
-  case NIL:
-    break;
-  }
+  current = value;
   if (_attrGroup.empty()) {
     onAttrChange(currentName);
   }
   _changed++;
   return true;
 }
-const Node::AttrValue Node::getAttribute(const std::string &name) const {
+const core::Attribute Node::getAttribute(const std::string &name) const {
   if (!_attributes.contains(name)) {
     return {};
   }
   auto &attr = _attributes.at(name);
-  switch (attr.type) {
-  case BOOLEAN:
-    return *attr.boolean;
-  case STRING:
-    return *attr.string;
-  case I32:
-    return *attr.i32;
-  case U32:
-    return *attr.u32;
-  case F32:
-    return *attr.f32;
-  case F64:
-    return *attr.f64;
-  case NIL:
-    return {};
-  }
-  return {};
+  return attr.toAttribute();
 }
 void Node::beginAttrGroup(const std::string &name) {
   if (!_attrGroup.empty()) {

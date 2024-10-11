@@ -1,8 +1,9 @@
 #pragma once
 #include "core/AutoPtr.hpp"
+#include "document/Scene.hpp"
 #include "script/Script.hpp"
 #include "script/Value.hpp"
-#include "video/Scene.hpp"
+
 namespace firefly::script {
 class Trait_Scene {
 private:
@@ -10,7 +11,8 @@ private:
 
 public:
   static void initialize(core::AutoPtr<Script> script);
-  static core::AutoPtr<Value> create(core::AutoPtr<Script> ctx,
-                                     const core::AutoPtr<video::Scene> &scene);
+  static core::AutoPtr<Value>
+  create(core::AutoPtr<Script> ctx,
+         const core::AutoPtr<document::Scene> &scene);
 };
 } // namespace firefly::script

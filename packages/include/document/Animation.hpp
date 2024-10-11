@@ -1,19 +1,21 @@
 #pragma once
-#include "Node.hpp"
-#include <functional>
+#include "document/Node.hpp"
 #include <string>
 #include <unordered_map>
-namespace firefly::video {
+namespace firefly::document {
 class Animation : public Node {
 private:
   struct Action {
-    std::function<void(uint32_t frame)> onTick;
     uint32_t frame;
     bool loop;
     uint32_t start;
     uint32_t end;
     bool enable;
     bool removed;
+    bool initialized;
+    float initValue;
+    float step;
+    std::string attribute;
   };
 
   std::unordered_map<std::string, Action> _actions;
@@ -31,12 +33,15 @@ public:
   void setAction(const std::string &name, const std::string &attr, float step,
                  uint32_t startFrame, uint32_t endFrame, bool loop = false);
   void removeAction(const std::string &name);
-  void setFPS(const uint32_t &fps);
+  void setSpeed(const uint32_t &speed);
   void start(const std::string &name);
   void stop(const std::string &name);
   void resume(const std::string &name);
   void reset(const std::string &name);
   void setGroup(const std::string &name);
   void onTick() override;
+
+public:
+  static constexpr inline const char *ATTR_SPEED = "speed";
 };
 }; // namespace firefly::video
