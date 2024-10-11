@@ -10,7 +10,7 @@ private:
   static FUNC_DEF(stop);
   static FUNC_DEF(resume);
   static FUNC_DEF(reset);
-  static FUNC_DEF(setFPS);
+  static FUNC_DEF(setSpeed);
   static FUNC_DEF(setGroup);
 
 public:

@@ -124,7 +124,6 @@ void GameApplication::onMainLoop() {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
-  script::Module_Event::emit(_script, "update", (uint32_t)(now - timePreFrame));
   timePreFrame = now;
   if (document::Scene::scene != nullptr) {
     document::Scene::scene->onTick();

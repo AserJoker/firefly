@@ -134,8 +134,8 @@ function Animation:removeAction(name) end
 --- @param name string
 function Animation:setGroup(name) end
 
---- @param fps number
-function Animation:setFPS(fps) end
+--- @param speed number
+function Animation:setSpeed(speed) end
 
 --- @param name string
 function Animation:start(name) end

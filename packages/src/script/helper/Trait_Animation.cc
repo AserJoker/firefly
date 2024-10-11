@@ -40,7 +40,7 @@ FUNC_DEF(Trait_Animation::setGroup) {
   self->setGroup(name);
   return {};
 }
-FUNC_DEF(Trait_Animation::setFPS) {
+FUNC_DEF(Trait_Animation::setSpeed) {
   auto self = args[0]->getOpaque().cast<document::Animation>();
   auto fps = (uint32_t)args[1]->toNumber(ctx);
   self->setSpeed(fps);
@@ -77,7 +77,7 @@ void Trait_Animation::initialize(core::AutoPtr<Script> ctx) {
                        ->setFunctionField(ctx, setAction)
                        ->setFunctionField(ctx, removeAction)
                        ->setFunctionField(ctx, setGroup)
-                       ->setFunctionField(ctx, setFPS)
+                       ->setFunctionField(ctx, setSpeed)
                        ->setFunctionField(ctx, start)
                        ->setFunctionField(ctx, stop)
                        ->setFunctionField(ctx, reset)
