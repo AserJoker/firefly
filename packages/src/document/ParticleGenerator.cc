@@ -123,7 +123,7 @@ void ParticleGenerator::setTangentialAcceleration(float value) {
 void ParticleGenerator::setRadialAcceleration(float value) {
   setAttribute(ATTR_RADIAL_ACCELERATION, value);
 }
-void ParticleGenerator::setScale(const glm::vec2 &value) {
+void ParticleGenerator::setSize(const glm::vec2 &value) {
   beginAttrGroup(ATTR_SCALE);
   setAttribute("x", value.x);
   setAttribute("y", value.y);
@@ -180,7 +180,7 @@ float ParticleGenerator::getRadialAcceleration() const {
   return _radialAcceleration;
 }
 
-const glm::vec2 &ParticleGenerator::getScale() const { return _scale; }
+const glm::vec2 &ParticleGenerator::getSize() const { return _scale; }
 
 const glm::vec2 &ParticleGenerator::getPosition() const { return _position; }
 

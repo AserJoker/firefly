@@ -1,7 +1,10 @@
 #include "script/helper/Trait_Properties.hpp"
+#include "core/AutoPtr.hpp"
 #include "core/Properties.hpp"
+#include "script/Script.hpp"
 using namespace firefly;
 using namespace firefly::script;
+using SelfType = core::AutoPtr<core::Properties>;
 void Trait_Properties::initialize(core::AutoPtr<Script> ctx) {
   auto global = ctx->getNativeGlobal();
   auto Properties = ctx->createValue()
@@ -24,26 +27,23 @@ Trait_Properties::create(core::AutoPtr<Script> ctx,
   return instance;
 }
 FUNC_DEF(Trait_Properties::getKey) {
-  auto self = args[0]->getOpaque().cast<core::Properties>();
-  auto key = args[1]->toString(ctx);
+  auto [self, key] = Script::parseArgs<SelfType, std::string>(ctx, args);
   auto result = self->get(key);
-  return {createString(ctx, result)};
+  return {ctx->createValue(result)};
 }
 FUNC_DEF(Trait_Properties::setKey) {
-  auto self = args[0]->getOpaque().cast<core::Properties>();
-  auto key = args[1]->toString(ctx);
-  auto value = args[2]->toString(ctx);
+  auto [self, key, value] =
+      Script::parseArgs<SelfType, std::string, std::string>(ctx, args);
   self->set(key, value);
   return {};
 }
 FUNC_DEF(Trait_Properties::removeKey) {
-  auto self = args[0]->getOpaque().cast<core::Properties>();
-  auto key = args[1]->toString(ctx);
+  auto [self, key] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->del(key);
   return {};
 }
 FUNC_DEF(Trait_Properties::store) {
-  auto self = args[0]->getOpaque().cast<core::Properties>();
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
   auto data = self->store();
-  return {createString(ctx, data)};
+  return {ctx->createValue(data)};
 }

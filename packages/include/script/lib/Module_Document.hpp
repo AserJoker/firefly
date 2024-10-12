@@ -7,6 +7,7 @@ private:
   static FUNC_DEF(createScene);
   static FUNC_DEF(createRenderTarget);
   static FUNC_DEF(createAnimation);
+  static FUNC_DEF(createParticleGenerator);
   static FUNC_DEF(setShader);
   static FUNC_DEF(setScene);
   static FUNC_DEF(getScene);

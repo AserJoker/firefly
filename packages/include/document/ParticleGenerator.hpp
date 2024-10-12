@@ -67,8 +67,8 @@ protected:
 
 public:
   ParticleGenerator(uint32_t count);
-  void setTexture(const std::string &path);
   void setTexture(const core::AutoPtr<gl::Texture2D> &tex);
+  void setTexture(const std::string &path);
   const std::string &getTexture() const;
 
   void setDirection(const glm::vec2 &direction);
@@ -76,7 +76,7 @@ public:
   void setLinearAcceleration(float value);
   void setTangentialAcceleration(float value);
   void setRadialAcceleration(float value);
-  void setScale(const glm::vec2 &value);
+  void setSize(const glm::vec2 &value);
   void setPosition(const glm::vec2 &value);
   void setDelay(uint32_t delay);
   void setRandomAngle(uint32_t angle);
@@ -91,7 +91,7 @@ public:
   float getLinearAcceleration() const;
   float getTangentialAcceleration() const;
   float getRadialAcceleration() const;
-  const glm::vec2 &getScale() const;
+  const glm::vec2 &getSize() const;
   const glm::vec2 &getPosition() const;
   uint32_t getDelay() const;
   uint32_t getRandomAngle() const;

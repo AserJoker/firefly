@@ -16,13 +16,11 @@ void Module_Media::open(core::AutoPtr<Script> ctx) {
   ctx->registerModule("media", exports);
 }
 FUNC_DEF(Module_Media::query) {
-  VALIDATE_ARGS(query, 1);
   auto media = core::Singleton<runtime::Media>::instance();
   auto resource = media->load(args[0]->toString(ctx));
   return {Trait_Resource::create(ctx, resource)};
 }
 FUNC_DEF(Module_Media::createBuffer) {
-  VALIDATE_ARGS(createBuffer, 1);
   if (args[0]->getType(ctx) == Atom::TYPE::NUMBER) {
     return {Trait_Buffer::create(
         ctx, new core::Buffer((uint32_t)args[0]->toNumber(ctx)))};

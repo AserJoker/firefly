@@ -5,6 +5,9 @@
 
 namespace firefly::core {
 template <class T> class AutoPtr {
+public:
+  using innerType = T;
+
 private:
   T *_object;
 

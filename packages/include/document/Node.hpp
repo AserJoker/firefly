@@ -61,6 +61,9 @@ public:
   void endAttrGroup();
   void bindAttribute(const std::string name, core::AutoPtr<Node> host,
                      const std::string &source);
+  const std::unordered_map<std::string, std::string> getAttributes() const;
+  const std::unordered_map<std::string, std::vector<std::string>> &
+  getAttributeGroups() const;
   virtual void onTick();
 };
 }; // namespace firefly::document

@@ -1,26 +1,21 @@
 #include "script/helper/Trait_Animation.hpp"
+#include "core/AutoPtr.hpp"
+#include "document/Animation.hpp"
+#include "script/Script.hpp"
 #include "script/helper/Trait_Node.hpp"
 using namespace firefly;
 using namespace firefly::script;
-
+using SelfType = core::AutoPtr<document::Animation>;
 FUNC_DEF(Trait_Animation::setAction) {
-  auto self = args[0]->getOpaque().cast<document::Animation>();
   if (args.size() == 7) {
-    auto name = args[1]->toString(ctx);
-    auto attr = args[2]->toString(ctx);
-    auto step = args[3]->toNumber(ctx);
-    auto startFrame = (uint32_t)args[4]->toNumber(ctx);
-    auto endFrame = (uint32_t)args[5]->toNumber(ctx);
-    auto loop = args[6]->toBoolean(ctx);
+    auto [self, name, attr, step, startFrame, endFrame, loop] =
+        Script::parseArgs<SelfType, std::string, std::string, float, uint32_t,
+                          uint32_t, bool>(ctx, args);
     self->setAction(name, attr, step, startFrame, endFrame, loop);
   } else {
-    auto name = args[1]->toString(ctx);
-    auto attr = args[2]->toString(ctx);
-    auto startValue = args[3]->toNumber(ctx);
-    auto finalValue = args[4]->toNumber(ctx);
-    auto startFrame = (uint32_t)args[5]->toNumber(ctx);
-    auto endFrame = (uint32_t)args[6]->toNumber(ctx);
-    auto loop = args[7]->toBoolean(ctx);
+    auto [self, name, attr, startValue, finalValue, startFrame, endFrame,
+          loop] = Script::parseArgs<SelfType, std::string, std::string, float,
+                                    float, uint32_t, uint32_t, bool>(ctx, args);
     self->setAction(name, attr, startValue, finalValue, startFrame, endFrame,
                     loop);
   }
@@ -28,45 +23,38 @@ FUNC_DEF(Trait_Animation::setAction) {
 }
 
 FUNC_DEF(Trait_Animation::removeAction) {
-  auto self = args[0]->getOpaque().cast<document::Animation>();
-  auto name = args[1]->toString(ctx);
+  auto [self, name] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->removeAction(name);
   return {};
 }
 
 FUNC_DEF(Trait_Animation::setGroup) {
-  auto self = args[0]->getOpaque().cast<document::Animation>();
-  auto name = args[1]->toString(ctx);
+  auto [self, name] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->setGroup(name);
   return {};
 }
 FUNC_DEF(Trait_Animation::setSpeed) {
-  auto self = args[0]->getOpaque().cast<document::Animation>();
-  auto fps = (uint32_t)args[1]->toNumber(ctx);
+  auto [self, fps] = Script::parseArgs<SelfType, uint32_t>(ctx, args);
   self->setSpeed(fps);
   return {};
 }
 FUNC_DEF(Trait_Animation::start) {
-  auto self = args[0]->getOpaque().cast<document::Animation>();
-  auto name = args[1]->toString(ctx);
+  auto [self, name] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->start(name);
   return {};
 }
 FUNC_DEF(Trait_Animation::stop) {
-  auto self = args[0]->getOpaque().cast<document::Animation>();
-  auto name = args[1]->toString(ctx);
+  auto [self, name] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->stop(name);
   return {};
 }
 FUNC_DEF(Trait_Animation::resume) {
-  auto self = args[0]->getOpaque().cast<document::Animation>();
-  auto name = args[1]->toString(ctx);
+  auto [self, name] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->resume(name);
   return {};
 }
 FUNC_DEF(Trait_Animation::reset) {
-  auto self = args[0]->getOpaque().cast<document::Animation>();
-  auto name = args[1]->toString(ctx);
+  auto [self, name] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->reset(name);
   return {};
 }

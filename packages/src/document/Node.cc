@@ -1,6 +1,7 @@
 #include "document/Node.hpp"
 #include "core/Attribute.hpp"
 #include "core/AutoPtr.hpp"
+#include <vector>
 using namespace firefly;
 using namespace firefly::document;
 Node::Node() : _parent(nullptr), _changed(0) {}
@@ -175,4 +176,15 @@ void Node::bindAttribute(const std::string name, core::AutoPtr<Node> host,
   }
   auto &group = host->_bindings[source];
   group.push_back({name, this});
+}
+const std::unordered_map<std::string, std::string> Node::getAttributes() const {
+  std::unordered_map<std::string, std::string> attributes;
+  for (auto &[name, attr] : _attributes) {
+    attributes[name] = attr.getTypeName();
+  }
+  return attributes;
+}
+const std::unordered_map<std::string, std::vector<std::string>> &
+Node::getAttributeGroups() const {
+  return _attributeGroups;
 }

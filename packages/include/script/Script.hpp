@@ -79,6 +79,37 @@ public:
   void gc();
 
   void destroy(Atom *atom);
+
+  template <int index, class T>
+  static constexpr void parseArg(core::AutoPtr<script::Script> &ctx, T &tuple,
+                                 script::Value::Stack &args) {}
+
+  template <int index, class T, class ARG, class... ARGS>
+  static constexpr void parseArg(core::AutoPtr<script::Script> &ctx, T &tuple,
+                                 script::Value::Stack &args) {
+    if constexpr (std::is_same_v<ARG, bool>) {
+      std::get<index>(tuple) = args[index]->toBoolean(ctx);
+    } else if constexpr (std::is_integral_v<ARG> ||
+                         std::is_floating_point_v<ARG>) {
+      std::get<index>(tuple) = (ARG)args[index]->toNumber(ctx);
+    } else if constexpr (std::is_same_v<ARG, std::string>) {
+      std::get<index>(tuple) = args[index]->toString(ctx);
+    } else if constexpr (std::is_same_v<ARG, core::AutoPtr<script::Value>>) {
+      std::get<index>(tuple) = args[index];
+    } else {
+      std::get<index>(tuple) =
+          args[index]->getOpaque().cast<typename ARG::innerType>();
+    }
+    parseArg<index + 1, T, ARGS...>(ctx, tuple, args);
+  }
+
+  template <class... ARGS>
+  static constexpr std::tuple<ARGS...>
+  parseArgs(core::AutoPtr<script::Script> &ctx, script::Value::Stack &args) {
+    std::tuple<ARGS...> result = std::make_tuple(ARGS{}...);
+    parseArg<0, std::tuple<ARGS...>, ARGS...>(ctx, result, args);
+    return result;
+  }
 };
 #define FUNC_DEF(name)                                                         \
   Value::Stack name(core::AutoPtr<Script> ctx, Value::Stack args)
@@ -88,11 +119,4 @@ public:
 #define createFunction(ctx, value) ctx->createValue()->setFunction(ctx, value)
 #define setFunctionField(ctx, func)                                            \
   setField(ctx, #func, ctx->createValue()->setFunction(ctx, func))
-#define VALIDATE_ARGS(func, s)                                                 \
-  if (args.size() < s) {                                                       \
-    throw exception::ValidateException(                                        \
-        fmt::format("Failed to call '{}',this function requires {} "           \
-                    "argument(s) but instead it is receiving {}",              \
-                    #func, s, args.size()));                                   \
-  }
 }; // namespace firefly::script

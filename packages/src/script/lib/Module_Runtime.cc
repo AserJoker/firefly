@@ -29,20 +29,17 @@ void Module_Runtime::open(core::AutoPtr<Script> ctx) {
   ctx->registerModule("runtime", exports);
 }
 FUNC_DEF(Module_Runtime::setWindowTitle) {
-  VALIDATE_ARGS(setWindowTitle, 1);
   auto title = args[0]->toString(ctx);
   auto app = core::Singleton<runtime::Application>::instance();
   app->getWindow()->setTitle(title);
   return {};
 }
 FUNC_DEF(Module_Runtime::getWindowTitle) {
-  VALIDATE_ARGS(getWindowTitle, 1);
   auto app = core::Singleton<runtime::Application>::instance();
   auto title = app->getWindow()->getTitle();
   return {ctx->createValue()->setString(ctx, title)};
 }
 FUNC_DEF(Module_Runtime::setWindowSize) {
-  VALIDATE_ARGS(setWindowSize, 2);
   uint32_t width = (uint32_t)args[0]->toNumber(ctx);
   uint32_t height = (uint32_t)args[1]->toNumber(ctx);
   auto app = core::Singleton<runtime::Application>::instance();
@@ -57,7 +54,6 @@ FUNC_DEF(Module_Runtime::getWindowSize) {
 }
 
 FUNC_DEF(Module_Runtime::saveConfig) {
-  VALIDATE_ARGS(saveConfig, 3);
   auto module = args[0]->toString(ctx);
   auto filename = args[1]->toString(ctx);
   auto config = args[2]->getOpaque().cast<core::Properties>();
@@ -76,7 +72,6 @@ FUNC_DEF(Module_Runtime::saveConfig) {
   return {};
 }
 FUNC_DEF(Module_Runtime::loadConfig) {
-  VALIDATE_ARGS(loadConfig, 2);
   auto module = args[0]->toString(ctx);
   auto filename = args[1]->toString(ctx);
   std::filesystem::path configPath = "./config";
@@ -94,7 +89,6 @@ FUNC_DEF(Module_Runtime::loadConfig) {
   return {Trait_Properties::create(ctx, new core::Properties(buf))};
 }
 FUNC_DEF(Module_Runtime::save) {
-  VALIDATE_ARGS(save, 3);
   auto name = args[0]->toString(ctx);
   auto file = args[1]->toString(ctx);
   std::filesystem::path savePath = "./saves";
@@ -109,7 +103,6 @@ FUNC_DEF(Module_Runtime::save) {
   return {};
 }
 FUNC_DEF(Module_Runtime::load) {
-  VALIDATE_ARGS(load, 2);
   auto name = args[0]->toString(ctx);
   auto file = args[1]->toString(ctx);
   std::filesystem::path savePath = "./saves";

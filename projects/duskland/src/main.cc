@@ -1,4 +1,5 @@
 
+
 #define _CRT_SECURE_NO_WARNINGS
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
@@ -15,8 +16,8 @@
 
 using namespace firefly;
 using namespace duskland;
-
 int main(int argc, char *argv[]) {
+
   setlocale(LC_ALL, NULL);
 #ifdef _WIN32
   SetConsoleOutputCP(CP_UTF8);

@@ -65,5 +65,6 @@ struct PtrAttribute {
   bool operator==(const Attribute &attr);
   bool operator==(const PtrAttribute &attr);
   Attribute toAttribute() const;
+  std::string getTypeName() const;
 };
 }; // namespace firefly::core

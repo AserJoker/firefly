@@ -10,6 +10,8 @@
 using namespace firefly;
 using namespace firefly::script;
 using exception::ValidateException;
+using SelfType = core::Promisify<core::AutoPtr<Value>>;
+
 core::AutoPtr<Value>
 Trait_Promise::create(core::AutoPtr<Script> ctx,
                       core::Promisify<core::AutoPtr<Value>> pro) {
@@ -38,7 +40,6 @@ void Trait_Promise::initialize(core::AutoPtr<Script> ctx) {
   ctx->popScope(scope);
 }
 FUNC_DEF(Trait_Promise::next) {
-  VALIDATE_ARGS(next, 2);
   auto self = args[0];
   auto callback = args[1];
   auto pro = self->getOpaque().cast<core::Promise<core::AutoPtr<Value>>>();
@@ -98,15 +99,12 @@ FUNC_DEF(Trait_Promise::next) {
   return {create(ctx, next)};
 }
 FUNC_DEF(Trait_Promise::wait) {
-  VALIDATE_ARGS(wait, 1);
-  auto self = args[0];
-  auto pro = self->getOpaque().cast<core::Promise<core::AutoPtr<Value>>>();
-  auto res = core::Coroutine::wait(pro);
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  auto res = core::Coroutine::wait(self);
   return {res};
 }
 FUNC_DEF(Trait_Promise::resolve) {
-  VALIDATE_ARGS(resolve, 1);
-  auto self = args[0];
+  auto [self] = Script::parseArgs<core::AutoPtr<Value>>(ctx, args);
   auto pro = self->getOpaque().cast<core::Promise<core::AutoPtr<Value>>>();
   core::AutoPtr<Value> value = ctx->createValue()->setArray(ctx);
   for (uint32_t i = 0; i < (uint32_t)args.size() - 1; i++) {
@@ -117,11 +115,9 @@ FUNC_DEF(Trait_Promise::resolve) {
   return {};
 }
 FUNC_DEF(Trait_Promise::reject) {
-  VALIDATE_ARGS(reject, 2);
-  auto self = args[0];
+  auto [self, message] =
+      Script::parseArgs<core::AutoPtr<Value>, std::string>(ctx, args);
   auto pro = self->getOpaque().cast<core::Promise<core::AutoPtr<Value>>>();
-  auto err = args[1];
-  self->setField(ctx, "message", err);
-  pro->reject(err->toString(ctx));
+  pro->reject(message);
   return {};
 }

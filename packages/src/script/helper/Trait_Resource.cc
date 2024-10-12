@@ -6,14 +6,14 @@
 #include "script/helper/Trait_Buffer.hpp"
 using namespace firefly;
 using namespace firefly::script;
+using SelfType = core::AutoPtr<runtime::Resource>;
 FUNC_DEF(Trait_Resource::read) {
-  auto self = args[0];
-  auto resource = self->getOpaque().cast<runtime::Resource>();
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
   uint32_t size = 0;
   if (args.size() > 1) {
     size = (uint32_t)args[1]->toNumber(ctx);
   }
-  auto buffer = resource->read(size);
+  auto buffer = self->read(size);
   return {Trait_Buffer::create(ctx, buffer)};
 }
 void Trait_Resource::initialize(core::AutoPtr<Script> ctx) {

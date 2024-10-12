@@ -17,6 +17,8 @@ private:
   static FUNC_DEF(beginAttrGroup);
   static FUNC_DEF(bindAttribute);
   static FUNC_DEF(endAttrGroup);
+  static FUNC_DEF(getAttributes);
+  static FUNC_DEF(getAttributeGroups);
 
 public:
   static void initialize(core::AutoPtr<Script> script);

@@ -16,6 +16,7 @@
 #include "script/helper/Trait_Animation.hpp"
 #include "script/helper/Trait_Buffer.hpp"
 #include "script/helper/Trait_Node.hpp"
+#include "script/helper/Trait_ParticleGenerator.hpp"
 #include "script/helper/Trait_Promise.hpp"
 #include "script/helper/Trait_Properties.hpp"
 #include "script/helper/Trait_RenderTarget.hpp"
@@ -69,6 +70,7 @@ void GameApplication::initScript() {
   script::Trait_Scene::initialize(_script);
   script::Trait_RenderTarget::initialize(_script);
   script::Trait_Animation::initialize(_script);
+  script::Trait_ParticleGenerator::initialize(_script);
 
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);

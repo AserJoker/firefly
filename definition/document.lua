@@ -51,6 +51,12 @@ function Node:endAttrGroup() end
 --- @param source string
 function Node:bindAttribute(name, host, source) end
 
+--- @return {[string]:"string"|"int32"|"uint32"|"float32"|"boolean"|"nil"}
+function Node:getAttributes() end
+
+--- @return {[string]:string[]}
+function Node:getAttributeGroups() end
+
 --- @class Scene:Node
 local Scene = {};
 

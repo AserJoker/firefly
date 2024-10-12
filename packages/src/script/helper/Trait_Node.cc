@@ -7,22 +7,21 @@
 
 using namespace firefly;
 using namespace firefly::script;
-
+using SelfType = core::AutoPtr<document::Node>;
 FUNC_DEF(Trait_Node::appendChild) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
-  auto child = args[1]->getOpaque().cast<document::Node>();
+  auto [self, child] = Script::parseArgs<SelfType, SelfType>(ctx, args);
   self->appendChild(child);
   return {};
 }
 
 FUNC_DEF(Trait_Node::removeChild) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
-  auto child = args[1]->getOpaque().cast<document::Node>();
+  auto [self, child] = Script::parseArgs<SelfType, SelfType>(ctx, args);
+
   self->removeChild(child);
   return {};
 }
 FUNC_DEF(Trait_Node::getParent) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
   auto parent = self->getParent();
   if (!parent) {
     return {ctx->createValue()};
@@ -31,35 +30,31 @@ FUNC_DEF(Trait_Node::getParent) {
 }
 
 FUNC_DEF(Trait_Node::getId) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
-  return {ctx->createValue()->setString(ctx, self->getId())};
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  return {ctx->createValue(self->getId())};
 }
 FUNC_DEF(Trait_Node::setId) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
-  auto id = args[1]->toString(ctx);
+  auto [self, id] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->setId(id);
   return {};
 }
 FUNC_DEF(Trait_Node::getChild) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
-  auto id = args[1]->toString(ctx);
+  auto [self, id] = Script::parseArgs<SelfType, std::string>(ctx, args);
   auto child = self->getChild(id);
   return {Trait_Node::create(ctx, child)};
 }
 FUNC_DEF(Trait_Node::beginAttrGroup) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
-  auto key = args[1]->toString(ctx);
+  auto [self, key] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->beginAttrGroup(key);
   return {};
 }
 FUNC_DEF(Trait_Node::endAttrGroup) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
   self->endAttrGroup();
   return {};
 }
 FUNC_DEF(Trait_Node::setAttribute) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
-  auto key = args[1]->toString(ctx);
+  auto [self, key] = Script::parseArgs<SelfType, std::string>(ctx, args);
   auto type = Atom::TYPE::NIL;
   if (args.size() > 2) {
     type = args[2]->getType(ctx);
@@ -84,17 +79,15 @@ FUNC_DEF(Trait_Node::setAttribute) {
   return {ctx->createValue(res)};
 }
 FUNC_DEF(Trait_Node::bindAttribute) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
-  auto name = args[1]->toString(ctx);
-  auto node = args[2]->getOpaque().cast<document::Node>();
-  auto source = args[3]->toString(ctx);
+  auto [self, name, node, source] =
+      Script::parseArgs<SelfType, std::string, SelfType, std::string>(ctx,
+                                                                      args);
   self->bindAttribute(name, node, source);
   return {};
 }
 
 FUNC_DEF(Trait_Node::getAttribute) {
-  auto self = args[0]->getOpaque().cast<document::Node>();
-  auto key = args[1]->toString(ctx);
+  auto [self, key] = Script::parseArgs<SelfType, std::string>(ctx, args);
   auto &attr = self->getAttribute(key);
   switch (attr.getType()) {
   case core::AttributeType::BOOLEAN:
@@ -113,6 +106,29 @@ FUNC_DEF(Trait_Node::getAttribute) {
   return {};
 }
 
+FUNC_DEF(Trait_Node::getAttributes) {
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  auto attributes = self->getAttributes();
+  auto result = ctx->createValue()->setObject(ctx);
+  for (auto &[key, type] : attributes) {
+    result->setField(ctx, key, ctx->createValue(type));
+  }
+  return {result};
+}
+FUNC_DEF(Trait_Node::getAttributeGroups) {
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  auto groups = self->getAttributeGroups();
+  auto result = ctx->createValue()->setObject(ctx);
+  for (auto &[name, attributes] : groups) {
+    auto attrs = ctx->createValue()->setArray(ctx);
+    for (auto index = 0; index < attributes.size(); index++) {
+      attrs->setIndex(ctx, index, ctx->createValue(attributes[index]));
+    }
+    result->setField(ctx, name, attrs);
+  }
+  return {result};
+}
+
 void Trait_Node::initialize(core::AutoPtr<Script> ctx) {
   auto global = ctx->getNativeGlobal();
   auto Node = ctx->createValue()
@@ -127,7 +143,9 @@ void Trait_Node::initialize(core::AutoPtr<Script> ctx) {
                   ->setFunctionField(ctx, setAttribute)
                   ->setFunctionField(ctx, bindAttribute)
                   ->setFunctionField(ctx, beginAttrGroup)
-                  ->setFunctionField(ctx, endAttrGroup);
+                  ->setFunctionField(ctx, endAttrGroup)
+                  ->setFunctionField(ctx, getAttributes)
+                  ->setFunctionField(ctx, getAttributeGroups);
   global->setField(ctx, "Node", Node);
 }
 

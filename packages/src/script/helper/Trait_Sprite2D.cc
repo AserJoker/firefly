@@ -1,26 +1,23 @@
 #include "script/helper/Trait_Sprite2D.hpp"
+#include "core/AutoPtr.hpp"
+#include "document/Sprite2D.hpp"
 #include "exception/ValidateException.hpp"
 #include "script/Script.hpp"
 #include "script/helper/Trait_Node.hpp"
-#include "document/Sprite2D.hpp"
+
 using namespace firefly;
 using namespace firefly::script;
 using exception::ValidateException;
-
+using SelfType = core::AutoPtr<document::Sprite2D>;
 FUNC_DEF(Trait_Sprite2D::setTexture) {
-  VALIDATE_ARGS(setTexture, 2);
-  auto self = args[0];
-  auto path = args[1]->toString(ctx);
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  sprite->setTexture(path);
+  auto [self, path] = Script::parseArgs<SelfType, std::string>(ctx, args);
+  self->setTexture(path);
   return {};
 }
 
 FUNC_DEF(Trait_Sprite2D::getTextureSize) {
-  VALIDATE_ARGS(setTexture, 1);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  auto size = sprite->getTextureObject()->getSize();
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  auto size = self->getTextureObject()->getSize();
   auto s = ctx->createValue()
                ->setObject(ctx)
                ->setField(ctx, "width", createNumber(ctx, size[0]))
@@ -29,23 +26,19 @@ FUNC_DEF(Trait_Sprite2D::getTextureSize) {
 }
 
 FUNC_DEF(Trait_Sprite2D::setRect) {
-  VALIDATE_ARGS(setRect, 2);
-  auto self = args[0];
-  auto rect = args[1];
+  auto [self, rect] =
+      Script::parseArgs<SelfType, core::AutoPtr<Value>>(ctx, args);
   auto x = (uint32_t)rect->getField(ctx, "x")->toNumber(ctx);
   auto y = (uint32_t)rect->getField(ctx, "y")->toNumber(ctx);
   auto width = (uint32_t)rect->getField(ctx, "width")->toNumber(ctx);
   auto height = (uint32_t)rect->getField(ctx, "height")->toNumber(ctx);
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  sprite->setRect({x, y, width, height});
+  self->setRect({x, y, width, height});
   return {};
 }
 
 FUNC_DEF(Trait_Sprite2D::getRect) {
-  VALIDATE_ARGS(getRect, 1);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  auto rc = sprite->getRect();
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  auto rc = self->getRect();
   auto rect = ctx->createValue()->setObject(ctx);
   rect->setField(ctx, "x", createNumber(ctx, rc[0]));
   rect->setField(ctx, "y", createNumber(ctx, rc[1]));
@@ -55,23 +48,19 @@ FUNC_DEF(Trait_Sprite2D::getRect) {
 }
 
 FUNC_DEF(Trait_Sprite2D::setSourceRect) {
-  VALIDATE_ARGS(setSourceRect, 2);
-  auto self = args[0];
-  auto rect = args[1];
+  auto [self, rect] =
+      Script::parseArgs<SelfType, core::AutoPtr<Value>>(ctx, args);
   auto x = (uint32_t)rect->getField(ctx, "x")->toNumber(ctx);
   auto y = (uint32_t)rect->getField(ctx, "y")->toNumber(ctx);
   auto width = (uint32_t)rect->getField(ctx, "width")->toNumber(ctx);
   auto height = (uint32_t)rect->getField(ctx, "height")->toNumber(ctx);
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  sprite->setSourceRect({x, y, width, height});
+  self->setSourceRect({x, y, width, height});
   return {};
 }
 
 FUNC_DEF(Trait_Sprite2D::getSourceRect) {
-  VALIDATE_ARGS(getSourceRect, 1);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  auto rc = sprite->getSourceRect();
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  auto rc = self->getSourceRect();
   auto rect = ctx->createValue()->setObject(ctx);
   rect->setField(ctx, "x", createNumber(ctx, rc[0]));
   rect->setField(ctx, "y", createNumber(ctx, rc[1]));
@@ -81,22 +70,17 @@ FUNC_DEF(Trait_Sprite2D::getSourceRect) {
 }
 
 FUNC_DEF(Trait_Sprite2D::setRotation) {
-  VALIDATE_ARGS(setRotation, 3);
-  auto self = args[0];
-  auto center = args[1];
-  auto angle = args[2]->toNumber(ctx);
+  auto [self, center, angle] =
+      Script::parseArgs<SelfType, core::AutoPtr<Value>, float>(ctx, args);
   auto x = (uint32_t)center->getField(ctx, "x")->toNumber(ctx);
   auto y = (uint32_t)center->getField(ctx, "y")->toNumber(ctx);
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  sprite->setRotation({x, y}, angle);
+  self->setRotation({x, y}, angle);
   return {};
 }
 
 FUNC_DEF(Trait_Sprite2D::getRotation) {
-  VALIDATE_ARGS(getRotation, 1);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  auto &[center, angle] = sprite->getRotation();
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  auto &[center, angle] = self->getRotation();
   auto rotation = ctx->createValue()->setObject(ctx);
   auto ct = ctx->createValue()->setObject(ctx);
   ct->setField(ctx, "x", createNumber(ctx, center[0]));
@@ -107,48 +91,36 @@ FUNC_DEF(Trait_Sprite2D::getRotation) {
 }
 
 FUNC_DEF(Trait_Sprite2D::setVisible) {
-  VALIDATE_ARGS(setVisible, 2);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  sprite->setVisible(args[1]->toBoolean(ctx));
+  auto [self, visible] = Script::parseArgs<SelfType, bool>(ctx, args);
+  self->setVisible(visible);
   return {};
 }
 
 FUNC_DEF(Trait_Sprite2D::isVisible) {
-  VALIDATE_ARGS(isVisible, 1);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  return {createBoolean(ctx, sprite->isVisible())};
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  return {ctx->createValue(self->isVisible())};
 }
 
 FUNC_DEF(Trait_Sprite2D::setZIndex) {
-  VALIDATE_ARGS(setZIndex, 2);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  sprite->setZIndex(args[1]->toNumber(ctx));
+  auto [self, zIndex] = Script::parseArgs<SelfType, int32_t>(ctx, args);
+  self->setZIndex(zIndex);
   return {};
 }
 
 FUNC_DEF(Trait_Sprite2D::getZIndex) {
-  VALIDATE_ARGS(getZIndex, 1);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  return {createNumber(ctx, sprite->getZIndex())};
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  return {ctx->createValue(self->getZIndex())};
 }
 
 FUNC_DEF(Trait_Sprite2D::setBlend) {
-  VALIDATE_ARGS(setBlend, 2);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  sprite->setBlend(args[1]->toNumber(ctx));
+  auto [self, blend] = Script::parseArgs<SelfType, int32_t>(ctx, args);
+  self->setBlend(blend);
   return {};
 }
 
 FUNC_DEF(Trait_Sprite2D::getBlend) {
-  VALIDATE_ARGS(getBlend, 1);
-  auto self = args[0];
-  auto sprite = self->getOpaque().cast<document::Sprite2D>();
-  return {createNumber(ctx, sprite->getBlend())};
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  return {ctx->createValue(self->getBlend())};
 }
 
 void Trait_Sprite2D::initialize(core::AutoPtr<Script> ctx) {

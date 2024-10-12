@@ -2,6 +2,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "document/Animation.hpp"
+#include "document/ParticleGenerator.hpp"
 #include "document/RenderTarget.hpp"
 #include "document/Scene.hpp"
 #include "document/Sprite2D.hpp"
@@ -9,6 +10,7 @@
 #include "script/Atom.hpp"
 #include "script/Script.hpp"
 #include "script/helper/Trait_Animation.hpp"
+#include "script/helper/Trait_ParticleGenerator.hpp"
 #include "script/helper/Trait_RenderTarget.hpp"
 #include "script/helper/Trait_Scene.hpp"
 #include "script/helper/Trait_Sprite2D.hpp"
@@ -19,7 +21,7 @@ using namespace firefly::script;
 using exception::ValidateException;
 
 FUNC_DEF(Module_Document::createSprite2D) {
-  VALIDATE_ARGS(createSprite2D, 1);
+
   core::AutoPtr<document::Sprite2D> sprite;
   if (args[0]->getType(ctx) == Atom::TYPE::STRING) {
     auto path = args[0]->toString(ctx);
@@ -52,6 +54,12 @@ FUNC_DEF(Module_Document::createAnimation) {
   return {Trait_Animation::create(ctx, animation)};
 }
 
+FUNC_DEF(Module_Document::createParticleGenerator) {
+  auto [count] = Script::parseArgs<uint32_t>(ctx, args);
+  core::AutoPtr generator = new document::ParticleGenerator(count);
+  return {Trait_ParticleGenerator::create(ctx, generator)};
+}
+
 FUNC_DEF(Module_Document::setScene) {
   auto scene = args[0]->getOpaque().cast<document::Scene>();
   document::Scene::scene = scene;
@@ -65,8 +73,7 @@ FUNC_DEF(Module_Document::getScene) {
 }
 
 FUNC_DEF(Module_Document::setShader) {
-  VALIDATE_ARGS(setShader, 1);
-  auto name = args[0]->toString(ctx);
+  auto [name] = Script::parseArgs<std::string>(ctx, args);
   auto renderer = core::Singleton<video::Renderer>::instance();
   renderer->setShader(name);
   return {};
@@ -79,6 +86,7 @@ void Module_Document::open(core::AutoPtr<Script> ctx) {
       ->setFunctionField(ctx, createScene)
       ->setFunctionField(ctx, createRenderTarget)
       ->setFunctionField(ctx, createAnimation)
+      ->setFunctionField(ctx, createParticleGenerator)
       ->setFunctionField(ctx, setShader)
       ->setFunctionField(ctx, setScene)
       ->setFunctionField(ctx, getScene);

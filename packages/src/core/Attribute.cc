@@ -92,6 +92,24 @@ Attribute PtrAttribute::toAttribute() const {
   }
   return {};
 }
+std::string PtrAttribute::getTypeName() const {
+  switch (type) {
+
+  case AttributeType::NIL:
+    return "nil";
+  case AttributeType::BOOLEAN:
+    return "boolean";
+  case AttributeType::I32:
+    return "int32";
+  case AttributeType::U32:
+    return "uint32";
+  case AttributeType::F32:
+    return "float32";
+  case AttributeType::STRING:
+    return "string";
+  }
+  return "unknown";
+}
 
 Attribute::Attribute() { _type = AttributeType::NIL; }
 

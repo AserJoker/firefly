@@ -1,19 +1,19 @@
 #include "script/helper/Trait_Scene.hpp"
 #include "core/AutoPtr.hpp"
+#include "document/Scene.hpp"
 #include "exception/Exception.hpp"
 #include "script/Script.hpp"
 #include "script/Value.hpp"
 #include "script/helper/Trait_Node.hpp"
 using namespace firefly;
 using namespace firefly::script;
-
+using SelfType = core::AutoPtr<document::Scene>;
 FUNC_DEF(Trait_Scene::setCamera) {
-  auto scene = args[0]->getOpaque().cast<document::Scene>();
-  auto type = args[1]->toString(ctx);
+  auto [self, type] = Script::parseArgs<SelfType, std::string>(ctx, args);
   if (type == "ortho") {
-    scene->setCamera(document::Scene::CameraType::ORTHO);
+    self->setCamera(document::Scene::CameraType::ORTHO);
   } else if (type == "perspective") {
-    scene->setCamera(document::Scene::CameraType::PERSPECTIVE);
+    self->setCamera(document::Scene::CameraType::PERSPECTIVE);
   } else {
     throw exception::RuntimeException<"LuaException">(
         fmt::format("Unknown camera type:'{}'", type));
