@@ -20,8 +20,8 @@ FUNC_DEF(Trait_Sprite2D::getTextureSize) {
   auto size = self->getTextureObject()->getSize();
   auto s = ctx->createValue()
                ->setObject(ctx)
-               ->setField(ctx, "width", createNumber(ctx, size[0]))
-               ->setField(ctx, "height", createNumber(ctx, size[1]));
+               ->setField(ctx, "width", ctx->createValue(size[0]))
+               ->setField(ctx, "height", ctx->createValue(size[1]));
   return {s};
 }
 
@@ -40,10 +40,10 @@ FUNC_DEF(Trait_Sprite2D::getRect) {
   auto [self] = Script::parseArgs<SelfType>(ctx, args);
   auto rc = self->getRect();
   auto rect = ctx->createValue()->setObject(ctx);
-  rect->setField(ctx, "x", createNumber(ctx, rc[0]));
-  rect->setField(ctx, "y", createNumber(ctx, rc[1]));
-  rect->setField(ctx, "width", createNumber(ctx, rc[2]));
-  rect->setField(ctx, "height", createNumber(ctx, rc[3]));
+  rect->setField(ctx, "x", ctx->createValue(rc[0]));
+  rect->setField(ctx, "y", ctx->createValue(rc[1]));
+  rect->setField(ctx, "width", ctx->createValue(rc[2]));
+  rect->setField(ctx, "height", ctx->createValue(rc[3]));
   return {rect};
 }
 
@@ -62,10 +62,10 @@ FUNC_DEF(Trait_Sprite2D::getSourceRect) {
   auto [self] = Script::parseArgs<SelfType>(ctx, args);
   auto rc = self->getSourceRect();
   auto rect = ctx->createValue()->setObject(ctx);
-  rect->setField(ctx, "x", createNumber(ctx, rc[0]));
-  rect->setField(ctx, "y", createNumber(ctx, rc[1]));
-  rect->setField(ctx, "width", createNumber(ctx, rc[2]));
-  rect->setField(ctx, "height", createNumber(ctx, rc[3]));
+  rect->setField(ctx, "x", ctx->createValue(rc[0]));
+  rect->setField(ctx, "y", ctx->createValue(rc[1]));
+  rect->setField(ctx, "width", ctx->createValue(rc[2]));
+  rect->setField(ctx, "height", ctx->createValue(rc[3]));
   return {rect};
 }
 
@@ -83,10 +83,10 @@ FUNC_DEF(Trait_Sprite2D::getRotation) {
   auto &[center, angle] = self->getRotation();
   auto rotation = ctx->createValue()->setObject(ctx);
   auto ct = ctx->createValue()->setObject(ctx);
-  ct->setField(ctx, "x", createNumber(ctx, center[0]));
-  ct->setField(ctx, "y", createNumber(ctx, center[1]));
+  ct->setField(ctx, "x", ctx->createValue(center[0]));
+  ct->setField(ctx, "y", ctx->createValue(center[1]));
   rotation->setField(ctx, "center", ct);
-  rotation->setField(ctx, "angle", createNumber(ctx, angle));
+  rotation->setField(ctx, "angle", ctx->createValue(angle));
   return {rotation};
 }
 

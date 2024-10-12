@@ -126,7 +126,7 @@ FUNC_DEF(Module_Runtime::getSaveInfo) {
   for (auto &item : std::filesystem::directory_iterator(savePath)) {
     if (item.is_directory()) {
       arr->setIndex(ctx, index++,
-                    createString(ctx, item.path().filename().string()));
+                    ctx->createValue(item.path().filename().string()));
     }
   }
   return {arr};

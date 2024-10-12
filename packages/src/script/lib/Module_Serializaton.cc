@@ -29,14 +29,14 @@ void Module_Serialization::open(core::AutoPtr<Script> ctx) {
 }
 
 FUNC_DEF(Module_Serialization::JSON_stringify) {
-  return {createString(ctx, args[0]->toJSON(ctx))};
+  return {ctx->createValue(args[0]->toJSON(ctx))};
 }
 FUNC_DEF(Module_Serialization::JSON_parse) {
   return {Value::parseJSON(ctx, args[0]->toString(ctx))};
 }
 
 FUNC_DEF(Module_Serialization::YAML_stringify) {
-  return {createString(ctx, args[0]->toYAML(ctx))};
+  return {ctx->createValue(args[0]->toYAML(ctx))};
 }
 FUNC_DEF(Module_Serialization::YAML_parse) {
   return {Value::parseYAML(ctx, args[0]->toString(ctx))};
