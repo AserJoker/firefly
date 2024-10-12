@@ -340,7 +340,7 @@ FUNC_DEF(Module_Input::getMousePosition) {
   return {ctx->createValue(pos.x), ctx->createValue(pos.y)};
 }
 FUNC_DEF(Module_Input::getKeyState) {
-  uint32_t scancode = (uint32_t)args[0]->toNumber(ctx);
+  auto [scancode] = Script::parseArgs<uint32_t>(ctx, args);
   auto keyboard = core::Singleton<input::Keyboard>::instance();
-  return {ctx->createValue( keyboard->getKeyState(scancode))};
+  return {ctx->createValue(keyboard->getKeyState(scancode))};
 }

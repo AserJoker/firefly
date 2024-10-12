@@ -1,4 +1,5 @@
 #include "script/Script.hpp"
+#include "core/Attribute.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "script/Atom.hpp"
@@ -73,15 +74,14 @@ core::AutoPtr<Value> Script::createValue(Atom *at) {
 
 core::AutoPtr<Value> Script::createValue(const AnyValue &value) {
   auto val = createValue();
-  auto &type = value.value.type();
-  if (type == typeid(double)) {
-    val->setNumber(this, std::any_cast<double>(value.value));
-  } else if (type == typeid(bool)) {
-    val->setBoolean(this, std::any_cast<bool>(value.value));
-  } else if (type == typeid(std::string)) {
-    val->setString(this, std::any_cast<std::string>(value.value));
-  } else if (type == typeid(Value::FunctionHandle)) {
-    val->setFunction(this, std::any_cast<Value::FunctionHandle>(value.value));
+  auto &type = value.getType();
+  if (type == core::AttributeType::F32 || type == core::AttributeType::I32 ||
+      type == core::AttributeType::U32) {
+    val->setNumber(this, value.toFloat32());
+  } else if (type == core::AttributeType::BOOLEAN) {
+    val->setBoolean(this, value.toBoolean());
+  } else if (type == core::AttributeType::STRING) {
+    val->setString(this, value.toString());
   }
   return val;
 }
