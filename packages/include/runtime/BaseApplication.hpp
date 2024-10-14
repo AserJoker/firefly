@@ -22,6 +22,8 @@ private:
   int _exitcode;
   bool _running;
 
+  std::string _assert;
+
 private:
   void showHelp();
 

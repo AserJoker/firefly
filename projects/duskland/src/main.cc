@@ -16,8 +16,8 @@
 
 using namespace firefly;
 using namespace duskland;
-int main(int argc, char *argv[]) {
 
+int main(int argc, char *argv[]) {
   setlocale(LC_ALL, NULL);
 #ifdef _WIN32
   SetConsoleOutputCP(CP_UTF8);
