@@ -12,3 +12,4 @@ saves
 Debug
 Release
 Testing
+tests/*/entry.cc

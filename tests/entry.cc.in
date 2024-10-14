@@ -1,8 +1,8 @@
 #include "Testing.hpp"
-#include "suits/Object.hpp"
-#include "suits/Singleton.hpp"
+@TEST_INCLUDE_LIST@
 #include <SDL2/SDL.h>
+
 int main(int argc, char *argv[]) {
-  Testing<TestObject, TestSingleton> testing;
+  Testing<@TEST_REGISTER_LIST@> testing;
   return testing.run(argc, argv);
 }
