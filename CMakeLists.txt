@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${PROJECT_SOURCE_DIR}/Debug)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${PROJECT_SOURCE_DIR}/Release)
 set(DEBUG_ENABLE on)
+
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
     set(DEBUG_ENABLE on)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
@@ -48,8 +49,8 @@ find_package(imgui CONFIG REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
 
 if(DEBUG_ENABLE MATCHES "on")
-enable_testing()
-add_subdirectory(tests)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
 
 add_subdirectory(packages)
