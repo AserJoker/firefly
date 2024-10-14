@@ -3,7 +3,7 @@
 #include "core/Object.hpp"
 #include "core/Singleton.hpp"
 #include <CUnit/CUnit.h>
-class TestSingleton : public TestSuit<"Singleton", TestSingleton> {
+class TestSingleton : public TestSuit<"TestSingleton", TestSingleton> {
   struct Test : public core::Object {};
   struct Test2 : public core::Object {
     int _data;

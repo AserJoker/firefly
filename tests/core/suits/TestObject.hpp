@@ -6,7 +6,7 @@
 using namespace firefly;
 template struct AccessorBinding<"Object._ref", &core::Object::_ref>;
 using ObjectAccessor = Accessor<core::Object>;
-class TestObject : public TestSuit<"Object", TestObject> {
+class TestObject : public TestSuit<"TestObject", TestObject> {
 private:
   void TEST_Object_ref() {
     core::Object object;
