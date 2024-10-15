@@ -22,8 +22,7 @@ protected:
 public:
   Array() {}
 
-  Array(const std::vector<T> &data) : _data(data) {}
-  Array(std::vector<T> &&data) : _data(std::move(data)) {}
+  Array(std::initializer_list<T> data) : _data(data) {}
 
   Array(const Array<T> &another) { _data = another._data; }
 
