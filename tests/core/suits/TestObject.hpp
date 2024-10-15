@@ -5,13 +5,14 @@
 
 using namespace firefly;
 template struct AccessorBinding<"Object._ref", &core::Object::_ref>;
+template struct AccessorBinding<"Object.addRef", &core::Object::addRef>;
 using ObjectAccessor = Accessor<core::Object>;
 class TestObject : public TestSuit<"TestObject", TestObject> {
 private:
   void TEST_Object_ref() {
     core::Object object;
     CU_ASSERT_EQUAL(ObjectAccessor::get<"Object._ref">(object), 0);
-    object.addRef();
+    ObjectAccessor::call<"Object.addRef">(object);
     CU_ASSERT_EQUAL(ObjectAccessor::get<"Object._ref">(object), 1);
     object.subRef();
     CU_ASSERT_EQUAL(ObjectAccessor::get<"Object._ref">(object), 0);

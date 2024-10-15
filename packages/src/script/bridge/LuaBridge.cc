@@ -170,7 +170,7 @@ Value::Stack LuaBridge::funcCall(core::AutoPtr<Script> ctx, Value::Stack args) {
   lua_getglobal(state, "$functions");
   auto functions = lua_gettop(state);
   lua_geti(state, functions, handle);
-  for (auto i = 1; i < args.size(); i++) {
+  for (size_t i = 1; i < args.size(); i++) {
     bridge->dump(state, args[i]);
   }
   auto current = lua_gettop(state);

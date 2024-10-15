@@ -120,13 +120,11 @@ void GameApplication::onInitialize() {
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   static auto time = SDL_GetTicks64();
-  static auto timePreFrame = SDL_GetTicks64();
   auto now = SDL_GetTicks64();
   if (now - time > 50) {
     time = now;
     script::Module_Event::emit(_script, "tick");
   }
-  timePreFrame = now;
   if (document::Scene::scene != nullptr) {
     document::Scene::scene->onTick();
   }

@@ -15,7 +15,6 @@ void Module_Event::open(core::AutoPtr<Script> ctx) {
 FUNC_DEF(Module_Event::on) {
   auto event = args[0]->toString(ctx);
   auto callback = args[1];
-  Atom *atom = callback->getAtom();
   auto global = ctx->getNativeGlobal();
   auto events = global->getField(ctx, "$events");
   if (events->getField(ctx, event)->getType(ctx) == Atom::TYPE::NIL) {

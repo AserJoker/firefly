@@ -6,12 +6,12 @@
 using namespace firefly;
 using namespace firefly::script;
 Array::Array(Atom *atom) : _self(atom) {}
-void Array::setIndex(core::AutoPtr<Script> ctx, int index,
+void Array::setIndex(core::AutoPtr<Script> ctx, int64_t index,
                      core::AutoPtr<Value> value) {
   if (value->getType(ctx) != Atom::TYPE::NIL) {
     auto atom = value->getAtom();
     atom->addParent(_self);
-    while (index >= _items.size()) {
+    while (index >= (int64_t)_items.size()) {
       _items.push_back(nullptr);
     }
     if (_items[index]) {
@@ -20,7 +20,7 @@ void Array::setIndex(core::AutoPtr<Script> ctx, int index,
     }
     _items[index] = atom;
   } else {
-    if (index < _items.size()) {
+    if (index < (int64_t)_items.size()) {
       _items[index]->addParent(ctx->getCurrentScope()->getRoot());
       _items[index]->removeParent(_self);
       _items[index] = nullptr;

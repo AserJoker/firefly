@@ -38,11 +38,11 @@ void Geometry::setAttribute(uint32_t index,
                        attribute->isNormalized(), attribute->getStride(), 0);
     _vao->enableAttribute(index);
   } else {
-    auto offset = 0;
+    uint32_t offset = 0;
     auto idx = index;
     auto valueSize = attribute->getStride() / attribute->getItemSize();
     while (offset < attribute->getItemSize()) {
-      auto itemSize = 4;
+      uint32_t itemSize = 4;
       if (offset + itemSize > attribute->getItemSize()) {
         itemSize = valueSize - itemSize;
       }

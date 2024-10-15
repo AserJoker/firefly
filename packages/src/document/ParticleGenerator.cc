@@ -26,7 +26,7 @@ ParticleGenerator::ParticleGenerator(uint32_t count) {
   _generatorCount = 1;
   _lifetime = 10.0f;
   _particles.resize(count);
-  for (auto i = 0; i < count; i++) {
+  for (uint32_t i = 0; i < count; i++) {
     _particles[i].lifetime = 0.f;
   }
   _matrixModel = glm::mat4(1.0f);
@@ -212,7 +212,7 @@ void ParticleGenerator::setTexture(const core::AutoPtr<gl::Texture2D> &tex) {
 const std::string &ParticleGenerator::getTexture() const { return _texture; }
 
 void ParticleGenerator::generateParticle(uint32_t count) {
-  auto current = 0;
+  uint32_t current = 0;
   for (auto &p : _particles) {
     if (p.lifetime <= 0) {
       initParticle(p);

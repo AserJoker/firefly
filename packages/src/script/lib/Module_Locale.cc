@@ -35,7 +35,7 @@ FUNC_DEF(Module_Locale::getLanguages) {
   auto locale = core::Singleton<runtime::Locale>::instance();
   auto languages = locale->getLanguages();
   auto result = ctx->createValue()->setArray(ctx);
-  for (auto i = 0; i < languages.size(); i++) {
+  for (size_t i = 0; i < languages.size(); i++) {
     result->setIndex(ctx, i, ctx->createValue()->setString(ctx, languages[i]));
   }
   return {result};

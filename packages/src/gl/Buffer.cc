@@ -4,7 +4,7 @@
 using namespace firefly;
 using namespace firefly::gl;
 Buffer::Buffer(BUFFER_USAGE usage, uint32_t handle)
-    : _usage(usage), _handle(handle) {
+    : _handle(handle), _usage(usage) {
   if (!_handle) {
     glGenBuffers(1, &_handle);
   }

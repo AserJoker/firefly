@@ -8,7 +8,6 @@ Animation::Animation(uint32_t fps, const std::string &group)
 void Animation::setAction(const std::string &name, const std::string &attr,
                           float step, uint32_t startFrame, uint32_t endFrame,
                           bool loop) {
-  auto count = endFrame - startFrame;
   Action action{};
   action.frame = 0;
   action.loop = loop;

@@ -34,7 +34,7 @@ core::AutoPtr<Buffer> File::read(uint32_t size) {
     return new core::Buffer(0);
   }
   auto buf = new core::Buffer(size);
-  auto len = 0;
+  uint32_t len = 0;
   while (len < size) {
     auto chunk = 4096;
     if (len + chunk > size) {
@@ -50,7 +50,7 @@ core::AutoPtr<Buffer> File::read(uint32_t size) {
 void File::write(const core::AutoPtr<Buffer> &data) {
   auto buf = data->getData();
   auto &size = data->getSize();
-  auto len = 0;
+  uint32_t len = 0;
   while (len < size) {
     auto chunk = 4096;
     if (len + chunk > size) {

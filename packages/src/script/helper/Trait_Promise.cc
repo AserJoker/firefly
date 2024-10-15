@@ -66,7 +66,7 @@ FUNC_DEF(Trait_Promise::next) {
             _next->resolve(_ctx->createValue());
           } else {
             auto arr = _ctx->createValue()->setArray(ctx);
-            for (auto i = 0; i < res.size(); i++) {
+            for (size_t i = 0; i < res.size(); i++) {
               arr->setIndex(ctx, i, res[i]);
             }
             _next->resolve(arr);

@@ -23,9 +23,12 @@ protected:
   }
 
 private:
-  void TEST_Singleton_initialize() {
+  void TEST_default_initialize() {
     auto a = core::Singleton<Test>::instance();
     CU_ASSERT_NOT_EQUAL(a, nullptr);
+  }
+
+  void TEST_custom_initialize() {
     auto b = core::Singleton<Test2>::instance();
     CU_ASSERT_EQUAL(b, nullptr);
     core::Singleton<Test2>::initialize(123);
@@ -36,7 +39,7 @@ private:
 
 public:
   TestSingleton() {
-    defineTest<"Singleton_initialize">(
-        &TestSingleton::TEST_Singleton_initialize);
+    defineTest<"default_initialize">(&TestSingleton::TEST_default_initialize);
+    defineTest<"custom_initialize">(&TestSingleton::TEST_custom_initialize);
   }
 };

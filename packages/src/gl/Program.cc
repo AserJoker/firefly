@@ -44,7 +44,7 @@ void Program::use() { glUseProgram(_handle); }
 const uint32_t &Program::getUniformLocation(const std::string &name) {
   static uint32_t invalid = GL_INVALID_INDEX;
   if (!_locations.contains(name)) {
-    auto loc = glGetUniformLocation(_handle, name.c_str());
+    uint32_t loc = glGetUniformLocation(_handle, name.c_str());
     if (loc == GL_INVALID_INDEX) {
       return invalid;
     }

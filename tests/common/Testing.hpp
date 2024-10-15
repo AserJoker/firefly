@@ -29,7 +29,7 @@ private:
     std::vector<std::string> result;
     auto inRegex = false;
     std::string item;
-    for (auto i = 0; i < source.length(); i++) {
+    for (size_t i = 0; i < source.length(); i++) {
       if (source[i] == spliter && !inRegex) {
         if (!item.empty()) {
           result.push_back(item);

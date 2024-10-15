@@ -90,7 +90,7 @@ core::AutoPtr<Value> Script::createValue(AnyValue &&value) {
 }
 core::AutoPtr<Value> Script::createValue(const std::vector<AnyValue> &value) {
   auto arr = createValue()->setArray(this);
-  for (auto i = 0; i < value.size(); i++) {
+  for (size_t i = 0; i < value.size(); i++) {
     arr->setIndex(this, i, createValue(value[i]));
   }
   return arr;

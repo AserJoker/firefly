@@ -121,7 +121,7 @@ FUNC_DEF(Trait_Node::getAttributeGroups) {
   auto result = ctx->createValue()->setObject(ctx);
   for (auto &[name, attributes] : groups) {
     auto attrs = ctx->createValue()->setArray(ctx);
-    for (auto index = 0; index < attributes.size(); index++) {
+    for (size_t index = 0; index < attributes.size(); index++) {
       attrs->setIndex(ctx, index, ctx->createValue(attributes[index]));
     }
     result->setField(ctx, name, attrs);

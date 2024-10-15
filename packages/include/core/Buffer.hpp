@@ -3,8 +3,8 @@
 namespace firefly::core {
 class Buffer : public Object {
 private:
-  void *_data;
   uint32_t _size;
+  void *_data;
 
 public:
   Buffer(uint32_t size = 0, const void *data = 0);

@@ -111,8 +111,8 @@ void Sprite2D::onAttrChange(const std::string &name) {
 }
 
 Sprite2D::Sprite2D(const std::string &path)
-    : _rotationAngle(0.0f), _matrixModel(1.0f), _zIndex(0),
-      _rotationCenter(0.0f, 0.0f, 1.0f), _blendValue(1.0f), _visible(true) {
+    : _rotationCenter(0.0f, 0.0f, 1.0f), _rotationAngle(0.0f), _zIndex(0),
+      _visible(true), _blendValue(1.0f), _matrixModel(1.0f) {
   _material = new video::Material();
   _material->setDepthTest(false);
 

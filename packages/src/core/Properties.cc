@@ -12,7 +12,7 @@ Properties::Properties(const core::AutoPtr<Buffer> &buffer) : _root(PObject{}) {
     std::string *iterator = &key;
     const char *data = (const char *)buffer->getData();
     bool inValue = false;
-    for (auto i = 0;; i++) {
+    for (uint32_t i = 0;; i++) {
       if (data[i] == '\"') {
         inValue = !inValue;
         continue;
@@ -77,7 +77,7 @@ const std::string Properties::encode(const std::string &source) const {
 }
 const std::string Properties::decode(const std::string &source) const {
   std::string result;
-  for (auto i = 0; i < source.size(); i++) {
+  for (size_t i = 0; i < source.size(); i++) {
     auto c = source[i];
     if (c == '\\') {
       if (source[i + 1] == 'n') {
@@ -170,7 +170,7 @@ const std::vector<std::string> Properties::keys(const std::string &key) const {
 void Properties::del(const std::string &key) {
   auto parts = parse(key);
   auto *iterator = &_root;
-  auto i = 0;
+  size_t i = 0;
   for (auto &part : parts) {
     if (!iterator->isObject) {
       return;
@@ -216,7 +216,7 @@ bool Properties::isObject(const std::string &key) const {
 const std::string Properties::parseJSONField(const std::string &field) const {
   std::string result = "{";
   auto keys = this->keys(field);
-  for (auto i = 0; i < keys.size(); i++) {
+  for (uint32_t i = 0; i < keys.size(); i++) {
     if (i != 0) {
       result += ",";
     }

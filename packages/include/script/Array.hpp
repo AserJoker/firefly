@@ -14,7 +14,7 @@ public:
   Array(Atom *self);
   uint32_t getLength(core::AutoPtr<Script> ctx);
   core::AutoPtr<Value> getIndex(core::AutoPtr<Script> ctx, uint32_t index);
-  void setIndex(core::AutoPtr<Script> ctx, int index,
+  void setIndex(core::AutoPtr<Script> ctx, int64_t index,
                 core::AutoPtr<Value> item);
 };
 }; // namespace firefly::script

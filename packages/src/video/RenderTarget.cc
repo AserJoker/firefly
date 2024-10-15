@@ -27,7 +27,7 @@ constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
 core::AutoPtr<Geometry> RenderTarget::_geometry = nullptr;
 RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
                            uint32_t attachment)
-    : _stage(stage), _size(size) {
+    : _size(size), _stage(stage) {
   _frame = new gl::FrameBuffer(size);
   std::vector<core::AutoPtr<gl::Texture2D>> textures;
   for (uint32_t i = 0; i < attachment; i++) {
