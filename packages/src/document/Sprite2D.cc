@@ -1,6 +1,6 @@
 #include "document/Sprite2D.hpp"
-#include "core/Attribute.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Value.hpp"
 #include "document/Renderable.hpp"
 #include "gl/AlphaFunc.hpp"
 #include "gl/BlendFunc.hpp"
@@ -10,6 +10,7 @@
 #include "video/Material.hpp"
 #include <cstdint>
 #include <glm/ext/matrix_transform.hpp>
+
 
 using namespace firefly;
 using namespace firefly::document;
@@ -155,7 +156,7 @@ Sprite2D::Sprite2D(const std::string &path)
   endAttrGroup();
 
   beginAttrGroup(ATTR_ALPHA_TEST);
-  setAttribute("enable", core::Attribute{false});
+  setAttribute("enable", core::Value{false});
   setAttribute("func", (uint32_t)gl::ALPHA_FUNC::LESS);
   setAttribute("value", 0.0f);
   endAttrGroup();

@@ -1,7 +1,7 @@
 #include "script/Script.hpp"
-#include "core/Attribute.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
+#include "core/Value.hpp"
 #include "script/Atom.hpp"
 #include "script/Scope.hpp"
 #include "script/Value.hpp"
@@ -9,6 +9,7 @@
 #include <list>
 #include <unordered_map>
 #include <vector>
+
 
 using namespace firefly;
 using namespace firefly::script;
@@ -75,12 +76,12 @@ core::AutoPtr<Value> Script::createValue(Atom *at) {
 core::AutoPtr<Value> Script::createValue(const AnyValue &value) {
   auto val = createValue();
   auto &type = value.getType();
-  if (type == core::AttributeType::F32 || type == core::AttributeType::I32 ||
-      type == core::AttributeType::U32) {
+  if (type == core::Value::Type::F32 || type == core::Value::Type::I32 ||
+      type == core::Value::Type::U32) {
     val->setNumber(this, value.toFloat32());
-  } else if (type == core::AttributeType::BOOLEAN) {
+  } else if (type == core::Value::Type::BOOLEAN) {
     val->setBoolean(this, value.toBoolean());
-  } else if (type == core::AttributeType::STRING) {
+  } else if (type == core::Value::Type::STRING) {
     val->setString(this, value.toString());
   }
   return val;

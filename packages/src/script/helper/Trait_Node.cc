@@ -1,6 +1,6 @@
 #include "script/helper/Trait_Node.hpp"
-#include "core/Attribute.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Value.hpp"
 #include "document/Node.hpp"
 #include "script/Script.hpp"
 #include "script/Value.hpp"
@@ -62,7 +62,7 @@ FUNC_DEF(Trait_Node::setAttribute) {
   auto res = false;
   switch (type) {
   case Atom::TYPE::NIL:
-    res = self->setAttribute(key, core::Attribute{nullptr});
+    res = self->setAttribute(key, core::Value{nullptr});
     break;
   case Atom::TYPE::NUMBER:
     res = self->setAttribute(key, float(args[2]->toNumber(ctx)));
@@ -90,17 +90,17 @@ FUNC_DEF(Trait_Node::getAttribute) {
   auto [self, key] = Script::parseArgs<SelfType, std::string>(ctx, args);
   auto &attr = self->getAttribute(key);
   switch (attr.getType()) {
-  case core::AttributeType::BOOLEAN:
+  case core::Value::Type::BOOLEAN:
     return {ctx->createValue(attr.toBoolean())};
-  case core::AttributeType::STRING:
+  case core::Value::Type::STRING:
     return {ctx->createValue(attr.toString())};
-  case core::AttributeType::I32:
+  case core::Value::Type::I32:
     return {ctx->createValue(attr.toInt32())};
-  case core::AttributeType::U32:
+  case core::Value::Type::U32:
     return {ctx->createValue(attr.toUint32())};
-  case core::AttributeType::F32:
+  case core::Value::Type::F32:
     return {ctx->createValue(attr.toFloat32())};
-  case core::AttributeType::NIL:
+  case core::Value::Type::NIL:
     return {};
   }
   return {};

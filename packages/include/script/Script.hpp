@@ -1,16 +1,17 @@
 #pragma once
 #include "Scope.hpp"
 #include "Value.hpp"
-#include "core/Attribute.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include "core/Value.hpp"
 #include <cstddef>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+
 namespace firefly::script {
-using AnyValue = core::Attribute;
+using AnyValue = core::Value;
 using AnyRecord = std::unordered_map<std::string, AnyValue>;
 using AnyArray = std::vector<AnyValue>;
 class Value;

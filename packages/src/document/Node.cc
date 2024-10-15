@@ -1,7 +1,8 @@
 #include "document/Node.hpp"
-#include "core/Attribute.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Value.hpp"
 #include <vector>
+
 using namespace firefly;
 using namespace firefly::document;
 Node::Node() : _parent(nullptr), _changed(0) {}
@@ -105,8 +106,7 @@ const core::AutoPtr<Node> Node::getChild(const std::string &id) const {
   }
   return nullptr;
 }
-bool Node::setAttribute(const std::string &name,
-                        const core::PtrAttribute &value) {
+bool Node::setAttribute(const std::string &name, const core::ValuePtr &value) {
   auto currentName = name;
   if (!_attrGroup.empty()) {
     currentName = _attrGroup + "." + name;
@@ -115,7 +115,7 @@ bool Node::setAttribute(const std::string &name,
     return false;
   }
   auto &current = _attributes.at(currentName);
-  current = value.toAttribute();
+  current = value.toValue();
   if (_attrGroup.empty()) {
     onAttrChange(currentName);
   }
@@ -123,7 +123,7 @@ bool Node::setAttribute(const std::string &name,
   return true;
 }
 
-bool Node::setAttribute(const std::string &name, const core::Attribute &value) {
+bool Node::setAttribute(const std::string &name, const core::Value &value) {
   auto currentName = name;
   if (!_attrGroup.empty()) {
     currentName = _attrGroup + "." + name;
@@ -139,12 +139,12 @@ bool Node::setAttribute(const std::string &name, const core::Attribute &value) {
   _changed++;
   return true;
 }
-const core::Attribute Node::getAttribute(const std::string &name) const {
+const core::Value Node::getAttribute(const std::string &name) const {
   if (!_attributes.contains(name)) {
     return {};
   }
   auto &attr = _attributes.at(name);
-  return attr.toAttribute();
+  return attr.toValue();
 }
 void Node::beginAttrGroup(const std::string &name) {
   if (!_attrGroup.empty()) {
