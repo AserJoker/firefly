@@ -17,15 +17,15 @@ ValuePtr::ValuePtr(bool *boolean) {
   this->boolean = boolean;
 }
 ValuePtr::ValuePtr(int32_t *i32) {
-  type = Value::Type::I32;
+  type = Value::Type::INTEGER;
   this->i32 = i32;
 }
 ValuePtr::ValuePtr(uint32_t *u32) {
-  type = Value::Type::U32;
+  type = Value::Type::UNSIGNED;
   this->u32 = u32;
 }
 ValuePtr::ValuePtr(float *f32) {
-  type = Value::Type::F32;
+  type = Value::Type::FLOAT;
   this->f32 = f32;
 }
 ValuePtr::ValuePtr(std::string *string) {
@@ -39,14 +39,14 @@ ValuePtr &ValuePtr::operator=(const Value &attr) {
   case Value::Type::BOOLEAN:
     *boolean = attr.toBoolean();
     break;
-  case Value::Type::I32:
-    *i32 = attr.toInt32();
+  case Value::Type::INTEGER:
+    *i32 = attr.toInteger();
     break;
-  case Value::Type::U32:
-    *u32 = attr.toUint32();
+  case Value::Type::UNSIGNED:
+    *u32 = attr.toUnsigned();
     break;
-  case Value::Type::F32:
-    *f32 = attr.toFloat32();
+  case Value::Type::FLOAT:
+    *f32 = attr.toFloat();
     break;
   case Value::Type::STRING:
     *string = attr.toString();
@@ -60,12 +60,12 @@ bool ValuePtr::operator==(const Value &attr) {
     return attr.getType() == Value::Type::NIL;
   case Value::Type::BOOLEAN:
     return *boolean == attr.toBoolean();
-  case Value::Type::I32:
-    return *i32 == attr.toInt32();
-  case Value::Type::U32:
-    return *u32 == attr.toUint32();
-  case Value::Type::F32:
-    return *f32 == attr.toFloat32();
+  case Value::Type::INTEGER:
+    return *i32 == attr.toInteger();
+  case Value::Type::UNSIGNED:
+    return *u32 == attr.toUnsigned();
+  case Value::Type::FLOAT:
+    return *f32 == attr.toFloat();
   case Value::Type::STRING:
     return *string == attr.toString();
   }
@@ -80,11 +80,11 @@ Value ValuePtr::toValue() const {
     return nullptr;
   case Value::Type::BOOLEAN:
     return *boolean;
-  case Value::Type::I32:
+  case Value::Type::INTEGER:
     return *i32;
-  case Value::Type::U32:
+  case Value::Type::UNSIGNED:
     return *u32;
-  case Value::Type::F32:
+  case Value::Type::FLOAT:
     return *f32;
   case Value::Type::STRING:
     return *string;
@@ -98,11 +98,11 @@ std::string ValuePtr::getTypeName() const {
     return "nil";
   case Value::Type::BOOLEAN:
     return "boolean";
-  case Value::Type::I32:
+  case Value::Type::INTEGER:
     return "int32";
-  case Value::Type::U32:
+  case Value::Type::UNSIGNED:
     return "uint32";
-  case Value::Type::F32:
+  case Value::Type::FLOAT:
     return "float32";
   case Value::Type::STRING:
     return "string";
@@ -121,13 +121,13 @@ Value::Value(const Value &another) {
   case Value::Type::BOOLEAN:
     _value = std::any_cast<bool>(another._value);
     break;
-  case Value::Type::I32:
+  case Value::Type::INTEGER:
     _value = std::any_cast<int32_t>(another._value);
     break;
-  case Value::Type::U32:
+  case Value::Type::UNSIGNED:
     _value = std::any_cast<uint32_t>(another._value);
     break;
-  case Value::Type::F32:
+  case Value::Type::FLOAT:
     _value = std::any_cast<float>(another._value);
     break;
   case Value::Type::STRING:
@@ -142,18 +142,22 @@ Value::Value(bool boolean) {
   _value = boolean;
 }
 Value::Value(int32_t i32) {
-  _type = Value::Type::I32;
+  _type = Value::Type::INTEGER;
   _value = i32;
 }
 Value::Value(uint32_t u32) {
-  _type = Value::Type::U32;
+  _type = Value::Type::UNSIGNED;
   _value = u32;
 }
 Value::Value(float f32) {
-  _type = Value::Type::F32;
+  _type = Value::Type::FLOAT;
   _value = f32;
 }
 Value::Value(const std::string &string) {
+  _type = Value::Type::STRING;
+  _value = string;
+}
+Value::Value(const char *string) {
   _type = Value::Type::STRING;
   _value = string;
 }
@@ -169,17 +173,17 @@ Value &Value::operator=(bool boolean) {
   return *this;
 }
 Value &Value::operator=(int32_t i32) {
-  _type = Value::Type::I32;
+  _type = Value::Type::INTEGER;
   _value = i32;
   return *this;
 }
 Value &Value::operator=(uint32_t u32) {
-  _type = Value::Type::U32;
+  _type = Value::Type::UNSIGNED;
   _value = u32;
   return *this;
 }
 Value &Value::operator=(float f32) {
-  _type = Value::Type::F32;
+  _type = Value::Type::FLOAT;
   _value = f32;
   return *this;
 }
@@ -188,6 +192,12 @@ Value &Value::operator=(const std::string &string) {
   _value = string;
   return *this;
 }
+Value &Value::operator=(const char *string) {
+  _type = Value::Type::STRING;
+  _value = string;
+  return *this;
+}
+
 Value &Value::operator=(const Value &another) {
   _type = another._type;
   switch (_type) {
@@ -197,13 +207,13 @@ Value &Value::operator=(const Value &another) {
   case Value::Type::BOOLEAN:
     _value = std::any_cast<bool>(another._value);
     break;
-  case Value::Type::I32:
+  case Value::Type::INTEGER:
     _value = std::any_cast<int32_t>(another._value);
     break;
-  case Value::Type::U32:
+  case Value::Type::UNSIGNED:
     _value = std::any_cast<uint32_t>(another._value);
     break;
-  case Value::Type::F32:
+  case Value::Type::FLOAT:
     _value = std::any_cast<float>(another._value);
     break;
   case Value::Type::STRING:
@@ -212,16 +222,15 @@ Value &Value::operator=(const Value &another) {
   }
   return *this;
 }
-bool Value::operator==(std::nullptr_t) {
-  return _type == Value::Type::NIL;
-}
+bool Value::operator==(std::nullptr_t) { return _type == Value::Type::NIL; }
 bool Value::operator==(bool boolean) { return toBoolean() == boolean; }
-bool Value::operator==(int32_t i32) { return toInt32() == i32; }
-bool Value::operator==(uint32_t u32) { return toUint32() == u32; }
-bool Value::operator==(float f32) { return toFloat32() == f32; }
+bool Value::operator==(int32_t i32) { return toInteger() == i32; }
+bool Value::operator==(uint32_t u32) { return toUnsigned() == u32; }
+bool Value::operator==(float f32) { return toFloat() == f32; }
 bool Value::operator==(const std::string &string) {
   return toString() == string;
 }
+bool Value::operator==(const char *string) { return toString() == string; }
 bool Value::operator==(const Value &another) {
   if (_type != another._type) {
     return false;
@@ -231,12 +240,12 @@ bool Value::operator==(const Value &another) {
     return true;
   case Value::Type::BOOLEAN:
     return toBoolean() == another.toBoolean();
-  case Value::Type::I32:
-    return toInt32() == another.toInt32();
-  case Value::Type::U32:
-    return toUint32() == another.toUint32();
-  case Value::Type::F32:
-    return toFloat32() == another.toFloat32();
+  case Value::Type::INTEGER:
+    return toInteger() == another.toInteger();
+  case Value::Type::UNSIGNED:
+    return toUnsigned() == another.toUnsigned();
+  case Value::Type::FLOAT:
+    return toFloat() == another.toFloat();
   case Value::Type::STRING:
     return toString() == another.toString();
   }
@@ -249,11 +258,11 @@ std::string Value::toString() const {
     return "nil";
   case Value::Type::BOOLEAN:
     return std::any_cast<bool>(_value) ? "true" : "false";
-  case Value::Type::I32:
+  case Value::Type::INTEGER:
     return fmt::format("{}", std::any_cast<int32_t>(_value));
-  case Value::Type::U32:
+  case Value::Type::UNSIGNED:
     return fmt::format("{}", std::any_cast<uint32_t>(_value));
-  case Value::Type::F32:
+  case Value::Type::FLOAT:
     return fmt::format("{:g}", std::any_cast<float>(_value));
   case Value::Type::STRING:
     return std::any_cast<std::string>(_value);
@@ -267,11 +276,11 @@ bool Value::toBoolean() const {
     return false;
   case Value::Type::BOOLEAN:
     return std::any_cast<bool>(_value);
-  case Value::Type::I32:
+  case Value::Type::INTEGER:
     return std::any_cast<int32_t>(_value) == 1;
-  case Value::Type::U32:
+  case Value::Type::UNSIGNED:
     return std::any_cast<uint32_t>(_value) == 1;
-  case Value::Type::F32:
+  case Value::Type::FLOAT:
     return std::any_cast<float>(_value) == 1;
   case Value::Type::STRING: {
     auto string = std::any_cast<std::string>(_value);
@@ -282,18 +291,18 @@ bool Value::toBoolean() const {
   return false;
 }
 
-int32_t Value::toInt32() const {
+int32_t Value::toInteger() const {
   switch (_type) {
 
   case Value::Type::NIL:
     return 0;
   case Value::Type::BOOLEAN:
     return std::any_cast<bool>(_value) ? 1 : 0;
-  case Value::Type::I32:
+  case Value::Type::INTEGER:
     return std::any_cast<int32_t>(_value);
-  case Value::Type::U32:
+  case Value::Type::UNSIGNED:
     return (int32_t)std::any_cast<uint32_t>(_value);
-  case Value::Type::F32:
+  case Value::Type::FLOAT:
     return (int32_t)std::any_cast<float>(_value);
   case Value::Type::STRING: {
     std::stringstream ss(std::any_cast<std::string>(_value));
@@ -305,18 +314,18 @@ int32_t Value::toInt32() const {
   return 0;
 }
 
-uint32_t Value::toUint32() const {
+uint32_t Value::toUnsigned() const {
   switch (_type) {
 
   case Value::Type::NIL:
     return 0;
   case Value::Type::BOOLEAN:
     return std::any_cast<bool>(_value) ? 1 : 0;
-  case Value::Type::I32:
+  case Value::Type::INTEGER:
     return (uint32_t)std::any_cast<int32_t>(_value);
-  case Value::Type::U32:
+  case Value::Type::UNSIGNED:
     return std::any_cast<uint32_t>(_value);
-  case Value::Type::F32:
+  case Value::Type::FLOAT:
     return (uint32_t)std::any_cast<float>(_value);
   case Value::Type::STRING: {
     std::stringstream ss(std::any_cast<std::string>(_value));
@@ -328,17 +337,17 @@ uint32_t Value::toUint32() const {
   return 0;
 }
 
-float Value::toFloat32() const {
+float Value::toFloat() const {
   switch (_type) {
   case Value::Type::NIL:
     return 0.f;
   case Value::Type::BOOLEAN:
     return std::any_cast<bool>(_value) ? 1.f : 0.f;
-  case Value::Type::I32:
+  case Value::Type::INTEGER:
     return (float)std::any_cast<int32_t>(_value);
-  case Value::Type::U32:
+  case Value::Type::UNSIGNED:
     return (float)std::any_cast<uint32_t>(_value);
-  case Value::Type::F32:
+  case Value::Type::FLOAT:
     return std::any_cast<float>(_value);
   case Value::Type::STRING: {
     std::stringstream ss(std::any_cast<std::string>(_value));

@@ -10,7 +10,6 @@
 #include <unordered_map>
 #include <vector>
 
-
 using namespace firefly;
 using namespace firefly::script;
 Script::Script() {
@@ -76,9 +75,9 @@ core::AutoPtr<Value> Script::createValue(Atom *at) {
 core::AutoPtr<Value> Script::createValue(const AnyValue &value) {
   auto val = createValue();
   auto &type = value.getType();
-  if (type == core::Value::Type::F32 || type == core::Value::Type::I32 ||
-      type == core::Value::Type::U32) {
-    val->setNumber(this, value.toFloat32());
+  if (type == core::Value::Type::FLOAT || type == core::Value::Type::INTEGER ||
+      type == core::Value::Type::UNSIGNED) {
+    val->setNumber(this, value.toFloat());
   } else if (type == core::Value::Type::BOOLEAN) {
     val->setBoolean(this, value.toBoolean());
   } else if (type == core::Value::Type::STRING) {

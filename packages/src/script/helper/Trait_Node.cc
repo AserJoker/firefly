@@ -94,12 +94,12 @@ FUNC_DEF(Trait_Node::getAttribute) {
     return {ctx->createValue(attr.toBoolean())};
   case core::Value::Type::STRING:
     return {ctx->createValue(attr.toString())};
-  case core::Value::Type::I32:
-    return {ctx->createValue(attr.toInt32())};
-  case core::Value::Type::U32:
-    return {ctx->createValue(attr.toUint32())};
-  case core::Value::Type::F32:
-    return {ctx->createValue(attr.toFloat32())};
+  case core::Value::Type::INTEGER:
+    return {ctx->createValue(attr.toInteger())};
+  case core::Value::Type::UNSIGNED:
+    return {ctx->createValue(attr.toUnsigned())};
+  case core::Value::Type::FLOAT:
+    return {ctx->createValue(attr.toFloat())};
   case core::Value::Type::NIL:
     return {};
   }

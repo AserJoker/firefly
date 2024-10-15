@@ -110,7 +110,7 @@ void Animation::onTick() {
         }
         if (!action.initialized) {
           action.initValue =
-              getParent()->getAttribute(action.attribute).toFloat32();
+              getParent()->getAttribute(action.attribute).toFloat();
           action.initialized = true;
         }
         getParent()->setAttribute(

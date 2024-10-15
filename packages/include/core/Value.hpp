@@ -8,7 +8,12 @@ namespace firefly::core {
 
 class Value {
 public:
-  enum class Type { NIL, BOOLEAN, I32, U32, F32, STRING };
+  enum class Type { NIL, BOOLEAN, INTEGER, UNSIGNED, FLOAT, STRING };
+  using Boolean = bool;
+  using Integer = int32_t;
+  using Unsigned = uint32_t;
+  using Float = float;
+  using String = std::string;
 
 private:
   std::any _value;
@@ -23,6 +28,7 @@ public:
   Value(uint32_t u32);
   Value(float f32);
   Value(const std::string &string);
+  Value(const char *string);
   const Type &getType() const;
 
   Value &operator=(std::nullptr_t);
@@ -31,6 +37,7 @@ public:
   Value &operator=(uint32_t);
   Value &operator=(float);
   Value &operator=(const std::string &);
+  Value &operator=(const char *);
   Value &operator=(const Value &);
 
   bool operator==(std::nullptr_t);
@@ -40,12 +47,13 @@ public:
   bool operator==(float);
   bool operator==(const std::string &);
   bool operator==(const Value &);
+  bool operator==(const char *);
 
   std::string toString() const;
   bool toBoolean() const;
-  int32_t toInt32() const;
-  uint32_t toUint32() const;
-  float toFloat32() const;
+  int32_t toInteger() const;
+  uint32_t toUnsigned() const;
+  float toFloat() const;
 };
 struct ValuePtr {
   Value::Type type;
@@ -56,6 +64,7 @@ struct ValuePtr {
     float *f32;
     std::string *string;
   };
+  
   ValuePtr();
   ValuePtr(std::nullptr_t);
   ValuePtr(bool *boolean);
@@ -63,6 +72,7 @@ struct ValuePtr {
   ValuePtr(uint32_t *u32);
   ValuePtr(float *f32);
   ValuePtr(std::string *string);
+
   ValuePtr &operator=(const Value &attr);
   bool operator==(const Value &attr);
   bool operator==(const ValuePtr &attr);
