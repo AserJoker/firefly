@@ -1,6 +1,8 @@
 #pragma once
 #include "Array.hpp"
 #include <cstddef>
+#include <initializer_list>
+#include <sstream>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -27,10 +29,14 @@ public:
 
   Map(Map &&another) : _data(std::move(another._data)){};
 
-  Map<K, T> &operator=(const Map<K, T> &another) { _data = another._data; }
+  Map<K, T> &operator=(const Map<K, T> &another) {
+    _data = another._data;
+    return *this;
+  }
 
   Map<K, T> &operator=(Map<K, T> &&another) {
     _data = std::move(another._data);
+    return *this;
   }
 
   bool operator==(const std::unordered_map<K, T> &data) {
@@ -149,10 +155,25 @@ public:
     return _data.erase(begin, end);
   }
 
-  void erase(const Array<K> &keys) {
+  void erase(std::initializer_list<std::string> keys) {
     for (auto &key : keys) {
       erase(key);
     }
+  }
+
+  std::string toString() const {
+    std::string result = "{";
+    size_t index = 0;
+    for (auto &[key, value] : _data) {
+      std::stringstream ss;
+      ss << key << "," << value;
+      result.append(ss.str());
+      if (index != _data.size() - 1) {
+        result.append(",");
+      }
+    }
+    result.append("}");
+    return result;
   }
 };
 } // namespace firefly::core

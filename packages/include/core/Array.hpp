@@ -1,7 +1,8 @@
 #pragma once
 #include <algorithm>
-#include <fmt/format.h>
+#include <initializer_list>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <variant>
@@ -24,19 +25,29 @@ public:
   Array(const std::vector<T> &data) : _data(data) {}
   Array(std::vector<T> &&data) : _data(std::move(data)) {}
 
-  Array(auto &&...args) { pushBack({std::forward<T>(args)...}); }
-
   Array(const Array<T> &another) { _data = another._data; }
 
   Array(Array<T> &&another) { _data = std::move(another._data); }
 
-  Array<T> &operator=(const std::vector<T> &data) { _data = data; }
+  Array<T> &operator=(const std::vector<T> &data) {
+    _data = data;
+    return *this;
+  }
 
-  Array<T> &operator=(std::vector<T> &&data) { _data = std::move(data); }
+  Array<T> &operator=(std::vector<T> &&data) {
+    _data = std::move(data);
+    return *this;
+  }
 
-  Array<T> &operator=(const Array<T> &another) { _data = another._data; }
+  Array<T> &operator=(const Array<T> &another) {
+    _data = another._data;
+    return *this;
+  }
 
-  Array<T> &operator=(Array<T> &&another) { _data = std::move(another._data); }
+  Array<T> &operator=(Array<T> &&another) {
+    _data = std::move(another._data);
+    return *this;
+  }
 
   bool operator==(const std::vector<T> &data) const {
     if (_data.size() != data.size()) {
@@ -51,7 +62,16 @@ public:
   }
 
   bool operator==(const Array<T> &another) const {
-    return *this == another.data();
+    auto &data = another._data;
+    if (_data.size() != data.size()) {
+      return false;
+    }
+    for (size_t index = 0; index < size(); index++) {
+      if (_data[index] != data[index]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   bool operator!=(const std::vector<T> &data) const { return !(*this == data); }
@@ -69,7 +89,7 @@ public:
 
   void pushBack(T &&item) { _data.push_back(item); }
 
-  void pushBack(std::vector<T> &&items) {
+  void pushBack(std::initializer_list<T> items) {
     _data.reserve(items.size());
     for (auto &item : items) {
       pushBack(std::move(item));
@@ -77,15 +97,6 @@ public:
   }
 
   void pushBack(const T &item) { _data.push_back(item); }
-
-  void pushBack(const std::vector<T> &items) {
-    _data.reserve(items.size());
-    for (auto &item : items) {
-      pushBack(item);
-    }
-  }
-
-  void pushBack(auto &&...args) { pushBack({std::forward<T>(args)...}); }
 
   void popBack() { _data.pop_back(); }
 
@@ -161,7 +172,7 @@ public:
   }
 
   bool contains(const T &data) const {
-    return std::find(_data.begin(), _data.end(), data);
+    return std::find(_data.begin(), _data.end(), data) != _data.end();
   }
 
   Iterator insert(ConstIterator position, T &&data) {
@@ -172,7 +183,7 @@ public:
     return _data.insert(position, data);
   }
 
-  Iterator insert(ConstIterator position, const std::vector<T> &data) {
+  Iterator insert(ConstIterator position, std::initializer_list<T> data) {
     return _data.insert(position, data.begin(), data.end());
   }
 
@@ -214,7 +225,7 @@ public:
 
   template <typename Compare> Array<T> sortCopy(Compare fn) const {
     Array<T> result = *this;
-    result.sortCopy(fn);
+    result.sort(fn);
     return result;
   }
 
@@ -246,7 +257,7 @@ public:
     }
     return *this;
   }
-  
+
   Array<T> &replaceAll(const T &source, const T &data) {
     auto index = indexOf(source);
     while (index < size()) {
@@ -256,35 +267,13 @@ public:
     return *this;
   }
 
-  template <class Process> auto map(Process process) {
-    using K = decltype(process(T{}, 0, *this));
-    Array<K> result;
-    result.reserve(size());
-    for (size_t index = 0; index < size(); index++) {
-      result.pushBack(process(at(index), index, *this));
-    }
-    return result;
-  }
-
-  template <class Process> void forEach(Process process) {
-    for (size_t index = 0; index < size(); index++) {
-      process(at(index), index, *this);
-    }
-  }
-
-  template <class Process, class K> K reduce(Process process, K init = {}) {
-    K result = init;
-    for (size_t index = 0; index < size(); index++) {
-      result = process(init, at(index), index, *this);
-    }
-    return result;
-  }
-
-  std::string toString() const {
+  const std::string toString() const {
     std::string result = "[";
     for (size_t index = 0; index < size(); index++) {
       auto &item = at(index);
-      result.append(fmt::format("{}", item));
+      std::stringstream ss;
+      ss << item;
+      result.append(ss.str());
       if (index != size() - 1) {
         result.append(",");
       }
