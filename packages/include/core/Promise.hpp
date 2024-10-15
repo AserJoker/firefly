@@ -1,8 +1,8 @@
 #pragma once
 #include "Object.hpp"
+#include "core/AutoPtr.hpp"
 #include <mutex>
 #include <shared_mutex>
-
 
 namespace firefly::core {
 template <class T> class Promise;
@@ -10,7 +10,6 @@ template <class T> class Promise;
 enum class PROMISE_STATUS { PENDDING, FULFILLED, REJECTED };
 
 template <class T> class Promise : public Object {
-public:
 private:
   PROMISE_STATUS _status;
   T _value{};
