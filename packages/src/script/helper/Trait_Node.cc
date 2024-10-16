@@ -38,11 +38,6 @@ FUNC_DEF(Trait_Node::setId) {
   self->setId(id);
   return {};
 }
-FUNC_DEF(Trait_Node::getChild) {
-  auto [self, id] = Script::parseArgs<SelfType, std::string>(ctx, args);
-  auto child = self->getChild(id);
-  return {Trait_Node::create(ctx, child)};
-}
 FUNC_DEF(Trait_Node::beginAttrGroup) {
   auto [self, key] = Script::parseArgs<SelfType, std::string>(ctx, args);
   self->beginAttrGroup(key);
@@ -138,7 +133,6 @@ void Trait_Node::initialize(core::AutoPtr<Script> ctx) {
                   ->setFunctionField(ctx, getParent)
                   ->setFunctionField(ctx, getId)
                   ->setFunctionField(ctx, setId)
-                  ->setFunctionField(ctx, getChild)
                   ->setFunctionField(ctx, getAttribute)
                   ->setFunctionField(ctx, setAttribute)
                   ->setFunctionField(ctx, bindAttribute)

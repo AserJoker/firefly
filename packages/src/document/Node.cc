@@ -1,11 +1,20 @@
 #include "document/Node.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Value.hpp"
-#include <vector>
 
 using namespace firefly;
 using namespace firefly::document;
-Node::Node() : _parent(nullptr), _changed(0) {}
+
+core::Map<std::string, Node *> Node::_indexedNodes;
+
+core::AutoPtr<Node> Node::query(const std::string &id) {
+  if (_indexedNodes.contains(id)) {
+    return _indexedNodes.at(id);
+  }
+  return nullptr;
+}
+
+Node::Node() : _parent(nullptr) {}
 Node::~Node() {
   for (auto &host : _bindingHosts) {
     for (auto &[_, group] : host->_bindings) {
@@ -19,16 +28,22 @@ Node::~Node() {
   }
   for (auto &[_, binding] : _bindings) {
     for (auto &item : binding) {
-      auto it = std::find(item.node->_bindingHosts.begin(),
-                          item.node->_bindingHosts.end(), this);
-      if (it != item.node->_bindingHosts.end()) {
-        item.node->_bindingHosts.erase(it);
-      }
+      item.node->_bindingHosts.erase(this);
     }
   }
   _bindingHosts.clear();
+  _children.clear();
+  if (!_id.empty()) {
+    _indexedNodes.erase(_id);
+  }
 }
-void Node::setId(const std::string &id) { _id = id; }
+void Node::setId(const std::string &id) {
+  if (!_id.empty()) {
+    _indexedNodes.erase(_id);
+  }
+  _id = id;
+  _indexedNodes[_id] = this;
+}
 
 const std::string &Node::getId() const { return _id; }
 
@@ -46,24 +61,21 @@ void Node::appendChild(core::AutoPtr<Node> child) {
     child->_parent->removeChild(child);
   }
   child->_parent = this;
-  if (!child->getId().empty()) {
-    _indexedChildren[child->getId()] = child;
-  }
 }
 void Node::onAttrChange(const std::string &name) {
-  if (_bindings.contains(name)) {
-    auto &bindings = _bindings.at(name);
-    for (auto &binding : bindings) {
-      if (_attributes.contains(name)) {
-        binding.node->setAttribute(binding.attr, _attributes[name]);
-      } else {
-        auto &group = _attributeGroups[name];
-        for (auto &item : group) {
-          auto fieldName = item.substr(name.length());
-          binding.node->setAttribute(binding.attr + fieldName,
-                                     _attributes[item]);
-        }
-      }
+  if (!_bindings.contains(name)) {
+    return;
+  }
+  auto &bindings = _bindings.at(name);
+  for (auto &binding : bindings) {
+    if (_attributes.contains(name)) {
+      binding.node->setAttribute(binding.attr, _attributes[name]);
+      continue;
+    }
+    auto &group = _attributeGroups[name];
+    for (auto &item : group) {
+      auto fieldName = item.substr(name.length());
+      binding.node->setAttribute(binding.attr + fieldName, _attributes[item]);
     }
   }
 }
@@ -79,9 +91,6 @@ void Node::removeChild(core::AutoPtr<Node> child) {
   if (it != _children.end()) {
     child->_parent = nullptr;
     _children.erase(it);
-    if (!child->getId().empty()) {
-      _indexedChildren.erase(child->getId());
-    }
   }
 }
 
@@ -93,19 +102,6 @@ void Node::onTick() {
   }
 }
 
-core::AutoPtr<Node> Node::getChild(const std::string &id) {
-  if (_indexedChildren.contains(id)) {
-    return _indexedChildren.at(id);
-  }
-  return nullptr;
-}
-
-const core::AutoPtr<Node> Node::getChild(const std::string &id) const {
-  if (_indexedChildren.contains(id)) {
-    return _indexedChildren.at(id);
-  }
-  return nullptr;
-}
 bool Node::setAttribute(const std::string &name, const core::ValuePtr &value) {
   auto currentName = name;
   if (!_attrGroup.empty()) {
@@ -119,7 +115,6 @@ bool Node::setAttribute(const std::string &name, const core::ValuePtr &value) {
   if (_attrGroup.empty()) {
     onAttrChange(currentName);
   }
-  _changed++;
   return true;
 }
 
@@ -136,7 +131,6 @@ bool Node::setAttribute(const std::string &name, const core::Value &value) {
   if (_attrGroup.empty()) {
     onAttrChange(currentName);
   }
-  _changed++;
   return true;
 }
 const core::Value Node::getAttribute(const std::string &name) const {
@@ -169,22 +163,21 @@ void Node::endAttrGroup() {
 void Node::bindAttribute(const std::string name, core::AutoPtr<Node> host,
                          const std::string &source) {
 
-  auto it = std::find(_bindingHosts.begin(), _bindingHosts.end(),
-                      host.getRawPointer());
+  auto it = _bindingHosts.find((Node *)host.getRawPointer());
   if (it != _bindingHosts.end()) {
-    _bindingHosts.push_back((Node *)host.getRawPointer());
+    _bindingHosts.pushBack((Node *)host.getRawPointer());
   }
   auto &group = host->_bindings[source];
-  group.push_back({name, this});
+  group.pushBack({name, this});
 }
-const std::unordered_map<std::string, std::string> Node::getAttributes() const {
-  std::unordered_map<std::string, std::string> attributes;
+const core::Map<std::string, std::string> Node::getAttributes() const {
+  core::Map<std::string, std::string> attributes;
   for (auto &[name, attr] : _attributes) {
     attributes[name] = attr.getTypeName();
   }
   return attributes;
 }
-const std::unordered_map<std::string, std::vector<std::string>> &
+const core::Map<std::string, core::Array<std::string>> &
 Node::getAttributeGroups() const {
   return _attributeGroups;
 }

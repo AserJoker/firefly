@@ -67,16 +67,8 @@ private:
   glm::vec3 _ambient;
   glm::vec3 _diffuse;
   glm::vec3 _specular;
-  glm::vec3 _emissive;
-  glm::vec3 _reflective;
-  glm::vec3 _transparent;
-  float _reflectivity;
   bool _wireframe;
   bool _cullBackface;
-  bool _blendAdd;
-  float _opacity;
-  float _shininess;
-  float _shininessStrength;
 
   bool _alphaTest;
   std::pair<gl::ALPHA_FUNC, float> _alphaFunc;
@@ -109,32 +101,17 @@ public:
   const glm::vec3 &getAmbient() const;
   const glm::vec3 &getDiffuse() const;
   const glm::vec3 &getSpecular() const;
-  const glm::vec3 &getEmissive() const;
-  const glm::vec3 &getReflective() const;
-  const glm::vec3 &getTransparent() const;
-  const float &getReflectivity() const;
   const bool &isWireframe() const;
   const bool &isCullBackface() const;
-  const bool &isBlendAdd() const;
-  const float &getOpacity() const;
-  const float &getShininess() const;
-  const float &getShininessStrength() const;
   const std::string &getName() const;
   const uint32_t &getInstanced() const;
 
   void setAmbient(const glm::vec3 &color);
   void setDiffuse(const glm::vec3 &color);
   void setSpecular(const glm::vec3 &color);
-  void setEmissive(const glm::vec3 &color);
-  void setReflective(const glm::vec3 &color);
-  void setTransparent(const glm::vec3 &color);
   void setReflectivity(float value);
   void setIsWireframe(bool value);
   void setIsCullBackface(bool value);
-  void setIsBlendAdd(bool value);
-  void setOpacity(float value);
-  void setShininess(float value);
-  void setShininessStrength(float value);
   void setName(const std::string &name);
   void setInstanced(uint32_t instanced);
 

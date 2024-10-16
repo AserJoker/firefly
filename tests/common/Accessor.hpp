@@ -1,11 +1,11 @@
 #pragma once
 #include "core/TemplateCString.hpp"
 using namespace firefly;
-template <core::template_c_string name> struct Identity {
+template <core::CompileString name> struct Identity {
   friend auto getAccessorType(Identity<name>);
 };
 
-template <core::template_c_string name, auto member> struct AccessorBinding {
+template <core::CompileString name, auto member> struct AccessorBinding {
   friend auto getAccessorType(Identity<name>) {
     return AccessorBinding<name, member>();
   }
@@ -21,20 +21,20 @@ template <core::template_c_string name, auto member> struct AccessorBinding {
 };
 
 template <class C> struct Accessor {
-  template <core::template_c_string name> static auto &get(const C &c) {
+  template <core::CompileString name> static auto &get(const C &c) {
     using AccessorType =
         decltype(getAccessorType(std::declval<Identity<name>>()));
     AccessorType acc{};
     return acc.get(c);
   }
 
-  template <core::template_c_string name> static void set(C &c, auto &&value) {
+  template <core::CompileString name> static void set(C &c, auto &&value) {
     using AccessorType =
         decltype(getAccessorType(std::declval<Identity<name>>()));
     AccessorType{}.set(c, value);
   }
 
-  template <core::template_c_string name, class... ARGS>
+  template <core::CompileString name, class... ARGS>
   static auto call(C &c, ARGS &&...args) {
     using AccessorType =
         decltype(getAccessorType(std::declval<Identity<name>>()));

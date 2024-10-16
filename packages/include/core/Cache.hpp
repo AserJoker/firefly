@@ -1,16 +1,17 @@
 #pragma once
 #include "core/AutoPtr.hpp"
+#include "core/Map.hpp"
 #include "core/Object.hpp"
 #include "core/Singleton.hpp"
 #include <string>
-#include <unordered_map>
+
 namespace firefly::core {
 template <class T> class Cache {
 private:
   class CacheInstance : public Object {
   private:
     friend class Cache<T>;
-    std::unordered_map<std::string, core::AutoPtr<T>> _cache;
+    core::Map<std::string, core::AutoPtr<T>> _cache;
 
   public:
     CacheInstance(){};

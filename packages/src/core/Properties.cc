@@ -2,7 +2,6 @@
 #include "core/AutoPtr.hpp"
 #include "core/Buffer.hpp"
 #include <fmt/format.h>
-#include <vector>
 using namespace firefly;
 using namespace firefly::core;
 Properties::Properties(const core::AutoPtr<Buffer> &buffer) : _root(PObject{}) {
@@ -100,13 +99,13 @@ const std::string Properties::decode(const std::string &source) const {
   }
   return result;
 }
-const std::vector<std::string> Properties::parse(const std::string &key) const {
-  std::vector<std::string> result;
+const core::Array<std::string> Properties::parse(const std::string &key) const {
+  core::Array<std::string> result;
   std::string part;
   for (auto &c : key) {
     if (c == '.' || c == '[') {
       if (!part.empty()) {
-        result.push_back(part);
+        result.pushBack(part);
         part.clear();
       }
     } else if (c != ']') {
@@ -114,7 +113,7 @@ const std::vector<std::string> Properties::parse(const std::string &key) const {
     }
   }
   if (!part.empty()) {
-    result.push_back(part);
+    result.pushBack(part);
   }
   return result;
 }
@@ -149,7 +148,7 @@ void Properties::set(const std::string &key, const std::string &value) {
   iterator->isObject = false;
   iterator->children.clear();
 }
-const std::vector<std::string> Properties::keys(const std::string &key) const {
+const core::Array<std::string> Properties::keys(const std::string &key) const {
   auto parts = parse(key);
   auto *iterator = &_root;
   for (auto &part : parts) {
@@ -161,9 +160,9 @@ const std::vector<std::string> Properties::keys(const std::string &key) const {
     }
     iterator = &iterator->children.at(part);
   }
-  std::vector<std::string> result;
+  core::Array<std::string> result;
   for (auto &[k, _] : iterator->children) {
-    result.push_back(k);
+    result.pushBack(k);
   }
   return result;
 }

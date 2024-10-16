@@ -28,8 +28,13 @@ FUNC_DEF(Module_Document::createSprite2D) {
     sprite = new document::Sprite2D(path);
   } else {
     auto renderTarget = args[0]->getOpaque().cast<document::RenderTarget>();
+    size_t attachment = 0;
+    if (args.size() > 1 && args[1]->getType(ctx) == Atom::TYPE::NUMBER) {
+      attachment = (size_t)args[1]->toNumber(ctx);
+    }
     sprite = new document::Sprite2D();
-    auto texture = renderTarget->getRenderTarget()->getAttachments()[0];
+    auto texture =
+        renderTarget->getRenderTarget()->getAttachments()[attachment];
     auto size = texture->getSize();
     sprite->setTexture(texture);
     sprite->setRect({0, 0, size});
@@ -46,7 +51,20 @@ FUNC_DEF(Module_Document::createScene) {
 FUNC_DEF(Module_Document::createRenderTarget) {
   auto width = (uint32_t)args[0]->getField(ctx, "width")->toNumber(ctx);
   auto height = (uint32_t)args[0]->getField(ctx, "height")->toNumber(ctx);
-  core::AutoPtr renderTarget = new document::RenderTarget({width, height});
+  uint32_t attachment = 1;
+  std::string stage = "basic";
+  if (args.size() > 1) {
+    if (args[1]->getType(ctx) == Atom::TYPE::NUMBER) {
+      attachment = (uint32_t)args[1]->toNumber(ctx);
+    } else if (args[1]->getType(ctx) == Atom::TYPE::STRING) {
+      stage = args[1]->toString(ctx);
+      if (args.size() > 2 && args[2]->getType(ctx) == Atom::TYPE::NUMBER) {
+        attachment = args[2]->toNumber(ctx);
+      }
+    }
+  }
+  core::AutoPtr renderTarget =
+      new document::RenderTarget(stage, {width, height}, attachment);
   return {Trait_RenderTarget::create(ctx, renderTarget)};
 }
 FUNC_DEF(Module_Document::createAnimation) {

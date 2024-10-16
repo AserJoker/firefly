@@ -28,10 +28,6 @@ function Node:getId() end
 --- @param id string
 function Node:setId(id) end
 
---- @param id string
---- @return Node
-function Node:getChild(id) end
-
 --- @param key string
 --- @param value any
 --- @return boolean
@@ -65,6 +61,9 @@ function Scene:setCamera(type) end
 
 --- @class RenderTarget:Node
 local RenderTarget = {}
+
+--- @param size Size
+function RenderTarget:resize(size) end
 
 --- @class Sprite2D:Node
 local Sprite2D = {}
@@ -155,8 +154,9 @@ function Animation:resume(name) end
 --- @param name string
 function Animation:reset(name) end
 
---- @param path string|RenderTarget
+--- @param path string
 --- @return Sprite2D
+--- @overload fun(renderTarget:RenderTarget,attachement:integer|nil):Sprite2D
 function createSprite2D(path) end
 
 --- @return Scene
@@ -168,8 +168,16 @@ function setScene(scene) end
 --- @return Scene
 function getScene() end
 
---- @param size {width:integer,height:integer}
+--- @class Size
+--- @field width integer
+--- @field height integer
+local Size = {};
+
+--- @param size Size
 --- @return RenderTarget
+--- @overload fun(size:Size,attachment:integer):RenderTarget
+--- @overload fun(size:Size,stage:string):RenderTarget
+--- @overload fun(size:Size,stage:string,attachment:integer):RenderTarget
 function createRenderTarget(size) end
 
 --- @return Animation

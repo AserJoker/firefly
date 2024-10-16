@@ -10,7 +10,7 @@
 #include <fmt/format.h>
 
 namespace firefly::core {
-template <class T, template_c_string name> class Injector : public AutoPtr<T> {
+template <class T, CompileString name> class Injector : public AutoPtr<T> {
 public:
   Injector()
       : AutoPtr<T>(

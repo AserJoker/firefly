@@ -7,6 +7,8 @@
 namespace firefly::script {
 class Trait_RenderTarget {
 private:
+  static FUNC_DEF(resize);
+
 public:
   static void initialize(core::AutoPtr<Script> script);
   static core::AutoPtr<Value>

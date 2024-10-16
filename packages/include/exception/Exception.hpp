@@ -13,8 +13,7 @@ public:
       const std::string &type, const std::string &message,
       const std::source_location &current = std::source_location::current());
 };
-template <core::template_c_string type>
-class RuntimeException : public Exception {
+template <core::CompileString type> class RuntimeException : public Exception {
 public:
   RuntimeException(
       const std::string &message, const std::runtime_error caused,

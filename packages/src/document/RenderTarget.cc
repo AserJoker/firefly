@@ -4,6 +4,7 @@
 #include "gl/FrameBuffer.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_image.h>
+#include <glm/fwd.hpp>
 using namespace firefly;
 using namespace firefly::document;
 
@@ -12,6 +13,7 @@ RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
     : _renderTarget(new video::RenderTarget(stage, size, attachment)) {}
 RenderTarget::RenderTarget(const glm::ivec2 &size, uint32_t attachment)
     : _renderTarget(new video::RenderTarget("basic", size, attachment)) {}
+
 void RenderTarget::onTick() {
   _renderTarget->active();
   glClearColor(0, 0, 0, 0);
@@ -26,4 +28,8 @@ void RenderTarget::onTick() {
 const core::AutoPtr<video::RenderTarget> &
 RenderTarget::getRenderTarget() const {
   return _renderTarget;
+}
+
+void RenderTarget::resize(const glm::ivec2 &size) {
+  _renderTarget->resize(size);
 }

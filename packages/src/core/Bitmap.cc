@@ -10,6 +10,4 @@ const bool Bitmap::check(const std::string &name) const {
   return false;
 }
 void Bitmap::clear() { _bitmap.clear(); }
-const std::unordered_map<std::string, bool> &Bitmap::getData() const {
-  return _bitmap;
-}
+const core::Map<std::string, bool> &Bitmap::getData() const { return _bitmap; }

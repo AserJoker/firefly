@@ -2,6 +2,7 @@
 #include "core/AutoPtr.hpp"
 #include "document/Node.hpp"
 #include "video/RenderTarget.hpp"
+#include <glm/fwd.hpp>
 #include <glm/glm.hpp>
 
 namespace firefly::document {
@@ -14,6 +15,7 @@ public:
                uint32_t attachment = 1);
   RenderTarget(const glm::ivec2 &size, uint32_t attachment = 1);
   const core::AutoPtr<video::RenderTarget> &getRenderTarget() const;
+  void resize(const glm::ivec2 &size);
   void onTick() override;
 };
 } // namespace firefly::document

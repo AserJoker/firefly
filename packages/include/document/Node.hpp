@@ -1,16 +1,21 @@
 #pragma once
 #include "core/AutoPtr.hpp"
+#include "core/Map.hpp"
 #include "core/Object.hpp"
 #include "core/Value.hpp"
 #include <fmt/format.h>
 #include <list>
 #include <string>
-#include <unordered_map>
-#include <vector>
 
 namespace firefly::document {
 
 class Node : public core::Object {
+private:
+  static core::Map<std::string, Node *> _indexedNodes;
+
+public:
+  static core::AutoPtr<Node> query(const std::string &id);
+
 public:
   struct AttrBinding {
     std::string attr;
@@ -20,16 +25,14 @@ public:
 private:
   Node *_parent;
   std::list<core::AutoPtr<Node>> _children;
-  std::unordered_map<std::string, core::AutoPtr<Node>> _indexedChildren;
-  std::unordered_map<std::string, core::ValuePtr> _attributes;
-  std::unordered_map<std::string, std::vector<AttrBinding>> _bindings;
-  std::vector<Node *> _bindingHosts;
-  std::unordered_map<std::string, std::vector<std::string>> _attributeGroups;
+  core::Map<std::string, core::ValuePtr> _attributes;
+  core::Map<std::string, core::Array<AttrBinding>> _bindings;
+  core::Array<Node *> _bindingHosts;
+  core::Map<std::string, core::Array<std::string>> _attributeGroups;
   std::string _id;
 
   std::list<std::string> _attrGroups;
   std::string _attrGroup;
-  uint32_t _changed;
 
 protected:
   virtual void onAttrChange(const std::string &name);
@@ -40,7 +43,7 @@ protected:
     if (pos != std::string::npos) {
       auto groupName = name.substr(0, pos);
       auto &group = this->_attributeGroups[groupName];
-      group.push_back(name);
+      group.pushBack(name);
     }
   }
 
@@ -49,8 +52,6 @@ public:
   ~Node() override;
   void setId(const std::string &id);
   const std::string &getId() const;
-  core::AutoPtr<Node> getChild(const std::string &id);
-  const core::AutoPtr<Node> getChild(const std::string &id) const;
   void appendChild(core::AutoPtr<Node> node);
   void removeChild(core::AutoPtr<Node> node);
   core::AutoPtr<Node> getParent();
@@ -62,8 +63,8 @@ public:
   void endAttrGroup();
   void bindAttribute(const std::string name, core::AutoPtr<Node> host,
                      const std::string &source);
-  const std::unordered_map<std::string, std::string> getAttributes() const;
-  const std::unordered_map<std::string, std::vector<std::string>> &
+  const core::Map<std::string, std::string> getAttributes() const;
+  const core::Map<std::string, core::Array<std::string>> &
   getAttributeGroups() const;
   virtual void onTick();
 };

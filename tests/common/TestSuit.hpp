@@ -37,15 +37,15 @@ public:
   }
 
 protected:
-  template <core::template_c_string suit> static int before() {
+  template <core::CompileString suit> static int before() {
     BaseTestSuit *s = _suits.at(suit.value);
     return s->beforeAll();
   };
-  template <core::template_c_string suit> static int after() {
+  template <core::CompileString suit> static int after() {
     BaseTestSuit *s = _suits.at(suit.value);
     return s->afterAll();
   };
-  template <core::template_c_string suit, core::template_c_string name>
+  template <core::CompileString suit, core::CompileString name>
   static void test() {
     BaseTestSuit *s = _suits.at(suit.value);
     Test t = s->_tests.at(name.value);
@@ -103,7 +103,7 @@ protected:
   }
 };
 
-template <core::template_c_string name, typename T>
+template <core::CompileString name, typename T>
 class TestSuit : public BaseTestSuit {
 private:
   CU_pSuite _suite;
@@ -123,7 +123,7 @@ public:
     }
   }
 
-  template <core::template_c_string test>
+  template <core::CompileString test>
   void defineTest(void (T::*TEST)(), int (T::*before)() = nullptr,
                   int (T::*after)() = nullptr) {
     BaseTestSuit::defineTest(

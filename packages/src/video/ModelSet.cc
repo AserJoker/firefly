@@ -40,18 +40,6 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
     glm::vec3 v = {color.r, color.g, color.b};
     material->setSpecular(v);
   }
-  if (mat->Get(AI_MATKEY_COLOR_EMISSIVE, color) == AI_SUCCESS) {
-    glm::vec3 v = {color.r, color.g, color.b};
-    material->setEmissive(v);
-  }
-  if (mat->Get(AI_MATKEY_COLOR_REFLECTIVE, color) == AI_SUCCESS) {
-    glm::vec3 v = {color.r, color.g, color.b};
-    material->setReflective(v);
-  }
-  if (mat->Get(AI_MATKEY_COLOR_TRANSPARENT, color) == AI_SUCCESS) {
-    glm::vec3 v = {color.r, color.g, color.b};
-    material->setTransparent(v);
-  }
   if (mat->Get(AI_MATKEY_REFLECTIVITY, fvalue) == AI_SUCCESS) {
     material->setReflectivity(fvalue);
   }
@@ -60,18 +48,6 @@ static core::AutoPtr<Material> parseMaterial(aiMaterial *mat) {
   }
   if (mat->Get(AI_MATKEY_TWOSIDED, ivalue) == AI_SUCCESS) {
     material->setIsCullBackface(ivalue);
-  }
-  if (mat->Get(AI_MATKEY_BLEND_FUNC, ivalue) == AI_SUCCESS) {
-    material->setIsBlendAdd(ivalue == aiBlendMode_Additive);
-  }
-  if (mat->Get(AI_MATKEY_OPACITY, fvalue) == AI_SUCCESS) {
-    material->setOpacity(fvalue);
-  }
-  if (mat->Get(AI_MATKEY_SHININESS, fvalue) == AI_SUCCESS) {
-    material->setShininess(fvalue);
-  }
-  if (mat->Get(AI_MATKEY_SHININESS_STRENGTH, fvalue) == AI_SUCCESS) {
-    material->setShininessStrength(fvalue);
   }
   aiString svalue;
   for (auto type = 1; type <= 21; type++) {

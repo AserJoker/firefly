@@ -154,10 +154,9 @@ public:
 
   ConstReverseIterator rend() const { return _data.rend(); }
 
-  Iterator find(const T &data) {
+  ConstIterator find(T &&data) const {
     return std::find(_data.begin(), _data.end(), data);
   }
-
   ConstIterator find(const T &data) const {
     return std::find(_data.begin(), _data.end(), data);
   }
@@ -196,7 +195,7 @@ public:
     return _data.erase(begin, end);
   }
 
-  Iterator erase(const T &data, bool removeAll = false) {
+  ConstIterator erase(const T &data, bool removeAll = false) {
     auto it = find(data);
     if (it == end()) {
       return it;
