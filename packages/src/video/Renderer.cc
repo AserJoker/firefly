@@ -187,8 +187,8 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   for (auto &[_, attribute] : material->getAttributes()) {
     attribute(_constants);
   }
+  auto index = (int32_t)_textures.size();
   auto textures = material->getTextures();
-  auto index = 0;
   for (auto &[name, info] : textures) {
     core::AutoPtr<gl::Texture2D> tex = info.texture;
     glActiveTexture(GL_TEXTURE0 + index);
@@ -262,6 +262,17 @@ void Renderer::draw(const Renderer::RenderItem &item) {
     item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
   }
 }
+void Renderer::setTexture(const std::string &name,
+                          core::AutoPtr<gl::Texture2D> texture) {
+  _textures[name] = texture;
+}
+void Renderer::clearTexture(const std::string &name) {
+  if (name.empty()) {
+    _textures.clear();
+  } else {
+    _textures.erase(name);
+  }
+}
 
 void Renderer::present() {
   std::list<core::AutoPtr<RenderTarget>> pipeline;
@@ -277,6 +288,13 @@ void Renderer::present() {
   }
   if (current != nullptr) {
     current->active();
+  }
+  uint32_t index = 0;
+  for (auto &[name, texture] : _textures) {
+    glActiveTexture(GL_TEXTURE0 + index);
+    gl::Texture2D::bind(texture);
+    _constants->setField(name, index);
+    _constants->setField(fmt::format("{}_enable", name), true);
   }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 

@@ -14,16 +14,21 @@ public:
 
 private:
   core::AutoPtr<video::Camera> _camera;
+  glm::ivec3 _cameraPosition;
   CameraType _cameraType;
 
 private:
   glm::ivec4 getViewport();
   core::AutoPtr<RenderTarget> getRenderTarget();
 
+protected:
+  void onAttrChange(const std::string &name) override;
+
 public:
   Scene();
   void onTick() override;
   void setCamera(CameraType type);
+  const core::AutoPtr<video::Camera> &getCamera() const;
   CameraType getCameraType() const;
 };
 }; // namespace firefly::document

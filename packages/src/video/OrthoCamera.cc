@@ -15,8 +15,9 @@ glm::mat4 OrthoCamera::getProjectionMatrix(const glm::ivec4 &viewport) {
   auto bottom = ((float)y - height / 2.0f) / height;
   auto top = ((float)y + height / 2.0f) / height;
 
-  auto projection = glm::ortho(left, right, bottom, top, -1000.f, 1000.0f) *
-                    glm::scale(glm::mat4(1.0f), {1.0f / width, 1.0f / height, 1.0f});
+  auto projection =
+      glm::ortho(left, right, bottom, top, -1000.f, 1000.0f) *
+      glm::scale(glm::mat4(1.0f), {1.0f / width, 1.0f / height, 1.0f});
   return projection;
 }
 OrthoCamera::OrthoCamera(const glm::vec3 &position, const glm::vec3 &up,

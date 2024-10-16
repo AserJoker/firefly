@@ -32,6 +32,8 @@ private:
   core::AutoPtr<video::Geometry> _geometry;
   core::AutoPtr<video::Material> _material;
 
+  glm::ivec4 _bindingRect;
+
   glm::mat4 _matrixModel;
   uint32_t _count;
   glm::vec3 _color;
@@ -62,6 +64,7 @@ protected:
   const core::AutoPtr<video::Geometry> &getGeometry() const override;
   const core::AutoPtr<video::Material> &getMaterial() const override;
   const glm::mat4 &getMatrixModel() const override;
+  const glm::ivec4 &getBindingRect() const override;
 
   void onAttrChange(const std::string &name) override;
 

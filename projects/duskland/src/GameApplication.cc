@@ -15,6 +15,7 @@
 #include "script/bridge/LuaBridge.hpp"
 #include "script/helper/Trait_Animation.hpp"
 #include "script/helper/Trait_Buffer.hpp"
+#include "script/helper/Trait_Camera.hpp"
 #include "script/helper/Trait_Node.hpp"
 #include "script/helper/Trait_ParticleGenerator.hpp"
 #include "script/helper/Trait_Promise.hpp"
@@ -71,6 +72,7 @@ void GameApplication::initScript() {
   script::Trait_RenderTarget::initialize(_script);
   script::Trait_Animation::initialize(_script);
   script::Trait_ParticleGenerator::initialize(_script);
+  script::Trait_Camera::initialize(_script);
 
   script::Module_Log::open(_script);
   script::Module_Locale::open(_script);

@@ -5,6 +5,7 @@
 #include "core/Object.hpp"
 #include "gl/Constant.hpp"
 #include "gl/Program.hpp"
+#include "gl/Texture2D.hpp"
 #include "video/RenderTarget.hpp"
 #include <glm/glm.hpp>
 #include <list>
@@ -34,6 +35,7 @@ private:
 
   core::AutoPtr<RenderTarget> _deferred;
   std::list<core::AutoPtr<RenderTarget>> _shaderRenderTargets;
+  core::Map<std::string, core::AutoPtr<gl::Texture2D>> _textures;
 
 private:
   void draw(const RenderItem &item);
@@ -62,5 +64,8 @@ public:
   void present();
   core::AutoPtr<RenderContext> pushContext();
   void popContext(const core::AutoPtr<RenderContext> &ctx);
+  void setTexture(const std::string &name,
+                  core::AutoPtr<gl::Texture2D> texture);
+  void clearTexture(const std::string &name);
 };
 } // namespace firefly::video

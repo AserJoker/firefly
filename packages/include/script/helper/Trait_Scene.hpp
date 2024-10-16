@@ -8,6 +8,7 @@ namespace firefly::script {
 class Trait_Scene {
 private:
   static FUNC_DEF(setCamera);
+  static FUNC_DEF(getCamera);
 
 public:
   static void initialize(core::AutoPtr<Script> script);

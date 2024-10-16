@@ -10,12 +10,16 @@ out vec3 vertexColor;
 
 uniform mat4 projection;
 uniform mat4 model;
+uniform vec3 cameraPosition;
 
 uniform int flip;
 
 void main() {
     vertexTexcoord = (coord_matrix * vec4(texcoord.x, texcoord.y, 0.0, 1.0)).xy;
-    vec4 pos = projection * view * model * vec4(position.x, position.y, 0.0, 1.0);
+    vec4 pos = view * model * vec4(position.x, position.y, 0.0, 1.0);
+    pos.x += cameraPosition.x;
+    pos.y += cameraPosition.y;
+    pos = projection * pos;
     if(flip == 1) {
         gl_Position = vec4(pos.x - 1.0, pos.y - 1.0, pos.zw);
     } else {

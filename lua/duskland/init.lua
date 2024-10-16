@@ -24,8 +24,10 @@ require'event'.on('gameLoaded', function()
     sprite:setRect({x = 0, y = 0, width = 32, height = 48})
     sprite:setSourceRect({x = 0, y = 0, width = 32, height = 48})
     sprite:beginAttrGroup("rect")
-    sprite:setAttribute("x", 128)
     sprite:endAttrGroup()
+
+    local camera = scene:getCamera()
+    camera:setPosition({x = 32, y = 0})
     require'event'.on("keyDown", function(scancode)
         if scancode == input.SCANCODE.S then animation:start("move") end
         if scancode == input.SCANCODE.A then

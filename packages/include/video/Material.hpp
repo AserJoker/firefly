@@ -69,6 +69,9 @@ private:
   glm::vec3 _specular;
   bool _wireframe;
   bool _cullBackface;
+  bool _shininess;
+  glm::vec3 _shininessColor;
+  float _shininessStrength;
 
   bool _alphaTest;
   std::pair<gl::ALPHA_FUNC, float> _alphaFunc;
@@ -114,6 +117,13 @@ public:
   void setIsCullBackface(bool value);
   void setName(const std::string &name);
   void setInstanced(uint32_t instanced);
+
+  void setIsShininess(bool shininess);
+  void setShininessColor(const glm::vec3 &color);
+  void setShininessStrength(float strength);
+  bool isShininess() const;
+  const glm::vec3 &getShininessColor() const;
+  float getShininessStrength() const;
 
   const bool &isBlend() const;
   void setBlend(bool value);

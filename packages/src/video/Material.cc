@@ -99,7 +99,16 @@ void Material::setIsCullBackface(bool value) { _cullBackface = value; }
 void Material::setName(const std::string &name) { _name = name; }
 
 void Material::setInstanced(uint32_t instanced) { _instanced = instanced; }
-
+void Material::setIsShininess(bool shininess) { _shininess = shininess; }
+void Material::setShininessColor(const glm::vec3 &color) {
+  _shininessColor = color;
+}
+void Material::setShininessStrength(float strength) {
+  _shininessStrength = strength;
+}
+bool Material::isShininess() const { return _shininess; }
+const glm::vec3 &Material::getShininessColor() const { return _shininessColor; }
+float Material::getShininessStrength() const { return _shininessStrength; }
 const bool &Material::isBlend() const { return _blend; }
 void Material::setBlend(bool value) { _blend = value; }
 

@@ -4,6 +4,7 @@
 #include "exception/Exception.hpp"
 #include "script/Script.hpp"
 #include "script/Value.hpp"
+#include "script/helper/Trait_Camera.hpp"
 #include "script/helper/Trait_Node.hpp"
 using namespace firefly;
 using namespace firefly::script;
@@ -20,11 +21,18 @@ FUNC_DEF(Trait_Scene::setCamera) {
   }
   return {};
 }
+FUNC_DEF(Trait_Scene::getCamera) {
+  auto [self] = Script::parseArgs<SelfType>(ctx, args);
+  auto &camera = self->getCamera();
+  return {Trait_Camera::create(ctx, camera)};
+}
 
 void Trait_Scene::initialize(core::AutoPtr<Script> ctx) {
   auto global = ctx->getNativeGlobal();
-  auto Scene =
-      ctx->createValue()->setObject(ctx)->setFunctionField(ctx, setCamera);
+  auto Scene = ctx->createValue()
+                   ->setObject(ctx)
+                   ->setFunctionField(ctx, setCamera)
+                   ->setFunctionField(ctx, getCamera);
   global->setField(ctx, "Scene", Scene);
 }
 

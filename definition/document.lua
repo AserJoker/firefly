@@ -7,6 +7,11 @@
 --- @field height integer
 local Rect = {}
 
+--- @class Position
+--- @field x integer
+--- @field y integer
+local Position = {};
+
 --- @param shaderName string
 function setShader(shaderName) end
 
@@ -53,11 +58,23 @@ function Node:getAttributes() end
 --- @return {[string]:string[]}
 function Node:getAttributeGroups() end
 
+--- @class Camera
+local Camera = {};
+
+--- @param position Position
+function Camera:setPosition(position) end
+
+--- @return Position
+function Camera:getPosition() end
+
 --- @class Scene:Node
 local Scene = {};
 
 --- @param type "ortho"|"perspective"
 function Scene:setCamera(type) end
+
+--- @return Camera
+function Scene:getCamera() end
 
 --- @class RenderTarget:Node
 local RenderTarget = {}

@@ -11,7 +11,6 @@
 #include <cstdint>
 #include <glm/ext/matrix_transform.hpp>
 
-
 using namespace firefly;
 using namespace firefly::document;
 
@@ -56,6 +55,7 @@ const core::AutoPtr<video::Material> &Sprite2D::getMaterial() const {
 }
 
 const glm::mat4 &Sprite2D::getMatrixModel() const { return _matrixModel; }
+const glm::ivec4 &Sprite2D::getBindingRect() const { return _dstRect; }
 
 void Sprite2D::onAttrChange(const std::string &name) {
   if (name == ATTR_TEXTURE) {

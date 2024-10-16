@@ -54,13 +54,23 @@ void Scene::onTick() {
       constants->setField("flip", 0);
     }
     constants->setField("projection", _camera->getProjectionMatrix());
-    constants->setField("view", _camera->getViewMatrix());
-    constants->setField("cameraPosition", _camera->getPosition());
+    auto position = _camera->getPosition();
+    constants->setField("cameraPosition", position);
   }
   renderer->setViewport(viewport);
   renderer->present();
 }
-Scene::Scene() : _cameraType(CameraType::NIL) { setCamera(CameraType::ORTHO); }
+void Scene::onAttrChange(const std::string &name) {
+  if (name == "camera" || name.starts_with("camera.")) {
+    _camera->setPosition(_cameraPosition);
+  }
+}
+Scene::Scene() : _cameraType(CameraType::NIL) {
+  setCamera(CameraType::ORTHO);
+  defineAttribute("camera.x", &_cameraPosition.x);
+  defineAttribute("camera.y", &_cameraPosition.y);
+  defineAttribute("camera.z", &_cameraPosition.z);
+}
 void Scene::setCamera(CameraType type) {
   _cameraType = type;
   switch (type) {
@@ -75,3 +85,4 @@ void Scene::setCamera(CameraType type) {
     break;
   }
 }
+const core::AutoPtr<video::Camera> &Scene::getCamera() const { return _camera; }
