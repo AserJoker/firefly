@@ -11,13 +11,13 @@ PerspectiveCamera::PerspectiveCamera(const glm::vec3 &position,
   auto app = core::Singleton<runtime::Application>::instance();
   auto win = app->getWindow();
   auto size = win->getSize();
-  setViewport({0, 0, size});
+  setViewport({0, 0, 0, size});
 }
-void PerspectiveCamera::setViewport(const glm::ivec4 &viewport) {
+void PerspectiveCamera::setViewport(const core::Rect<> &viewport) {
   if (_viewport != viewport) {
-    setProjectionMatrix(glm::perspective(glm::radians(45.0f),
-                                         (float)viewport.z / (float)viewport.w,
-                                         0.1f, 100.0f));
+    setProjectionMatrix(glm::perspective(
+        glm::radians(45.0f), (float)viewport.width / (float)viewport.height,
+        0.1f, 100.0f));
     _viewport = viewport;
   }
 }

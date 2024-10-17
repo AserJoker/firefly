@@ -1,5 +1,6 @@
 #pragma once
 #include "core/AutoPtr.hpp"
+#include "core/Rect.hpp"
 #include "document/Node.hpp"
 #include "document/RenderTarget.hpp"
 #include "video/Camera.hpp"
@@ -14,11 +15,11 @@ public:
 
 private:
   core::AutoPtr<video::Camera> _camera;
-  glm::ivec3 _cameraPosition;
+  core::Point<> _cameraPosition;
   CameraType _cameraType;
 
 private:
-  glm::ivec4 getViewport();
+  core::Rect<> getViewport();
   core::AutoPtr<RenderTarget> getRenderTarget();
 
 protected:

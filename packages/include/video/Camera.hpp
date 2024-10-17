@@ -1,5 +1,6 @@
 #pragma once
 #include "core/Object.hpp"
+#include "core/Rect.hpp"
 #include <glm/glm.hpp>
 namespace firefly::video {
 class Camera : public core::Object {
@@ -10,7 +11,7 @@ private:
   glm::vec3 _up;
 
 protected:
-  glm::ivec4 _viewport;
+  core::Rect<> _viewport;
 
 public:
   Camera(const glm::mat4 &projection, const glm::vec3 &position,
@@ -24,6 +25,6 @@ public:
   const glm::vec3 &getFront() const;
   const glm::mat4 &getProjectionMatrix() const;
   const glm::mat4 getViewMatrix() const;
-  virtual void setViewport(const glm::ivec4 &viewport);
+  virtual void setViewport(const core::Rect<> &viewport);
 };
 } // namespace firefly::video

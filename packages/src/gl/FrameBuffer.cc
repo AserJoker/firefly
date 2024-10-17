@@ -3,7 +3,7 @@
 #include <glad/glad.h>
 using namespace firefly;
 using namespace firefly::gl;
-FrameBuffer::FrameBuffer(const glm::ivec2 &size, uint32_t handle)
+FrameBuffer::FrameBuffer(const core::Size<> &size, uint32_t handle)
     : _handle(handle), _size(size) {
   if (!_handle) {
     glGenFramebuffers(1, &_handle);
@@ -11,7 +11,8 @@ FrameBuffer::FrameBuffer(const glm::ivec2 &size, uint32_t handle)
   glBindFramebuffer(GL_FRAMEBUFFER, _handle);
   glGenRenderbuffers(1, &_renderBuffer);
   glBindRenderbuffer(GL_RENDERBUFFER, _renderBuffer);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.x, size.y);
+  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, size.width,
+                        size.height);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT,
                             GL_RENDERBUFFER, _renderBuffer);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -54,7 +55,7 @@ void FrameBuffer::bind(const core::AutoPtr<FrameBuffer> &framebuffer) {
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer->_handle);
   }
 }
-const glm::ivec2 &FrameBuffer::getSize() const { return _size; }
+const core::Size<> &FrameBuffer::getSize() const { return _size; }
 const std::vector<uint32_t> &FrameBuffer::getAttachmentBuffers() const {
   return _attachmentBuffers;
 }

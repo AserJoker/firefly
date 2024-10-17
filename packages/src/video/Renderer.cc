@@ -77,7 +77,7 @@ Renderer::Renderer() : _shaderName("internal") {
   _constants->setField("projection", glm::mat4(1.0f));
   _context = new RenderContext();
 }
-void Renderer::initialize(const glm::ivec4 &viewport) {
+void Renderer::initialize(const core::Rect<> &viewport) {
   setViewport(viewport);
   std::unordered_map<std::string, Shader::ShaderSource> sources = {
       {
@@ -112,18 +112,18 @@ void Renderer::initialize(const glm::ivec4 &viewport) {
   Geometry::set("quad", quadGeometry);
 }
 
-void Renderer::setViewport(const glm::ivec4 &viewport) {
+void Renderer::setViewport(const core::Rect<> &viewport) {
   _viewport = viewport;
-  glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
+  glViewport(_viewport.x, _viewport.y, _viewport.width, _viewport.height);
   if (_deferred != nullptr) {
-    _deferred->resize({_viewport.z, _viewport.w});
+    _deferred->resize({_viewport.width, _viewport.height});
   }
   for (auto &attr : _shaderRenderTargets) {
-    attr->resize({_viewport.z, _viewport.w});
+    attr->resize({_viewport.width, _viewport.height});
   }
 }
 
-const glm::ivec4 &Renderer::getViewport() const { return _viewport; }
+const core::Rect<> &Renderer::getViewport() const { return _viewport; }
 
 bool Renderer::activeShader(const std::string &name, const std::string &stage) {
   auto shader = Shader::get(name, fmt::format("shader::{}", name));
@@ -152,10 +152,11 @@ void Renderer::setShader(const std::string &name) {
   for (auto &[name, _] : programs) {
     if (name.starts_with("composite_") || name == "composite") {
       _shaderRenderTargets.push_back(
-          new RenderTarget(name, {_viewport.z, _viewport.w}));
+          new RenderTarget(name, {_viewport.width, _viewport.height}));
     }
     if (name == "deferred") {
-      _deferred = new video::RenderTarget(name, {_viewport.z, _viewport.w}, 3);
+      _deferred =
+          new video::RenderTarget(name, {_viewport.width, _viewport.height}, 3);
     }
   }
   _shaderRenderTargets.sort([](const core::AutoPtr<RenderTarget> &a,
@@ -325,7 +326,7 @@ void Renderer::present() {
       it++;
     }
     gl::FrameBuffer::bind(nullptr);
-    glViewport(_viewport.x, _viewport.y, _viewport.z, _viewport.w);
+    glViewport(_viewport.x, _viewport.y, _viewport.width, _viewport.height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     if (!activeShader(_shaderName, current->getStage())) {
       activeShader("internal", "basic");

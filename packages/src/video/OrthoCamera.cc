@@ -1,15 +1,16 @@
 #include "video/OrthoCamera.hpp"
+#include "core/Rect.hpp"
 #include "runtime/Application.hpp"
 #include "video/Camera.hpp"
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/ext/matrix_transform.hpp>
 using namespace firefly;
 using namespace firefly::video;
-glm::mat4 OrthoCamera::getProjectionMatrix(const glm::ivec4 &viewport) {
+glm::mat4 OrthoCamera::getProjectionMatrix(const core::Rect<> &viewport) {
   auto x = viewport.x;
   auto y = viewport.y;
-  auto width = viewport.z;
-  auto height = viewport.w;
+  auto width = viewport.width;
+  auto height = viewport.height;
   auto left = ((float)x - width / 2.0f) / width;
   auto right = ((float)x + width / 2.0f) / width;
   auto bottom = ((float)y - height / 2.0f) / height;
@@ -26,10 +27,10 @@ OrthoCamera::OrthoCamera(const glm::vec3 &position, const glm::vec3 &up,
   auto app = core::Singleton<runtime::Application>::instance();
   auto win = app->getWindow();
   auto size = win->getSize();
-  setViewport({0, 0, size});
+  setViewport({core::Point<>(0, 0), size});
 }
 
-void OrthoCamera::setViewport(const glm::ivec4 &viewport) {
+void OrthoCamera::setViewport(const core::Rect<> &viewport) {
   if (_viewport != viewport) {
     setProjectionMatrix(getProjectionMatrix(viewport));
     _viewport = viewport;

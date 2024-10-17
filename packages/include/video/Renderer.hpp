@@ -3,6 +3,7 @@
 #include "Material.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include "core/Rect.hpp"
 #include "gl/Constant.hpp"
 #include "gl/Program.hpp"
 #include "gl/Texture2D.hpp"
@@ -31,7 +32,7 @@ private:
 
   core::AutoPtr<RenderContext> _context;
 
-  glm::ivec4 _viewport;
+  core::Rect<> _viewport;
 
   core::AutoPtr<RenderTarget> _deferred;
   std::list<core::AutoPtr<RenderTarget>> _shaderRenderTargets;
@@ -45,7 +46,7 @@ public:
   void draw(const core::AutoPtr<Material> &material,
             const core::AutoPtr<Geometry> &geometry, const glm::mat4 &matrix);
   using core::Object::initialize;
-  void initialize(const glm::ivec4 &viewport);
+  void initialize(const core::Rect<> &viewport);
 
   bool activeShader(const std::string &name, const std::string &stage);
   void setShader(const std::string &name);
@@ -56,8 +57,8 @@ public:
   const core::AutoPtr<gl::Constant> &getConstants() const;
   core::AutoPtr<gl::Constant> &getConstants();
 
-  void setViewport(const glm::ivec4 &viewport);
-  const glm::ivec4 &getViewport() const;
+  void setViewport(const core::Rect<> &viewport);
+  const core::Rect<> &getViewport() const;
 
   core::AutoPtr<gl::Program> getShaderProgram();
 

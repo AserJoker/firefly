@@ -1,5 +1,6 @@
 #include "document/RenderTarget.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Rect.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
 #include "video/Renderer.hpp"
@@ -8,10 +9,10 @@
 using namespace firefly;
 using namespace firefly::document;
 
-RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
+RenderTarget::RenderTarget(const std::string &stage, const core::Size<> &size,
                            uint32_t attachment)
     : _renderTarget(new video::RenderTarget(stage, size, attachment)) {}
-RenderTarget::RenderTarget(const glm::ivec2 &size, uint32_t attachment)
+RenderTarget::RenderTarget(const core::Size<> &size, uint32_t attachment)
     : _renderTarget(new video::RenderTarget("basic", size, attachment)) {}
 
 void RenderTarget::onTick() {
@@ -30,6 +31,6 @@ RenderTarget::getRenderTarget() const {
   return _renderTarget;
 }
 
-void RenderTarget::resize(const glm::ivec2 &size) {
+void RenderTarget::resize(const core::Size<> &size) {
   _renderTarget->resize(size);
 }

@@ -21,7 +21,7 @@ private:
   float _ambientStrength;
   core::Map<std::string, Light> _lights;
   core::AutoPtr<gl::Texture2D> _lightTexture;
-  bool _changed;
+  glm::vec4 _viewport;
 
 private:
   core::Injector<runtime::EventBus, INJECTOR_EVENTBUS> _bus;

@@ -1,6 +1,7 @@
 #pragma once
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
+#include "core/Rect.hpp"
 #include "gl/Texture2D.hpp"
 #include <glm/glm.hpp>
 #include <vector>
@@ -12,16 +13,16 @@ private:
   uint32_t _renderBuffer;
   std::vector<core::AutoPtr<Texture2D>> _attachments;
   std::vector<uint32_t> _attachmentBuffers;
-  glm::ivec2 _size;
+  core::Size<> _size;
 
 public:
-  FrameBuffer(const glm::ivec2 &size, uint32_t handle = 0);
+  FrameBuffer(const core::Size<> &size, uint32_t handle = 0);
   ~FrameBuffer() override;
   void bindAttachments(const std::vector<core::AutoPtr<Texture2D>> &textures);
   const std::vector<core::AutoPtr<Texture2D>> &getAttachments() const;
   bool check();
   uint32_t getHandle() const;
-  const glm::ivec2 &getSize() const;
+  const core::Size<> &getSize() const;
   const std::vector<uint32_t> &getAttachmentBuffers() const;
 
 public:

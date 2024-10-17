@@ -1,5 +1,6 @@
 #include "video/RenderTarget.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Rect.hpp"
 #include "exception/Exception.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
@@ -25,14 +26,14 @@ constexpr static const float quadTex[] = {0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
 constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
 
 core::AutoPtr<Geometry> RenderTarget::_geometry = nullptr;
-RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
+RenderTarget::RenderTarget(const std::string &stage, const core::Size<> &size,
                            uint32_t attachment)
     : _size(size), _stage(stage) {
   _frame = new gl::FrameBuffer(size);
   std::vector<core::AutoPtr<gl::Texture2D>> textures;
   for (uint32_t i = 0; i < attachment; i++) {
     core::AutoPtr texture =
-        new gl::Texture2D(size.x, size.y, gl::PIXEL_FORMAT::RGBA);
+        new gl::Texture2D(size.width, size.height, gl::PIXEL_FORMAT::RGBA);
     textures.push_back(texture);
   }
   _frame->bindAttachments(textures);
@@ -47,7 +48,7 @@ RenderTarget::RenderTarget(const std::string &stage, const glm::ivec2 &size,
     _geometry->setAttributeIndex(new AttributeIndex(quadIndex));
   }
 }
-RenderTarget::RenderTarget(const glm::ivec2 &size, uint32_t attachment)
+RenderTarget::RenderTarget(const core::Size<> &size, uint32_t attachment)
     : RenderTarget("basic", size, attachment) {}
 void RenderTarget::active() {
   gl::FrameBuffer::bind(_frame);
@@ -55,7 +56,7 @@ void RenderTarget::active() {
   glDrawBuffers(attachmentBuffers.size(), attachmentBuffers.data());
 }
 
-const glm::ivec2 &RenderTarget::getSize() const { return _size; }
+const core::Size<> &RenderTarget::getSize() const { return _size; }
 
 const std::string &RenderTarget::getStage() const { return _stage; }
 
@@ -76,8 +77,8 @@ void RenderTarget::draw(core::AutoPtr<gl::Program> program) {
   }
   _geometry->draw(gl::DRAW_MODE::TRIANGLES);
 }
-void RenderTarget::resize(const glm::ivec2 &size) {
-  if (size.x <= _size.x && size.y <= _size.y) {
+void RenderTarget::resize(const core::Size<> &size) {
+  if (size.width <= _size.width && size.height <= _size.height) {
     return;
   }
   _size = size;
@@ -86,7 +87,7 @@ void RenderTarget::resize(const glm::ivec2 &size) {
   std::vector<core::AutoPtr<gl::Texture2D>> textures;
   for (uint32_t i = 0; i < attachment; i++) {
     core::AutoPtr texture =
-        new gl::Texture2D(size.x, size.y, gl::PIXEL_FORMAT::RGB);
+        new gl::Texture2D(size.width, size.height, gl::PIXEL_FORMAT::RGB);
     textures.push_back(texture);
   }
   _frame->bindAttachments(textures);

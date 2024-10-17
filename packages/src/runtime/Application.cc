@@ -3,6 +3,7 @@
 //
 #include "runtime/Application.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Rect.hpp"
 #include "exception/SDLException.hpp"
 #include "runtime/BaseApplication.hpp"
 #include "runtime/Event_Resize.hpp"
@@ -37,7 +38,7 @@ void Application::onInitialize() {
   }
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
   _window = new runtime::Window("firefly", 1024, 768);
-  _renderer->initialize({0, 0, 1024, 768});
+  _renderer->initialize({core::Point<>(0, 0), core::Size<>(1024, 768)});
   _renderer->setShader("standard");
   _eventbus->on(this, &Application::onEvent);
 }
@@ -65,8 +66,9 @@ void Application::onEvent(Event_SDL &event) {
   }
   if (event.getEvent().type == SDL_WINDOWEVENT) {
     if (event.getEvent().window.event == SDL_WINDOWEVENT_RESIZED) {
-      _eventbus->emit<Event_Resize>(glm::ivec2(
-          {event.getEvent().window.data1, event.getEvent().window.data2}));
+      _eventbus->emit<Event_Resize>(
+          core::Size<>({(uint32_t)event.getEvent().window.data1,
+                        (uint32_t)event.getEvent().window.data2}));
     }
   }
 }

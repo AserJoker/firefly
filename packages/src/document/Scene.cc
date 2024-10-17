@@ -1,5 +1,6 @@
 #include "document/Scene.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Rect.hpp"
 #include "core/Singleton.hpp"
 #include "runtime/Application.hpp"
 #include "video/OrthoCamera.hpp"
@@ -24,26 +25,26 @@ core::AutoPtr<RenderTarget> Scene::getRenderTarget() {
   }
   return nullptr;
 }
-glm::ivec4 Scene::getViewport() {
+core::Rect<> Scene::getViewport() {
   auto parent = getParent();
   while (parent != nullptr) {
     auto rt = parent.cast<RenderTarget>();
     if (rt != nullptr) {
-      return {0, 0, rt->getRenderTarget()->getSize()};
+      return {core::Point<>(0, 0), rt->getRenderTarget()->getSize()};
     }
     parent = parent->getParent();
   }
   auto app = core::Singleton<runtime::Application>::instance();
   auto win = app->getWindow();
   auto size = win->getSize();
-  return {0, 0, size};
+  return {core::Point<>(0, 0), size};
 }
 void Scene::onTick() {
   auto renderer = core::Singleton<video::Renderer>::instance();
   auto renderTarget = getRenderTarget();
   Node::onTick();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  glm::vec4 viewport = getViewport();
+  auto viewport = getViewport();
   auto target = getRenderTarget();
   if (_camera != nullptr) {
     _camera->setViewport(viewport);
@@ -62,7 +63,8 @@ void Scene::onTick() {
 }
 void Scene::onAttrChange(const std::string &name) {
   if (name == "camera" || name.starts_with("camera.")) {
-    _camera->setPosition(_cameraPosition);
+    _camera->setPosition(
+        {_cameraPosition.x, _cameraPosition.y, _cameraPosition.z});
   }
 }
 Scene::Scene() : _cameraType(CameraType::NIL) {

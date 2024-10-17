@@ -49,8 +49,8 @@ FUNC_DEF(Module_Runtime::setWindowSize) {
 FUNC_DEF(Module_Runtime::getWindowSize) {
   auto app = core::Singleton<runtime::Application>::instance();
   auto size = app->getWindow()->getSize();
-  return {ctx->createValue()->setNumber(ctx, size.x),
-          ctx->createValue()->setNumber(ctx, size.y)};
+  return {ctx->createValue()->setNumber(ctx, size.width),
+          ctx->createValue()->setNumber(ctx, size.height)};
 }
 
 FUNC_DEF(Module_Runtime::saveConfig) {

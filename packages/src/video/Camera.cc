@@ -1,4 +1,5 @@
 #include "video/Camera.hpp"
+#include "core/Rect.hpp"
 #include <glm/ext/matrix_transform.hpp>
 using namespace firefly;
 using namespace firefly::video;
@@ -19,4 +20,4 @@ const glm::mat4 &Camera::getProjectionMatrix() const { return _projection; }
 const glm::mat4 Camera::getViewMatrix() const {
   return glm::lookAt(_position, _position + _front, _up);
 }
-void Camera::setViewport(const glm::ivec4 &viewport) { _viewport = viewport; }
+void Camera::setViewport(const core::Rect<> &viewport) { _viewport = viewport; }

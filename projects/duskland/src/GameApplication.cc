@@ -176,8 +176,8 @@ void GameApplication::onClick(input::Event_Click &e) {
 }
 
 void GameApplication::onResize(runtime::Event_Resize &e) {
-  _renderer->setViewport({0, 0, e.getSize()});
-  script::Module_Event::emit(
-      _script, "resize",
-      script::AnyRecord{{"width", e.getSize().x}, {"height", e.getSize().y}});
+  _renderer->setViewport({core::Point<>(0, 0), e.getSize()});
+  script::Module_Event::emit(_script, "resize",
+                             script::AnyRecord{{"width", e.getSize().width},
+                                               {"height", e.getSize().height}});
 }

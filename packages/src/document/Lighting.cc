@@ -8,18 +8,23 @@
 
 using namespace firefly;
 using namespace firefly::document;
-Lighting::Lighting()
-    : _ambientColor(1.0f), _ambientStrength(0.0f), _changed(false) {
+Lighting::Lighting() : _ambientColor(1.0f), _ambientStrength(0.0f) {
   auto renderer = core::Singleton<video::Renderer>::instance();
   auto &viewport = renderer->getViewport();
-  _lightTexture =
-      new gl::Texture2D(viewport.z, viewport.w, gl::PIXEL_FORMAT::RGBA);
+  _lightTexture = new gl::Texture2D(viewport.width, viewport.height,
+                                    gl::PIXEL_FORMAT::RGBA);
   _bus->on(this, &Lighting::onResize);
 }
 
 void Lighting::onResize(runtime::Event_Resize &resize) {
   auto &size = resize.getSize();
-  _lightTexture = new gl::Texture2D(size.x, size.y, gl::PIXEL_FORMAT::RGBA);
+  _lightTexture =
+      new gl::Texture2D(size.width, size.height, gl::PIXEL_FORMAT::RGBA);
 }
 
-void Lighting::updateTexture() {}
+void Lighting::updateTexture() {
+  if (!_lightTexture) {
+    _lightTexture =
+        new gl::Texture2D(_viewport.z, _viewport.w, gl::PIXEL_FORMAT::RGBA);
+  }
+}

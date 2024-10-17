@@ -1,4 +1,5 @@
 #include "runtime/Window.hpp"
+#include "core/Rect.hpp"
 #include "core/Singleton.hpp"
 #include "exception/GLADException.hpp"
 #include "exception/SDLException.hpp"
@@ -158,21 +159,21 @@ void Window::present() { SDL_GL_SwapWindow(_window); }
 void Window::setSwapInterval(int flag) {
   SDL_ASSERT(SDL_GL_SetSwapInterval(flag) >= 0);
 }
-const glm::ivec2 Window::getSize() const {
+const core::Size<uint32_t> Window::getSize() const {
   int w, h;
   SDL_GetWindowSize(_window, &w, &h);
-  return {w, h};
+  return {(uint32_t)w, (uint32_t)h};
 }
-void Window::setSize(const glm::ivec2 &size) {
-  SDL_SetWindowSize(_window, size.x, size.y);
+void Window::setSize(const core::Size<uint32_t> &size) {
+  SDL_SetWindowSize(_window, (int32_t)size.width, (int32_t)size.height);
 }
 void Window::hide() { SDL_HideWindow(_window); }
 void Window::show() { SDL_ShowWindow(_window); }
-const glm::ivec2 Window::getWindowPosition() const {
+const core::Point<int32_t> Window::getWindowPosition() const {
   int x, y;
   SDL_GetWindowPosition(_window, &x, &y);
   return {x, y};
 }
-void Window::setWindowPosition(const glm::ivec2 &pos) {
+void Window::setWindowPosition(const core::Point<int32_t> &pos) {
   SDL_SetWindowSize(_window, pos.x, pos.y);
 }
