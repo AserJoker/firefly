@@ -302,9 +302,6 @@ const core::AutoPtr<video::Material> &ParticleGenerator::getMaterial() const {
 const glm::mat4 &ParticleGenerator::getMatrixModel() const {
   return _matrixModel;
 };
-const glm::ivec4 &ParticleGenerator::getBindingRect() const {
-  return _bindingRect;
-}
 void ParticleGenerator::onAttrChange(const std::string &name) {
   if (name == ATTR_TEXTURE) {
     _material->setTexture(video::Material::DIFFUSE_TEX, _texture);

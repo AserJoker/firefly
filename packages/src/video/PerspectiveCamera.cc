@@ -11,7 +11,7 @@ PerspectiveCamera::PerspectiveCamera(const glm::vec3 &position,
   auto app = core::Singleton<runtime::Application>::instance();
   auto win = app->getWindow();
   auto size = win->getSize();
-  setViewport({0, 0, 0, size});
+  setViewport({0, 0, size});
 }
 void PerspectiveCamera::setViewport(const core::Rect<> &viewport) {
   if (_viewport != viewport) {

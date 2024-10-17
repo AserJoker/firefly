@@ -47,7 +47,7 @@ Texture2D::Texture2D(const std::string &name, TEXTURE_WRAP_MODE swrap,
   generateMipmap();
   setSWrap(swrap);
   setTWrap(twrap);
-  _size = {img->w, img->h};
+  _size = {(uint32_t)img->w, (uint32_t)img->h};
   SDL_FreeSurface(img);
 }
 
@@ -72,7 +72,7 @@ void Texture2D::setImage(uint32_t level, PIXEL_FORMAT internalFormat,
 }
 
 core::AutoPtr<core::Buffer> Texture2D::getImage(uint32_t level) {
-  core::AutoPtr buffer = new core::Buffer(_size.x * _size.y * 4);
+  core::AutoPtr buffer = new core::Buffer(_size.width * _size.height * 4);
   glBindTexture(GL_TEXTURE_2D, _handle);
   glGetTexImage(GL_TEXTURE_2D, level, GL_RGBA, GL_UNSIGNED_BYTE,
                 (void *)buffer->getData());
@@ -110,7 +110,7 @@ void Texture2D::setTWrap(TEXTURE_WRAP_MODE mode) {
   glBindTexture(GL_TEXTURE_2D, _handle);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, (GLint)mode);
 }
-const glm::ivec2 &Texture2D::getSize() const { return _size; }
+const core::Size<> &Texture2D::getSize() const { return _size; }
 const uint32_t &Texture2D::getHandle() const { return _handle; }
 void Texture2D::bind(const core::AutoPtr<Texture2D> &tex) {
   glBindTexture(GL_TEXTURE_2D, tex->_handle);

@@ -15,7 +15,7 @@ public:
 
 private:
   core::AutoPtr<video::Camera> _camera;
-  core::Point<> _cameraPosition;
+  glm::vec3 _cameraPosition;
   CameraType _cameraType;
 
 private:

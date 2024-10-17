@@ -1,5 +1,6 @@
 #include "document/Sprite2D.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Rect.hpp"
 #include "core/Value.hpp"
 #include "document/Renderable.hpp"
 #include "gl/AlphaFunc.hpp"
@@ -18,16 +19,15 @@ void Sprite2D::updateModel() {
   if (!_material->getTextures().contains(video::Material::DIFFUSE_TEX)) {
     return;
   }
-  const auto &x = _dstRect[0];
-  const auto &y = _dstRect[1];
-  const auto &w = _dstRect[2];
-  const auto &h = _dstRect[3];
+  auto &[x, y, width, height] = _dstRect;
   _matrixModel =
-      glm::translate(glm::mat4(1.0f), {glm::vec2(_rotationCenter), 0}) *
-      glm::rotate(glm::mat4(1.0f), _rotationAngle, {0, 0, _rotationCenter.z}) *
-      glm::translate(glm::mat4(1.0f), {-glm::vec2(_rotationCenter), 0.f}) *
+      glm::translate(glm::mat4(1.0f),
+                     {glm::vec2({_rotationCenter.x, _rotationCenter.y}), 0}) *
+      glm::rotate(glm::mat4(1.0f), _rotationAngle, {0, 0, 1.0f}) *
+      glm::translate(glm::mat4(1.0f),
+                     {-glm::vec2(_rotationCenter.x, _rotationCenter.y), 0.f}) *
       glm::translate(glm::mat4(1.0f), {x, y, _zIndex}) *
-      glm::scale(glm::mat4(1.0f), {w, h, 1.0});
+      glm::scale(glm::mat4(1.0f), {width, height, 1.0});
 }
 void Sprite2D::updateTexModel() {
   if (!_material->getTextures().contains(video::Material::DIFFUSE_TEX)) {
@@ -36,14 +36,12 @@ void Sprite2D::updateTexModel() {
   const auto &size = _material->getTextures()
                          .at(video::Material::DIFFUSE_TEX)
                          .texture->getSize();
-  const auto &x = _srcRect[0];
-  const auto &y = _srcRect[1];
-  const auto &w = _srcRect[2];
-  const auto &h = _srcRect[3];
+  auto &[x, y, width, height] = _srcRect;
   _material->getTextures().at(video::Material::DIFFUSE_TEX).textureCoordMatrix =
       glm::translate(glm::mat4(1.0f),
-                     {x * 1.0f / size.x, y * 1.0f / size.y, 0}) *
-      glm::scale(glm::mat4(1.0f), {w * 1.0f / size.x, h * 1.0f / size.y, 1.0f});
+                     {x * 1.0f / size.width, y * 1.0f / size.height, 0}) *
+      glm::scale(glm::mat4(1.0f), {width * 1.0f / size.width,
+                                   height * 1.0f / size.height, 1.0f});
 }
 
 const core::AutoPtr<video::Geometry> &Sprite2D::getGeometry() const {
@@ -55,7 +53,6 @@ const core::AutoPtr<video::Material> &Sprite2D::getMaterial() const {
 }
 
 const glm::mat4 &Sprite2D::getMatrixModel() const { return _matrixModel; }
-const glm::ivec4 &Sprite2D::getBindingRect() const { return _dstRect; }
 
 void Sprite2D::onAttrChange(const std::string &name) {
   if (name == ATTR_TEXTURE) {
@@ -119,12 +116,12 @@ Sprite2D::Sprite2D(const std::string &path)
 
   defineAttribute(ATTR_RECT_X, &_dstRect.x);
   defineAttribute(ATTR_RECT_Y, &_dstRect.y);
-  defineAttribute(ATTR_RECT_WIDTH, &_dstRect.z);
-  defineAttribute(ATTR_RECT_HEIGHT, &_dstRect.w);
+  defineAttribute(ATTR_RECT_WIDTH, &_dstRect.width);
+  defineAttribute(ATTR_RECT_HEIGHT, &_dstRect.height);
   defineAttribute(ATTR_SOURCE_X, &_srcRect.x);
   defineAttribute(ATTR_SOURCE_Y, &_srcRect.y);
-  defineAttribute(ATTR_SOURCE_WIDTH, &_srcRect.z);
-  defineAttribute(ATTR_SOURCE_HEIGHT, &_srcRect.w);
+  defineAttribute(ATTR_SOURCE_WIDTH, &_srcRect.width);
+  defineAttribute(ATTR_SOURCE_HEIGHT, &_srcRect.height);
   defineAttribute(ATTR_ROTATION_X, &_rotationCenter.x);
   defineAttribute(ATTR_ROTATION_Y, &_rotationCenter.y);
   defineAttribute(ATTR_ROTATION_ANGLE, &_rotationAngle);
@@ -144,8 +141,8 @@ Sprite2D::Sprite2D(const std::string &path)
     auto tex =
         _material->getTextures().at(video::Material::DIFFUSE_TEX).texture;
     auto texSize = tex->getSize();
-    setRect({0, 0, texSize});
-    setRect({0, 0, texSize});
+    setRect({core::Point<>(0, 0), texSize});
+    setRect({core::Point<>(0, 0), texSize});
   }
   beginAttrGroup(ATTR_BLEND);
   setAttribute("enable", true);
@@ -175,29 +172,29 @@ const core::AutoPtr<gl::Texture2D> &Sprite2D::getTextureObject() const {
   return _material->getTextures().at(video::Material::DIFFUSE_TEX).texture;
 }
 
-void Sprite2D::setRect(const glm::ivec4 &rect) {
+void Sprite2D::setRect(const core::Rect<> &rect) {
   beginAttrGroup(ATTR_RECT);
   setAttribute("x", rect.x);
   setAttribute("y", rect.y);
-  setAttribute("width", rect.z);
-  setAttribute("height", rect.w);
+  setAttribute("width", rect.width);
+  setAttribute("height", rect.height);
   endAttrGroup();
 }
 
-const glm::ivec4 &Sprite2D::getRect() const { return _dstRect; }
+const core::Rect<> &Sprite2D::getRect() const { return _dstRect; }
 
-void Sprite2D::setSourceRect(const glm::ivec4 &rect) {
+void Sprite2D::setSourceRect(const core::Rect<> &rect) {
   beginAttrGroup(ATTR_SOURCE);
   setAttribute("x", rect.x);
   setAttribute("y", rect.y);
-  setAttribute("width", rect.z);
-  setAttribute("height", rect.w);
+  setAttribute("width", rect.width);
+  setAttribute("height", rect.height);
   endAttrGroup();
 }
 
-const glm::ivec4 &Sprite2D::getSourceRect() const { return _srcRect; }
+const core::Rect<> &Sprite2D::getSourceRect() const { return _srcRect; }
 
-void Sprite2D::setRotation(const glm::ivec2 &center, float angle) {
+void Sprite2D::setRotation(const core::Point<> &center, float angle) {
   beginAttrGroup(ATTR_ROTATION);
   setAttribute("x", center.x);
   setAttribute("y", center.y);
@@ -205,8 +202,8 @@ void Sprite2D::setRotation(const glm::ivec2 &center, float angle) {
   endAttrGroup();
 }
 
-const std::tuple<glm::ivec2, float> Sprite2D::getRotation() const {
-  return {{_rotationCenter.x, _rotationCenter.y}, _rotationAngle};
+const std::tuple<core::Point<>, float> Sprite2D::getRotation() const {
+  return {_rotationCenter, _rotationAngle};
 }
 
 void Sprite2D::setZIndex(int32_t zIndex) { setAttribute(ATTR_Z_INDEX, zIndex); }

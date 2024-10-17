@@ -20,16 +20,16 @@ FUNC_DEF(Trait_Sprite2D::getTextureSize) {
   auto size = self->getTextureObject()->getSize();
   auto s = ctx->createValue()
                ->setObject(ctx)
-               ->setField(ctx, "width", ctx->createValue(size[0]))
-               ->setField(ctx, "height", ctx->createValue(size[1]));
+               ->setField(ctx, "width", ctx->createValue(size.width))
+               ->setField(ctx, "height", ctx->createValue(size.height));
   return {s};
 }
 
 FUNC_DEF(Trait_Sprite2D::setRect) {
   auto [self, rect] =
       Script::parseArgs<SelfType, core::AutoPtr<Value>>(ctx, args);
-  auto x = (uint32_t)rect->getField(ctx, "x")->toNumber(ctx);
-  auto y = (uint32_t)rect->getField(ctx, "y")->toNumber(ctx);
+  auto x = (int32_t)rect->getField(ctx, "x")->toNumber(ctx);
+  auto y = (int32_t)rect->getField(ctx, "y")->toNumber(ctx);
   auto width = (uint32_t)rect->getField(ctx, "width")->toNumber(ctx);
   auto height = (uint32_t)rect->getField(ctx, "height")->toNumber(ctx);
   self->setRect({x, y, width, height});
@@ -40,18 +40,18 @@ FUNC_DEF(Trait_Sprite2D::getRect) {
   auto [self] = Script::parseArgs<SelfType>(ctx, args);
   auto rc = self->getRect();
   auto rect = ctx->createValue()->setObject(ctx);
-  rect->setField(ctx, "x", ctx->createValue(rc[0]));
-  rect->setField(ctx, "y", ctx->createValue(rc[1]));
-  rect->setField(ctx, "width", ctx->createValue(rc[2]));
-  rect->setField(ctx, "height", ctx->createValue(rc[3]));
+  rect->setField(ctx, "x", ctx->createValue(rc.x));
+  rect->setField(ctx, "y", ctx->createValue(rc.y));
+  rect->setField(ctx, "width", ctx->createValue(rc.width));
+  rect->setField(ctx, "height", ctx->createValue(rc.height));
   return {rect};
 }
 
 FUNC_DEF(Trait_Sprite2D::setSourceRect) {
   auto [self, rect] =
       Script::parseArgs<SelfType, core::AutoPtr<Value>>(ctx, args);
-  auto x = (uint32_t)rect->getField(ctx, "x")->toNumber(ctx);
-  auto y = (uint32_t)rect->getField(ctx, "y")->toNumber(ctx);
+  auto x = (int32_t)rect->getField(ctx, "x")->toNumber(ctx);
+  auto y = (int32_t)rect->getField(ctx, "y")->toNumber(ctx);
   auto width = (uint32_t)rect->getField(ctx, "width")->toNumber(ctx);
   auto height = (uint32_t)rect->getField(ctx, "height")->toNumber(ctx);
   self->setSourceRect({x, y, width, height});
@@ -62,18 +62,18 @@ FUNC_DEF(Trait_Sprite2D::getSourceRect) {
   auto [self] = Script::parseArgs<SelfType>(ctx, args);
   auto rc = self->getSourceRect();
   auto rect = ctx->createValue()->setObject(ctx);
-  rect->setField(ctx, "x", ctx->createValue(rc[0]));
-  rect->setField(ctx, "y", ctx->createValue(rc[1]));
-  rect->setField(ctx, "width", ctx->createValue(rc[2]));
-  rect->setField(ctx, "height", ctx->createValue(rc[3]));
+  rect->setField(ctx, "x", ctx->createValue(rc.x));
+  rect->setField(ctx, "y", ctx->createValue(rc.y));
+  rect->setField(ctx, "width", ctx->createValue(rc.width));
+  rect->setField(ctx, "height", ctx->createValue(rc.height));
   return {rect};
 }
 
 FUNC_DEF(Trait_Sprite2D::setRotation) {
   auto [self, center, angle] =
       Script::parseArgs<SelfType, core::AutoPtr<Value>, float>(ctx, args);
-  auto x = (uint32_t)center->getField(ctx, "x")->toNumber(ctx);
-  auto y = (uint32_t)center->getField(ctx, "y")->toNumber(ctx);
+  auto x = (int32_t)center->getField(ctx, "x")->toNumber(ctx);
+  auto y = (int32_t)center->getField(ctx, "y")->toNumber(ctx);
   self->setRotation({x, y}, angle);
   return {};
 }
@@ -83,8 +83,8 @@ FUNC_DEF(Trait_Sprite2D::getRotation) {
   auto &[center, angle] = self->getRotation();
   auto rotation = ctx->createValue()->setObject(ctx);
   auto ct = ctx->createValue()->setObject(ctx);
-  ct->setField(ctx, "x", ctx->createValue(center[0]));
-  ct->setField(ctx, "y", ctx->createValue(center[1]));
+  ct->setField(ctx, "x", ctx->createValue(center.x));
+  ct->setField(ctx, "y", ctx->createValue(center.y));
   rotation->setField(ctx, "center", ct);
   rotation->setField(ctx, "angle", ctx->createValue(angle));
   return {rotation};

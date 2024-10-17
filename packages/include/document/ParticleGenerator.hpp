@@ -64,7 +64,6 @@ protected:
   const core::AutoPtr<video::Geometry> &getGeometry() const override;
   const core::AutoPtr<video::Material> &getMaterial() const override;
   const glm::mat4 &getMatrixModel() const override;
-  const glm::ivec4 &getBindingRect() const override;
 
   void onAttrChange(const std::string &name) override;
 

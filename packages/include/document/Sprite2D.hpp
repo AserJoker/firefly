@@ -1,6 +1,7 @@
 #pragma once
 #include "Renderable.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Rect.hpp"
 #include "gl/AlphaFunc.hpp"
 #include "gl/BlendFunc.hpp"
 #include "gl/Texture2D.hpp"
@@ -11,9 +12,9 @@
 namespace firefly::document {
 class Sprite2D : public Renderable {
 private:
-  glm::ivec4 _dstRect;
-  glm::ivec4 _srcRect;
-  glm::ivec3 _rotationCenter;
+  core::Rect<> _dstRect;
+  core::Rect<> _srcRect;
+  core::Point<> _rotationCenter;
   float _rotationAngle;
   int32_t _zIndex;
   std::string _texture;
@@ -38,7 +39,6 @@ protected:
   const core::AutoPtr<video::Geometry> &getGeometry() const override;
   const core::AutoPtr<video::Material> &getMaterial() const override;
   const glm::mat4 &getMatrixModel() const override;
-  const glm::ivec4 &getBindingRect() const override;
 
   void onAttrChange(const std::string &name) override;
 
@@ -50,26 +50,26 @@ public:
   const std::string &getTexture() const;
   const core::AutoPtr<gl::Texture2D> &getTextureObject() const;
 
-  void setRect(const glm::ivec4 &rect);
-  const glm::ivec4 &getRect() const;
+  void setRect(const core::Rect<> &rect);
+  const core::Rect<> &getRect() const;
 
-  void setSourceRect(const glm::ivec4 &rect);
-  const glm::ivec4 &getSourceRect() const;
+  void setSourceRect(const core::Rect<> &rect);
+  const core::Rect<> &getSourceRect() const;
 
-  void setPosition(const glm::ivec2 &position);
-  const glm::ivec2 getPosition() const;
+  void setPosition(const core::Point<> &position);
+  const core::Point<> getPosition() const;
 
-  void setSize(const glm::ivec2 &size);
-  const glm::ivec2 setSize() const;
+  void setSize(const core::Size<> &size);
+  const core::Size<> setSize() const;
 
-  void setSourcePosition(const glm::ivec2 &position);
-  const glm::ivec2 getSourcePosition() const;
+  void setSourcePosition(const core::Point<> &position);
+  const core::Point<> getSourcePosition() const;
 
-  void setSourceSize(const glm::ivec2 &size);
-  const glm::ivec2 getSourceSize() const;
+  void setSourceSize(const core::Size<> &size);
+  const core::Size<> getSourceSize() const;
 
-  void setRotation(const glm::ivec2 &center, float angle);
-  const std::tuple<glm::ivec2, float> getRotation() const;
+  void setRotation(const core::Point<> &center, float angle);
+  const std::tuple<core::Point<>, float> getRotation() const;
 
   void setZIndex(int32_t zIndex);
   int32_t getZIndex() const;

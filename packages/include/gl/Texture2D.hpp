@@ -5,6 +5,7 @@
 #include "core/Buffer.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
+#include "core/Rect.hpp"
 #include "gl/DataType.hpp"
 #include "gl/PixelFormat.hpp"
 #include <glm/glm.hpp>
@@ -12,7 +13,7 @@ namespace firefly::gl {
 class Texture2D : public core::Object, public core::Cache<Texture2D> {
 private:
   uint32_t _handle;
-  glm::ivec2 _size;
+  core::Size<> _size;
 
 public:
   Texture2D(uint32_t handle = 0);
@@ -37,7 +38,7 @@ public:
   void setSWrap(TEXTURE_WRAP_MODE mode);
   void setTWrap(TEXTURE_WRAP_MODE mode);
   void setRWrap(TEXTURE_WRAP_MODE mode);
-  const glm::ivec2 &getSize() const;
+  const core::Size<> &getSize() const;
 
 public:
   static void bind(const core::AutoPtr<Texture2D> &tex);
