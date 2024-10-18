@@ -144,3 +144,39 @@ void Program::setUniform(const std::string &name, const glm::mat4x3 &value,
   }
   glUniformMatrix4x3fv(loc, 1, transpose, glm::value_ptr(value));
 }
+void Program::setUniform(const std::string &name, const Uniform &uniform) {
+  if (_uniforms.contains(name)) {
+    if (_uniforms.at(name) == uniform) {
+      return;
+    }
+  }
+  _uniforms[name] = uniform;
+  switch (uniform.getType()) {
+  case UniformType::BOOLEAN:
+    return setUniform(name, uniform.get<Boolean_t>());
+  case UniformType::INTEGER:
+    return setUniform(name, uniform.get<Intgeter_t>());
+  case UniformType::FLOAT:
+    return setUniform(name, uniform.get<Float_t>());
+  case UniformType::VEC2:
+    return setUniform(name, uniform.get<Vector2_t>());
+  case UniformType::VEC3:
+    return setUniform(name, uniform.get<Vector3_t>());
+  case UniformType::VEC4:
+    return setUniform(name, uniform.get<Vector4_t>());
+  case UniformType::MAT2:
+    return setUniform(name, uniform.get<Matrix2x2_t>());
+  case UniformType::MAT3:
+    return setUniform(name, uniform.get<Matrix3x3_t>());
+  case UniformType::MAT4:
+    return setUniform(name, uniform.get<Matrix4x4_t>());
+  case UniformType::MAT2x3:
+    return setUniform(name, uniform.get<Matrix2x3_t>());
+  case UniformType::MAT3x2:
+    return setUniform(name, uniform.get<Matrix3x2_t>());
+  case UniformType::MAT3x4:
+    return setUniform(name, uniform.get<Matrix3x4_t>());
+  case UniformType::MAT4x3:
+    return setUniform(name, uniform.get<Matrix4x3_t>());
+  }
+}

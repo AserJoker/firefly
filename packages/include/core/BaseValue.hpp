@@ -40,6 +40,8 @@ public:
       TypeSelect<std::remove_cv_t<std::remove_reference_t<T>>, TYPES...>::type;
 
 public:
+  BaseValue() : _value(nullptr), _type{} {}
+
   template <typename T>
   BaseValue(T value)
       : _value(value), _type(Select<T>::value), _typename(Select<T>::name) {

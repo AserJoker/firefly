@@ -71,7 +71,7 @@ const core::AutoPtr<gl::FrameBuffer> &RenderTarget::getFrameBuffer() const {
 void RenderTarget::draw(core::AutoPtr<gl::Program> program) {
   auto attachments = _frame->getAttachments();
   for (size_t i = 0; i < attachments.size(); i++) {
-    program->setUniform(fmt::format("attachment_{}", i), (int)i);
+    program->setUniform(fmt::format("attachment_{}", i), gl::Uniform((int)i));
     glActiveTexture(GL_TEXTURE0 + (uint32_t)i);
     gl::Texture2D::bind(attachments[i]);
   }

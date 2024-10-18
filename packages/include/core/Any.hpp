@@ -18,7 +18,7 @@ template <class T> struct AnyImpl : AnyImplBase {
 struct Any {
   AnyImplBase *_base;
 
-  template <class T> Any(T value) : _base(new AnyImpl<T>(value)) {}
+  template <class T> Any(T value = nullptr) : _base(new AnyImpl<T>(value)) {}
 
   Any(const Any &another) : _base(another._base->clone()) {}
 

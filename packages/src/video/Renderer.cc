@@ -205,6 +205,9 @@ void Renderer::popContext(const core::AutoPtr<Renderer::RenderContext> &ctx) {
 
 void Renderer::draw(const Renderer::RenderItem &item) {
   setMaterial(item.material);
+  for (auto &[name, uniform] : _uniforms) {
+    _shader->setUniform(name, uniform);
+  }
   auto instanced = item.material->getInstanced();
   if (instanced > 1) {
     item.geometry->drawInstanced(gl::DRAW_MODE::TRIANGLES, instanced);
@@ -245,8 +248,8 @@ void Renderer::present() {
   for (auto &[name, texture] : _textures) {
     glActiveTexture(GL_TEXTURE0 + index);
     gl::Texture2D::bind(texture);
-    _shader->setUniform(name, index);
-    _shader->setUniform(fmt::format("{}_enable", name), true);
+    _shader->setUniform(name, gl::Uniform(index));
+    _shader->setUniform(fmt::format("{}_enable", name), gl::Uniform(true));
   }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
@@ -284,4 +287,8 @@ void Renderer::present() {
     }
     current->draw(_shader);
   }
+}
+void Renderer::setUniform(const std::string &name, const gl::Uniform &uniform) {
+  gl::Uniform a = 1;
+  a = uniform;
 }

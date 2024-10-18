@@ -57,7 +57,6 @@ void GameApplication::onInitialize() {
   using namespace core;
   Value v = 123;
   v.get<Integer_t>() = 234;
-  std::cout << v << std::endl;
   exit();
   showWindow(true);
 }

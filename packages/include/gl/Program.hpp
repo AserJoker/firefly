@@ -1,4 +1,5 @@
 #pragma once
+#include "Uniform.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
@@ -10,17 +11,10 @@ class Program : public core::Object, public core::Cache<Program> {
 private:
   uint32_t _handle;
   std::unordered_map<std::string, uint32_t> _locations;
+  std::unordered_map<std::string, Uniform> _uniforms;
 
-public:
-  Program();
-  ~Program() override;
-  void attach(const core::AutoPtr<Shader> &shader);
-  bool link();
-  const std::string getInfoLog() const;
-  const uint32_t &getHandle() const;
-  void use();
+private:
   const uint32_t &getUniformLocation(const std::string &name);
-  void bindUniformBlock(const std::string &name, uint32_t index);
   void setUniform(const std::string &name, int32_t value);
   void setUniform(const std::string &name, bool value);
   void setUniform(const std::string &name, float value);
@@ -41,5 +35,15 @@ public:
                   const bool &transpose = false);
   void setUniform(const std::string &name, const glm::mat4 &value,
                   const bool &transpose = false);
+
+public:
+  Program();
+  ~Program() override;
+  void attach(const core::AutoPtr<Shader> &shader);
+  bool link();
+  const std::string getInfoLog() const;
+  const uint32_t &getHandle() const;
+  void use();
+  void setUniform(const std::string &name, const Uniform &uniform);
 };
 }; // namespace firefly::gl

@@ -9,6 +9,7 @@
 #include "video/RenderTarget.hpp"
 #include <glm/glm.hpp>
 #include <list>
+#include <unordered_map>
 
 namespace firefly::video {
 class Renderer : public core::Object {
@@ -35,6 +36,8 @@ private:
   core::AutoPtr<RenderTarget> _deferred;
   std::list<core::AutoPtr<RenderTarget>> _shaderRenderTargets;
   core::Map<std::string, core::AutoPtr<gl::Texture2D>> _textures;
+
+  std::unordered_map<std::string, gl::Uniform> _uniforms;
 
 private:
   void draw(const RenderItem &item);
@@ -63,5 +66,6 @@ public:
                   core::AutoPtr<gl::Texture2D> texture);
   void clearTexture(const std::string &name);
   void present();
+  void setUniform(const std::string &name, const gl::Uniform &uniform);
 };
 } // namespace firefly::video
