@@ -1,9 +1,6 @@
 #pragma once
 #include <algorithm>
 #include <initializer_list>
-#include <ostream>
-#include <sstream>
-#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -47,6 +44,8 @@ public:
     _data = std::move(another._data);
     return *this;
   }
+
+  virtual ~Array(){};
 
   bool operator==(const std::vector<T> &data) const {
     if (_data.size() != data.size()) {
@@ -264,27 +263,6 @@ public:
     }
     return *this;
   }
-
-  const std::string toString() const {
-    std::string result = "[";
-    for (size_t index = 0; index < size(); index++) {
-      auto &item = at(index);
-      std::stringstream ss;
-      ss << item;
-      result.append(ss.str());
-      if (index != size() - 1) {
-        result.append(",");
-      }
-    }
-    result.append("]");
-    return result;
-  }
 };
 
-template <class T>
-constexpr inline std::ostream &operator<<(std::ostream &out,
-                                          const Array<T> &array) {
-  out << array.toString();
-  return out;
-}
 }; // namespace firefly::core

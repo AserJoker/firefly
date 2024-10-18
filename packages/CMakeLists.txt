@@ -10,7 +10,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC $<IF:$<TARGET_EXISTS:SDL2_mixer::SD
 target_link_libraries(${PROJECT_NAME} PUBLIC $<IF:$<TARGET_EXISTS:SDL2_ttf::SDL2_ttf>,SDL2_ttf::SDL2_ttf,SDL2_ttf::SDL2_ttf-static>)
 target_link_libraries(${PROJECT_NAME} PUBLIC glm::glm)
 target_link_libraries(${PROJECT_NAME} PUBLIC yaml-cpp::yaml-cpp)
-target_link_libraries(${PROJECT_NAME} PUBLIC assimp::assimp)
 target_link_libraries(${PROJECT_NAME} PUBLIC LibXml2::LibXml2)
 target_link_libraries(${PROJECT_NAME} PUBLIC cjson)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${LUA_LIBRARIES})

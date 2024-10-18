@@ -5,17 +5,16 @@
 
 #include "BaseApplication.hpp"
 #include "Event_SDL.hpp"
-#include "core/AutoPtr.hpp"
-#include "runtime/Window.hpp"
+#include <SDL2/SDL.h>
 
 namespace firefly::runtime {
 class Application : public BaseApplication {
 private:
-  core::AutoPtr<Window> _window;
+  SDL_Window *_window;
+  SDL_GLContext _ctx;
 
 public:
   Application(int argc, char **argv);
-  core::AutoPtr<Window> getWindow();
 
 protected:
   void onInitialize() override;
@@ -23,6 +22,8 @@ protected:
   void onMainLoop() override;
 
   void onUnInitialize() override;
+
+  void showWindow(bool show);
 
   virtual void onEvent(Event_SDL &);
 };

@@ -13,7 +13,6 @@ BaseApplication::BaseApplication(int argc, char *argv[])
   }
   _cmdline->define("help", _cmdline->placeholder, "h",
                    "Display this information.");
-  _cmdline->define("assert", _assert, "a", "Set assert pack path");
 }
 
 BaseApplication::~BaseApplication() {}

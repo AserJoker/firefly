@@ -4,7 +4,6 @@
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
 #include "core/Rect.hpp"
-#include "gl/Constant.hpp"
 #include "gl/Program.hpp"
 #include "gl/Texture2D.hpp"
 #include "video/RenderTarget.hpp"
@@ -19,6 +18,7 @@ private:
     core::AutoPtr<Material> material;
     glm::mat4 matrixModel;
   };
+
   struct RenderContext : public core::Object {
     std::list<RenderItem> normalRenderList;
     std::list<RenderItem> blendRenderList;
@@ -27,8 +27,6 @@ private:
 private:
   std::string _shaderName;
   core::AutoPtr<gl::Program> _shader;
-
-  core::AutoPtr<gl::Constant> _constants;
 
   core::AutoPtr<RenderContext> _context;
 
@@ -54,19 +52,16 @@ public:
 
   void setMaterial(const core::AutoPtr<Material> &material);
 
-  const core::AutoPtr<gl::Constant> &getConstants() const;
-  core::AutoPtr<gl::Constant> &getConstants();
-
   void setViewport(const core::Rect<> &viewport);
   const core::Rect<> &getViewport() const;
 
   core::AutoPtr<gl::Program> getShaderProgram();
 
-  void present();
   core::AutoPtr<RenderContext> pushContext();
   void popContext(const core::AutoPtr<RenderContext> &ctx);
   void setTexture(const std::string &name,
                   core::AutoPtr<gl::Texture2D> texture);
   void clearTexture(const std::string &name);
+  void present();
 };
 } // namespace firefly::video

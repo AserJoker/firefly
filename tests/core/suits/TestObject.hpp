@@ -4,8 +4,10 @@
 #include "core/Object.hpp"
 
 using namespace firefly;
+
 template struct AccessorBinding<"Object._ref", &core::Object::_ref>;
 template struct AccessorBinding<"Object.addRef", &core::Object::addRef>;
+
 using ObjectAccessor = Accessor<core::Object>;
 class TestObject : public TestSuit<"TestObject", TestObject> {
 private:

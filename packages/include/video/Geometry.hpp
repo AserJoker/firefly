@@ -11,21 +11,10 @@
 #include <vector>
 namespace firefly::video {
 class Geometry : public core::Object, public core::Cache<Geometry> {
-public:
-  struct Bounding {
-    float left, right, top, bottom, front, back;
-  };
-
-  struct BoundingShpere {
-    glm::vec3 center;
-    float radis;
-  };
 
 private:
   std::unordered_map<uint32_t, core::AutoPtr<Attribute>> _attributes;
   core::AutoPtr<AttributeIndex> _attrIndex;
-  Bounding _binding;
-  BoundingShpere _bindingShpere;
   core::AutoPtr<gl::VertexArray> _vao;
 
 public:
@@ -46,10 +35,6 @@ public:
 
   const core::AutoPtr<AttributeIndex> &getAttributeIndex() const;
   core::AutoPtr<AttributeIndex> &getAttributeIndex();
-  void computeBounding();
-  void computeBoundingSphere();
-  const Bounding &getBounding() const;
-  const BoundingShpere &getBoundingSphere() const;
   virtual void draw(gl::DRAW_MODE mode) const;
   virtual void drawInstanced(gl::DRAW_MODE mode, uint32_t count) const;
 
@@ -58,8 +43,5 @@ public:
   static constexpr const uint32_t ATTR_NORMAL = 1;
   static constexpr const uint32_t ATTR_COLOR = 2;
   static constexpr const uint32_t ATTR_TEXCOORD = 3;
-  static constexpr const uint32_t ATTR_TANGENT = 11;
-  static constexpr const uint32_t ATTR_BITANGENT = 12;
-  static constexpr const uint32_t ATTR_CUSTOM = 13;
 };
 } // namespace firefly::video

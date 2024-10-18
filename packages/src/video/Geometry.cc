@@ -3,7 +3,6 @@
 #include "gl/Buffer.hpp"
 #include "gl/BufferTarget.hpp"
 #include "gl/DrawMode.hpp"
-#include "gl/MapAccess.hpp"
 #include "gl/VertexArray.hpp"
 #include "video/Attribute.hpp"
 #include "video/AttributeIndex.hpp"
@@ -11,9 +10,7 @@
 using namespace firefly;
 using namespace firefly::video;
 
-Geometry::Geometry() : _binding({0, 0, 0, 0, 0, 0}) {
-  _vao = new gl::VertexArray();
-}
+Geometry::Geometry() { _vao = new gl::VertexArray(); }
 Geometry::Geometry(const std::vector<core::AutoPtr<Attribute>> &attributes,
                    const core::AutoPtr<AttributeIndex> &index)
     : Geometry() {
@@ -93,81 +90,6 @@ const core::AutoPtr<AttributeIndex> &Geometry::getAttributeIndex() const {
 }
 core::AutoPtr<AttributeIndex> &Geometry::getAttributeIndex() {
   return _attrIndex;
-}
-const Geometry::Bounding &Geometry::getBounding() const { return _binding; }
-void Geometry::computeBounding() {
-  if (_attributes.contains(Geometry::ATTR_POSITION)) {
-    auto &position = _attributes.at(Geometry::ATTR_POSITION);
-    auto &itemSize = position->getItemSize();
-    if (itemSize == 3) {
-      glm::vec3 *data = (glm::vec3 *)position->getVertexBufferObject()->map(
-          gl::MAP_ACCESS::READ_ONLY);
-      auto count = position->getItemCount();
-      for (uint32_t i = 0; i < count; i++) {
-        auto &item = data[i];
-        _binding.left = std::min(_binding.left, item.x);
-        _binding.right = std::max(_binding.right, item.x);
-        _binding.bottom = std::min(_binding.bottom, item.y);
-        _binding.top = std::max(_binding.top, item.y);
-        _binding.front = std::min(_binding.front, item.z);
-        _binding.back = std::max(_binding.back, item.z);
-      }
-      position->getVertexBufferObject()->unmap();
-    } else if (itemSize == 2) {
-      glm::vec2 *data = (glm::vec2 *)position->getVertexBufferObject()->map(
-          gl::MAP_ACCESS::READ_ONLY);
-      auto count = position->getItemCount();
-      for (uint32_t i = 0; i < count; i++) {
-        auto &item = data[i];
-        _binding.left = std::min(_binding.left, item.x);
-        _binding.right = std::max(_binding.right, item.x);
-        _binding.bottom = std::min(_binding.bottom, item.y);
-        _binding.top = std::max(_binding.top, item.y);
-      }
-      position->getVertexBufferObject()->unmap();
-    }
-  }
-}
-void Geometry::computeBoundingSphere() {
-  auto y = (_binding.top + _binding.bottom) / 2;
-  auto z = (_binding.front + _binding.back) / 2;
-  auto x = (_binding.left + _binding.right) / 2;
-  Geometry::BoundingShpere shpere = {glm::vec3(x, y, z), 0};
-  if (_attributes.contains(Geometry::ATTR_POSITION)) {
-    auto &position = _attributes.at(Geometry::ATTR_POSITION);
-    auto &itemSize = position->getItemSize();
-    if (itemSize == 3) {
-      glm::vec3 *data = (glm::vec3 *)position->getVertexBufferObject()->map(
-          gl::MAP_ACCESS::READ_ONLY);
-      auto count = position->getItemCount();
-      for (uint32_t i = 0; i < count; i++) {
-        auto &item = data[i];
-        auto dst = shpere.center - item;
-        auto d = std::sqrt(dst.x * dst.x + dst.y * dst.y + dst.z * dst.z);
-        if (d > shpere.radis) {
-          shpere.radis = d;
-        }
-      }
-      position->getVertexBufferObject()->unmap();
-    } else {
-      glm::vec2 *data = (glm::vec2 *)position->getVertexBufferObject()->map(
-          gl::MAP_ACCESS::READ_ONLY);
-      auto count = position->getItemCount();
-      for (uint32_t i = 0; i < count; i++) {
-        auto &item = data[i];
-        auto dst = glm::vec2(shpere.center) - item;
-        auto d = std::sqrt(dst.x * dst.x + dst.y * dst.y);
-        if (d > shpere.radis) {
-          shpere.radis = d;
-        }
-      }
-      position->getVertexBufferObject()->unmap();
-    }
-  }
-  _bindingShpere = shpere;
-}
-const Geometry::BoundingShpere &Geometry::getBoundingSphere() const {
-  return _bindingShpere;
 }
 void Geometry::draw(gl::DRAW_MODE mode) const {
   if (!_attributes.contains(Geometry::ATTR_POSITION)) {

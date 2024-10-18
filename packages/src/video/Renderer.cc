@@ -1,12 +1,9 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
-#include "gl/Constant.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
-#include "gl/PixelFormat.hpp"
 #include "gl/ShaderType.hpp"
 #include "gl/Texture2D.hpp"
-#include "gl/TextureFilter.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
 #include "video/RenderTarget.hpp"
@@ -60,21 +57,7 @@ constexpr static const char *internalBasicFragment =
     "    gl_FragColor = texture(attachment_0, vertexTexcoord).rgba;\n\r"
     "}\n\r";
 
-constexpr static const uint32_t internalTextureData[] = {
-    0xff777777, 0xffffffff, 0xffffffff, 0xff777777};
-
-constexpr static const float quadVec[] = {0.f,  0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-                                          0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f};
-
-constexpr static const float quadTex[] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-                                          0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f};
-
-constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
-
 Renderer::Renderer() : _shaderName("internal") {
-  _constants = new gl::Constant();
-  _constants->setField("model", glm::mat4(1.0f));
-  _constants->setField("projection", glm::mat4(1.0f));
   _context = new RenderContext();
 }
 void Renderer::initialize(const core::Rect<> &viewport) {
@@ -97,19 +80,6 @@ void Renderer::initialize(const core::Rect<> &viewport) {
   };
   core::AutoPtr<Shader> shader = new Shader(sources);
   Shader::set("internal", shader);
-  core::AutoPtr internalTexture = new gl::Texture2D(
-      2, 2, gl::PIXEL_FORMAT::RGBA, (void *)&internalTextureData[0]);
-  internalTexture->setMagnificationFilter(gl::TEXTURE_FILTER::NEAREST);
-  internalTexture->setMinifyingFilter(gl::TEXTURE_FILTER::NEAREST);
-  gl::Texture2D::set("internal", internalTexture);
-
-  core::AutoPtr quadGeometry = new Geometry();
-  quadGeometry->setAttribute(Geometry::ATTR_POSITION,
-                             new Attribute(quadVec, 2));
-  quadGeometry->setAttribute(Geometry::ATTR_TEXCOORD,
-                             new Attribute(quadTex, 2));
-  quadGeometry->setAttributeIndex(new AttributeIndex(quadIndex));
-  Geometry::set("quad", quadGeometry);
 }
 
 void Renderer::setViewport(const core::Rect<> &viewport) {
@@ -185,22 +155,6 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   if (!activeShader(_shaderName, shader)) {
     activeShader("internal", "basic");
   }
-  for (auto &[_, attribute] : material->getAttributes()) {
-    attribute(_constants);
-  }
-  auto index = (int32_t)_textures.size();
-  auto textures = material->getTextures();
-  for (auto &[name, info] : textures) {
-    core::AutoPtr<gl::Texture2D> tex = info.texture;
-    glActiveTexture(GL_TEXTURE0 + index);
-    gl::Texture2D::bind(tex);
-    _constants->setField(name, index);
-    _constants->setField(fmt::format("{}_blend", name), info.blend);
-    _constants->setField(fmt::format("{}_coord_matrix", name),
-                         info.textureCoordMatrix);
-    _constants->setField(fmt::format("{}_enable", name), true);
-    index++;
-  }
 
   if (material->isDepthTest()) {
     glEnable(GL_DEPTH_TEST);
@@ -226,12 +180,6 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
   }
 }
 
-const core::AutoPtr<gl::Constant> &Renderer::getConstants() const {
-  return _constants;
-}
-
-core::AutoPtr<gl::Constant> &Renderer::getConstants() { return _constants; }
-
 void Renderer::draw(const core::AutoPtr<Material> &material,
                     const core::AutoPtr<Geometry> &geometry,
                     const glm::mat4 &model) {
@@ -244,18 +192,19 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
     });
   }
 }
+
 core::AutoPtr<Renderer::RenderContext> Renderer::pushContext() {
   auto context = _context;
   _context = new RenderContext();
   return context;
 }
+
 void Renderer::popContext(const core::AutoPtr<Renderer::RenderContext> &ctx) {
   _context = ctx;
 }
+
 void Renderer::draw(const Renderer::RenderItem &item) {
-  _constants->setField("model", item.matrixModel);
   setMaterial(item.material);
-  _shader->setUniform(_constants);
   auto instanced = item.material->getInstanced();
   if (instanced > 1) {
     item.geometry->drawInstanced(gl::DRAW_MODE::TRIANGLES, instanced);
@@ -263,10 +212,12 @@ void Renderer::draw(const Renderer::RenderItem &item) {
     item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
   }
 }
+
 void Renderer::setTexture(const std::string &name,
                           core::AutoPtr<gl::Texture2D> texture) {
   _textures[name] = texture;
 }
+
 void Renderer::clearTexture(const std::string &name) {
   if (name.empty()) {
     _textures.clear();
@@ -290,12 +241,12 @@ void Renderer::present() {
   if (current != nullptr) {
     current->active();
   }
-  uint32_t index = 0;
+  int32_t index = 0;
   for (auto &[name, texture] : _textures) {
     glActiveTexture(GL_TEXTURE0 + index);
     gl::Texture2D::bind(texture);
-    _constants->setField(name, index);
-    _constants->setField(fmt::format("{}_enable", name), true);
+    _shader->setUniform(name, index);
+    _shader->setUniform(fmt::format("{}_enable", name), true);
   }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 

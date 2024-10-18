@@ -2,7 +2,7 @@
 #include "Array.hpp"
 #include <cstddef>
 #include <initializer_list>
-#include <sstream>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -38,8 +38,10 @@ public:
     _data = std::move(another._data);
     return *this;
   }
+  
+  virtual ~Map() {}
 
-  bool operator==(const std::unordered_map<K, T> &data) {
+  bool operator==(const Map<K, T> &data) const {
     if (_data.size() != data.size()) {
       return false;
     }
@@ -80,15 +82,6 @@ public:
   bool contains(const K &key) const { return _data.contains(key); }
 
   bool contains(K &&key) const { return _data.contains(std::forward<K>(key)); }
-
-  Iterator find(const K &key) {
-    for (auto it = begin(); it != end(); it++) {
-      if (it->first == key) {
-        return it;
-      }
-    }
-    return end();
-  }
 
   ConstIterator find(const K &key) const {
     for (auto it = begin(); it != end(); it++) {
@@ -159,21 +152,6 @@ public:
     for (auto &key : keys) {
       erase(key);
     }
-  }
-
-  std::string toString() const {
-    std::string result = "{";
-    size_t index = 0;
-    for (auto &[key, value] : _data) {
-      std::stringstream ss;
-      ss << key << "," << value;
-      result.append(ss.str());
-      if (index != _data.size() - 1) {
-        result.append(",");
-      }
-    }
-    result.append("}");
-    return result;
   }
 };
 } // namespace firefly::core
