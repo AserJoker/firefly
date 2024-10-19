@@ -30,11 +30,11 @@ private:
 
   void TEST_custom_initialize() {
     auto b = core::Singleton<Test2>::instance();
-    CU_ASSERT_EQUAL(b, nullptr);
+    CU_ASSERT_EQUAL_FATAL(b, nullptr);
     core::Singleton<Test2>::initialize(123);
     b = core::Singleton<Test2>::instance();
     CU_ASSERT_NOT_EQUAL(b, nullptr);
-    CU_ASSERT_EQUAL(b->_data, 123);
+    CU_ASSERT_EQUAL_FATAL(b->_data, 123);
   }
 
 public:

@@ -1,7 +1,6 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
-#include "core/Value.hpp"
 #include "input/Event_Click.hpp"
 #include "input/Event_KeyDown.hpp"
 #include "input/Event_MouseDown.hpp"
@@ -16,7 +15,6 @@
 #include <SDL_timer.h>
 #include <fmt/format.h>
 #include <glad/glad.h>
-#include <iostream>
 #include <string>
 
 using namespace firefly;
@@ -54,10 +52,6 @@ void GameApplication::onInitialize() {
   _locale->reload();
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   _renderer = new video::Renderer();
-  using namespace core;
-  Value v = 123;
-  v.get<Integer_t>() = 234;
-  exit();
   showWindow(true);
 }
 

@@ -7,29 +7,29 @@ private:
   void TEST_accessor(void) {
     core::Map<std::string, uint32_t> map;
     map["demo"] = 123;
-    CU_ASSERT_EQUAL(map["demo"], 123);
-    CU_ASSERT_EQUAL(map.size(), 1);
+    CU_ASSERT_EQUAL_FATAL(map["demo"], 123);
+    CU_ASSERT_EQUAL_FATAL(map.size(), 1);
   }
   void TEST_erase(void) {
     core::Map<std::string, uint32_t> map;
     map["demo"] = 123;
     map.erase("demo");
-    CU_ASSERT_EQUAL(map.size(), 0);
+    CU_ASSERT_EQUAL_FATAL(map.size(), 0);
   }
   void TEST_keys(void) {
     core::Map<std::string, uint32_t> map;
     map["demo"] = 123;
     map["demo_2"] = 123;
     auto keys = map.keys();
-    CU_ASSERT(keys.contains("demo"));
-    CU_ASSERT(keys.contains("demo_2"));
+    CU_ASSERT_FATAL(keys.contains("demo"));
+    CU_ASSERT_FATAL(keys.contains("demo_2"));
   }
   void TEST_find(void) {
     core::Map<std::string, uint32_t> map;
     map["demo"] = 123;
     map["demo_2"] = 123;
     auto it = map.find("demo");
-    CU_ASSERT_EQUAL(it->second, 123);
+    CU_ASSERT_EQUAL_FATAL(it->second, 123);
   }
 
 public:
