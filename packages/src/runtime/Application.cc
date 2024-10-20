@@ -3,7 +3,6 @@
 //
 #include "runtime/Application.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Rect.hpp"
 #include "exception/GLADException.hpp"
 #include "exception/SDLException.hpp"
 #include "runtime/BaseApplication.hpp"

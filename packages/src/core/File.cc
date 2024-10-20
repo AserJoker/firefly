@@ -61,7 +61,3 @@ void File::write(const core::AutoPtr<Buffer> &data) {
     len += chunk;
   }
 }
-AutoPtr<Promise<AutoPtr<Buffer>>> File::readAsync(uint32_t size) {
-  return Coroutine::async<AutoPtr<Buffer>>(
-      [=, this]() -> AutoPtr<Buffer> { return read(size); });
-}

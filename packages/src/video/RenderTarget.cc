@@ -1,6 +1,5 @@
 #include "video/RenderTarget.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Rect.hpp"
 #include "exception/Exception.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
@@ -20,6 +19,7 @@ using namespace firefly::video;
 constexpr static const float quadVec[] = {-1.0f, 1.0f,  -1.0f, -1.0f,
                                           1.0f,  -1.0f, -1.0f, 1.0f,
                                           1.0f,  -1.0f, 1.0f,  1.0f};
+
 constexpr static const float quadTex[] = {0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
                                           0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f};
 
@@ -77,6 +77,7 @@ void RenderTarget::draw(core::AutoPtr<gl::Program> program) {
   }
   _geometry->draw(gl::DRAW_MODE::TRIANGLES);
 }
+
 void RenderTarget::resize(const core::Size<> &size) {
   if (size.width <= _size.width && size.height <= _size.height) {
     return;

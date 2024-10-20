@@ -184,7 +184,7 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
                     const core::AutoPtr<Geometry> &geometry,
                     const glm::mat4 &model) {
   if (!material->isBlend()) {
-    _context->normalRenderList.push_back({geometry, material, model});
+    _context->solidRenderList.push_back({geometry, material, model});
   } else {
     _context->blendRenderList.push_back({geometry, material, model});
     _context->blendRenderList.sort([](auto &a, auto &b) -> bool {
@@ -203,7 +203,7 @@ void Renderer::popContext(const core::AutoPtr<Renderer::RenderContext> &ctx) {
   _context = ctx;
 }
 
-void Renderer::draw(const Renderer::RenderItem &item) {
+void Renderer::drawPass(const Renderer::Pass &item) {
   setMaterial(item.material);
   for (auto &[name, uniform] : _uniforms) {
     _shader->setUniform(name, uniform);
@@ -214,6 +214,23 @@ void Renderer::draw(const Renderer::RenderItem &item) {
   } else {
     item.geometry->draw(gl::DRAW_MODE::TRIANGLES);
   }
+}
+void Renderer::drawPassList(std::list<Renderer::Pass> &list) {
+  for (auto &item : list) {
+    drawPass(item);
+  }
+  list.clear();
+}
+
+void Renderer::drawContext(core::AutoPtr<Renderer::RenderContext> &ctx) {
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  glDisable(GL_BLEND);
+  drawPassList(ctx->solidRenderList);
+  ctx->solidRenderList.clear();
+
+  glEnable(GL_BLEND);
+  drawPassList(ctx->blendRenderList);
+  ctx->blendRenderList.clear();
 }
 
 void Renderer::setTexture(const std::string &name,
@@ -231,64 +248,57 @@ void Renderer::clearTexture(const std::string &name) {
 
 void Renderer::present() {
   std::list<core::AutoPtr<RenderTarget>> pipeline;
+
   if (_deferred != nullptr) {
     pipeline.push_back(_deferred);
   }
+
   for (auto &process : _shaderRenderTargets) {
     pipeline.push_back(process);
   }
+
   core::AutoPtr<RenderTarget> current;
   if (pipeline.size()) {
     current = *pipeline.begin();
-  }
-  if (current != nullptr) {
+    pipeline.pop_front();
     current->active();
   }
+
   int32_t index = 0;
+
   for (auto &[name, texture] : _textures) {
     glActiveTexture(GL_TEXTURE0 + index);
     gl::Texture2D::bind(texture);
-    _shader->setUniform(name, gl::Uniform(index));
-    _shader->setUniform(fmt::format("{}_enable", name), gl::Uniform(true));
+    setUniform(name, gl::Uniform(index));
+    setUniform(fmt::format("{}_enable", name), gl::Uniform(true));
   }
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-  glDisable(GL_BLEND);
-  for (auto &item : _context->normalRenderList) {
-    draw(item);
-  }
-  _context->normalRenderList.clear();
+  drawContext(_context);
 
-  glEnable(GL_BLEND);
-  for (auto &item : _context->blendRenderList) {
-    draw(item);
-  }
-  _context->blendRenderList.clear();
-
-  if (_shaderRenderTargets.size() > 1) {
-    auto it = pipeline.begin();
-    it++;
-    while (it != pipeline.end()) {
-      auto &next = *it;
-      if (activeShader(_shaderName, current->getStage())) {
-        next->active();
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
-                GL_STENCIL_BUFFER_BIT);
-        current->draw(_shader);
-        current = next;
+  if (pipeline.size() > 1) {
+    for (auto &next : pipeline) {
+      if (!activeShader(_shaderName, current->getStage())) {
+        activeShader("internal", "basic");
       }
-      it++;
+      next->active();
+      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
+              GL_STENCIL_BUFFER_BIT);
+      current->draw(_shader);
+      current = next;
     }
+
     gl::FrameBuffer::bind(nullptr);
     glViewport(_viewport.x, _viewport.y, _viewport.width, _viewport.height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
     if (!activeShader(_shaderName, current->getStage())) {
       activeShader("internal", "basic");
     }
+
     current->draw(_shader);
   }
 }
+
 void Renderer::setUniform(const std::string &name, const gl::Uniform &uniform) {
-  gl::Uniform a = 1;
-  a = uniform;
+  _uniforms[name] = uniform;
 }

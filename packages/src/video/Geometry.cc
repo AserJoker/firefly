@@ -74,10 +74,12 @@ void Geometry::removeAttribute(uint32_t index) {
   _attributes.erase(index);
   _vao->disableAttribute(index);
 }
+
 const std::unordered_map<uint32_t, core::AutoPtr<Attribute>> &
 Geometry::getAttributes() const {
   return _attributes;
 }
+
 void Geometry::setAttributeIndex(
     const core::AutoPtr<AttributeIndex> &attrIndex) {
   _attrIndex = attrIndex;
@@ -85,12 +87,15 @@ void Geometry::setAttributeIndex(
   gl::Buffer::bind(gl::BUFFER_TARGET::ELEMENT_ARRAY,
                    attrIndex->getElementBufferObject());
 }
+
 const core::AutoPtr<AttributeIndex> &Geometry::getAttributeIndex() const {
   return _attrIndex;
 }
+
 core::AutoPtr<AttributeIndex> &Geometry::getAttributeIndex() {
   return _attrIndex;
 }
+
 void Geometry::draw(gl::DRAW_MODE mode) const {
   if (!_attributes.contains(Geometry::ATTR_POSITION)) {
     return;
@@ -104,6 +109,7 @@ void Geometry::draw(gl::DRAW_MODE mode) const {
                    0);
   }
 }
+
 void Geometry::drawInstanced(gl::DRAW_MODE mode, uint32_t count) const {
   if (!_attributes.contains(Geometry::ATTR_POSITION)) {
     return;

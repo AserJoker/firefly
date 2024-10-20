@@ -14,15 +14,15 @@
 namespace firefly::video {
 class Renderer : public core::Object {
 private:
-  struct RenderItem {
+  struct Pass {
     core::AutoPtr<Geometry> geometry;
     core::AutoPtr<Material> material;
     glm::mat4 matrixModel;
   };
 
   struct RenderContext : public core::Object {
-    std::list<RenderItem> normalRenderList;
-    std::list<RenderItem> blendRenderList;
+    std::list<Pass> solidRenderList;
+    std::list<Pass> blendRenderList;
   };
 
 private:
@@ -34,13 +34,19 @@ private:
   core::Rect<> _viewport;
 
   core::AutoPtr<RenderTarget> _deferred;
+
   std::list<core::AutoPtr<RenderTarget>> _shaderRenderTargets;
+
   core::Map<std::string, core::AutoPtr<gl::Texture2D>> _textures;
 
   std::unordered_map<std::string, gl::Uniform> _uniforms;
 
 private:
-  void draw(const RenderItem &item);
+  void drawPass(const Pass &item);
+  void drawPassList(std::list<Pass> &list);
+  void drawContext(core::AutoPtr<RenderContext> &ctx);
+
+  void setMaterial(const core::AutoPtr<Material> &material);
 
 public:
   Renderer();
@@ -52,8 +58,6 @@ public:
   bool activeShader(const std::string &name, const std::string &stage);
   void setShader(const std::string &name);
   const std::string &getShader() const;
-
-  void setMaterial(const core::AutoPtr<Material> &material);
 
   void setViewport(const core::Rect<> &viewport);
   const core::Rect<> &getViewport() const;

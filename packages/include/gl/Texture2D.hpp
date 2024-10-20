@@ -5,10 +5,10 @@
 #include "core/Buffer.hpp"
 #include "core/Cache.hpp"
 #include "core/Object.hpp"
-#include "core/Rect.hpp"
+#include "core/Size.hpp"
 #include "gl/DataType.hpp"
 #include "gl/PixelFormat.hpp"
-#include <glm/glm.hpp>
+
 namespace firefly::gl {
 class Texture2D : public core::Object, public core::Cache<Texture2D> {
 private:
