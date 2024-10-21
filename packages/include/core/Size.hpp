@@ -5,9 +5,9 @@ template <class T = uint32_t> struct Size {
   T width;
   T height;
 
-  Size() : width(T{}), height(T{}) {}
+  constexpr Size() : width(T{}), height(T{}) {}
 
-  Size(T width, T height) : width(width), height(height) {}
+  constexpr Size(T width, T height) : width(width), height(height) {}
 
   Size(const Size<T> &another) : width(another.width), height(another.height) {}
 

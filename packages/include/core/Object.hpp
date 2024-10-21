@@ -19,12 +19,8 @@ public:
 
   inline const std::string getIdentity() const { return _identity; }
 
-  Object() : _ref(0) {
-    _identity = fmt::format("[0x{:x}]", (ptrdiff_t)this);
-  };
+  Object() : _ref(0) { _identity = fmt::format("[0x{:x}]", (ptrdiff_t)this); };
 
-  virtual void initialize() {}
   virtual ~Object() = default;
-
 };
 } // namespace firefly::core

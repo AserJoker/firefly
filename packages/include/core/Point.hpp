@@ -5,9 +5,9 @@ template <class T = int32_t> struct Point {
   T x;
   T y;
 
-  Point() : x(T{}), y(T{}) {}
+  constexpr Point() : x(T{}), y(T{}) {}
 
-  Point(T x, T y, T z = T{}) : x(x), y(y) {}
+  constexpr Point(T x, T y, T z = T{}) : x(x), y(y) {}
 
   Point(const Point<T> &another) : x(another.x), y(another.y) {}
 

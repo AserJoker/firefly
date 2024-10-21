@@ -6,9 +6,9 @@ template <class T = int32_t, class K = uint32_t> struct Rect {
   T x, y;
   K width, height;
 
-  Rect() : x(T{}), y(T{}), width(K{}), height(K{}) {}
+  constexpr Rect() : x(T{}), y(T{}), width(K{}), height(K{}) {}
 
-  Rect(T x, T y, K width, K height)
+  constexpr Rect(T x, T y, K width, K height)
       : x(x), y(y), width(width), height(height) {}
 
   Rect(const Point<T> &point, K width, K height)

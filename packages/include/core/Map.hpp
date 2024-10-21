@@ -25,6 +25,13 @@ public:
 
   Map(std::unordered_map<K, T> &&data) : _data(data) {}
 
+  template <class Tv, class Kv>
+  constexpr Map(const std::initializer_list<std::pair<Tv, Kv>> &initialize) {
+    for (auto &[k, v] : initialize) {
+      _data[k] = v;
+    }
+  }
+
   Map(const Map &another) : _data(another._data){};
 
   Map(Map &&another) : _data(std::move(another._data)){};
@@ -38,7 +45,7 @@ public:
     _data = std::move(another._data);
     return *this;
   }
-  
+
   virtual ~Map() {}
 
   bool operator==(const Map<K, T> &data) const {
@@ -138,7 +145,7 @@ public:
 
   T &operator[](const KeyType &key) { return _data[key]; }
 
-  const T &operator[](const KeyType &key) const { return _data[key]; }
+  const T &operator[](const KeyType &key) const { return _data.at(key); }
 
   auto erase(const KeyType &key) { return _data.erase(key); }
 

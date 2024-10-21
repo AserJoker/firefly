@@ -1,14 +1,9 @@
 #include "video/RenderTarget.hpp"
 #include "core/AutoPtr.hpp"
 #include "exception/Exception.hpp"
-#include "gl/DrawMode.hpp"
 #include "gl/FrameBuffer.hpp"
 #include "gl/PixelFormat.hpp"
-#include "gl/Program.hpp"
 #include "gl/Texture2D.hpp"
-#include "video/Attribute.hpp"
-#include "video/AttributeIndex.hpp"
-#include "video/Geometry.hpp"
 #include <SDL_image.h>
 #include <SDL_pixels.h>
 #include <SDL_rwops.h>
@@ -16,16 +11,7 @@
 #include <vector>
 using namespace firefly;
 using namespace firefly::video;
-constexpr static const float quadVec[] = {-1.0f, 1.0f,  -1.0f, -1.0f,
-                                          1.0f,  -1.0f, -1.0f, 1.0f,
-                                          1.0f,  -1.0f, 1.0f,  1.0f};
 
-constexpr static const float quadTex[] = {0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-                                          0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f};
-
-constexpr static const uint32_t quadIndex[] = {0, 1, 2, 3, 4, 5};
-
-core::AutoPtr<Geometry> RenderTarget::_geometry = nullptr;
 RenderTarget::RenderTarget(const std::string &stage, const core::Size<> &size,
                            uint32_t attachment)
     : _size(size), _stage(stage) {
@@ -41,15 +27,11 @@ RenderTarget::RenderTarget(const std::string &stage, const core::Size<> &size,
     throw exception::RuntimeException<"Check Framebuffer">(
         "Failed to check framebuffer");
   }
-  if (!_geometry) {
-    _geometry = new Geometry();
-    _geometry->setAttribute(0, new Attribute(quadVec, 2));
-    _geometry->setAttribute(3, new Attribute(quadTex, 2));
-    _geometry->setAttributeIndex(new AttributeIndex(quadIndex));
-  }
 }
+
 RenderTarget::RenderTarget(const core::Size<> &size, uint32_t attachment)
     : RenderTarget("basic", size, attachment) {}
+
 void RenderTarget::active() {
   gl::FrameBuffer::bind(_frame);
   auto attachmentBuffers = _frame->getAttachmentBuffers();
@@ -64,18 +46,9 @@ const std::vector<core::AutoPtr<gl::Texture2D>> &
 RenderTarget::getAttachments() const {
   return _frame->getAttachments();
 }
+
 const core::AutoPtr<gl::FrameBuffer> &RenderTarget::getFrameBuffer() const {
   return _frame;
-}
-
-void RenderTarget::draw(core::AutoPtr<gl::Program> program) {
-  auto attachments = _frame->getAttachments();
-  for (size_t i = 0; i < attachments.size(); i++) {
-    program->setUniform(fmt::format("attachment_{}", i), gl::Uniform((int)i));
-    glActiveTexture(GL_TEXTURE0 + (uint32_t)i);
-    gl::Texture2D::bind(attachments[i]);
-  }
-  _geometry->draw(gl::DRAW_MODE::TRIANGLES);
 }
 
 void RenderTarget::resize(const core::Size<> &size) {

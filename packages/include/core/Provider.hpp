@@ -27,12 +27,10 @@ public:
     _constructors[name.value] = func;
   }
 
-  template <class T, class... Args>
-  AutoPtr<T> inject(const std::string &name, Args &&...args) {
+  template <class T> AutoPtr<T> inject(const std::string &name) {
     if (_constructors.contains(name)) {
       auto &constructor = _constructors.at(name);
       auto ins = constructor().cast<T>();
-      ins->initialize(args...);
       return ins;
     }
     return nullptr;

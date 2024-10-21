@@ -4,15 +4,14 @@
 #pragma once
 
 #include "BaseApplication.hpp"
+#include "Event_Exit.hpp"
 #include "Event_SDL.hpp"
+#include "runtime/Event_Resize.hpp"
 #include <SDL2/SDL.h>
 
 namespace firefly::runtime {
 class Application : public BaseApplication {
 private:
-  SDL_Window *_window;
-  SDL_GLContext _ctx;
-
 public:
   Application(int argc, char **argv);
 
@@ -23,8 +22,10 @@ protected:
 
   void onUnInitialize() override;
 
-  void showWindow(bool show);
-
   virtual void onEvent(Event_SDL &);
+
+  virtual void onResize(Event_Resize &);
+
+  virtual void onExit(Event_Exit &);
 };
 } // namespace firefly::runtime

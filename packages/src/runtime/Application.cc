@@ -3,9 +3,9 @@
 //
 #include "runtime/Application.hpp"
 #include "core/AutoPtr.hpp"
-#include "exception/GLADException.hpp"
 #include "exception/SDLException.hpp"
 #include "runtime/BaseApplication.hpp"
+#include "runtime/Event_Exit.hpp"
 #include "runtime/Event_Resize.hpp"
 #include "runtime/Event_SDL.hpp"
 #include <SDL2/SDL.h>
@@ -17,83 +17,7 @@
 
 using namespace firefly;
 using namespace firefly::runtime;
-void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id,
-                            GLenum severity, GLsizei length,
-                            const char *message, const void *userParam) {
-  // ignore non-significant error/warning codes
-  if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
-    return;
-  auto logger = core::Singleton<Logger>::instance();
-  logger->warn("---------------");
-  logger->warn("Debug message ({}): {}", id, message);
 
-  switch (source) {
-  case GL_DEBUG_SOURCE_API:
-    logger->warn("Source: API");
-    break;
-  case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
-    logger->warn("Source: Window System");
-    break;
-  case GL_DEBUG_SOURCE_SHADER_COMPILER:
-    logger->warn("Source: Shader Compiler");
-    break;
-  case GL_DEBUG_SOURCE_THIRD_PARTY:
-    logger->warn("Source: Third Party");
-    break;
-  case GL_DEBUG_SOURCE_APPLICATION:
-    logger->warn("Source: Application");
-    break;
-  case GL_DEBUG_SOURCE_OTHER:
-    logger->warn("Source: Other");
-    break;
-  }
-
-  switch (type) {
-  case GL_DEBUG_TYPE_ERROR:
-    logger->warn("Type: Error");
-    break;
-  case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
-    logger->warn("Type: Deprecated Behaviour");
-    break;
-  case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-    logger->warn("Type: Undefined Behaviour");
-    break;
-  case GL_DEBUG_TYPE_PORTABILITY:
-    logger->warn("Type: Portability");
-    break;
-  case GL_DEBUG_TYPE_PERFORMANCE:
-    logger->warn("Type: Performance");
-    break;
-  case GL_DEBUG_TYPE_MARKER:
-    logger->warn("Type: Marker");
-    break;
-  case GL_DEBUG_TYPE_PUSH_GROUP:
-    logger->warn("Type: Push Group");
-    break;
-  case GL_DEBUG_TYPE_POP_GROUP:
-    logger->warn("Type: Pop Group");
-    break;
-  case GL_DEBUG_TYPE_OTHER:
-    logger->warn("Type: Other");
-    break;
-  }
-
-  switch (severity) {
-  case GL_DEBUG_SEVERITY_HIGH:
-    logger->warn("Severity: high");
-    break;
-  case GL_DEBUG_SEVERITY_MEDIUM:
-    logger->warn("Severity: medium");
-    break;
-  case GL_DEBUG_SEVERITY_LOW:
-    logger->warn("Severity: low");
-    break;
-  case GL_DEBUG_SEVERITY_NOTIFICATION:
-    logger->warn("Severity: notification");
-    break;
-  }
-  logger->warn("---------------");
-}
 Application::Application(int argc, char **argv) : BaseApplication(argc, argv) {}
 
 void Application::onInitialize() {
@@ -128,63 +52,40 @@ void Application::onInitialize() {
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-
-  _window = SDL_CreateWindow("firefly", SDL_WINDOWPOS_CENTERED,
-                             SDL_WINDOWPOS_CENTERED, 1024, 768,
-                             SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI |
-                                 SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
-  _ctx = SDL_GL_CreateContext(_window);
-  if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
-    throw exception::GLADException("Failed to initialize glad");
-  }
-  SDL_GL_SetSwapInterval(0);
-
-  int flags;
-  glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
-  if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
-    glEnable(GL_DEBUG_OUTPUT);
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    glDebugMessageCallback(glDebugOutput, nullptr);
-    glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr,
-                          GL_TRUE);
-  }
-
   _eventbus->on(this, &Application::onEvent);
+  _eventbus->on(this, &Application::onResize);
+  _eventbus->on(this, &Application::onExit);
 }
+
 void Application::onMainLoop() {
   BaseApplication::onMainLoop();
   SDL_Event event;
   if (SDL_PollEvent(&event)) {
     _eventbus->emit<Event_SDL>(event);
   }
-  SDL_GL_SwapWindow(_window);
 }
 
 void Application::onUnInitialize() {
-  SDL_GL_DeleteContext(_ctx);
   TTF_Quit();
   Mix_Quit();
   IMG_Quit();
   SDL_Quit();
   BaseApplication::onUnInitialize();
 }
-void Application::showWindow(bool show) {
-  if (show) {
-    SDL_ShowWindow(_window);
-  } else {
-    SDL_HideWindow(_window);
-  }
-}
 
 void Application::onEvent(Event_SDL &event) {
   if (event.getEvent().type == SDL_QUIT) {
-    exit();
+    _eventbus->emit<Event_Exit>();
   }
   if (event.getEvent().type == SDL_WINDOWEVENT) {
     if (event.getEvent().window.event == SDL_WINDOWEVENT_RESIZED) {
-      _eventbus->emit<Event_Resize>(
-          core::Size<>({(uint32_t)event.getEvent().window.data1,
-                        (uint32_t)event.getEvent().window.data2}));
+      uint32_t width = event.getEvent().window.data1;
+      uint32_t height = event.getEvent().window.data2;
+      _eventbus->emit<Event_Resize>(core::Size<>(width, height));
     }
   }
 }
+
+void Application::onExit(Event_Exit &) { exit(); }
+
+void Application::onResize(Event_Resize &) {}

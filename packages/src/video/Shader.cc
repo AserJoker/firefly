@@ -8,13 +8,12 @@
 #include "runtime/Media.hpp"
 #include <filesystem>
 #include <string>
-#include <unordered_map>
 using namespace firefly;
 using namespace firefly::video;
 
-const std::unordered_map<std::string, Shader::ShaderSource>
+const core::Map<std::string, Shader::ShaderSource>
 Shader::load(const std::string &path) {
-  std::unordered_map<std::string, ShaderSource> sources;
+  core::Map<std::string, ShaderSource> sources;
   auto media = core::Singleton<runtime::Media>::instance();
   auto programs = media->scan(path);
   for (auto &program : programs) {
@@ -54,7 +53,7 @@ Shader::load(const std::string &path) {
 
 Shader::Shader(const std::string &path) : Shader(load(path)) {}
 
-Shader::Shader(const std::unordered_map<std::string, ShaderSource> &sources)
+Shader::Shader(const core::Map<std::string, ShaderSource> &sources)
     : _sources(sources) {
   for (auto &[name, sources] : sources) {
     core::AutoPtr<gl::Program> program = new gl::Program();
@@ -78,16 +77,14 @@ Shader::Shader(const std::unordered_map<std::string, ShaderSource> &sources)
 void Shader::setSource(const std::string &name, const gl::SHADER_TYPE &type,
                        const std::string &source) {}
 
-const std::unordered_map<std::string, Shader::ShaderSource> &
-Shader::getSources() const {
+const core::Map<std::string, Shader::ShaderSource> &Shader::getSources() const {
   return _sources;
 }
-const std::unordered_map<std::string, core::AutoPtr<gl::Program>> &
+const core::Map<std::string, core::AutoPtr<gl::Program>> &
 Shader::getPrograms() const {
   return _programs;
 }
-std::unordered_map<std::string, core::AutoPtr<gl::Program>> &
-Shader::getPrograms() {
+core::Map<std::string, core::AutoPtr<gl::Program>> &Shader::getPrograms() {
   return _programs;
 }
 

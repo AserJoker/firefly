@@ -1,111 +1,150 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Singleton.hpp"
+#include "core/Value.hpp"
+#include "exception/FileException.hpp"
+#include "exception/GLADException.hpp"
 #include "gl/DrawMode.hpp"
-#include "gl/FrameBuffer.hpp"
-#include "gl/ShaderType.hpp"
 #include "gl/Texture2D.hpp"
+#include "runtime/Logger.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
-#include "video/RenderTarget.hpp"
 #include "video/Shader.hpp"
-#include <concurrencysal.h>
+#include <SDL2/SDL.h>
 #include <fmt/format.h>
 #include <glm/ext/matrix_transform.hpp>
-#include <unordered_map>
 
 using namespace firefly;
 using namespace firefly::video;
 
-constexpr static const char *internalGBufferVertex =
-    "#version 330 core \n\r"
-    "layout(location = 0) in vec3 position;\n\r"
-    "layout(location = 3) in vec2 coord;\n\r"
-    "out vec2 vertexTexcoord;\n\r"
-    "uniform mat4 projection;\n\r"
-    "uniform mat4 view;\n\r"
-    "uniform mat4 model;\n\r"
-    "uniform mat4 diffuse_texture_coord_matrix;\n\r"
-    "void main() {\n\r"
-    "gl_Position = projection * view * model * vec4(position, 1.0);\n\r"
-    "vertexTexcoord = (diffuse_texture_coord_matrix * "
-    "vec4(coord,0.0,1.0)).xy;\n\r"
-    "}\n\r";
-constexpr static const char *internalGBufferFragment =
-    "#version 330 core\n\r"
-    "in vec2 vertexTexcoord;\n\r"
-    "uniform sampler2D diffuse_texture;\n\r"
-    "uniform float diffuse_texture_blend;\n\r"
-    "void main() {\n\r"
-    "    vec4 col = texture(diffuse_texture, vertexTexcoord).rgba;\n\r"
-    "    gl_FragColor = col * diffuse_texture_blend;\n\r"
-    "}\n\r";
+static void APIENTRY showOpenGLMessage(GLenum source, GLenum type,
+                                       unsigned int id, GLenum severity,
+                                       GLsizei length, const char *message,
+                                       const void *userParam) {
+  // ignore non-significant error/warning codes
+  if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
+    return;
+  auto logger = core::Singleton<runtime::Logger>::instance();
+  logger->warn("---------------");
+  logger->warn("Debug message ({}): {}", id, message);
 
-constexpr static const char *internalBasicVertex =
-    "#version 330 core \n\r"
-    "layout(location = 0) in vec2 position;\n\r"
-    "layout(location = 3) in vec2 coord;\n\r"
-    "out vec2 vertexTexcoord;\n\r"
-    "void main() {\n\r"
-    "gl_Position = vec4(position, 0.0, 1.0);\n\r"
-    "vertexTexcoord = coord;\n\r"
-    "}\n\r";
-constexpr static const char *internalBasicFragment =
-    "#version 330 core\n\r"
-    "in vec2 vertexTexcoord;\n\r"
-    "uniform sampler2D attachment_0;\n\r"
-    "void main() {\n\r"
-    "    gl_FragColor = texture(attachment_0, vertexTexcoord).rgba;\n\r"
-    "}\n\r";
+  switch (source) {
+  case GL_DEBUG_SOURCE_API:
+    logger->warn("Source: API");
+    break;
+  case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+    logger->warn("Source: Window System");
+    break;
+  case GL_DEBUG_SOURCE_SHADER_COMPILER:
+    logger->warn("Source: Shader Compiler");
+    break;
+  case GL_DEBUG_SOURCE_THIRD_PARTY:
+    logger->warn("Source: Third Party");
+    break;
+  case GL_DEBUG_SOURCE_APPLICATION:
+    logger->warn("Source: Application");
+    break;
+  case GL_DEBUG_SOURCE_OTHER:
+    logger->warn("Source: Other");
+    break;
+  }
 
-Renderer::Renderer() : _shaderName("internal") {
+  switch (type) {
+  case GL_DEBUG_TYPE_ERROR:
+    logger->warn("Type: Error");
+    break;
+  case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+    logger->warn("Type: Deprecated Behaviour");
+    break;
+  case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+    logger->warn("Type: Undefined Behaviour");
+    break;
+  case GL_DEBUG_TYPE_PORTABILITY:
+    logger->warn("Type: Portability");
+    break;
+  case GL_DEBUG_TYPE_PERFORMANCE:
+    logger->warn("Type: Performance");
+    break;
+  case GL_DEBUG_TYPE_MARKER:
+    logger->warn("Type: Marker");
+    break;
+  case GL_DEBUG_TYPE_PUSH_GROUP:
+    logger->warn("Type: Push Group");
+    break;
+  case GL_DEBUG_TYPE_POP_GROUP:
+    logger->warn("Type: Pop Group");
+    break;
+  case GL_DEBUG_TYPE_OTHER:
+    logger->warn("Type: Other");
+    break;
+  }
+
+  switch (severity) {
+  case GL_DEBUG_SEVERITY_HIGH:
+    logger->warn("Severity: high");
+    break;
+  case GL_DEBUG_SEVERITY_MEDIUM:
+    logger->warn("Severity: medium");
+    break;
+  case GL_DEBUG_SEVERITY_LOW:
+    logger->warn("Severity: low");
+    break;
+  case GL_DEBUG_SEVERITY_NOTIFICATION:
+    logger->warn("Severity: notification");
+    break;
+  }
+  logger->warn("---------------");
+}
+
+Renderer::Renderer(SDL_Window *window) : _shaderName("internal") {
+  _window = window;
+  _ctx = SDL_GL_CreateContext(window);
+  SDL_GL_SetSwapInterval(0);
+  if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
+    throw exception::GLADException("Failed to initialize glad");
+  }
+
+  glEnable(GL_DEBUG_OUTPUT);
+  glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+  glDebugMessageCallback(showOpenGLMessage, nullptr);
+  glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr,
+                        GL_TRUE);
+
+  int32_t width, height;
+  SDL_GetWindowSize(window, &width, &height);
+  setViewport({0, 0, (uint32_t)width, (uint32_t)height});
   _context = new RenderContext();
 }
-void Renderer::initialize(const core::Rect<> &viewport) {
-  setViewport(viewport);
-  std::unordered_map<std::string, Shader::ShaderSource> sources = {
-      {
-          "gbuffer",
-          {
-              {gl::SHADER_TYPE::VERTEX_SHADER, internalGBufferVertex},
-              {gl::SHADER_TYPE::FRAGMENT_SHADER, internalGBufferFragment},
-          },
-      },
-      {
-          "basic",
-          {
-              {gl::SHADER_TYPE::VERTEX_SHADER, internalBasicVertex},
-              {gl::SHADER_TYPE::FRAGMENT_SHADER, internalBasicFragment},
-          },
-      },
-  };
-  core::AutoPtr<Shader> shader = new Shader(sources);
-  Shader::set("internal", shader);
-}
+
+Renderer::~Renderer() { SDL_GL_DeleteContext(_ctx); }
 
 void Renderer::setViewport(const core::Rect<> &viewport) {
   _viewport = viewport;
   glViewport(_viewport.x, _viewport.y, _viewport.width, _viewport.height);
-  if (_deferred != nullptr) {
-    _deferred->resize({_viewport.width, _viewport.height});
-  }
-  for (auto &attr : _shaderRenderTargets) {
-    attr->resize({_viewport.width, _viewport.height});
-  }
 }
 
 const core::Rect<> &Renderer::getViewport() const { return _viewport; }
 
 bool Renderer::activeShader(const std::string &name, const std::string &stage) {
-  auto shader = Shader::get(name, fmt::format("shader::{}", name));
-  auto program = shader->getProgram(stage);
-  if (!program) {
+  try {
+    auto shader = Shader::get(name, fmt::format("shader::{}", name));
+    auto program = shader->getProgram(stage);
+    if (!program) {
+      return false;
+    }
+    if (program != _shader) {
+      _shader = program;
+      _shader->use();
+    }
+    for (auto &[name, uniform] : _uniforms) {
+      _shader->setUniform(name, uniform);
+    }
+    return true;
+  } catch (exception::FileException &e) {
+    core::Singleton<runtime::Logger>::instance()->warn(
+        "Failed to active shader '{}:{}'\n\t{}", name, stage, e.what());
     return false;
   }
-  if (program != _shader) {
-    _shader = program;
-    _shader->use();
-  }
-  return true;
 }
 
 core::AutoPtr<gl::Program> Renderer::getShaderProgram() { return _shader; }
@@ -114,46 +153,22 @@ void Renderer::setShader(const std::string &name) {
   if (_shaderName == name) {
     return;
   }
-  _deferred = nullptr;
-  _shaderRenderTargets.clear();
   _shaderName = name;
-  auto shader = Shader::get(name, fmt::format("shader::{}", name));
-  auto &programs = shader->getPrograms();
-  for (auto &[name, _] : programs) {
-    if (name.starts_with("composite_") || name == "composite") {
-      _shaderRenderTargets.push_back(
-          new RenderTarget(name, {_viewport.width, _viewport.height}));
-    }
-    if (name == "deferred") {
-      _deferred =
-          new video::RenderTarget(name, {_viewport.width, _viewport.height}, 3);
-    }
-  }
-  _shaderRenderTargets.sort([](const core::AutoPtr<RenderTarget> &a,
-                               const core::AutoPtr<RenderTarget> &b) -> bool {
-    if (a->getStage() == "composite") {
-      return false;
-    }
-    if (b->getStage() == "composite") {
-      return true;
-    }
-    auto sida = a->getStage().substr(11);
-    auto ida = std::atoi(sida.c_str());
-    auto sidb = b->getStage().substr(11);
-    auto idb = std::atoi(sidb.c_str());
-    return ida <= idb;
-  });
 }
 
 const std::string &Renderer::getShader() const { return _shaderName; }
 
 void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
-  auto shader = material->getShader();
-  if (shader.empty()) {
-    shader = "gbuffer";
+  int32_t index = _textures.size();
+  for (auto &[name, path] : material->getTextures()) {
+    auto &tex = gl::Texture2D::get(path, fmt::format("texture::{}", path));
+    gl::Texture2D::bind(tex, index);
+    setUniform(name, index);
+    index++;
   }
-  if (!activeShader(_shaderName, shader)) {
-    activeShader("internal", "basic");
+
+  for (auto &[name, attribute] : material->getAttributes()) {
+    setUniform(name, attribute);
   }
 
   if (material->isDepthTest()) {
@@ -174,16 +189,25 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
   }
 
-  if (material->isBlend()) {
+  if (material->isTransparent()) {
     auto &func = material->getBlendFunc();
     glBlendFunc((GLenum)func.first, (GLenum)func.second);
+  }
+
+  auto shader = material->getShader();
+  if (shader.empty()) {
+    shader = "basic";
+  }
+
+  if (!activeShader(_shaderName, shader)) {
+    activeShader("internal", "basic");
   }
 }
 
 void Renderer::draw(const core::AutoPtr<Material> &material,
                     const core::AutoPtr<Geometry> &geometry,
                     const glm::mat4 &model) {
-  if (!material->isBlend()) {
+  if (!material->isTransparent()) {
     _context->solidRenderList.push_back({geometry, material, model});
   } else {
     _context->blendRenderList.push_back({geometry, material, model});
@@ -204,10 +228,8 @@ void Renderer::popContext(const core::AutoPtr<Renderer::RenderContext> &ctx) {
 }
 
 void Renderer::drawPass(const Renderer::Pass &item) {
+  setUniform("model", item.matrixModel);
   setMaterial(item.material);
-  for (auto &[name, uniform] : _uniforms) {
-    _shader->setUniform(name, uniform);
-  }
   auto instanced = item.material->getInstanced();
   if (instanced > 1) {
     item.geometry->drawInstanced(gl::DRAW_MODE::TRIANGLES, instanced);
@@ -223,7 +245,6 @@ void Renderer::drawPassList(std::list<Renderer::Pass> &list) {
 }
 
 void Renderer::drawContext(core::AutoPtr<Renderer::RenderContext> &ctx) {
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   glDisable(GL_BLEND);
   drawPassList(ctx->solidRenderList);
   ctx->solidRenderList.clear();
@@ -233,72 +254,41 @@ void Renderer::drawContext(core::AutoPtr<Renderer::RenderContext> &ctx) {
   ctx->blendRenderList.clear();
 }
 
-void Renderer::setTexture(const std::string &name,
-                          core::AutoPtr<gl::Texture2D> texture) {
-  _textures[name] = texture;
-}
-
-void Renderer::clearTexture(const std::string &name) {
-  if (name.empty()) {
-    _textures.clear();
-  } else {
-    _textures.erase(name);
-  }
-}
-
 void Renderer::present() {
-  std::list<core::AutoPtr<RenderTarget>> pipeline;
-
-  if (_deferred != nullptr) {
-    pipeline.push_back(_deferred);
-  }
-
-  for (auto &process : _shaderRenderTargets) {
-    pipeline.push_back(process);
-  }
-
-  core::AutoPtr<RenderTarget> current;
-  if (pipeline.size()) {
-    current = *pipeline.begin();
-    pipeline.pop_front();
-    current->active();
-  }
-
-  int32_t index = 0;
-
-  for (auto &[name, texture] : _textures) {
-    glActiveTexture(GL_TEXTURE0 + index);
-    gl::Texture2D::bind(texture);
-    setUniform(name, gl::Uniform(index));
-    setUniform(fmt::format("{}_enable", name), gl::Uniform(true));
-  }
-
+  SDL_GL_MakeCurrent(_window, _ctx);
+  auto uniforms = _uniforms;
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   drawContext(_context);
-
-  if (pipeline.size() > 1) {
-    for (auto &next : pipeline) {
-      if (!activeShader(_shaderName, current->getStage())) {
-        activeShader("internal", "basic");
-      }
-      next->active();
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT |
-              GL_STENCIL_BUFFER_BIT);
-      current->draw(_shader);
-      current = next;
-    }
-
-    gl::FrameBuffer::bind(nullptr);
-    glViewport(_viewport.x, _viewport.y, _viewport.width, _viewport.height);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-    if (!activeShader(_shaderName, current->getStage())) {
-      activeShader("internal", "basic");
-    }
-
-    current->draw(_shader);
-  }
+  _uniforms = uniforms;
 }
 
 void Renderer::setUniform(const std::string &name, const gl::Uniform &uniform) {
   _uniforms[name] = uniform;
+}
+
+void Renderer::setTexture(const core::String_t &name,
+                          const core::String_t &path) {
+  _textures[name] = path;
+  int32_t index = 0;
+  for (auto &[name, path] : _textures) {
+    auto &tex = gl::Texture2D::get(path, fmt::format("texture::{}", path));
+    gl::Texture2D::bind(tex, index);
+    setUniform(name, index);
+    index++;
+  }
+}
+
+void Renderer::removeTexture(const core::String_t &name) {
+  _textures.erase(name);
+  int32_t index = 0;
+  for (auto &[name, path] : _textures) {
+    auto &tex = gl::Texture2D::get(path, fmt::format("texture::{}", path));
+    gl::Texture2D::bind(tex, index);
+    setUniform(name, index);
+    index++;
+  }
+}
+
+const core::Map<core::String_t, core::String_t> &Renderer::getTextures() const {
+  return _textures;
 }

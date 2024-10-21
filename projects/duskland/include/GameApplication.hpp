@@ -20,6 +20,8 @@ class GameApplication : public runtime::Application {
 private:
   core::AutoPtr<input::Mouse> _mouse;
   core::AutoPtr<input::Keyboard> _keyboard;
+
+  SDL_Window *_window;
   core::AutoPtr<video::Renderer> _renderer;
 
 protected:
@@ -40,7 +42,9 @@ protected:
   void onKeyDown(input::Event_KeyDown &e);
   void onKeyUp(input::Event_KeyUp &e);
 
-  void onResize(runtime::Event_Resize &e);
+  void onResize(runtime::Event_Resize &e) override;
+
+  void onExit(runtime::Event_Exit &) override;
 
 public:
   GameApplication(int argc, char *argv[]);

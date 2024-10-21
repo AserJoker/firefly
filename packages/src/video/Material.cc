@@ -4,9 +4,9 @@
 using namespace firefly;
 using namespace firefly::video;
 Material::Material()
-    : _cullBackface(false), _alphaTest(false),
-      _alphaFunc({gl::ALPHA_FUNC::ALWAYS, 0.0f}), _depthTest(true),
-      _stencilTest(false), _blend(false),
+    : _wireframe(false), _transparent(false), _cullBackface(false),
+      _alphaTest(false), _alphaFunc({gl::ALPHA_FUNC::ALWAYS, 0.0f}),
+      _depthTest(true), _stencilTest(false),
       _blendFunc(
           {gl::BLEND_FUNC::SRC_ALPHA, gl::BLEND_FUNC::ONE_MINUS_SRC_ALPHA}),
       _visible(true), _instanced(1) {}
@@ -15,23 +15,23 @@ void Material::setShader(const std::string &shader) { _shader = shader; }
 
 const std::string &Material::getShader() const { return _shader; }
 
-const bool &Material::isWireframe() const { return _wireframe; }
+void Material::setIsWireframe(bool value) { _wireframe = value; }
 
-const bool &Material::isCullBackface() const { return _cullBackface; }
+bool Material::isWireframe() const { return _wireframe; }
+
+void Material::setIsCullBackface(bool value) { _cullBackface = value; }
+
+bool Material::isCullBackface() const { return _cullBackface; }
+
+void Material::setIsTransparent(bool value) { _transparent = value; }
+
+bool Material::isTransparent() const { return _transparent; }
 
 const std::string &Material::getName() const { return _name; }
 
 const uint32_t &Material::getInstanced() const { return _instanced; }
 
-void Material::setIsWireframe(bool value) { _wireframe = value; }
-
-void Material::setIsCullBackface(bool value) { _cullBackface = value; }
-
 void Material::setName(const std::string &name) { _name = name; }
-
-const bool &Material::isBlend() const { return _blend; }
-
-void Material::setBlend(bool value) { _blend = value; }
 
 const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &
 Material::getBlendFunc() const {
@@ -67,10 +67,30 @@ void Material::setAlphaFunc(const std::pair<gl::ALPHA_FUNC, float> &func) {
   _alphaFunc = func;
 }
 
-void Material::enableAttribute(const std::string &name) {
-  _enableAttributes.insert(name);
+void Material::setAttribute(const core::String_t &name,
+                            const Material::Attribute &value) {
+  _attributes[name] = value;
 }
 
-void Material::disableAttribute(const std::string &name) {
-  _enableAttributes.erase(name);
+const Material::Attribute &
+Material::getAttribute(const core::String_t &name) const {
+  return _attributes[name];
+}
+
+const core::Map<core::String_t, Material::Attribute> &
+Material::getAttributes() const {
+  return _attributes;
+}
+
+void Material::setTexture(const core::String_t &name,
+                          const core::String_t &path) {
+  _textures[name] = path;
+}
+
+const core::String_t &Material::getTexture(const core::String_t &name) const {
+  return _textures[name];
+}
+
+const core::Map<core::String_t, core::String_t> &Material::getTextures() const {
+  return _textures;
 }
