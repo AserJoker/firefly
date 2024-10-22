@@ -5,11 +5,11 @@
 #include "exception/FileException.hpp"
 #include "exception/GLADException.hpp"
 #include "gl/DrawMode.hpp"
-#include "gl/Texture2D.hpp"
 #include "runtime/Logger.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
 #include "video/Shader.hpp"
+#include "video/Texture.hpp"
 #include <SDL2/SDL.h>
 #include <fmt/format.h>
 #include <glm/ext/matrix_transform.hpp>
@@ -125,6 +125,18 @@ void Renderer::setViewport(const core::Rect<> &viewport) {
 
 const core::Rect<> &Renderer::getViewport() const { return _viewport; }
 
+void Renderer::bindingTextures(
+    const core::Map<core::String_t, core::AutoPtr<Texture>> &textures,
+    uint32_t offset) {
+  int32_t index = (int32_t)offset;
+  for (auto &[name, tex] : textures) {
+    tex->bind(index);
+    setUniform(fmt::format("{}_texture", name), index);
+    setUniform(fmt::format("{}_matrix", name), tex->getMatrix());
+    setUniform(fmt::format("{}_enable", name), true);
+    index++;
+  }
+}
 bool Renderer::activeShader(const std::string &name, const std::string &stage) {
   try {
     auto shader = Shader::get(name, fmt::format("shader::{}", name));
@@ -159,13 +171,7 @@ void Renderer::setShader(const std::string &name) {
 const std::string &Renderer::getShader() const { return _shaderName; }
 
 void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
-  int32_t index = _textures.size();
-  for (auto &[name, path] : material->getTextures()) {
-    auto &tex = gl::Texture2D::get(path, fmt::format("texture::{}", path));
-    gl::Texture2D::bind(tex, index);
-    setUniform(name, index);
-    index++;
-  }
+  bindingTextures(material->getTextures(), (uint32_t)_textures.size());
 
   for (auto &[name, attribute] : material->getAttributes()) {
     setUniform(name, attribute);
@@ -257,6 +263,7 @@ void Renderer::drawContext(core::AutoPtr<Renderer::RenderContext> &ctx) {
 void Renderer::present() {
   SDL_GL_MakeCurrent(_window, _ctx);
   auto uniforms = _uniforms;
+  bindingTextures(_textures);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   drawContext(_context);
   _uniforms = uniforms;
@@ -268,27 +275,14 @@ void Renderer::setUniform(const std::string &name, const gl::Uniform &uniform) {
 
 void Renderer::setTexture(const core::String_t &name,
                           const core::String_t &path) {
-  _textures[name] = path;
-  int32_t index = 0;
-  for (auto &[name, path] : _textures) {
-    auto &tex = gl::Texture2D::get(path, fmt::format("texture::{}", path));
-    gl::Texture2D::bind(tex, index);
-    setUniform(name, index);
-    index++;
-  }
+  _textures[name] = new Texture(path);
 }
 
 void Renderer::removeTexture(const core::String_t &name) {
   _textures.erase(name);
-  int32_t index = 0;
-  for (auto &[name, path] : _textures) {
-    auto &tex = gl::Texture2D::get(path, fmt::format("texture::{}", path));
-    gl::Texture2D::bind(tex, index);
-    setUniform(name, index);
-    index++;
-  }
 }
 
-const core::Map<core::String_t, core::String_t> &Renderer::getTextures() const {
+const core::Map<core::String_t, core::AutoPtr<Texture>> &
+Renderer::getTextures() const {
   return _textures;
 }

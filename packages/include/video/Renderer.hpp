@@ -1,6 +1,7 @@
 #pragma once
 #include "Geometry.hpp"
 #include "Material.hpp"
+#include "Texture.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Map.hpp"
 #include "core/Object.hpp"
@@ -33,7 +34,7 @@ private:
 
   core::Rect<> _viewport;
 
-  core::Map<core::String_t, core::String_t> _textures;
+  core::Map<core::String_t, core::AutoPtr<Texture>> _textures;
 
   core::Map<std::string, gl::Uniform> _uniforms;
 
@@ -49,8 +50,12 @@ private:
   void drawContext(core::AutoPtr<RenderContext> &ctx);
 
   void setMaterial(const core::AutoPtr<Material> &material);
-  
+
   bool activeShader(const std::string &name, const std::string &stage);
+
+  void bindingTextures(
+      const core::Map<core::String_t, core::AutoPtr<Texture>> &textures,
+      uint32_t offset = 0);
 
 public:
   Renderer(SDL_Window *window);
@@ -79,7 +84,7 @@ public:
 
   void removeTexture(const core::String_t &name);
 
-  const core::Map<core::String_t, core::String_t> &getTextures() const;
+  const core::Map<core::String_t, core::AutoPtr<Texture>> &getTextures() const;
 
   void present();
 };

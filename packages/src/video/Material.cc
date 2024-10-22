@@ -83,14 +83,16 @@ Material::getAttributes() const {
 }
 
 void Material::setTexture(const core::String_t &name,
-                          const core::String_t &path) {
-  _textures[name] = path;
+                          const core::AutoPtr<Texture> &texture) {
+  _textures[name] = texture;
 }
 
-const core::String_t &Material::getTexture(const core::String_t &name) const {
+const core::AutoPtr<Texture> &
+Material::getTexture(const core::String_t &name) const {
   return _textures[name];
 }
 
-const core::Map<core::String_t, core::String_t> &Material::getTextures() const {
+const core::Map<core::String_t, core::AutoPtr<Texture>> &
+Material::getTextures() const {
   return _textures;
 }

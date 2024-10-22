@@ -1,4 +1,6 @@
 #pragma once
+#include "Texture.hpp"
+#include "core/AutoPtr.hpp"
 #include "core/Cache.hpp"
 #include "core/Map.hpp"
 #include "core/Object.hpp"
@@ -18,7 +20,7 @@ public:
 private:
   core::Map<core::String_t, Attribute> _attributes;
 
-  core::Map<core::String_t, core::String_t> _textures;
+  core::Map<core::String_t, core::AutoPtr<Texture>> _textures;
 
   std::string _name;
 
@@ -85,8 +87,9 @@ public:
   const Attribute &getAttribute(const core::String_t &name) const;
   const core::Map<core::String_t, Attribute> &getAttributes() const;
 
-  void setTexture(const core::String_t &name, const core::String_t &path);
-  const core::String_t &getTexture(const core::String_t &name) const;
-  const core::Map<core::String_t, core::String_t> &getTextures() const;
+  void setTexture(const core::String_t &name,
+                  const core::AutoPtr<Texture> &path);
+  const core::AutoPtr<Texture> &getTexture(const core::String_t &name) const;
+  const core::Map<core::String_t, core::AutoPtr<Texture>> &getTextures() const;
 };
 } // namespace firefly::video

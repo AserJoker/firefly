@@ -18,6 +18,7 @@
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
 #include "video/Renderer.hpp"
+#include "video/Texture.hpp"
 #include <SDL_video.h>
 #include <fmt/format.h>
 #include <glm/ext/matrix_transform.hpp>
@@ -36,6 +37,8 @@ glm::mat4 model = glm::mat4(1.0f);
 core::AutoPtr<video::Geometry> geometry;
 
 core::AutoPtr<video::Material> material;
+
+auto offset = 0.0f;
 
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
@@ -90,22 +93,30 @@ void GameApplication::onInitialize() {
 
   material = new video::Material();
   material->setShader("basic");
-  material->setTexture("diffuse", "001-Fighter01.png");
+  material->setTexture("diffuse", new video::Texture("001-Fighter01.png"));
   material->setDepthTest(true);
   material->setIsTransparent(true);
 
   _renderer->setUniform("projection", projection);
 
-  auto tex =
-      gl::Texture2D::get("001-Fighter01.png", "texture::001-Fighter01.png");
-
-  model = glm::scale(glm::mat4(1.0f), {tex->getSize().width * 1.0f,
-                                       tex->getSize().height * 1.0f, 1.0f});
+  auto tex = material->getTexture("diffuse");
+  model = glm::scale(glm::mat4(1.0f),
+                     {tex->getTexture()->getSize().width * 1.0f * 0.25,
+                      tex->getTexture()->getSize().height * 1.0f * 0.25, 1.0f});
+  tex->setMatrix(glm::scale(glm::mat4(1.0f), {0.25, 0.25, 1.0}) *
+                 glm::translate(glm::mat4(1.0f), {offset, 0, 0}));
 }
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  auto tex = material->getTexture("diffuse");
+  tex->setMatrix(glm::translate(glm::mat4(1.0f), {offset, 0, 0}) *
+                 glm::scale(glm::mat4(1.0f), {0.25, 0.25, 1.0}));
+  offset += 0.25;
+  if (offset > 1) {
+    offset = 0;
+  }
   _renderer->setUniform("view", view);
   _renderer->draw(material, geometry, model);
   _renderer->present();
