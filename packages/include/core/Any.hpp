@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <type_traits>
 #include <typeinfo>
 #include <utility>
 namespace firefly::core {
@@ -17,12 +18,18 @@ template <class T> struct AnyImpl : AnyImplBase {
 };
 struct Any {
   AnyImplBase *_base;
-
-  template <class T> Any(T value = nullptr) : _base(new AnyImpl<T>(value)) {}
+  Any() : _base(new AnyImpl<std::nullptr_t>(nullptr)) {}
+  template <class T>
+  Any(T value)
+      : _base(
+            new AnyImpl<std::remove_reference_t<std::remove_cv_t<T>>>(value)) {}
 
   Any(const Any &another) : _base(another._base->clone()) {}
 
   Any &operator=(const Any &another) {
+    if (&another == this) {
+      return *this;
+    }
     delete _base;
     _base = another._base->clone();
     return *this;

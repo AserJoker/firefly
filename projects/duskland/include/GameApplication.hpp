@@ -11,7 +11,6 @@
 #include "input/Mouse.hpp"
 #include "runtime/Application.hpp"
 #include "runtime/Event_Resize.hpp"
-#include "video/Renderer.hpp"
 
 namespace duskland {
 using namespace firefly;
@@ -20,9 +19,6 @@ class GameApplication : public runtime::Application {
 private:
   core::AutoPtr<input::Mouse> _mouse;
   core::AutoPtr<input::Keyboard> _keyboard;
-
-  SDL_Window *_window;
-  core::AutoPtr<video::Renderer> _renderer;
 
 protected:
   void onInitialize() override;

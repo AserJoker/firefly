@@ -23,12 +23,15 @@ template <class T = int32_t, class K = uint32_t> struct Rect {
 
   operator Size<K>() { return {this->width, this->height}; }
 
-  bool operator==(const Rect<T, K> &another) {
+  bool operator==(const Rect<T, K> &another) const {
     if (this == &another) {
       return true;
     }
     return x == another.x && y == another.y && width == another.width &&
            height == another.height;
+  }
+  bool operator!=(const Rect<T, K> &another) const {
+    return !(*this == another);
   }
 };
 }; // namespace firefly::core

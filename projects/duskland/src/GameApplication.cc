@@ -1,7 +1,10 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Rect.hpp"
 #include "core/Singleton.hpp"
+#include "document/Node.hpp"
+#include "document/Renderable.hpp"
+#include "document/Scene2D.hpp"
+#include "document/Window.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/Texture2D.hpp"
 #include "input/Event_Click.hpp"
@@ -17,7 +20,6 @@
 #include "video/AttributeIndex.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
-#include "video/Renderer.hpp"
 #include "video/Texture.hpp"
 #include <SDL_video.h>
 #include <fmt/format.h>
@@ -26,19 +28,58 @@
 using namespace firefly;
 using namespace duskland;
 
-glm::mat4 projection =
-    glm::scale(glm::mat4(1.0f), {1.0f / 512.0f, 1.0f / 384.0f, 0.0f});
+core::AutoPtr<document::Node> root = new document::Node();
 
-glm::mat4 view = glm::scale(glm::mat4(1.0f), {1.0f, -1.0f, 1.0f}) *
-                 glm::translate(glm::mat4(1.0f), {-512.0f, -384.0f, 0.0f});
+class Demo : public document::Renderable {
+private:
+  glm::mat4 model = glm::mat4(1.0f);
 
-glm::mat4 model = glm::mat4(1.0f);
+  core::AutoPtr<video::Geometry> geometry;
 
-core::AutoPtr<video::Geometry> geometry;
+  core::AutoPtr<video::Material> material;
 
-core::AutoPtr<video::Material> material;
+protected:
+  const core::AutoPtr<video::Geometry> &getGeometry() const override {
+    return geometry;
+  }
 
-auto offset = 0.0f;
+  const core::AutoPtr<video::Material> &getMaterial() const override {
+    return material;
+  }
+
+  const glm::mat4 &getMatrix() const override { return model; }
+
+public:
+  Demo() {
+    core::AutoPtr attrPosition =
+        new video::Attribute(internal::rectPosition, 3);
+    core::AutoPtr attrTextureCoord =
+        new video::Attribute(internal::rectTextureCoord, 2);
+
+    core::AutoPtr attrIndices =
+        new video::AttributeIndex(internal::rectIndices);
+
+    geometry = new video::Geometry();
+
+    geometry->setAttribute(0, attrPosition);
+    geometry->setAttribute(1, attrTextureCoord);
+    geometry->setAttributeIndex(attrIndices);
+
+    material = new video::Material();
+    material->setShader("basic");
+    material->setTexture("diffuse", new video::Texture("001-Fighter01.png"));
+    material->setDepthTest(true);
+    material->setIsTransparent(true);
+
+    auto tex = material->getTexture("diffuse");
+    model = glm::translate(glm::mat4(1.0f), {100.0f, 0, 0}) *
+            glm::scale(glm::mat4(1.0f),
+                       {tex->getTexture()->getSize().width * 1.0f,
+                        tex->getTexture()->getSize().height * 1.0f, 1.0f});
+    tex->setMatrix(glm::scale(glm::mat4(1.0f), {1, 1, 1.0}) *
+                   glm::translate(glm::mat4(1.0f), {0, 0, 0}));
+  }
+};
 
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
@@ -69,58 +110,20 @@ void GameApplication::onInitialize() {
   initScript();
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
-  _window = SDL_CreateWindow("duskland", SDL_WINDOWPOS_CENTERED,
-                             SDL_WINDOWPOS_CENTERED, 1024, 768,
-                             SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI |
-                                 SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
-  _renderer = new video::Renderer(_window);
-  SDL_ShowWindow(_window);
+
+  core::AutoPtr<document::Node> window = new document::Window();
+  root->appendChild(window);
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
 
-  _renderer->setShader("2d");
-
-  core::AutoPtr attrPosition = new video::Attribute(internal::rectPosition, 3);
-  core::AutoPtr attrTextureCoord =
-      new video::Attribute(internal::rectTextureCoord, 2);
-
-  core::AutoPtr attrIndices = new video::AttributeIndex(internal::rectIndices);
-
-  geometry = new video::Geometry();
-
-  geometry->setAttribute(0, attrPosition);
-  geometry->setAttribute(1, attrTextureCoord);
-  geometry->setAttributeIndex(attrIndices);
-
-  material = new video::Material();
-  material->setShader("basic");
-  material->setTexture("diffuse", new video::Texture("001-Fighter01.png"));
-  material->setDepthTest(true);
-  material->setIsTransparent(true);
-
-  _renderer->setUniform("projection", projection);
-
-  auto tex = material->getTexture("diffuse");
-  model = glm::scale(glm::mat4(1.0f),
-                     {tex->getTexture()->getSize().width * 1.0f * 0.25,
-                      tex->getTexture()->getSize().height * 1.0f * 0.25, 1.0f});
-  tex->setMatrix(glm::scale(glm::mat4(1.0f), {0.25, 0.25, 1.0}) *
-                 glm::translate(glm::mat4(1.0f), {offset, 0, 0}));
+  core::AutoPtr<document::Node> scene = new document::Scene2D();
+  core::AutoPtr<document::Node> demo = new Demo();
+  window->appendChild(scene);
+  scene->appendChild(demo);
 }
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-  auto tex = material->getTexture("diffuse");
-  tex->setMatrix(glm::translate(glm::mat4(1.0f), {offset, 0, 0}) *
-                 glm::scale(glm::mat4(1.0f), {0.25, 0.25, 1.0}));
-  offset += 0.25;
-  if (offset > 1) {
-    offset = 0;
-  }
-  _renderer->setUniform("view", view);
-  _renderer->draw(material, geometry, model);
-  _renderer->present();
-  SDL_GL_SwapWindow(_window);
+  root->onTick();
 }
 
 void GameApplication::onUnInitialize() {
@@ -139,8 +142,6 @@ void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {}
 
 void GameApplication::onClick(input::Event_Click &e) {}
 
-void GameApplication::onResize(runtime::Event_Resize &e) {
-  _renderer->setViewport({0, 0, e.getSize()});
-}
+void GameApplication::onResize(runtime::Event_Resize &e) {}
 
 void GameApplication::onExit(runtime::Event_Exit &e) { Application::onExit(e); }

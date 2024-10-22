@@ -81,7 +81,8 @@ void Application::onEvent(Event_SDL &event) {
     if (event.getEvent().window.event == SDL_WINDOWEVENT_RESIZED) {
       uint32_t width = event.getEvent().window.data1;
       uint32_t height = event.getEvent().window.data2;
-      _eventbus->emit<Event_Resize>(core::Size<>(width, height));
+      _eventbus->emit<Event_Resize>(core::Size<>(width, height),
+                                    event.getEvent().window.windowID);
     }
   }
 }

@@ -161,12 +161,7 @@ bool Renderer::activeShader(const std::string &name, const std::string &stage) {
 
 core::AutoPtr<gl::Program> Renderer::getShaderProgram() { return _shader; }
 
-void Renderer::setShader(const std::string &name) {
-  if (_shaderName == name) {
-    return;
-  }
-  _shaderName = name;
-}
+void Renderer::setShader(const std::string &name) { _shaderName = name; }
 
 const std::string &Renderer::getShader() const { return _shaderName; }
 
@@ -286,3 +281,4 @@ const core::Map<core::String_t, core::AutoPtr<Texture>> &
 Renderer::getTextures() const {
   return _textures;
 }
+const SDL_Window *Renderer::getWindow() const { return _window; }

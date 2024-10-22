@@ -9,6 +9,7 @@
 #include "core/Value.hpp"
 #include "gl/Program.hpp"
 #include <SDL2/SDL.h>
+#include <SDL_video.h>
 #include <glm/glm.hpp>
 #include <list>
 
@@ -87,5 +88,7 @@ public:
   const core::Map<core::String_t, core::AutoPtr<Texture>> &getTextures() const;
 
   void present();
+
+  const SDL_Window *getWindow() const;
 };
 } // namespace firefly::video
