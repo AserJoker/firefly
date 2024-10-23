@@ -1,12 +1,12 @@
 #include "runtime/ModLoader.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/File.hpp"
-#include "core/JSONException.hpp"
+#include "core/Json.hpp"
 #include "core/Singleton.hpp"
+#include "core/Value.hpp"
 #include "runtime/Logger.hpp"
 #include "runtime/Media.hpp"
 #include "runtime/ModLoaderException.hpp"
-#include "runtime/Resource.hpp"
 #include <algorithm>
 #include <cjson/cJSON.h>
 #include <exception>
@@ -115,90 +115,76 @@ void ModLoader::loadAll(const std::string &root) {
   }
 }
 
+template <class T>
+static void parseField(T &value, core::Map_t &root, const std::string &field) {
+  try {
+    if (root.contains(field)) {
+      value = root.at(field).get<T>();
+    }
+  } catch (...) {
+    throw ModLoaderException(fmt::format("invalid field '{}'", field));
+  }
+}
+
 ModLoader::Manifest ModLoader::parseManifest(const std::string &source) {
-  path modPath = source;
-  path maniefstPath = modPath;
-  Manifest manifest;
-  core::AutoPtr file = new ResourceTrait<core::File>(
-      maniefstPath.append("manifest.json").string());
-  auto buffer = file->read();
-  auto root =
-      cJSON_ParseWithLength((const char *)buffer->getData(), buffer->getSize());
-  if (!root) {
-    throw core::JSONException(fmt::format("Failed to load manifest from '{}':\n\t {}",
-                                    source, cJSON_GetErrorPtr()));
-  }
-  manifest.name = modPath.filename().string();
-  manifest.path = source;
-  manifest.loaded = false;
-  auto child = root->child;
-  while (child) {
-    std::string key = child->string;
-    if (key == "name") {
-      manifest.displayName = child->valuestring;
+  try {
+    path modPath = source;
+    path manifestPath = modPath;
+    Manifest manifest;
+    core::AutoPtr file =
+        new core::File(manifestPath.append("manifest.json").string());
+
+    auto buffer = file->read();
+
+    auto json = core::Json::parse(
+        std::string((char *)buffer->getData(), buffer->getSize()));
+    if (json.getType() != core::ValueType::MAP) {
+      throw ModLoaderException("invalid format");
     }
-    if (key == "version") {
-      manifest.version = Version::parse(child->valuestring);
-    }
-    if (key == "author") {
-      manifest.author = child->valuestring;
-    }
-    if (key == "email") {
-      manifest.author = child->valuestring;
-    }
-    if (key == "icon") {
-      manifest.icon = child->valuestring;
-    }
-    if (key == "preview") {
-      manifest.preview = child->valuestring;
-    }
-    if (key == "description") {
-      manifest.description = child->valuestring;
-    }
-    if (key == "dependences") {
-      auto dep = child->child;
-      while (dep) {
-        std::string name;
-        Version version;
-        auto depField = dep->child;
-        while (depField) {
-          std::string key = depField->string;
-          if (key == "name") {
-            name = depField->valuestring;
-          }
-          if (key == "version") {
-            version = Version::parse(depField->valuestring);
-          }
-          depField = depField->next;
+    auto &map = json.get<core::Map_t>();
+    manifest.name = modPath.filename().string();
+    manifest.path = source;
+    manifest.loaded = false;
+    std::string version;
+    parseField(manifest.displayName, map, "displayName");
+    parseField(version, map, "version");
+    manifest.version = Version::parse(version);
+    parseField(manifest.author, map, "author");
+    parseField(manifest.email, map, "email");
+    parseField(manifest.icon, map, "icon");
+    parseField(manifest.preview, map, "preview");
+    parseField(manifest.description, map, "description");
+    if (map.contains("dependences")) {
+      try {
+        auto &arr = map["dependences"].get<core::Array_t>();
+        for (auto &item : arr) {
+          auto &dep = item.get<core::Map_t>();
+          auto &name = dep["name"].get<core::String_t>();
+          auto &version = dep["version"].get<core::String_t>();
+          manifest.dependences[name] = Version::parse(version);
         }
-        manifest.dependences[name] = version;
-        dep = dep->next;
+      } catch (...) {
+        throw ModLoaderException("invalid format 'dependences'");
       }
     }
-    if (key == "runtimeDependences") {
-      auto dep = child->child;
-      while (dep) {
-        std::string name;
-        Version version;
-        auto depField = dep->child;
-        while (depField) {
-          std::string key = depField->string;
-          if (key == "name") {
-            name = depField->valuestring;
-          }
-          if (key == "version") {
-            version = Version::parse(depField->valuestring);
-          }
-          depField = depField->next;
+    if (map.contains("runtimeDependences")) {
+      try {
+        auto &arr = map["runtimeDependences"].get<core::Array_t>();
+        for (auto &item : arr) {
+          auto &dep = item.get<core::Map_t>();
+          auto &name = dep["name"].get<core::String_t>();
+          auto &version = dep["version"].get<core::String_t>();
+          manifest.runtimeDependences[name] = Version::parse(version);
         }
-        manifest.runtimeDependences[name] = version;
-        dep = dep->next;
+      } catch (...) {
+        throw ModLoaderException("invalid format 'runtimeDependences'");
       }
     }
-    child = child->next;
+    return manifest;
+  } catch (std::exception &e) {
+    throw ModLoaderException(
+        fmt::format("Failed to resolve manifest.json: {}", e.what()));
   }
-  cJSON_free(root);
-  return manifest;
 }
 
 void ModLoader::loadMod(const std::string &name) {
