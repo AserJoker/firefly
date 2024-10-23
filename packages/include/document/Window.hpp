@@ -4,7 +4,7 @@
 #include "core/Injector.hpp"
 #include "document/Node.hpp"
 #include "runtime/EventBus.hpp"
-#include "runtime/Event_Resize.hpp"
+#include "runtime/ResizeEvent.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_video.h>
 namespace firefly::document {
@@ -16,7 +16,7 @@ private:
   core::AutoPtr<video::Renderer> _renderer;
 
 protected:
-  virtual void onResize(runtime::Event_Resize &);
+  virtual void onResize(runtime::ResizeEvent &);
 
 public:
   Window();

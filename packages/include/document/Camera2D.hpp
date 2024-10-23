@@ -4,7 +4,7 @@
 #include "core/Point.hpp"
 #include "document/Node.hpp"
 #include "runtime/EventBus.hpp"
-#include "runtime/Event_Resize.hpp"
+#include "runtime/ResizeEvent.hpp"
 #include <glm/glm.hpp>
 namespace firefly::document {
 class Camera2D : public Node {
@@ -17,7 +17,7 @@ private:
 
 private:
   void applyMatrix(const core::Size<> &size);
-  void onResize(runtime::Event_Resize &);
+  void onResize(runtime::ResizeEvent &);
 
 public:
   Camera2D();

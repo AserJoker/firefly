@@ -1,7 +1,7 @@
 #include "document/Scene2D.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Math.hpp"
-#include "runtime/Event_Resize.hpp"
+#include "runtime/ResizeEvent.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_video.h>
 
@@ -23,7 +23,7 @@ void Scene2D::onLoad() {
   }
 }
 
-void Scene2D::onResize(runtime::Event_Resize &e) {
+void Scene2D::onResize(runtime::ResizeEvent &e) {
   auto &renderer = this->inject<core::AutoPtr<video::Renderer>>();
   if (e.getWindowId() == SDL_GetWindowID((SDL_Window *)renderer->getWindow())) {
     auto width = e.getSize().width / 2.0f;

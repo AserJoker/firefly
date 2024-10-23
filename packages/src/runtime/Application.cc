@@ -3,17 +3,18 @@
 //
 #include "runtime/Application.hpp"
 #include "core/AutoPtr.hpp"
-#include "exception/SDLException.hpp"
 #include "runtime/BaseApplication.hpp"
-#include "runtime/Event_Exit.hpp"
-#include "runtime/Event_Resize.hpp"
-#include "runtime/Event_SDL.hpp"
+#include "runtime/ExitEvent.hpp"
+#include "runtime/ResizeEvent.hpp"
+#include "runtime/SDLException.hpp"
+#include "runtime/SystemEvent.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_ttf.h>
 #include <SDL_video.h>
 #include <glad/glad.h>
+
 
 using namespace firefly;
 using namespace firefly::runtime;
@@ -23,18 +24,18 @@ Application::Application(int argc, char **argv) : BaseApplication(argc, argv) {}
 void Application::onInitialize() {
   BaseApplication::onInitialize();
   if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-    throw exception::SDLException(SDL_GetError());
+    throw SDLException();
   }
   if (!IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG | IMG_INIT_TIF | IMG_INIT_WEBP |
                 IMG_INIT_JXL | IMG_INIT_AVIF)) {
-    throw exception::SDLException(SDL_GetError());
+    throw SDLException();
   }
   if (!Mix_Init(MIX_INIT_FLAC | MIX_INIT_MID | MIX_INIT_MOD | MIX_INIT_MP3 |
                 MIX_INIT_OGG | MIX_INIT_OPUS | MIX_INIT_WAVPACK)) {
-    throw exception::SDLException(SDL_GetError());
+    throw SDLException();
   }
   if (TTF_Init() != 0) {
-    throw exception::SDLException(SDL_GetError());
+    throw SDLException();
   }
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
 
@@ -61,7 +62,7 @@ void Application::onMainLoop() {
   BaseApplication::onMainLoop();
   SDL_Event event;
   if (SDL_PollEvent(&event)) {
-    _eventbus->emit<Event_SDL>(event);
+    _eventbus->emit<SystemEvent>(event);
   }
 }
 
@@ -73,20 +74,20 @@ void Application::onUnInitialize() {
   BaseApplication::onUnInitialize();
 }
 
-void Application::onEvent(Event_SDL &event) {
+void Application::onEvent(SystemEvent &event) {
   if (event.getEvent().type == SDL_QUIT) {
-    _eventbus->emit<Event_Exit>();
+    _eventbus->emit<ExitEvent>();
   }
   if (event.getEvent().type == SDL_WINDOWEVENT) {
     if (event.getEvent().window.event == SDL_WINDOWEVENT_RESIZED) {
       uint32_t width = event.getEvent().window.data1;
       uint32_t height = event.getEvent().window.data2;
-      _eventbus->emit<Event_Resize>(core::Size<>(width, height),
-                                    event.getEvent().window.windowID);
+      _eventbus->emit<ResizeEvent>(core::Size<>(width, height),
+                                   event.getEvent().window.windowID);
     }
   }
 }
 
-void Application::onExit(Event_Exit &) { exit(); }
+void Application::onExit(ExitEvent &) { exit(); }
 
-void Application::onResize(Event_Resize &) {}
+void Application::onResize(ResizeEvent &) {}

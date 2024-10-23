@@ -3,7 +3,7 @@
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
 #include "runtime/EventBus.hpp"
-#include "runtime/Event_SDL.hpp"
+#include "runtime/SystemEvent.hpp"
 #include <glm/glm.hpp>
 namespace firefly::input {
 class Mouse : public core::Object {
@@ -13,7 +13,7 @@ private:
   glm::ivec2 _wheel;
 
 private:
-  void onEvent(runtime::Event_SDL &e);
+  void onEvent(runtime::SystemEvent &e);
 
 public:
   Mouse();

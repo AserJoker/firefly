@@ -6,7 +6,7 @@
 
 #include "AutoPtr.hpp"
 #include "Provider.hpp"
-#include "exception/InjectorException.hpp"
+#include "InjectorException.hpp"
 #include <fmt/format.h>
 
 namespace firefly::core {
@@ -16,7 +16,7 @@ public:
       : AutoPtr<T>(
             Singleton<Provider>::instance()->template inject<T>(name.value)) {
     if (!*this) {
-      throw exception::InjectorException(
+      throw InjectorException(
           fmt::format("'{}' is not initialized", name.value));
     }
   }

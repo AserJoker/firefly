@@ -1,13 +1,16 @@
 #include "video/Shader.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
-#include "exception/Exception.hpp"
 #include "gl/Program.hpp"
 #include "gl/Shader.hpp"
 #include "gl/ShaderType.hpp"
 #include "runtime/Media.hpp"
+#include "video/CompileException.hpp"
+#include "video/LinkException.hpp"
 #include <filesystem>
 #include <string>
+
+
 using namespace firefly;
 using namespace firefly::video;
 
@@ -61,14 +64,13 @@ Shader::Shader(const core::Map<std::string, ShaderSource> &sources)
       core::AutoPtr<gl::Shader> shader = new gl::Shader(type);
       shader->setShaderSource(source);
       if (!shader->compile()) {
-        throw exception::RuntimeException<"Shader Compile">(
-            shader->getInfoLog());
+        throw CompileException(shader->getInfoLog());
       }
       program->attach(shader);
     }
     if (!program->link()) {
-      throw exception::RuntimeException<"Program Link">(fmt::format(
-          "Failed to link '{}':\n\t{}", name, program->getInfoLog()));
+      throw LinkException(fmt::format("Failed to link '{}':\n\t{}", name,
+                                      program->getInfoLog()));
     }
     _programs[name] = program;
   }

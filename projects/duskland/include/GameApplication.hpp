@@ -1,16 +1,16 @@
 #pragma once
 
 #include "core/AutoPtr.hpp"
-#include "input/Event_Click.hpp"
-#include "input/Event_KeyDown.hpp"
-#include "input/Event_KeyUp.hpp"
-#include "input/Event_MouseDown.hpp"
-#include "input/Event_MouseMotion.hpp"
-#include "input/Event_MouseWheel.hpp"
+#include "input/ClickEvent.hpp"
+#include "input/KeyDownEvent.hpp"
+#include "input/KeyUpEvent.hpp"
 #include "input/Keyboard.hpp"
 #include "input/Mouse.hpp"
+#include "input/MouseDownEvent.hpp"
+#include "input/MouseMotionEvent.hpp"
+#include "input/MouseWheelEvent.hpp"
 #include "runtime/Application.hpp"
-#include "runtime/Event_Resize.hpp"
+#include "runtime/ResizeEvent.hpp"
 
 namespace duskland {
 using namespace firefly;
@@ -31,16 +31,16 @@ protected:
   virtual void initLocale();
   virtual void initEvent();
 
-  void onMouseMotion(input::Event_MouseMotion &e);
-  void onMouseDown(input::Event_MouseDown &e);
-  void onMouseWheel(input::Event_MouseWheel &e);
-  void onClick(input::Event_Click &e);
-  void onKeyDown(input::Event_KeyDown &e);
-  void onKeyUp(input::Event_KeyUp &e);
+  void onMouseMotion(input::MouseMotionEvent &e);
+  void onMouseDown(input::MouseDownEvent &e);
+  void onMouseWheel(input::MouseWheelEvent &e);
+  void onClick(input::ClickEvent &e);
+  void onKeyDown(input::KeyDownEvent &e);
+  void onKeyUp(input::KeyUpEvent &e);
 
-  void onResize(runtime::Event_Resize &e) override;
+  void onResize(runtime::ResizeEvent &e) override;
 
-  void onExit(runtime::Event_Exit &) override;
+  void onExit(runtime::ExitEvent &) override;
 
 public:
   GameApplication(int argc, char *argv[]);

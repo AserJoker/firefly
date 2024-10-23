@@ -1,14 +1,15 @@
 #include "video/RenderTarget.hpp"
 #include "core/AutoPtr.hpp"
-#include "exception/Exception.hpp"
 #include "gl/FrameBuffer.hpp"
 #include "gl/PixelFormat.hpp"
 #include "gl/Texture2D.hpp"
+#include "video/FramebufferException.hpp"
 #include <SDL_image.h>
 #include <SDL_pixels.h>
 #include <SDL_rwops.h>
 #include <SDL_surface.h>
 #include <vector>
+
 using namespace firefly;
 using namespace firefly::video;
 
@@ -24,8 +25,7 @@ RenderTarget::RenderTarget(const std::string &stage, const core::Size<> &size,
   }
   _frame->bindAttachments(textures);
   if (!_frame->check()) {
-    throw exception::RuntimeException<"Check Framebuffer">(
-        "Failed to check framebuffer");
+    throw FramebufferException("Failed to check framebuffer");
   }
 }
 
@@ -66,7 +66,6 @@ void RenderTarget::resize(const core::Size<> &size) {
   }
   _frame->bindAttachments(textures);
   if (!_frame->check()) {
-    throw exception::RuntimeException<"Check Framebuffer">(
-        "Failed to check framebuffer");
+    throw FramebufferException("Failed to check framebuffer");
   }
 }

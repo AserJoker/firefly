@@ -4,9 +4,9 @@
 #pragma once
 
 #include "BaseApplication.hpp"
-#include "Event_Exit.hpp"
-#include "Event_SDL.hpp"
-#include "runtime/Event_Resize.hpp"
+#include "ExitEvent.hpp"
+#include "SystemEvent.hpp"
+#include "runtime/ResizeEvent.hpp"
 #include <SDL2/SDL.h>
 
 namespace firefly::runtime {
@@ -22,10 +22,10 @@ protected:
 
   void onUnInitialize() override;
 
-  virtual void onEvent(Event_SDL &);
+  virtual void onEvent(SystemEvent &);
 
-  virtual void onResize(Event_Resize &);
+  virtual void onResize(ResizeEvent &);
 
-  virtual void onExit(Event_Exit &);
+  virtual void onExit(ExitEvent &);
 };
 } // namespace firefly::runtime

@@ -1,6 +1,6 @@
 #include "core/File.hpp"
 #include "core/Coroutine.hpp"
-#include "exception/FileException.hpp"
+#include "core/FileException.hpp"
 #include <fmt/format.h>
 #include <ios>
 using namespace firefly;
@@ -14,8 +14,7 @@ File::File(const std::string &name, bool append) {
                            std::ios::trunc);
   }
   if (!_handle.is_open()) {
-    throw exception::FileException(
-        fmt::format("Failed to open file '{}'", name));
+    throw FileException(fmt::format("Failed to open file '{}'", name));
   }
 }
 

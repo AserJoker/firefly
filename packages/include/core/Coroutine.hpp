@@ -1,9 +1,10 @@
 #pragma once
 #include "AutoPtr.hpp"
 #include "Promise.hpp"
+#include "RejectException.hpp"
 #include "core/Object.hpp"
-#include "exception/Exception.hpp"
 #include <functional>
+
 namespace firefly::core {
 class Coroutine : public Object {
 
@@ -27,7 +28,7 @@ public:
     if (promise->getStatus() == PROMISE_STATUS::FULFILLED) {
       return promise->getValue();
     }
-    throw exception::RuntimeException<"Promise Reject">(promise->getMessage());
+    throw RejectException(promise->getMessage());
   }
   template <class T, class Fn, class CFn>
   static void next(core::AutoPtr<Promise<T>> promise, Fn &&callback,

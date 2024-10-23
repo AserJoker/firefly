@@ -1,6 +1,6 @@
 #pragma once
 
-#include "exception/NullpointerException.hpp"
+#include "NullpointerException.hpp"
 #include <cstddef>
 
 namespace firefly::core {
@@ -49,28 +49,28 @@ public:
 
   T &operator*() {
     if (!_object) {
-      throw exception::NullpointerException();
+      throw NullpointerException();
     }
     return *_object;
   }
 
   T *operator->() {
     if (!_object) {
-      throw exception::NullpointerException();
+      throw NullpointerException();
     }
     return _object;
   }
 
   const T &operator*() const {
     if (!_object) {
-      throw exception::NullpointerException();
+      throw NullpointerException();
     }
     return *_object;
   }
 
   const T *operator->() const {
     if (!_object) {
-      throw exception::NullpointerException();
+      throw NullpointerException();
     }
     return _object;
   }

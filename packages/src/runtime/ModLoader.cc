@@ -1,11 +1,11 @@
 #include "runtime/ModLoader.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/File.hpp"
+#include "core/JSONException.hpp"
 #include "core/Singleton.hpp"
-#include "exception/JSONException.hpp"
-#include "exception/ModLoaderException.hpp"
 #include "runtime/Logger.hpp"
 #include "runtime/Media.hpp"
+#include "runtime/ModLoaderException.hpp"
 #include "runtime/Resource.hpp"
 #include <algorithm>
 #include <cjson/cJSON.h>
@@ -30,7 +30,7 @@ void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
         path += part;
       }
       path += "->" + name;
-      throw exception::ModLoaderException(fmt::format(
+      throw ModLoaderException(fmt::format(
           "Failed to load mod '{}':\n\t cycle dependices find:\n\t{}",
           manifest.name, path));
     }
@@ -41,12 +41,12 @@ void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
     } else if (_mods.contains(name)) {
       dep = _mods.at(name);
     } else {
-      throw exception::ModLoaderException(
+      throw ModLoaderException(
           fmt::format("Failed to load mod '{}',dependence '{}' is not found",
                       manifest.displayName, name));
     }
     if (version >= dep.version) {
-      throw exception::ModLoaderException(
+      throw ModLoaderException(
           fmt::format("Failed to load mod '{}',dependence '{}' is too "
                       "old,need '{}',given '{}'",
                       manifest.displayName, name, version.toString(),
@@ -100,12 +100,12 @@ void ModLoader::loadAll(const std::string &root) {
   for (auto &[_, manifest] : _mods) {
     for (auto &[name, version] : manifest.runtimeDependences) {
       if (!_mods.contains(name)) {
-        throw exception::ModLoaderException(fmt::format(
+        throw ModLoaderException(fmt::format(
             "Failed to load mod '{}',runtime dependence '{}' is not found",
             manifest.displayName, name));
       }
       if (_mods.at(name).version < version) {
-        throw exception::ModLoaderException(fmt::format(
+        throw ModLoaderException(fmt::format(
             "Failed to load mod '{}',runtime dependence '{}' is too "
             "old,need '{}',given '{}'",
             manifest.displayName, name, version.toString(),
@@ -125,9 +125,8 @@ ModLoader::Manifest ModLoader::parseManifest(const std::string &source) {
   auto root =
       cJSON_ParseWithLength((const char *)buffer->getData(), buffer->getSize());
   if (!root) {
-    throw exception::JSONException(
-        fmt::format("Failed to load manifest from '{}':\n\t {}", source,
-                    cJSON_GetErrorPtr()));
+    throw core::JSONException(fmt::format("Failed to load manifest from '{}':\n\t {}",
+                                    source, cJSON_GetErrorPtr()));
   }
   manifest.name = modPath.filename().string();
   manifest.path = source;

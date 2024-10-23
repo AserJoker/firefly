@@ -1,10 +1,10 @@
 #include "input/Mouse.hpp"
-#include "input/Event_Click.hpp"
-#include "input/Event_MouseDown.hpp"
-#include "input/Event_MouseMotion.hpp"
-#include "input/Event_MouseUp.hpp"
-#include "input/Event_MouseWheel.hpp"
-#include "runtime/Event_SDL.hpp"
+#include "input/ClickEvent.hpp"
+#include "input/MouseDownEvent.hpp"
+#include "input/MouseMotionEvent.hpp"
+#include "input/MouseUpEvent.hpp"
+#include "input/MouseWheelEvent.hpp"
+#include "runtime/SystemEvent.hpp"
 #include <SDL_events.h>
 #include <SDL_mouse.h>
 #include <SDL_video.h>
@@ -14,13 +14,13 @@ using namespace firefly;
 using namespace firefly::input;
 Mouse::Mouse() : _captured(false) { _bus->on(this, &Mouse::onEvent); }
 
-void Mouse::onEvent(runtime::Event_SDL &e) {
+void Mouse::onEvent(runtime::SystemEvent &e) {
   auto &event = e.getEvent();
   if (event.type == SDL_MOUSEMOTION) {
     glm::ivec2 delta = {event.motion.xrel, event.motion.yrel};
     glm::ivec2 position;
     SDL_GetMouseState(&position.x, &position.y);
-    _bus->emit<Event_MouseMotion>(position, delta);
+    _bus->emit<MouseMotionEvent>(position, delta);
     if (_captured) {
       auto win = SDL_GL_GetCurrentWindow();
       int w, h;
@@ -29,16 +29,16 @@ void Mouse::onEvent(runtime::Event_SDL &e) {
     }
   }
   if (event.type == SDL_MOUSEBUTTONDOWN) {
-    _bus->emit<Event_MouseDown>(event.button.button);
+    _bus->emit<MouseDownEvent>(event.button.button);
   }
   if (event.type == SDL_MOUSEBUTTONUP) {
-    _bus->emit<Event_MouseUp>(event.button.button);
-    _bus->emit<Event_Click>(event.button.button);
+    _bus->emit<MouseUpEvent>(event.button.button);
+    _bus->emit<ClickEvent>(event.button.button);
   }
   if (event.type == SDL_MOUSEWHEEL) {
     glm::vec2 delta = {event.wheel.x, event.wheel.y};
     _wheel += delta;
-    _bus->emit<Event_MouseWheel>(_wheel, delta);
+    _bus->emit<MouseWheelEvent>(_wheel, delta);
   }
 }
 

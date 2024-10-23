@@ -3,7 +3,7 @@
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
 #include "runtime/EventBus.hpp"
-#include "runtime/Event_SDL.hpp"
+#include "runtime/SystemEvent.hpp"
 namespace firefly::input {
 class Keyboard : public core::Object {
 private:
@@ -11,7 +11,7 @@ private:
   core::Injector<runtime::EventBus, INJECTOR_EVENTBUS> _bus;
 
 private:
-  void onEvent(runtime::Event_SDL &e);
+  void onEvent(runtime::SystemEvent &e);
 
 public:
   Keyboard();

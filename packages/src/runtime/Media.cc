@@ -1,7 +1,7 @@
 #include "runtime/Media.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/File.hpp"
-#include "exception/MediaNotExistException.hpp"
+#include "runtime/MediaNotExistException.hpp"
 #include "runtime/Resource.hpp"
 #include <filesystem>
 #include <fmt/core.h>
@@ -17,7 +17,7 @@ core::AutoPtr<Resource> Media::load(const std::string &name) {
       return new ResourceTrait<core::File>(filepath);
     }
   }
-  throw exception::MediaNotExistException(
+  throw MediaNotExistException(
       fmt::format("Failed to load resource: {}", name));
 }
 std::vector<core::AutoPtr<Resource>> Media::loadAll(const std::string &name) {

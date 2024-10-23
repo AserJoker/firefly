@@ -8,13 +8,13 @@
 #include "document/Window.hpp"
 #include "gl/DrawMode.hpp"
 #include "gl/Texture2D.hpp"
-#include "input/Event_Click.hpp"
-#include "input/Event_KeyDown.hpp"
-#include "input/Event_MouseDown.hpp"
-#include "input/Event_MouseMotion.hpp"
-#include "input/Event_MouseWheel.hpp"
+#include "input/ClickEvent.hpp"
+#include "input/KeyDownEvent.hpp"
 #include "input/Keyboard.hpp"
 #include "input/Mouse.hpp"
+#include "input/MouseDownEvent.hpp"
+#include "input/MouseMotionEvent.hpp"
+#include "input/MouseWheelEvent.hpp"
 #include "internal/geometry.hpp"
 #include "runtime/Application.hpp"
 #include "video/Attribute.hpp"
@@ -134,18 +134,18 @@ void GameApplication::onUnInitialize() {
   runtime::Application::onUnInitialize();
 }
 
-void GameApplication::onKeyDown(input::Event_KeyDown &e) {}
+void GameApplication::onKeyDown(input::KeyDownEvent &e) {}
 
-void GameApplication::onKeyUp(input::Event_KeyUp &e) {}
+void GameApplication::onKeyUp(input::KeyUpEvent &e) {}
 
-void GameApplication::onMouseMotion(input::Event_MouseMotion &e) {}
+void GameApplication::onMouseMotion(input::MouseMotionEvent &e) {}
 
-void GameApplication::onMouseDown(input::Event_MouseDown &e) {}
+void GameApplication::onMouseDown(input::MouseDownEvent &e) {}
 
-void GameApplication::onMouseWheel(input::Event_MouseWheel &e) {}
+void GameApplication::onMouseWheel(input::MouseWheelEvent &e) {}
 
-void GameApplication::onClick(input::Event_Click &e) {}
+void GameApplication::onClick(input::ClickEvent &e) {}
 
-void GameApplication::onResize(runtime::Event_Resize &e) {}
+void GameApplication::onResize(runtime::ResizeEvent &e) {}
 
-void GameApplication::onExit(runtime::Event_Exit &e) { Application::onExit(e); }
+void GameApplication::onExit(runtime::ExitEvent &e) { Application::onExit(e); }

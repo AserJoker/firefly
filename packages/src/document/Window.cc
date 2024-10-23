@@ -1,5 +1,5 @@
 #include "document/Window.hpp"
-#include "runtime/Event_Resize.hpp"
+#include "runtime/ResizeEvent.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_video.h>
 #include <glm/ext/matrix_transform.hpp>
@@ -24,7 +24,7 @@ void Window::onTick() {
   SDL_GL_SwapWindow(_window);
 }
 
-void Window::onResize(runtime::Event_Resize &e) {
+void Window::onResize(runtime::ResizeEvent &e) {
   if (e.getWindowId() == SDL_GetWindowID(_window)) {
     _renderer->setViewport({0, 0, e.getSize()});
   }

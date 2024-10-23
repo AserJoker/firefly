@@ -1,5 +1,6 @@
 #include "core/Json.hpp"
 #include "core/Value.hpp"
+#include "core/JSONException.hpp"
 #include <cjson/cJSON.h>
 using namespace firefly;
 using namespace firefly::core;
@@ -36,6 +37,7 @@ static Value cJSONtoValue(cJSON *node) {
   }
   return nullptr;
 }
+
 static cJSON *ValuetoCJSON(const Value &v) {
   switch (v.getType()) {
   case ValueType::NIL:
@@ -71,12 +73,17 @@ static cJSON *ValuetoCJSON(const Value &v) {
   }
   return cJSON_CreateNull();
 }
+
 Value Json::parse(const String_t &source) {
   cJSON *root = cJSON_Parse(source.c_str());
+  if (root == nullptr) {
+    throw JSONException(cJSON_GetErrorPtr());
+  }
   Value result = cJSONtoValue(root);
   cJSON_free(root);
   return result;
 }
+
 std::string Json::stringify(const Value &object) {
   cJSON *root = ValuetoCJSON(object);
   auto res = cJSON_Print(root);

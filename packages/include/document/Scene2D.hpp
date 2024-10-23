@@ -3,7 +3,7 @@
 #include "core/Injector.hpp"
 #include "document/Node.hpp"
 #include "runtime/EventBus.hpp"
-#include "runtime/Event_Resize.hpp"
+#include "runtime/ResizeEvent.hpp"
 #include <glm/glm.hpp>
 namespace firefly::document {
 class Scene2D : public Node {
@@ -13,7 +13,7 @@ private:
   core::Injector<runtime::EventBus, INJECTOR_EVENTBUS> _eventBus;
 
 private:
-  void onResize(runtime::Event_Resize &);
+  void onResize(runtime::ResizeEvent &);
 
 public:
   Scene2D();

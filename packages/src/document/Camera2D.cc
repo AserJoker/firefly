@@ -1,7 +1,7 @@
 #include "document/Camera2D.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Math.hpp"
-#include "runtime/Event_Resize.hpp"
+#include "runtime/ResizeEvent.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_video.h>
 
@@ -30,7 +30,7 @@ void Camera2D::applyMatrix(const core::Size<> &size) {
           core::translate({-width, -height, 0.0f});
 }
 
-void Camera2D::onResize(runtime::Event_Resize &e) {
+void Camera2D::onResize(runtime::ResizeEvent &e) {
   auto renderer = inject<core::AutoPtr<video::Renderer>>();
   if (e.getWindowId() == SDL_GetWindowID((SDL_Window *)renderer->getWindow())) {
     applyMatrix(e.getSize());

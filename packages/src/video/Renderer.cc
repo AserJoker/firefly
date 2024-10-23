@@ -1,11 +1,11 @@
 #include "video/Renderer.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/FileException.hpp"
 #include "core/Singleton.hpp"
 #include "core/Value.hpp"
-#include "exception/FileException.hpp"
-#include "exception/GLADException.hpp"
 #include "gl/DrawMode.hpp"
 #include "runtime/Logger.hpp"
+#include "video/GLADException.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
 #include "video/Shader.hpp"
@@ -101,7 +101,7 @@ Renderer::Renderer(SDL_Window *window) : _shaderName("internal") {
   _ctx = SDL_GL_CreateContext(window);
   SDL_GL_SetSwapInterval(0);
   if (!gladLoadGLLoader(SDL_GL_GetProcAddress)) {
-    throw exception::GLADException("Failed to initialize glad");
+    throw GLADException("Failed to initialize glad");
   }
 
   glEnable(GL_DEBUG_OUTPUT);
@@ -152,7 +152,7 @@ bool Renderer::activeShader(const std::string &name, const std::string &stage) {
       _shader->setUniform(name, uniform);
     }
     return true;
-  } catch (exception::FileException &e) {
+  } catch (core::FileException &e) {
     core::Singleton<runtime::Logger>::instance()->warn(
         "Failed to active shader '{}:{}'\n\t{}", name, stage, e.what());
     return false;
