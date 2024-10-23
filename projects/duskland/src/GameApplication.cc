@@ -1,6 +1,7 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
+#include "document/Camera2D.hpp"
 #include "document/Node.hpp"
 #include "document/Renderable.hpp"
 #include "document/Scene2D.hpp"
@@ -29,6 +30,8 @@ using namespace firefly;
 using namespace duskland;
 
 core::AutoPtr<document::Node> root = new document::Node();
+
+core::AutoPtr<document::Camera2D> camera;
 
 class Demo : public document::Renderable {
 private:
@@ -72,7 +75,7 @@ public:
     material->setIsTransparent(true);
 
     auto tex = material->getTexture("diffuse");
-    model = glm::translate(glm::mat4(1.0f), {100.0f, 0, 0}) *
+    model = glm::translate(glm::mat4(1.0f), {0.0f, 0, 0}) *
             glm::scale(glm::mat4(1.0f),
                        {tex->getTexture()->getSize().width * 1.0f,
                         tex->getTexture()->getSize().height * 1.0f, 1.0f});
@@ -113,12 +116,13 @@ void GameApplication::onInitialize() {
 
   core::AutoPtr<document::Node> window = new document::Window();
   root->appendChild(window);
-  glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
 
   core::AutoPtr<document::Node> scene = new document::Scene2D();
-  core::AutoPtr<document::Node> demo = new Demo();
   window->appendChild(scene);
-  scene->appendChild(demo);
+  camera = new document::Camera2D();
+  scene->appendChild(camera);
+  scene->appendChild(new Demo());
+  glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
 }
 
 void GameApplication::onMainLoop() {

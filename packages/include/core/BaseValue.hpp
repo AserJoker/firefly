@@ -3,7 +3,6 @@
 #include "TemplateCString.hpp"
 #include "Type.hpp"
 #include <exception>
-#include <functional>
 #include <initializer_list>
 #include <string>
 #include <string_view>
@@ -32,8 +31,6 @@ protected:
   KeyType _type;
   std::string _typename;
 
-  std::function<bool(const Any &v1, const Any &v2)> _isEqual;
-
 public:
   template <class T>
   using Select =
@@ -44,15 +41,11 @@ public:
 
   template <typename T>
   BaseValue(T value)
-      : _value(value), _type(Select<T>::value), _typename(Select<T>::name) {
-    _isEqual = [](const Any &a, const Any &b) -> bool {
-      return a.as<T>() == b.as<T>();
-    };
-  }
+      : _value(value), _type(Select<T>::value), _typename(Select<T>::name) {}
 
   BaseValue(const BaseValue &another)
       : _value(another._value), _type(another._type),
-        _typename(another._typename), _isEqual(another._isEqual) {}
+        _typename(another._typename) {}
 
   template <typename T> operator T() const { return get<T>(); }
 
@@ -60,13 +53,12 @@ public:
     _value = value._value;
     _type = value._type;
     _typename = value._typename;
-    _isEqual = value._isEqual;
     return *this;
   }
 
   bool operator==(const BaseValue &another) const {
     try {
-      return _isEqual(_value, another._value);
+      return _value == another._value;
     } catch (std::exception &e) {
       return false;
     }

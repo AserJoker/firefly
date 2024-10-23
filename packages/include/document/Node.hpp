@@ -1,5 +1,5 @@
 #pragma once
-#include "core/Any.hpp"
+#include "core/AnyPtr.hpp"
 #include "core/Array.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Map.hpp"
@@ -17,15 +17,18 @@ private:
 
   core::Map<core::String_t, core::Any> _provider;
 
+  core::Map<core::String_t, core::AnyPtr> _attributes;
+
   bool _ready;
 
 protected:
   template <class T>
-  void provide(const T &value, const core::String_t &name = typeid(T).name()) {
+  void provide(T &value, const core::String_t &name = typeid(T).name()) {
     _provider[name] = core::Any(value);
   }
 
-  template <class T> T inject(const core::String_t &name = typeid(T).name()) {
+  template <class T> T &inject(const core::String_t &name = typeid(T).name()) {
+    static auto defaultValue = T{};
     auto parent = getParent();
     while (parent != nullptr) {
       if (parent->_provider.contains(name)) {
@@ -33,7 +36,12 @@ protected:
       }
       parent = parent->getParent();
     }
-    return T{};
+    return defaultValue;
+  }
+
+  template <class T>
+  void defineAttribute(const core::String_t &name, T &attribute) {
+    _attributes[name] = &attribute;
   }
 
 public:

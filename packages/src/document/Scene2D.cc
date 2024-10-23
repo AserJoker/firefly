@@ -18,25 +18,17 @@ void Scene2D::onLoad() {
     auto height = viewport.height / 2.0f;
     _projection = core::scale({1.0f / width, 1.0f / height, 0.0f});
 
-    _view = core::scale({1.0f, -1.0f, 1.0f}) *
-            core::translate({-width, -height, 0.0f});
-
     renderer->setShader("2d");
     renderer->setUniform("projection", _projection);
-    renderer->setUniform("view", _view);
   }
 }
 
 void Scene2D::onResize(runtime::Event_Resize &e) {
-  auto renderer = this->inject<core::AutoPtr<video::Renderer>>();
+  auto &renderer = this->inject<core::AutoPtr<video::Renderer>>();
   if (e.getWindowId() == SDL_GetWindowID((SDL_Window *)renderer->getWindow())) {
     auto width = e.getSize().width / 2.0f;
     auto height = e.getSize().height / 2.0f;
     _projection = core::scale({1.0f / width, 1.0f / height, 0.0f});
-
-    _view = core::scale({1.0f, -1.0f, 1.0f}) *
-            core::translate({-width, -height, 0.0f});
     renderer->setUniform("projection", _projection);
-    renderer->setUniform("view", _view);
   }
 }

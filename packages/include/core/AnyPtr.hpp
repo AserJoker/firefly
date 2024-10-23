@@ -13,7 +13,9 @@ private:
     virtual const std::type_info &type() = 0;
   };
   template <class T> struct HandleImpl : public Handle {
-    core::Any get(void *ptr) override { return *(T *)ptr; }
+    core::Any get(void *ptr) override {
+      return *(T *)ptr;
+    }
     void set(void *ptr, const core::Any &value) override {
       *(T *)ptr = value.as<T>();
     }
