@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/AutoPtr.hpp"
+#include "document/Node.hpp"
 #include "input/ClickEvent.hpp"
 #include "input/KeyDownEvent.hpp"
 #include "input/KeyUpEvent.hpp"
@@ -19,6 +20,7 @@ class GameApplication : public runtime::Application {
 private:
   core::AutoPtr<input::Mouse> _mouse;
   core::AutoPtr<input::Keyboard> _keyboard;
+  core::AutoPtr<document::Node> _document;
 
 protected:
   void onInitialize() override;

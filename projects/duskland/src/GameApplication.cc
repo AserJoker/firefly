@@ -6,7 +6,6 @@
 #include "document/Renderable.hpp"
 #include "document/Scene2D.hpp"
 #include "document/Window.hpp"
-#include "gl/DrawMode.hpp"
 #include "gl/Texture2D.hpp"
 #include "input/ClickEvent.hpp"
 #include "input/KeyDownEvent.hpp"
@@ -28,8 +27,6 @@
 
 using namespace firefly;
 using namespace duskland;
-
-core::AutoPtr<document::Node> root = new document::Node();
 
 core::AutoPtr<document::Camera2D> camera;
 
@@ -113,21 +110,21 @@ void GameApplication::onInitialize() {
   initScript();
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
+  _document = new document::Node();
 
   core::AutoPtr<document::Node> window = new document::Window();
-  root->appendChild(window);
+  _document->appendChild(window);
 
   core::AutoPtr<document::Node> scene = new document::Scene2D();
   window->appendChild(scene);
   camera = new document::Camera2D();
   scene->appendChild(camera);
   scene->appendChild(new Demo());
-  glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
 }
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
-  root->onTick();
+  _document->onTick();
 }
 
 void GameApplication::onUnInitialize() {

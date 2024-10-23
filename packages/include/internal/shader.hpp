@@ -6,27 +6,31 @@
 namespace firefly::internal {
 namespace {
 constexpr static const char *vertex =
-    "#version 330 core \n\r"
+    "#version 330 core\n\r"
     "layout(location = 0) in vec3 position;\n\r"
-    "layout(location = 3) in vec2 coord;\n\r"
-    "out vec2 vertexTexcoord;\n\r"
+    "layout(location = 1) in vec2 coord;\n\r"
     "uniform mat4 projection;\n\r"
-    "uniform mat4 view;\n\r"
     "uniform mat4 model;\n\r"
-    "uniform mat4 diffuse_texture_coord_matrix;\n\r"
+    "uniform mat4 view;\n\r"
+    "out vec2 vertexTextureCoord;\n\r"
     "void main() {\n\r"
-    "gl_Position = projection * view * model * vec4(position, 1.0);\n\r"
-    "vertexTexcoord = (diffuse_texture_coord_matrix * "
-    "vec4(coord,0.0,1.0)).xy;\n\r"
+    "    gl_Position = projection * view * model * vec4(position, 1.0);\n\r"
+    "    vertexTextureCoord = coord;\n\r"
     "}\n\r";
 constexpr static const char *fragment =
-    "#version 330 core\n\r"
-    "in vec2 vertexTexcoord;\n\r"
+    "#version 330 core"
+    "in vec2 vertexTextureCoord;\n\r"
     "uniform sampler2D diffuse_texture;\n\r"
-    "uniform float diffuse_texture_blend;\n\r"
+    "uniform int diffuse_enable;\n\r"
+    "uniform mat4 diffuse_matrix;\n\r"
+    "\n\r"
     "void main() {\n\r"
-    "    vec4 col = texture(diffuse_texture, vertexTexcoord).rgba;\n\r"
-    "    gl_FragColor = col * diffuse_texture_blend;\n\r"
+    "    if(diffuse_enable == 1) {\n\r"
+    "        gl_FragColor = texture(diffuse_texture, (diffuse_matrix * "
+    "vec4(vertexTextureCoord, 0.0, 1.0)).xy);\n\r"
+    "    } else {\n\r"
+    "        gl_FragColor = vec4(0, 0, 0, 1);\n\r"
+    "    }\n\r"
     "}\n\r";
 } // namespace
 constexpr std::initializer_list<std::pair<gl::SHADER_TYPE, core::CString_t>>

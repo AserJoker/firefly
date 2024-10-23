@@ -17,13 +17,13 @@
 using namespace firefly;
 using namespace firefly::video;
 
-static void APIENTRY showOpenGLMessage(GLenum source, GLenum type,
-                                       unsigned int id, GLenum severity,
-                                       GLsizei length, const char *message,
+static void APIENTRY showOpenGLMessage(GLenum source, GLenum type, uint32_t id,
+                                       GLenum severity, GLsizei length,
+                                       const char *message,
                                        const void *userParam) {
-  // ignore non-significant error/warning codes
   if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
     return;
+
   auto logger = core::Singleton<runtime::Logger>::instance();
   logger->warn("---------------");
   logger->warn("Debug message ({}): {}", id, message);
@@ -109,6 +109,8 @@ Renderer::Renderer(SDL_Window *window) : _shaderName("internal") {
   glDebugMessageCallback(showOpenGLMessage, nullptr);
   glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr,
                         GL_TRUE);
+
+  glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
 
   int32_t width, height;
   SDL_GetWindowSize(window, &width, &height);
