@@ -1,6 +1,7 @@
 #include "document/Camera2D.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Math.hpp"
+#include "document/Window.hpp"
 #include "runtime/ResizeEvent.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_video.h>
@@ -9,14 +10,16 @@ using namespace firefly;
 using namespace firefly::document;
 Camera2D::Camera2D() { _eventBus->on(this, &Camera2D::onResize); }
 void Camera2D::onLoad() {
-  auto renderer = inject<core::AutoPtr<video::Renderer>>();
+  auto win = findParent<Window>();
+  auto renderer = win->getRenderer();
   auto viewport = renderer->getViewport();
   applyMatrix({viewport.width, viewport.height});
   renderer->setUniform("view", _view);
 }
 void Camera2D::setPosition(const core::Point<> &position) {
   _position = position;
-  auto renderer = inject<core::AutoPtr<video::Renderer>>();
+  auto win = findParent<Window>();
+  auto renderer = win->getRenderer();
   auto viewport = renderer->getViewport();
   applyMatrix({viewport.width, viewport.height});
   renderer->setUniform("view", _view);
@@ -31,7 +34,8 @@ void Camera2D::applyMatrix(const core::Size<> &size) {
 }
 
 void Camera2D::onResize(runtime::ResizeEvent &e) {
-  auto renderer = inject<core::AutoPtr<video::Renderer>>();
+  auto win = findParent<Window>();
+  auto renderer = win->getRenderer();
   if (e.getWindowId() == SDL_GetWindowID((SDL_Window *)renderer->getWindow())) {
     applyMatrix(e.getSize());
     renderer->setUniform("view", _view);

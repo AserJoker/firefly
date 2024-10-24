@@ -3,10 +3,9 @@
 #include "core/Singleton.hpp"
 #include "document/Camera2D.hpp"
 #include "document/Node.hpp"
-#include "document/Renderable.hpp"
 #include "document/Scene2D.hpp"
+#include "document/Sprite2D.hpp"
 #include "document/Window.hpp"
-#include "gl/Texture2D.hpp"
 #include "input/ClickEvent.hpp"
 #include "input/KeyDownEvent.hpp"
 #include "input/Keyboard.hpp"
@@ -14,73 +13,13 @@
 #include "input/MouseDownEvent.hpp"
 #include "input/MouseMotionEvent.hpp"
 #include "input/MouseWheelEvent.hpp"
-#include "internal/geometry.hpp"
 #include "runtime/Application.hpp"
-#include "video/Attribute.hpp"
-#include "video/AttributeIndex.hpp"
-#include "video/Geometry.hpp"
-#include "video/Material.hpp"
-#include "video/Texture.hpp"
 #include <SDL_video.h>
 #include <fmt/format.h>
 #include <glm/ext/matrix_transform.hpp>
 
 using namespace firefly;
 using namespace duskland;
-
-core::AutoPtr<document::Camera2D> camera;
-
-class Demo : public document::Renderable {
-private:
-  glm::mat4 model = glm::mat4(1.0f);
-
-  core::AutoPtr<video::Geometry> geometry;
-
-  core::AutoPtr<video::Material> material;
-
-protected:
-  const core::AutoPtr<video::Geometry> &getGeometry() const override {
-    return geometry;
-  }
-
-  const core::AutoPtr<video::Material> &getMaterial() const override {
-    return material;
-  }
-
-  const glm::mat4 &getMatrix() const override { return model; }
-
-public:
-  Demo() {
-    core::AutoPtr attrPosition =
-        new video::Attribute(internal::rectPosition, 3);
-    core::AutoPtr attrTextureCoord =
-        new video::Attribute(internal::rectTextureCoord, 2);
-
-    core::AutoPtr attrIndices =
-        new video::AttributeIndex(internal::rectIndices);
-
-    geometry = new video::Geometry();
-
-    geometry->setAttribute(0, attrPosition);
-    geometry->setAttribute(1, attrTextureCoord);
-    geometry->setAttributeIndex(attrIndices);
-
-    material = new video::Material();
-    material->setShader("basic");
-    material->setTexture("diffuse", new video::Texture("001-Fighter01.png"));
-    material->setDepthTest(true);
-    material->setIsTransparent(true);
-
-    auto tex = material->getTexture("diffuse");
-    model = glm::translate(glm::mat4(1.0f), {0.0f, 0, 0}) *
-            glm::scale(glm::mat4(1.0f),
-                       {tex->getTexture()->getSize().width * 1.0f,
-                        tex->getTexture()->getSize().height * 1.0f, 1.0f});
-    tex->setMatrix(glm::scale(glm::mat4(1.0f), {1, 1, 1.0}) *
-                   glm::translate(glm::mat4(1.0f), {0, 0, 0}));
-  }
-};
-
 GameApplication::GameApplication(int argc, char *argv[])
     : runtime::Application(argc, argv){};
 
@@ -117,9 +56,29 @@ void GameApplication::onInitialize() {
 
   core::AutoPtr<document::Node> scene = new document::Scene2D();
   window->appendChild(scene);
-  camera = new document::Camera2D();
+  core::AutoPtr camera = new document::Camera2D();
   scene->appendChild(camera);
-  scene->appendChild(new Demo());
+  core::AutoPtr sprite = new document::Sprite2D();
+  core::AutoPtr sprite2 = new document::Sprite2D();
+  sprite->setTexture("001-Fighter01.png");
+  sprite2->setTexture("001-Fighter01.png");
+
+  sprite->setDestinationRect({0, 0, 32, 48});
+  sprite->setSourceRect({0, 0, 32, 48});
+
+  sprite2->setDestinationRect({5 * 32, 0, 32, 48});
+  sprite2->setSourceRect({0, 0, 32, 48});
+
+  core::AutoPtr grass = new document::Sprite2D();
+  grass->setTexture("001-Grassland01.png");
+
+  grass->setDestinationPosition({0, 16});
+
+  scene->appendChild(sprite);
+  scene->appendChild(grass);
+  scene->appendChild(sprite2);
+  sprite->setZIndex(1);
+  sprite2->setZIndex(-1);
 }
 
 void GameApplication::onMainLoop() {

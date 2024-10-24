@@ -15,7 +15,6 @@
 #include <SDL_video.h>
 #include <glad/glad.h>
 
-
 using namespace firefly;
 using namespace firefly::runtime;
 

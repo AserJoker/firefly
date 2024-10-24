@@ -43,19 +43,19 @@ void Material::setBlendFunc(
   _blendFunc = func;
 }
 
-const bool &Material::isVisible() const { return _visible; }
+ bool Material::isVisible() const { return _visible; }
 
 void Material::setVisible(bool value) { _visible = value; }
 
-const bool &Material::isStencilTest() const { return _stencilTest; }
+ bool Material::isStencilTest() const { return _stencilTest; }
 
 void Material::setStencil(bool value) { _stencilTest = value; }
 
-const bool &Material::isDepthTest() const { return _depthTest; }
+ bool Material::isDepthTest() const { return _depthTest; }
 
 void Material::setDepthTest(bool value) { _depthTest = value; }
 
-const bool &Material::isAlphaTest() const { return _alphaTest; }
+ bool Material::isAlphaTest() const { return _alphaTest; }
 
 void Material::setAlphaTest(bool value) { _alphaTest = value; }
 

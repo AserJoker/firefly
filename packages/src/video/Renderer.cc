@@ -176,6 +176,7 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
 
   if (material->isDepthTest()) {
     glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
   } else {
     glDisable(GL_DEPTH_TEST);
   }

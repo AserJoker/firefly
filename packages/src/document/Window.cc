@@ -1,4 +1,5 @@
 #include "document/Window.hpp"
+#include "core/AutoPtr.hpp"
 #include "runtime/ResizeEvent.hpp"
 #include "video/Renderer.hpp"
 #include <SDL_video.h>
@@ -14,7 +15,6 @@ Window::Window() : _window(nullptr) {
                                  SDL_WINDOW_ALLOW_HIGHDPI);
   _renderer = new video::Renderer(_window);
   _eventBus->on(this, &Window::onResize);
-  provide(_renderer);
 }
 
 void Window::onTick() {
@@ -29,3 +29,7 @@ void Window::onResize(runtime::ResizeEvent &e) {
     _renderer->setViewport({0, 0, e.getSize()});
   }
 }
+const core::AutoPtr<video::Renderer> &Window::getRenderer() const {
+  return _renderer;
+}
+core::AutoPtr<video::Renderer> &Window::getRenderer() { return _renderer; }

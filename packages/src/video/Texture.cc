@@ -34,3 +34,4 @@ const core::AutoPtr<gl::Texture2D> &Texture::getTexture() const {
 void Texture::setMatrix(const glm::mat4 &matrix) { _coordMatrix = matrix; }
 
 const glm::mat4 &Texture::getMatrix() const { return _coordMatrix; }
+glm::mat4 &Texture::getMatrix() { return _coordMatrix; };

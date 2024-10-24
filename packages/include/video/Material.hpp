@@ -68,16 +68,16 @@ public:
   const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &getBlendFunc() const;
   void setBlendFunc(const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &func);
 
-  const bool &isVisible() const;
+  bool isVisible() const;
   void setVisible(bool value);
 
-  const bool &isStencilTest() const;
+  bool isStencilTest() const;
   void setStencil(bool value);
 
-  const bool &isDepthTest() const;
+  bool isDepthTest() const;
   void setDepthTest(bool value);
 
-  const bool &isAlphaTest() const;
+  bool isAlphaTest() const;
   void setAlphaTest(bool value);
 
   const std::pair<gl::ALPHA_FUNC, float> &getAlphaFunc() const;

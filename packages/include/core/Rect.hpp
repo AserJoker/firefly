@@ -3,8 +3,18 @@
 #include "Size.hpp"
 namespace firefly::core {
 template <class T = int32_t, class K = uint32_t> struct Rect {
-  T x, y;
-  K width, height;
+  union {
+    struct {
+      T x, y;
+    };
+    core::Point<T> point;
+  };
+  union {
+    struct {
+      K width, height;
+    };
+    core::Size<K> size;
+  };
 
   constexpr Rect() : x(T{}), y(T{}), width(K{}), height(K{}) {}
 
@@ -19,17 +29,21 @@ template <class T = int32_t, class K = uint32_t> struct Rect {
   Rect(const Point<T> &point, const Size<K> &size)
       : Rect(point.x, point.y, size.width, size.height) {}
 
-  operator Point<T>() { return {this->x, this->y}; }
+  Rect(const Rect<T, K> &another) : point(another.point), size(another.size) {}
 
-  operator Size<K>() { return {this->width, this->height}; }
+  Rect<T, K> &operator=(const Rect<T, K> &another) {
+    point = another.point;
+    size = another.size;
+    return *this;
+  }
 
   bool operator==(const Rect<T, K> &another) const {
     if (this == &another) {
       return true;
     }
-    return x == another.x && y == another.y && width == another.width &&
-           height == another.height;
+    return point == another.point && size == another.size;
   }
+
   bool operator!=(const Rect<T, K> &another) const {
     return !(*this == another);
   }

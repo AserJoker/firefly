@@ -15,33 +15,26 @@ private:
   Node *_parent;
   core::String_t _id;
 
-  core::Map<core::String_t, core::Any> _provider;
-
   core::Map<core::String_t, core::AnyPtr> _attributes;
 
   bool _ready;
 
 protected:
   template <class T>
-  void provide(T &value, const core::String_t &name = typeid(T).name()) {
-    _provider[name] = core::Any(value);
-  }
-
-  template <class T> T &inject(const core::String_t &name = typeid(T).name()) {
-    static auto defaultValue = T{};
-    auto parent = getParent();
-    while (parent != nullptr) {
-      if (parent->_provider.contains(name)) {
-        return parent->_provider[name].as<T>();
-      }
-      parent = parent->getParent();
-    }
-    return defaultValue;
-  }
-
-  template <class T>
   void defineAttribute(const core::String_t &name, T &attribute) {
     _attributes[name] = &attribute;
+  }
+
+  template <class T> core::AutoPtr<T> findParent() {
+    auto parent = _parent;
+    while (parent) {
+      auto p = dynamic_cast<T *>(parent);
+      if (p != nullptr) {
+        return p;
+      }
+      parent = parent->_parent;
+    }
+    return nullptr;
   }
 
 public:

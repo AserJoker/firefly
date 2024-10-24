@@ -21,5 +21,7 @@ protected:
 public:
   Window();
   void onTick() override;
+  const core::AutoPtr<video::Renderer> &getRenderer() const;
+  core::AutoPtr<video::Renderer> &getRenderer();
 };
 } // namespace firefly::document

@@ -31,5 +31,6 @@ public:
   void setMatrix(const glm::mat4 &matrix);
 
   const glm::mat4 &getMatrix() const;
+  glm::mat4 &getMatrix();
 };
 } // namespace firefly::video
