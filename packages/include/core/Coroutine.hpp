@@ -22,7 +22,7 @@ public:
     return pro;
   };
   template <class T> static const T &wait(core::AutoPtr<Promise<T>> promise) {
-    while (promise->template getStatus() == PROMISE_STATUS::PENDDING) {
+    while (promise->getStatus() == PROMISE_STATUS::PENDDING) {
       yield();
     }
     if (promise->getStatus() == PROMISE_STATUS::FULFILLED) {

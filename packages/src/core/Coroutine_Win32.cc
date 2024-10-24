@@ -39,9 +39,10 @@ void Coroutine::start(const std::function<void()> &func) {
 }
 void Coroutine::yield() {
   if (current == master) {
-    currentRoutine++;
     if (currentRoutine == routines.end()) {
       currentRoutine = routines.begin();
+    } else {
+      currentRoutine++;
     }
     while (!routines.empty() && !currentRoutine->enable) {
       auto next = currentRoutine;

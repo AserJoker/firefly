@@ -11,7 +11,6 @@ class Camera2D : public Node {
 private:
   core::Injector<runtime::EventBus, INJECTOR_EVENTBUS> _eventBus;
   core::Point<> _position;
-  float _zoom;
 
   glm::mat4 _view;
 
