@@ -1,6 +1,7 @@
 #include "document/Camera2D.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Math.hpp"
+#include "core/Value.hpp"
 #include "document/Window.hpp"
 #include "runtime/ResizeEvent.hpp"
 #include "video/Renderer.hpp"
@@ -8,20 +9,28 @@
 
 using namespace firefly;
 using namespace firefly::document;
+
 Camera2D::Camera2D() {
   _eventBus->on(this, &Camera2D::onResize);
   defineAttribute(ATTR_POSITION, _position);
 }
+
 void Camera2D::onLoad() {
   _window = findParent<Window>();
   applyMatrix(_window->getRenderer()->getViewport().size);
   Node::onLoad();
 }
+
 void Camera2D::onUnload() { _window = nullptr; }
 
 void Camera2D::setPosition(const core::Point<> &position) {
-  _position = position;
-  applyMatrix(_window->getRenderer()->getViewport().size);
+  setAttribute(ATTR_POSITION, position);
+}
+
+void Camera2D::onAttrChange(const core::String_t &name) {
+  if (isAttribute(ATTR_POSITION, name)) {
+    applyMatrix(_window->getRenderer()->getViewport().size);
+  }
 }
 
 void Camera2D::applyMatrix(const core::Size<> &size) {

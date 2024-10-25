@@ -47,6 +47,10 @@ protected:
     defineAttribute(name + ".height", attribute.height);
   }
 
+  bool isAttribute(const core::String_t &key, const core::String_t &attribute) {
+    return attribute == key || attribute.starts_with(key + ".");
+  }
+
   template <class T> T *findParent() {
     auto parent = _parent;
     while (parent) {

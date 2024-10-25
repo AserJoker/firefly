@@ -88,13 +88,10 @@ void Sprite2D::onAttrChange(const core::String_t &name) {
     applyTexMatrix();
     return;
   }
-  if (name == ATTR_DESTINATION ||
-      name.starts_with(core::String_t(ATTR_DESTINATION) + ".") ||
-      name == ATTR_ZINDEX) {
+  if (isAttribute(ATTR_DESTINATION, name) || name == ATTR_ZINDEX) {
     applyMatrix();
   }
-  if (name == ATTR_SOURCE ||
-      name.starts_with(core::String_t(ATTR_SOURCE) + ".")) {
+  if (isAttribute(ATTR_SOURCE, name)) {
     applyTexMatrix();
   }
 }

@@ -3,6 +3,7 @@
 #include "core/Injector.hpp"
 #include "core/Point.hpp"
 #include "core/Size.hpp"
+#include "core/Value.hpp"
 #include "document/Node.hpp"
 #include "document/Window.hpp"
 #include "runtime/EventBus.hpp"
@@ -21,8 +22,11 @@ private:
 private:
   void applyMatrix(const core::Size<> &size);
   void onResize(runtime::ResizeEvent &);
+
+protected:
   void onLoad() override;
   void onUnload() override;
+  void onAttrChange(const core::String_t &name) override;
 
 public:
   Camera2D();
