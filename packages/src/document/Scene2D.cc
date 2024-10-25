@@ -23,6 +23,7 @@ void Scene2D::onLoad() {
     renderer->setShader("2d");
     renderer->setUniform("projection", _projection);
   }
+  Node::onLoad();
 }
 
 void Scene2D::onResize(runtime::ResizeEvent &e) {

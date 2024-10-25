@@ -11,6 +11,7 @@
 #include "video/Shader.hpp"
 #include "video/Texture.hpp"
 #include <SDL2/SDL.h>
+#include <SDL_video.h>
 #include <fmt/format.h>
 #include <glm/ext/matrix_transform.hpp>
 
@@ -125,7 +126,9 @@ void Renderer::setViewport(const core::Rect<> &viewport) {
   glViewport(_viewport.x, _viewport.y, _viewport.width, _viewport.height);
 }
 
-const core::Rect<> &Renderer::getViewport() const { return _viewport; }
+const core::Rect<> &Renderer::getViewport() const {
+  return _viewport;
+}
 
 void Renderer::bindingTextures(
     const core::Map<core::String_t, core::AutoPtr<Texture>> &textures,

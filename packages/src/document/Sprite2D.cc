@@ -1,5 +1,6 @@
 #include "document/Sprite2D.hpp"
 #include "core/Math.hpp"
+#include "core/Value.hpp"
 #include "internal/geometry.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
@@ -7,7 +8,12 @@
 #include <glm/ext/matrix_transform.hpp>
 using namespace firefly;
 using namespace firefly::document;
-Sprite2D::Sprite2D() : _zIndex(0) {}
+Sprite2D::Sprite2D() : _zIndex(0) {
+  defineAttribute(ATTR_TEXTURE, _texturePath);
+  defineAttribute(ATTR_ZINDEX, _zIndex);
+  defineAttribute(ATTR_DESTINATION, _destinationRect);
+  defineAttribute(ATTR_SOURCE, _sourceRect);
+}
 
 void Sprite2D::onLoad() {
   _geometry = new video::Geometry();
@@ -43,6 +49,7 @@ void Sprite2D::onLoad() {
   _material->setDepthTest(false);
   applyTexMatrix();
   applyMatrix();
+  Node::onLoad();
 }
 
 void Sprite2D::applyMatrix() {
@@ -72,65 +79,69 @@ const core::AutoPtr<video::Material> &Sprite2D::getMaterial() const {
 }
 const glm::mat4 &Sprite2D::getMatrix() const { return _matrix; }
 
-void Sprite2D::setTexture(const core::String_t &path) {
-  if (_texturePath != path) {
-    _texturePath = path;
+void Sprite2D::onAttrChange(const core::String_t &name) {
+  if (name == ATTR_TEXTURE) {
     if (!_texture) {
       return;
     }
-    _texture->setTexture(path);
+    _texture->setTexture(_texturePath);
+    applyTexMatrix();
+    return;
+  }
+  if (name == ATTR_DESTINATION ||
+      name.starts_with(core::String_t(ATTR_DESTINATION) + ".") ||
+      name == ATTR_ZINDEX) {
+    applyMatrix();
+  }
+  if (name == ATTR_SOURCE ||
+      name.starts_with(core::String_t(ATTR_SOURCE) + ".")) {
     applyTexMatrix();
   }
+}
+
+void Sprite2D::setTexture(const core::String_t &path) {
+  setAttribute(ATTR_TEXTURE, path);
 }
 const core::String_t &Sprite2D::getTexture() const { return _texturePath; }
 
 void Sprite2D::setDestinationRect(const core::Rect<> &rect) {
-  _destinationRect = rect;
-  applyMatrix();
+  setAttribute(ATTR_DESTINATION, rect);
 }
 const core::Rect<> &Sprite2D::getDestinationRect() const {
   return _destinationRect;
 }
 
 void Sprite2D::setDestinationPosition(const core::Point<> &position) {
-  _destinationRect.point = position;
-  applyMatrix();
+  setAttribute(ATTR_DESTINATION, position);
 }
 const core::Point<> &Sprite2D::getDestinationPosition() const {
   return _destinationRect.point;
 }
 
 void Sprite2D::setDestinationSize(const core::Size<> &size) {
-  _destinationRect.size = size;
-  applyMatrix();
+  setAttribute(ATTR_DESTINATION, size);
 }
 const core::Size<> &Sprite2D::getDestinationSize() const {
   return _destinationRect.size;
 }
 
 void Sprite2D::setSourceRect(const core::Rect<> &rect) {
-  _sourceRect = rect;
-  applyTexMatrix();
+  setAttribute(ATTR_SOURCE, rect);
 }
 const core::Rect<> &Sprite2D::getSourceRect() const { return _sourceRect; }
 
 void Sprite2D::setSourcePosition(const core::Point<> &position) {
-  _sourceRect.point = position;
-  applyTexMatrix();
+  setAttribute(ATTR_SOURCE, position);
 }
 const core::Point<> &Sprite2D::getSourcePosition() const {
   return _sourceRect.point;
 }
 
 void Sprite2D::setSourceSize(const core::Size<> &size) {
-  _sourceRect.size = size;
-  applyTexMatrix();
+  setAttribute(ATTR_SOURCE, size);
 }
 const core::Size<> &Sprite2D::getSourceSize() const { return _sourceRect.size; }
 
-void Sprite2D::setZIndex(int32_t zIndex) {
-  _zIndex = zIndex;
-  applyMatrix();
-}
+void Sprite2D::setZIndex(int32_t zIndex) { setAttribute(ATTR_ZINDEX, zIndex); }
 
 int32_t Sprite2D::getZIndex() const { return _zIndex; }

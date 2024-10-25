@@ -53,7 +53,6 @@ void GameApplication::onInitialize() {
 
   core::AutoPtr<document::Node> window = new document::Window();
   _document->appendChild(window);
-
   core::AutoPtr<document::Node> scene = new document::Scene2D();
   window->appendChild(scene);
   core::AutoPtr camera = new document::Camera2D();
@@ -83,7 +82,7 @@ void GameApplication::onInitialize() {
 
 void GameApplication::onMainLoop() {
   runtime::Application::onMainLoop();
-  _document->onTick();
+  _document->onMainLoop();
 }
 
 void GameApplication::onUnInitialize() {

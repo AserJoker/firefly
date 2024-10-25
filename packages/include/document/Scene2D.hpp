@@ -14,9 +14,9 @@ private:
 
 private:
   void onResize(runtime::ResizeEvent &);
+  void onLoad() override;
 
 public:
   Scene2D();
-  void onLoad() override;
 };
 }; // namespace firefly::document

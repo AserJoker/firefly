@@ -6,18 +6,20 @@ namespace firefly::core {
 class AnyPtr {
 private:
   struct Handle {
-    virtual core::Any get(void *ptr) = 0;
-    virtual void set(void *ptr, const core::Any &value) = 0;
+    virtual const core::Any get(void *ptr) const = 0;
+    virtual bool set(void *ptr, const core::Any &value) = 0;
     virtual Handle *clone() = 0;
     virtual ~Handle(){};
     virtual const std::type_info &type() = 0;
   };
   template <class T> struct HandleImpl : public Handle {
-    core::Any get(void *ptr) override {
-      return *(T *)ptr;
-    }
-    void set(void *ptr, const core::Any &value) override {
-      *(T *)ptr = value.as<T>();
+    const core::Any get(void *ptr) const override { return *(T *)ptr; }
+    bool set(void *ptr, const core::Any &value) override {
+      if (*(T *)ptr != value.as<T>()) {
+        *(T *)ptr = value.as<T>();
+        return true;
+      }
+      return false;
     }
     Handle *clone() override { return new HandleImpl<T>(); }
     const std::type_info &type() override { return typeid(T); }
@@ -45,9 +47,9 @@ public:
     return *this;
   }
 
-  core::Any get() { return _handle->get(_ptr); }
+  const core::Any get() const { return _handle->get(_ptr); }
 
-  void set(const core::Any &value) { return _handle->set(_ptr, value); }
+  bool set(const core::Any &value) { return _handle->set(_ptr, value); }
 
   const std::type_info &type() const { return _handle->type(); }
 };

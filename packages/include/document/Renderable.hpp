@@ -9,8 +9,6 @@ protected:
   virtual const core::AutoPtr<video::Geometry> &getGeometry() const = 0;
   virtual const core::AutoPtr<video::Material> &getMaterial() const = 0;
   virtual const glm::mat4 &getMatrix() const = 0;
-
-public:
   void onTick() override;
 };
 }; // namespace firefly::document

@@ -1,4 +1,8 @@
 #include "document/Node.hpp"
+#include "core/TypeException.hpp"
+#include "core/Value.hpp"
+#include <exception>
+
 using namespace firefly;
 using namespace firefly::document;
 core::Map<core::String_t, Node *> Node::_indexedNodes;
@@ -55,11 +59,95 @@ void Node::removeChild(core::AutoPtr<Node> child) {
   }
 }
 
-void Node::onTick() {
+void Node::beginAttributeGroup(const core::String_t &name) {
+  if (_currentAttributeGroup.empty()) {
+    _currentAttributeGroup = name;
+  } else {
+    if (_attributeGroupStack.empty()) {
+      _attributeGroupStack.pushBack(_currentAttributeGroup);
+      _currentAttributeGroup = name;
+    } else {
+      _attributeGroupStack.pushBack(_currentAttributeGroup);
+      _currentAttributeGroup += "." + name;
+    }
+  }
+}
+void Node::endAttributeGroup() {
+  if (_currentAttributeGroup.empty()) {
+    return;
+  }
+  onAttrChange(_currentAttributeGroup);
+  if (_attributeGroupStack.empty()) {
+    _currentAttributeGroup.clear();
+  } else {
+    _currentAttributeGroup = *_attributeGroupStack.rbegin();
+    _attributeGroupStack.popBack();
+  }
+}
+
+const core::Value Node::getAttribute(const core::String_t &name) const {
+  if (_attributes.contains(name)) {
+    auto value = _attributes.at(name).get();
+    if (value.is<core::String_t>()) {
+      return value.as<core::String_t>();
+    } else if (value.is<core::Integer_t>()) {
+      return value.as<core::Integer_t>();
+    } else if (value.is<core::Unsigned_t>()) {
+      return value.as<core::Unsigned_t>();
+    } else if (value.is<core::Float_t>()) {
+      return value.as<core::Float_t>();
+    } else if (value.is<core::Boolean_t>()) {
+      return value.as<core::Boolean_t>();
+    }
+  }
+  return nullptr;
+}
+
+void Node::setAttribute(const core::String_t &name, const core::Value &value) {
+  core::String_t attrName;
+  if (!_currentAttributeGroup.empty()) {
+    attrName = _currentAttributeGroup + "." + name;
+  }
+  if (!_attributes.contains(attrName)) {
+    attrName = name;
+  }
+  if (_attributes.contains(attrName)) {
+    try {
+      auto &attr = _attributes.at(attrName);
+      bool isChanged = false;
+      if (attr.type() == typeid(core::String_t)) {
+        isChanged = attr.set(value.to<core::String_t>());
+      } else if (attr.type() == typeid(core::Integer_t)) {
+        isChanged = attr.set(value.to<core::Integer_t>());
+      } else if (attr.type() == typeid(core::Unsigned_t)) {
+        isChanged = attr.set(value.to<core::Unsigned_t>());
+      } else if (attr.type() == typeid(core::Float_t)) {
+        isChanged = attr.set(value.to<core::Float_t>());
+      } else if (attr.type() == typeid(core::Boolean_t)) {
+        isChanged = attr.set(value.to<core::Boolean_t>());
+      } else {
+        throw core::TypeException(
+            fmt::format("unknown type '{}'", value.getTypeName()));
+      }
+      if (isChanged) {
+        if (attrName == name) {
+          onAttrChange(name);
+        }
+      }
+    } catch (std::exception &e) {
+      throw core::TypeException(
+          fmt::format("Failed to set attribute '{}'", attrName), e);
+    }
+  }
+}
+void Node::onMainLoop() {
   if (!_ready) {
     _ready = true;
     onLoad();
   }
+  onTick();
+}
+void Node::onTick() {
   for (auto &child : _children) {
     child->onTick();
   }
@@ -72,7 +160,14 @@ core::AutoPtr<Node> Node::select(const core::String_t &identity) {
   return _indexedNodes.at(identity);
 }
 
-void Node::onLoad() {}
+void Node::onLoad() {
+  for (auto &child : _children) {
+    if (!child->_ready) {
+      child->_ready = true;
+      child->onLoad();
+    }
+  }
+}
 
 void Node::onUnload() {
   _ready = false;
