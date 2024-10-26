@@ -66,35 +66,35 @@ void Node::removeChild(core::AutoPtr<Node> child) {
   }
 }
 
-void Node::beginAttributeGroup(const core::String_t &name) {
-  if (_currentAttributeGroup.empty()) {
-    _currentAttributeGroup = name;
+void Node::beginPropGroup(const core::String_t &name) {
+  if (_currentPropertyGroup.empty()) {
+    _currentPropertyGroup = name;
   } else {
-    if (_attributeGroupStack.empty()) {
-      _attributeGroupStack.pushBack(_currentAttributeGroup);
-      _currentAttributeGroup = name;
+    if (_propertyGroupStack.empty()) {
+      _propertyGroupStack.pushBack(_currentPropertyGroup);
+      _currentPropertyGroup = name;
     } else {
-      _attributeGroupStack.pushBack(_currentAttributeGroup);
-      _currentAttributeGroup += "." + name;
+      _propertyGroupStack.pushBack(_currentPropertyGroup);
+      _currentPropertyGroup += "." + name;
     }
   }
 }
-void Node::endAttributeGroup() {
-  if (_currentAttributeGroup.empty()) {
+void Node::endPropGroup() {
+  if (_currentPropertyGroup.empty()) {
     return;
   }
-  onAttrChange(_currentAttributeGroup);
-  if (_attributeGroupStack.empty()) {
-    _currentAttributeGroup.clear();
+  onPropChange(_currentPropertyGroup);
+  if (_propertyGroupStack.empty()) {
+    _currentPropertyGroup.clear();
   } else {
-    _currentAttributeGroup = *_attributeGroupStack.rbegin();
-    _attributeGroupStack.popBack();
+    _currentPropertyGroup = *_propertyGroupStack.rbegin();
+    _propertyGroupStack.popBack();
   }
 }
 
-const core::Value Node::getAttribute(const core::String_t &name) const {
-  if (_attributes.contains(name)) {
-    auto value = _attributes.at(name).get();
+const core::Value Node::getProperty(const core::String_t &name) const {
+  if (_properties.contains(name)) {
+    auto value = _properties.at(name).get();
     if (value.is<core::String_t>()) {
       return value.as<core::String_t>();
     } else if (value.is<core::Integer_t>()) {
@@ -110,32 +110,32 @@ const core::Value Node::getAttribute(const core::String_t &name) const {
   return nullptr;
 }
 
-void Node::setAttribute(const core::String_t &name, const core::Value &value) {
-  if (_attributeGroups.contains(name) &&
+void Node::setProperty(const core::String_t &name, const core::Value &value) {
+  if (_propertyGroups.contains(name) &&
       value.getType() == core::ValueType::STRING) {
     std::string source = value.get<core::String_t>();
-    setAttribute(name, core::Json::parse(source));
+    setProperty(name, core::Json::parse(source));
     return;
   }
-  if (_attributeGroups.contains(name) &&
+  if (_propertyGroups.contains(name) &&
       value.getType() == core::ValueType::MAP) {
     auto record = value.get<core::Map_t>();
     for (auto &[key, value] : record) {
-      setAttribute(name + "." + key, value);
+      setProperty(name + "." + key, value);
     }
     return;
   }
 
   core::String_t attrName;
-  if (!_currentAttributeGroup.empty()) {
-    attrName = _currentAttributeGroup + "." + name;
+  if (!_currentPropertyGroup.empty()) {
+    attrName = _currentPropertyGroup + "." + name;
   }
-  if (!_attributes.contains(attrName)) {
+  if (!_properties.contains(attrName)) {
     attrName = name;
   }
-  if (_attributes.contains(attrName)) {
+  if (_properties.contains(attrName)) {
     try {
-      auto &attr = _attributes.at(attrName);
+      auto &attr = _properties.at(attrName);
       bool isChanged = false;
       if (attr.type() == typeid(core::String_t)) {
         isChanged = attr.set(value.to<core::String_t>());
@@ -153,7 +153,7 @@ void Node::setAttribute(const core::String_t &name, const core::Value &value) {
       }
       if (isChanged) {
         if (attrName == name) {
-          onAttrChange(name);
+          onPropChange(name);
         }
       }
     } catch (std::exception &e) {
@@ -223,7 +223,7 @@ static core::AutoPtr<Node> parseXML(xmlNodePtr node) {
         name += chr;
       }
     }
-    result->setAttribute(name, value);
+    result->setProperty(name, value);
     prop = prop->next;
   }
   auto child = node->children;

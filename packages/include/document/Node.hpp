@@ -1,5 +1,5 @@
 #pragma once
-#include "Attribute.hpp"
+#include "core/AnyPtr.hpp"
 #include "core/Array.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Map.hpp"
@@ -13,6 +13,20 @@
 namespace firefly::document {
 class Node : public core::Object {
 private:
+  class Property : public core::AnyPtr {
+  public:
+    Property() = default;
+    Property(core::String_t *ptr) : core::AnyPtr(ptr){};
+    Property(core::Integer_t *ptr) : core::AnyPtr(ptr){};
+    Property(core::Unsigned_t *ptr) : core::AnyPtr(ptr){};
+    Property(core::Float_t *ptr) : core::AnyPtr(ptr){};
+    Property(core::Boolean_t *ptr) : core::AnyPtr(ptr){};
+
+    Property(const Property &attr) = default;
+    Property &operator=(const Property &another) = default;
+  };
+
+private:
   static core::Map<core::String_t, Node *> _indexedNodes;
 
 private:
@@ -20,49 +34,53 @@ private:
   Node *_parent;
   core::String_t _id;
 
-  core::Map<core::String_t, Attribute> _attributes;
+  core::Map<core::String_t, Property> _properties;
 
-  core::Map<core::String_t, core::Array<core::String_t>> _attributeGroups;
+  core::Map<core::String_t, core::Array<core::String_t>> _propertyGroups;
 
   bool _ready;
 
-  core::String_t _currentAttributeGroup;
-  core::Array<core::String_t> _attributeGroupStack;
+  core::String_t _currentPropertyGroup;
+  core::Array<core::String_t> _propertyGroupStack;
 
 protected:
   template <class T>
-  void defineAttribute(const core::String_t &name, T &attribute) {
-    _attributes[name] = &attribute;
+  void defineProperty(const core::String_t &name, T &property) {
+    _properties[name] = &property;
     auto tmp = name;
     auto pos = tmp.find_last_of('.');
     while (pos != std::string::npos) {
       auto group = tmp.substr(0, pos);
-      auto &groups = _attributeGroups[group];
+      auto &groups = _propertyGroups[group];
       groups.pushBack(tmp);
       tmp = group;
       pos = tmp.find_last_of('.');
     }
   }
 
-  void defineAttribute(const core::String_t &name, core::Rect<> &attribute) {
-    defineAttribute(name + ".x", attribute.x);
-    defineAttribute(name + ".y", attribute.y);
-    defineAttribute(name + ".width", attribute.width);
-    defineAttribute(name + ".height", attribute.height);
+  inline void defineProperty(const core::String_t &name,
+                             core::Rect<> &property) {
+    defineProperty(name + ".x", property.x);
+    defineProperty(name + ".y", property.y);
+    defineProperty(name + ".width", property.width);
+    defineProperty(name + ".height", property.height);
   }
 
-  void defineAttribute(const core::String_t &name, core::Point<> &attribute) {
-    defineAttribute(name + ".x", attribute.x);
-    defineAttribute(name + ".y", attribute.y);
+  inline void defineProperty(const core::String_t &name,
+                             core::Point<> &property) {
+    defineProperty(name + ".x", property.x);
+    defineProperty(name + ".y", property.y);
   }
 
-  void defineAttribute(const core::String_t &name, core::Size<> &attribute) {
-    defineAttribute(name + ".width", attribute.width);
-    defineAttribute(name + ".height", attribute.height);
+  inline void defineProperty(const core::String_t &name,
+                             core::Size<> &property) {
+    defineProperty(name + ".width", property.width);
+    defineProperty(name + ".height", property.height);
   }
 
-  bool isAttribute(const core::String_t &key, const core::String_t &attribute) {
-    return attribute == key || attribute.starts_with(key + ".");
+  inline bool isProperty(const core::String_t &key,
+                         const core::String_t &property) {
+    return property == key || property.starts_with(key + ".");
   }
 
   template <class T> T *findParent() {
@@ -77,7 +95,7 @@ protected:
     return nullptr;
   }
 
-  virtual void onAttrChange(const core::String_t &name) {};
+  virtual void onPropChange(const core::String_t &name) {};
 
 public:
   Node();
@@ -95,34 +113,34 @@ public:
   void appendChild(core::AutoPtr<Node> child);
   void removeChild(core::AutoPtr<Node> child);
 
-  const core::Value getAttribute(const core::String_t &name) const;
-  virtual void setAttribute(const core::String_t &name,
-                            const core::Value &value);
-  inline void setAttribute(const core::String_t &name,
-                           const core::Rect<> &rect) {
-    beginAttributeGroup(name);
-    setAttribute("x", rect.x);
-    setAttribute("y", rect.y);
-    setAttribute("width", rect.width);
-    setAttribute("height", rect.height);
-    endAttributeGroup();
+  const core::Value getProperty(const core::String_t &name) const;
+  virtual void setProperty(const core::String_t &name,
+                           const core::Value &value);
+  inline void setProperty(const core::String_t &name,
+                          const core::Rect<> &rect) {
+    beginPropGroup(name);
+    setProperty("x", rect.x);
+    setProperty("y", rect.y);
+    setProperty("width", rect.width);
+    setProperty("height", rect.height);
+    endPropGroup();
   }
-  inline void setAttribute(const core::String_t &name,
-                           const core::Size<> &size) {
-    beginAttributeGroup(name);
-    setAttribute("width", size.width);
-    setAttribute("height", size.height);
-    endAttributeGroup();
+  inline void setProperty(const core::String_t &name,
+                          const core::Size<> &size) {
+    beginPropGroup(name);
+    setProperty("width", size.width);
+    setProperty("height", size.height);
+    endPropGroup();
   }
-  inline void setAttribute(const core::String_t &name,
-                           const core::Point<> &position) {
-    beginAttributeGroup(name);
-    setAttribute("x", position.x);
-    setAttribute("y", position.y);
-    endAttributeGroup();
+  inline void setProperty(const core::String_t &name,
+                          const core::Point<> &position) {
+    beginPropGroup(name);
+    setProperty("x", position.x);
+    setProperty("y", position.y);
+    endPropGroup();
   }
-  void beginAttributeGroup(const core::String_t &name);
-  void endAttributeGroup();
+  void beginPropGroup(const core::String_t &name);
+  void endPropGroup();
 
   void onMainLoop();
 

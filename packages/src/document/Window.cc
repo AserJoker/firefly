@@ -11,10 +11,10 @@ using namespace firefly::document;
 Window::Window()
     : _window(nullptr), _title("firefly - [no name]"), _position(-1, -1),
       _size(1024, 768), _fullscreen(false) {
-  defineAttribute(ATTR_TITLE, _title);
-  defineAttribute(ATTR_POSITION, _position);
-  defineAttribute(ATTR_SIZE, _size);
-  defineAttribute(ATTR_FULLSCREEN, _fullscreen);
+  defineProperty(PROP_TITLE, _title);
+  defineProperty(PROP_POSITION, _position);
+  defineProperty(PROP_SIZE, _size);
+  defineProperty(PROP_FULLSCREEN, _fullscreen);
 }
 
 void Window::onLoad() {

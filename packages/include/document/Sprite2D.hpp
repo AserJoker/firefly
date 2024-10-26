@@ -31,7 +31,7 @@ protected:
   const core::AutoPtr<video::Material> &getMaterial() const override;
   const glm::mat4 &getMatrix() const override;
 
-  void onAttrChange(const core::String_t &name) override;
+  void onPropChange(const core::String_t &name) override;
   void onLoad() override;
 
 public:
@@ -62,17 +62,17 @@ public:
   int32_t getZIndex() const;
 
 public:
-  static inline constexpr auto ATTR_TEXTURE = "texture";
-  static inline constexpr auto ATTR_ZINDEX = "zIndex";
-  static inline constexpr auto ATTR_DESTINATION = "destination";
-  static inline constexpr auto ATTR_DESTINATION_X = "destination.x";
-  static inline constexpr auto ATTR_DESTINATION_Y = "destination.y";
-  static inline constexpr auto ATTR_DESTINATION_WIDTH = "destination.width";
-  static inline constexpr auto ATTR_DESTINATION_HEIGHT = "destination.height";
-  static inline constexpr auto ATTR_SOURCE = "source";
-  static inline constexpr auto ATTR_SOURCE_X = "source.x";
-  static inline constexpr auto ATTR_SOURCE_Y = "source.y";
-  static inline constexpr auto ATTR_SOURCE_WIDTH = "source.width";
-  static inline constexpr auto ATTR_SOURCE_HEIGHT = "source.height";
+  static inline constexpr auto PROP_TEXTURE = "texture";
+  static inline constexpr auto PROP_ZINDEX = "zIndex";
+  static inline constexpr auto PROP_DESTINATION = "destination";
+  static inline constexpr auto PROP_DESTINATION_X = "destination.x";
+  static inline constexpr auto PROP_DESTINATION_Y = "destination.y";
+  static inline constexpr auto PROP_DESTINATION_WIDTH = "destination.width";
+  static inline constexpr auto PROP_DESTINATION_HEIGHT = "destination.height";
+  static inline constexpr auto PROP_SOURCE = "source";
+  static inline constexpr auto PROP_SOURCE_X = "source.x";
+  static inline constexpr auto PROP_SOURCE_Y = "source.y";
+  static inline constexpr auto PROP_SOURCE_WIDTH = "source.width";
+  static inline constexpr auto PROP_SOURCE_HEIGHT = "source.height";
 };
 } // namespace firefly::document

@@ -36,13 +36,13 @@ public:
   uint32_t getWindowID() const;
 
 public:
-  constexpr static inline auto ATTR_TITLE = "title";
-  constexpr static inline auto ATTR_POSITION = "position";
-  constexpr static inline auto ATTR_POSITION_X = "position.x";
-  constexpr static inline auto ATTR_POSITION_Y = "position.y";
-  constexpr static inline auto ATTR_SIZE = "position";
-  constexpr static inline auto ATTR_SIZE_X = "size.x";
-  constexpr static inline auto ATTR_SIZE_Y = "size.y";
-  constexpr static inline auto ATTR_FULLSCREEN = "fullscreen";
+  constexpr static inline auto PROP_TITLE = "title";
+  constexpr static inline auto PROP_POSITION = "position";
+  constexpr static inline auto PROP_POSITION_X = "position.x";
+  constexpr static inline auto PROP_POSITION_Y = "position.y";
+  constexpr static inline auto PROP_SIZE = "position";
+  constexpr static inline auto PROP_SIZE_X = "size.x";
+  constexpr static inline auto PROP_SIZE_Y = "size.y";
+  constexpr static inline auto PROP_FULLSCREEN = "fullscreen";
 };
 } // namespace firefly::document

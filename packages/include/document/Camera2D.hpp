@@ -26,13 +26,13 @@ private:
 protected:
   void onLoad() override;
   void onUnload() override;
-  void onAttrChange(const core::String_t &name) override;
+  void onPropChange(const core::String_t &name) override;
 
 public:
   Camera2D();
   void setPosition(const core::Point<> &position);
 
 public:
-  constexpr static inline auto ATTR_POSITION = "position";
+  constexpr static inline auto PROP_POSITION = "position";
 };
 }; // namespace firefly::document
