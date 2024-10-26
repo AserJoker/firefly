@@ -3,7 +3,7 @@
 using namespace firefly;
 using namespace firefly::core;
 static std::string format(const std::string &type, const std::string &message,
-                          const std::exception caused,
+                          const std::exception& caused,
                           const std::source_location &current) {
   return fmt::format("{}: {}\n\tat {}({}:{}:{})\ncaused by:\n{}", type, message,
                      current.function_name(), current.file_name(),
@@ -16,7 +16,7 @@ static std::string format(const std::string &type, const std::string &message,
                      current.line(), current.column());
 }
 Exception::Exception(const std::string &type, const std::string &message,
-                     const std::exception caused,
+                     const std::exception& caused,
                      const std::source_location &current)
     : std::runtime_error(format(type, message, caused, current)) {}
 Exception::Exception(const std::string &type, const std::string &message,

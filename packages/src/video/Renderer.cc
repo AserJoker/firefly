@@ -126,9 +126,7 @@ void Renderer::setViewport(const core::Rect<> &viewport) {
   glViewport(_viewport.x, _viewport.y, _viewport.width, _viewport.height);
 }
 
-const core::Rect<> &Renderer::getViewport() const {
-  return _viewport;
-}
+const core::Rect<> &Renderer::getViewport() const { return _viewport; }
 
 void Renderer::bindingTextures(
     const core::Map<core::String_t, core::AutoPtr<Texture>> &textures,
@@ -219,7 +217,7 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
   } else {
     _context->blendRenderList.push_back({geometry, material, model});
     _context->blendRenderList.sort([](auto &a, auto &b) -> bool {
-      return a.matrixModel[3][2] < b.matrixModel[3][2];
+      return a.matrixModel[3][2] >= b.matrixModel[3][2];
     });
   }
 }

@@ -20,6 +20,7 @@ private:
   core::Rect<> _sourceRect;
   core::Rect<> _destinationRect;
   std::string _texturePath;
+  std::string _shader;
   int32_t _zIndex;
 
 private:
@@ -39,6 +40,9 @@ public:
 
   void setTexture(const core::String_t &path);
   const core::String_t &getTexture() const;
+
+  void setShader(const core::String_t &shader);
+  const core::String_t &getShader() const;
 
   void setDestinationRect(const core::Rect<> &rect);
   const core::Rect<> &getDestinationRect() const;
@@ -62,8 +66,9 @@ public:
   int32_t getZIndex() const;
 
 public:
+  static inline constexpr auto PROP_SHADER = "shader";
   static inline constexpr auto PROP_TEXTURE = "texture";
-  static inline constexpr auto PROP_ZINDEX = "zIndex";
+  static inline constexpr auto PROP_ZINDEX = "z-index";
   static inline constexpr auto PROP_DESTINATION = "destination";
   static inline constexpr auto PROP_DESTINATION_X = "destination.x";
   static inline constexpr auto PROP_DESTINATION_Y = "destination.y";

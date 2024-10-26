@@ -8,7 +8,7 @@ class Exception : public std::runtime_error {
 public:
   Exception(
       const std::string &type, const std::string &message,
-      const std::exception caused,
+      const std::exception &caused,
       const std::source_location &current = std::source_location::current());
   Exception(
       const std::string &type, const std::string &message,
@@ -17,7 +17,7 @@ public:
 template <core::CompileString type> class RuntimeException : public Exception {
 public:
   RuntimeException(
-      const std::string &message, const std::exception caused,
+      const std::string &message, const std::exception &caused,
       const std::source_location &current = std::source_location::current())
       : Exception(type.value, message, caused, current) {}
   RuntimeException(

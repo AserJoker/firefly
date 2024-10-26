@@ -8,7 +8,9 @@ Texture::Texture() : _coordMatrix(1.0f) {}
 
 Texture::Texture(const core::String_t &path, const glm::mat4 &matrix)
     : _coordMatrix(matrix) {
-  _texture = gl::Texture2D::get(path, fmt::format("texture::{}", path));
+  if (!path.empty()) {
+    _texture = gl::Texture2D::get(path, fmt::format("texture::{}", path));
+  }
 }
 
 Texture::Texture(const core::AutoPtr<gl::Texture2D> &tex,

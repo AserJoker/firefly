@@ -13,6 +13,7 @@ Sprite2D::Sprite2D() : _zIndex(0) {
   defineProperty(PROP_ZINDEX, _zIndex);
   defineProperty(PROP_DESTINATION, _destinationRect);
   defineProperty(PROP_SOURCE, _sourceRect);
+  defineProperty(PROP_SHADER, _shader);
 }
 
 void Sprite2D::onLoad() {
@@ -25,28 +26,32 @@ void Sprite2D::onLoad() {
 
   core::AutoPtr attrIndices = new video::AttributeIndex(internal::rectIndices);
 
-  _texture = new video::Texture(_texturePath);
-  auto [width, height] = _texture->getTexture()->getSize();
-  if (_sourceRect.width == 0) {
-    _sourceRect.width = width;
-  }
-  if (_sourceRect.height == 0) {
-    _sourceRect.height = height;
-  }
-  if (_destinationRect.width == 0) {
-    _destinationRect.width = width;
-  }
-  if (_destinationRect.height == 0) {
-    _destinationRect.height = height;
+  _texture = new video::Texture();
+  if (!_texturePath.empty()) {
+    auto [width, height] = _texture->getTexture()->getSize();
+    if (_sourceRect.width == 0) {
+      _sourceRect.width = width;
+    }
+    if (_sourceRect.height == 0) {
+      _sourceRect.height = height;
+    }
+    if (_destinationRect.width == 0) {
+      _destinationRect.width = width;
+    }
+    if (_destinationRect.height == 0) {
+      _destinationRect.height = height;
+    }
+    _material->setTexture("diffuse", _texture);
   }
 
   _geometry->setAttribute(0, attrPosition);
   _geometry->setAttribute(1, attrCoord);
   _geometry->setAttributeIndex(attrIndices);
 
-  _material->setTexture("diffuse", _texture);
   _material->setIsTransparent(true);
-  _material->setDepthTest(false);
+  _material->setDepthTest(true);
+  _material->setShader(_shader);
+
   applyTexMatrix();
   applyMatrix();
   Node::onLoad();
@@ -85,6 +90,9 @@ void Sprite2D::onPropChange(const core::String_t &name) {
       return;
     }
     _texture->setTexture(_texturePath);
+    if (_material != nullptr && _material->getTexture("diffuse") != _texture) {
+      _material->setTexture("diffuse", _texture);
+    }
     applyTexMatrix();
     return;
   }
@@ -94,12 +102,23 @@ void Sprite2D::onPropChange(const core::String_t &name) {
   if (isProperty(PROP_SOURCE, name)) {
     applyTexMatrix();
   }
+  if (isProperty(PROP_SHADER, name)) {
+    if (_material != nullptr) {
+      _material->setShader(_shader);
+    }
+  }
 }
 
 void Sprite2D::setTexture(const core::String_t &path) {
   setProperty(PROP_TEXTURE, path);
 }
 const core::String_t &Sprite2D::getTexture() const { return _texturePath; }
+
+void Sprite2D::setShader(const core::String_t &shader) {
+  setProperty(PROP_SHADER, shader);
+}
+
+const core::String_t &Sprite2D::getShader() const { return _shader; }
 
 void Sprite2D::setDestinationRect(const core::Rect<> &rect) {
   setProperty(PROP_DESTINATION, rect);

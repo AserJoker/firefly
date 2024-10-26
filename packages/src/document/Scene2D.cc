@@ -18,7 +18,7 @@ void Scene2D::onLoad() {
     auto viewport = renderer->getViewport();
     auto width = viewport.width / 2.0f;
     auto height = viewport.height / 2.0f;
-    _projection = core::scale({1.0f / width, 1.0f / height, 0.0f});
+    _projection = core::scale({1.0f / width, 1.0f / height, 1.0f});
 
     renderer->setShader("2d");
     renderer->setUniform("projection", _projection);
@@ -32,7 +32,7 @@ void Scene2D::onResize(runtime::ResizeEvent &e) {
   if (e.getWindowId() == SDL_GetWindowID((SDL_Window *)renderer->getWindow())) {
     auto width = e.getSize().width / 2.0f;
     auto height = e.getSize().height / 2.0f;
-    _projection = core::scale({1.0f / width, 1.0f / height, 0.0f});
+    _projection = core::scale({1.0f / width, 1.0f / height, 1.0f});
     renderer->setUniform("projection", _projection);
   }
 }

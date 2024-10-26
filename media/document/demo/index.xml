@@ -3,9 +3,8 @@
     <window title="duskland.system.title" width="1024" height="768" resizable="true">
         <scene-2d id="main">
             <camera-2d/>
-            <sprite-2d id="player" texture="001-Fighter01.png" destination='{"x":0,"y":0,"width":32,"height":48}' source='{"x":0,"y":0,"width":32,"height":48}'>
-                
-            </sprite-2d>
+            <sprite-2d destination='{"x":0,"y":0,"width":100,"height":100}' shader="red" z-index="-1"/>
+            <sprite-2d destination='{"x":50,"y":50,"width":100,"height":100}' shader="green" z-index="0"/>
         </scene-2d>
     </window>
 </document>
