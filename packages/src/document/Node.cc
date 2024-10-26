@@ -1,7 +1,14 @@
 #include "document/Node.hpp"
+#include "core/AutoPtr.hpp"
+#include "core/Json.hpp"
+#include "core/Singleton.hpp"
 #include "core/TypeException.hpp"
 #include "core/Value.hpp"
+#include "runtime/Media.hpp"
 #include <exception>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <libxml/xmlstring.h>
 
 using namespace firefly;
 using namespace firefly::document;
@@ -104,6 +111,21 @@ const core::Value Node::getAttribute(const core::String_t &name) const {
 }
 
 void Node::setAttribute(const core::String_t &name, const core::Value &value) {
+  if (_attributeGroups.contains(name) &&
+      value.getType() == core::ValueType::STRING) {
+    std::string source = value.get<core::String_t>();
+    setAttribute(name, core::Json::parse(source));
+    return;
+  }
+  if (_attributeGroups.contains(name) &&
+      value.getType() == core::ValueType::MAP) {
+    auto record = value.get<core::Map_t>();
+    for (auto &[key, value] : record) {
+      setAttribute(name + "." + key, value);
+    }
+    return;
+  }
+
   core::String_t attrName;
   if (!_currentAttributeGroup.empty()) {
     attrName = _currentAttributeGroup + "." + name;
@@ -153,6 +175,12 @@ void Node::onTick() {
   }
 }
 
+core::AutoPtr<Node> Node::create(const core::String_t &type) {
+  if (_nodeConstructors.contains(type)) {
+    return _nodeConstructors[type]();
+  }
+  return nullptr;
+}
 core::AutoPtr<Node> Node::select(const core::String_t &identity) {
   if (!Node::_indexedNodes.contains(identity)) {
     return nullptr;
@@ -174,4 +202,52 @@ void Node::onUnload() {
   for (auto &child : _children) {
     child->onUnload();
   }
+}
+
+static core::AutoPtr<Node> parseXML(xmlNodePtr node) {
+
+  core::AutoPtr<Node> result =
+      Node::create(core::String_t((const char *)node->name));
+  if (!result) {
+    result = new Node();
+  }
+  auto prop = node->properties;
+  while (prop != nullptr) {
+    std::string key = (const char *)prop->name;
+    std::string value = (const char *)xmlGetProp(node, prop->name);
+    std::string name;
+    for (auto &chr : key) {
+      if (chr == '_') {
+        name += ".";
+      } else {
+        name += chr;
+      }
+    }
+    result->setAttribute(name, value);
+    prop = prop->next;
+  }
+  auto child = node->children;
+  while (child != nullptr) {
+    auto node = parseXML(child);
+    if (node != nullptr) {
+      result->appendChild(node);
+    }
+    child = child->next;
+  }
+  return result;
+}
+
+core::AutoPtr<Node> Node::load(const core::String_t &name) {
+  auto media = core::Singleton<runtime::Media>::instance();
+  auto buf = media->load(fmt::format("document::{}", name))->read();
+  xmlNodePtr root = nullptr;
+  xmlDocPtr document =
+      xmlParseMemory((const char *)buf->getData(), buf->getSize());
+  if (!document) {
+    return nullptr;
+  }
+  root = xmlDocGetRootElement(document);
+  core::AutoPtr<Node> result = parseXML(root);
+  xmlFreeDoc(document);
+  return result;
 }

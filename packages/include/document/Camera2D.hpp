@@ -10,7 +10,7 @@
 #include "runtime/ResizeEvent.hpp"
 #include <glm/glm.hpp>
 namespace firefly::document {
-class Camera2D : public Node {
+class Camera2D : public Node, public Node::Register<"camera-2d", Camera2D> {
 private:
   core::Injector<runtime::EventBus, INJECTOR_EVENTBUS> _eventBus;
   core::Point<> _position;

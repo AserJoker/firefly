@@ -6,7 +6,10 @@
 #include "core/Object.hpp"
 #include "core/Point.hpp"
 #include "core/Rect.hpp"
+#include "core/TemplateCString.hpp"
 #include "core/Value.hpp"
+#include <functional>
+
 namespace firefly::document {
 class Node : public core::Object {
 private:
@@ -19,6 +22,8 @@ private:
 
   core::Map<core::String_t, Attribute> _attributes;
 
+  core::Map<core::String_t, core::Array<core::String_t>> _attributeGroups;
+
   bool _ready;
 
   core::String_t _currentAttributeGroup;
@@ -28,6 +33,15 @@ protected:
   template <class T>
   void defineAttribute(const core::String_t &name, T &attribute) {
     _attributes[name] = &attribute;
+    auto tmp = name;
+    auto pos = tmp.find_last_of('.');
+    while (pos != std::string::npos) {
+      auto group = tmp.substr(0, pos);
+      auto &groups = _attributeGroups[group];
+      groups.pushBack(tmp);
+      tmp = group;
+      pos = tmp.find_last_of('.');
+    }
   }
 
   void defineAttribute(const core::String_t &name, core::Rect<> &attribute) {
@@ -82,7 +96,8 @@ public:
   void removeChild(core::AutoPtr<Node> child);
 
   const core::Value getAttribute(const core::String_t &name) const;
-  void setAttribute(const core::String_t &name, const core::Value &value);
+  virtual void setAttribute(const core::String_t &name,
+                            const core::Value &value);
   inline void setAttribute(const core::String_t &name,
                            const core::Rect<> &rect) {
     beginAttributeGroup(name);
@@ -116,7 +131,23 @@ protected:
   virtual void onLoad();
   virtual void onUnload();
 
+private:
+  static inline core::Map<core::String_t, std::function<core::AutoPtr<Node>()>>
+      _nodeConstructors;
+
 public:
+  template <core::CompileString type, class T> struct Register {
+  public:
+    static void registerNode() {
+      _nodeConstructors[type.value] = []() -> core::AutoPtr<Node> {
+        return new T();
+      };
+    };
+  };
+
+public:
+  static core::AutoPtr<Node> create(const core::String_t &type);
   static core::AutoPtr<Node> select(const core::String_t &identity);
+  static core::AutoPtr<Node> load(const core::String_t &path);
 };
 }; // namespace firefly::document

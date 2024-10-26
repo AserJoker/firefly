@@ -6,7 +6,7 @@
 #include "runtime/ResizeEvent.hpp"
 #include <glm/glm.hpp>
 namespace firefly::document {
-class Scene2D : public Node {
+class Scene2D : public Node, public Node::Register<"scene-2d", Scene2D> {
 private:
   glm::mat4 _projection;
 

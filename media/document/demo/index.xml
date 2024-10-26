@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document>
+    <window title="duskland.system.title" width="1024" height="768" resizable="true">
+        <scene-2d id="main">
+            <camera-2d/>
+            <sprite-2d id="player" texture="001-Fighter01.png" destination="{&quot;x&quot;:0,&quot;y&quot;:0,&quot;width&quot;:32,&quot;height&quot;:48}" source="{&quot;x&quot;:0,&quot;y&quot;:0,&quot;width&quot;:32,&quot;height&quot;:48}"/>
+        </scene-2d>
+    </window>
+</document>

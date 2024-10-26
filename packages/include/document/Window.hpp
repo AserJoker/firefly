@@ -11,7 +11,7 @@
 #include "video/Renderer.hpp"
 #include <SDL_video.h>
 namespace firefly::document {
-class Window : public Node {
+class Window : public Node, public Node::Register<"window", Window> {
 private:
   core::Injector<runtime::EventBus, INJECTOR_EVENTBUS> _eventBus;
 

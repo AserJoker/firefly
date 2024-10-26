@@ -9,7 +9,8 @@
 #include "video/Material.hpp"
 #include "video/Texture.hpp"
 namespace firefly::document {
-class Sprite2D : public Renderable {
+class Sprite2D : public Renderable,
+                 public Node::Register<"sprite-2d", Sprite2D> {
 private:
   core::AutoPtr<video::Geometry> _geometry;
   core::AutoPtr<video::Material> _material;

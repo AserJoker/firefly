@@ -29,9 +29,10 @@ protected:
 
   void onUnInitialize() override;
 
-  virtual void initScript();
-  virtual void initLocale();
-  virtual void initEvent();
+  void initScript();
+  void initLocale();
+  void initEvent();
+  void initDocument();
 
   void onMouseMotion(input::MouseMotionEvent &e);
   void onMouseDown(input::MouseDownEvent &e);
