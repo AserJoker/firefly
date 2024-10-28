@@ -2,15 +2,16 @@
 #include "Any.hpp"
 #include "Array.hpp"
 #include "BaseValue.hpp"
+#include "CompileString.hpp"
 #include "Map.hpp"
-#include "TemplateCString.hpp"
-#include "core/TemplateCString.hpp"
+#include "core/CompileString.hpp"
 #include <cjson/cJSON.h>
 #include <cstddef>
 #include <cstdint>
 #include <fmt/format.h>
 #include <stdexcept>
 #include <string>
+
 
 namespace firefly::core {
 class Value;

@@ -3,7 +3,6 @@
 #include "core/Injector.hpp"
 #include "core/Point.hpp"
 #include "core/Size.hpp"
-#include "core/Value.hpp"
 #include "document/Node.hpp"
 #include "document/Window.hpp"
 #include "runtime/EventBus.hpp"
@@ -26,7 +25,7 @@ private:
 protected:
   void onLoad() override;
   void onUnload() override;
-  void onPropChange(const core::String_t &name) override;
+  void onPositionChange();
 
 public:
   Camera2D();

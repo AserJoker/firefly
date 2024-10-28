@@ -13,6 +13,8 @@ using namespace firefly::document;
 Camera2D::Camera2D() {
   _eventBus->on(this, &Camera2D::onResize);
   defineProperty(PROP_POSITION, _position);
+
+  watchProp(PROP_POSITION, &Camera2D::onPositionChange);
 }
 
 void Camera2D::onLoad() {
@@ -27,10 +29,8 @@ void Camera2D::setPosition(const core::Point<> &position) {
   setProperty(PROP_POSITION, position);
 }
 
-void Camera2D::onPropChange(const core::String_t &name) {
-  if (isProperty(PROP_POSITION, name)) {
-    applyMatrix(_window->getRenderer()->getViewport().size);
-  }
+void Camera2D::onPositionChange() {
+  applyMatrix(_window->getRenderer()->getViewport().size);
 }
 
 void Camera2D::applyMatrix(const core::Size<> &size) {

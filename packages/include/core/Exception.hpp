@@ -1,5 +1,5 @@
 #pragma once
-#include "core/TemplateCString.hpp"
+#include "core/CompileString.hpp"
 #include <exception>
 #include <source_location>
 #include <stdexcept>

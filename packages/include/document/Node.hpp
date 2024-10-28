@@ -2,11 +2,11 @@
 #include "core/AnyPtr.hpp"
 #include "core/Array.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/CompileString.hpp"
 #include "core/Map.hpp"
 #include "core/Object.hpp"
 #include "core/Point.hpp"
 #include "core/Rect.hpp"
-#include "core/TemplateCString.hpp"
 #include "core/Value.hpp"
 #include <functional>
 
@@ -14,6 +14,7 @@ namespace firefly::document {
 class Node : public core::Object {
 private:
   class Property : public core::AnyPtr {
+  private:
   public:
     Property() = default;
     Property(core::String_t *ptr) : core::AnyPtr(ptr){};
@@ -21,6 +22,12 @@ private:
     Property(core::Unsigned_t *ptr) : core::AnyPtr(ptr){};
     Property(core::Float_t *ptr) : core::AnyPtr(ptr){};
     Property(core::Boolean_t *ptr) : core::AnyPtr(ptr){};
+
+    Property(core::Array<core::String_t> *ptr) : core::AnyPtr(ptr){};
+    Property(core::Array<core::Integer_t> *ptr) : core::AnyPtr(ptr){};
+    Property(core::Array<core::Unsigned_t> *ptr) : core::AnyPtr(ptr){};
+    Property(core::Array<core::Float_t> *ptr) : core::AnyPtr(ptr){};
+    Property(core::Array<core::Boolean_t> *ptr) : core::AnyPtr(ptr){};
 
     Property(const Property &attr) = default;
     Property &operator=(const Property &another) = default;
@@ -42,6 +49,8 @@ private:
 
   core::String_t _currentPropertyGroup;
   core::Array<core::String_t> _propertyGroupStack;
+
+  core::Map<std::string, core::Array<std::function<void()>>> _propWatchers;
 
 protected:
   template <class T>
@@ -78,6 +87,13 @@ protected:
     defineProperty(name + ".height", property.height);
   }
 
+  template <class T>
+  void watchProp(const core::String_t &prop, void (T::*callback)()) {
+    auto &watchers = _propWatchers[prop];
+    watchers.pushBack(std::function(
+        [=, this]() -> void { (dynamic_cast<T *>(this)->*callback)(); }));
+  }
+
   inline bool isProperty(const core::String_t &key,
                          const core::String_t &property) {
     return property == key || property.starts_with(key + ".");
@@ -95,7 +111,16 @@ protected:
     return nullptr;
   }
 
-  virtual void onPropChange(const core::String_t &name) {};
+  void onPropChange(const core::String_t &name) {
+    fmt::print("{}\n",name);
+    for (auto &[prop, watchers] : _propWatchers) {
+      if (isProperty(prop, name)) {
+        for (auto &watcher : watchers) {
+          watcher();
+        }
+      }
+    }
+  };
 
 public:
   Node();

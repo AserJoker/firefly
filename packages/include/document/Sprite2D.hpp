@@ -32,7 +32,8 @@ protected:
   const core::AutoPtr<video::Material> &getMaterial() const override;
   const glm::mat4 &getMatrix() const override;
 
-  void onPropChange(const core::String_t &name) override;
+  void onTextureChange();
+  void onShaderChange();
   void onLoad() override;
 
 public:

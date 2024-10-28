@@ -57,7 +57,7 @@ void GameApplication::onInitialize() {
   initScript();
   _mod->loadAll(cwd().append("mods").string());
   _locale->reload();
-  _document = document::Node::load("demo::index.xml");
+  _document = document::Node::load("duskland::index.xml");
 }
 
 void GameApplication::onMainLoop() {

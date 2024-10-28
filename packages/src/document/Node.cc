@@ -120,9 +120,11 @@ void Node::setProperty(const core::String_t &name, const core::Value &value) {
   if (_propertyGroups.contains(name) &&
       value.getType() == core::ValueType::MAP) {
     auto record = value.get<core::Map_t>();
+    beginPropGroup(name);
     for (auto &[key, value] : record) {
-      setProperty(name + "." + key, value);
+      setProperty(key, value);
     }
+    endPropGroup();
     return;
   }
 

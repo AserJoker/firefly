@@ -1,6 +1,6 @@
 #pragma once
 #include "Any.hpp"
-#include "TemplateCString.hpp"
+#include "CompileString.hpp"
 #include "Type.hpp"
 #include <exception>
 #include <initializer_list>

@@ -1,6 +1,6 @@
 #pragma once
 #include "TestException.hpp"
-#include "core/TemplateCString.hpp"
+#include "core/CompileString.hpp"
 #include <CUnit/CUnit.h>
 #include <CUnit/TestDB.h>
 #include <fmt/format.h>

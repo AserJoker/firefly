@@ -1,5 +1,5 @@
 #pragma once
-#include "core/TemplateCString.hpp"
+#include "core/CompileString.hpp"
 using namespace firefly;
 template <core::CompileString name> struct Identity {
   friend auto getAccessorType(Identity<name>);

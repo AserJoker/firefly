@@ -14,6 +14,12 @@ Sprite2D::Sprite2D() : _zIndex(0) {
   defineProperty(PROP_DESTINATION, _destinationRect);
   defineProperty(PROP_SOURCE, _sourceRect);
   defineProperty(PROP_SHADER, _shader);
+
+  watchProp(PROP_TEXTURE, &Sprite2D::onTextureChange);
+  watchProp(PROP_ZINDEX, &Sprite2D::applyMatrix);
+  watchProp(PROP_DESTINATION, &Sprite2D::applyMatrix);
+  watchProp(PROP_SOURCE, &Sprite2D::applyTexMatrix);
+  watchProp(PROP_SHADER, &Sprite2D::onShaderChange);
 }
 
 void Sprite2D::onLoad() {
@@ -79,33 +85,27 @@ void Sprite2D::applyTexMatrix() {
 const core::AutoPtr<video::Geometry> &Sprite2D::getGeometry() const {
   return _geometry;
 }
+
 const core::AutoPtr<video::Material> &Sprite2D::getMaterial() const {
   return _material;
 }
+
 const glm::mat4 &Sprite2D::getMatrix() const { return _matrix; }
 
-void Sprite2D::onPropChange(const core::String_t &name) {
-  if (name == PROP_TEXTURE) {
-    if (!_texture) {
-      return;
-    }
-    _texture->setTexture(_texturePath);
-    if (_material != nullptr && _material->getTexture("diffuse") != _texture) {
-      _material->setTexture("diffuse", _texture);
-    }
-    applyTexMatrix();
+void Sprite2D::onTextureChange() {
+  if (!_texture) {
     return;
   }
-  if (isProperty(PROP_DESTINATION, name) || name == PROP_ZINDEX) {
-    applyMatrix();
+  _texture->setTexture(_texturePath);
+  if (_material != nullptr && _material->getTexture("diffuse") != _texture) {
+    _material->setTexture("diffuse", _texture);
   }
-  if (isProperty(PROP_SOURCE, name)) {
-    applyTexMatrix();
-  }
-  if (isProperty(PROP_SHADER, name)) {
-    if (_material != nullptr) {
-      _material->setShader(_shader);
-    }
+  applyTexMatrix();
+}
+
+void Sprite2D::onShaderChange() {
+  if (_material != nullptr) {
+    _material->setShader(_shader);
   }
 }
 

@@ -8,7 +8,7 @@
 #include "Map.hpp"
 #include "Object.hpp"
 #include "Singleton.hpp"
-#include "core/TemplateCString.hpp"
+#include "core/CompileString.hpp"
 #include <functional>
 #include <string>
 
