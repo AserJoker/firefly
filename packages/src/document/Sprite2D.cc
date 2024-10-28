@@ -59,7 +59,7 @@ void Sprite2D::onLoad() {
 
 void Sprite2D::applyMatrix() {
   _matrix = core::translate({_destinationRect.x * 1.0f,
-                             _destinationRect.y * 1.0f, _zIndex / 1000.0f}) *
+                             _destinationRect.y * 1.0f, _zIndex * 1.0f}) *
             glm::scale(glm::mat4(1.0f), {_destinationRect.width * 1.0f,
                                          _destinationRect.height * 1.0f, 1.0f});
 }

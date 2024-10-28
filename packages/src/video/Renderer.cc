@@ -112,6 +112,7 @@ Renderer::Renderer(SDL_Window *window) : _shaderName("internal") {
                         GL_TRUE);
 
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
+  glDepthFunc(GL_LEQUAL);
 
   int32_t width, height;
   SDL_GetWindowSize(window, &width, &height);
@@ -177,7 +178,6 @@ void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
 
   if (material->isDepthTest()) {
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
   } else {
     glDisable(GL_DEPTH_TEST);
   }
@@ -217,7 +217,7 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
   } else {
     _context->blendRenderList.push_back({geometry, material, model});
     _context->blendRenderList.sort([](auto &a, auto &b) -> bool {
-      return a.matrixModel[3][2] >= b.matrixModel[3][2];
+      return a.matrixModel[3][2] > b.matrixModel[3][2];
     });
   }
 }
