@@ -6,6 +6,8 @@ Buffer::Buffer(uint32_t size, const void *data) : _size(size), _data(0) {
     _data = ::operator new(size);
     if (data) {
       std::memcpy(_data, data, size);
+    } else {
+      memset(_data, 0, size);
     }
   }
 }

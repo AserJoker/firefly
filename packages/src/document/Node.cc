@@ -173,7 +173,7 @@ void Node::onMainLoop() {
 }
 void Node::onTick() {
   for (auto &child : _children) {
-    child->onTick();
+    child->onMainLoop();
   }
 }
 
@@ -219,7 +219,7 @@ static core::AutoPtr<Node> parseXML(xmlNodePtr node) {
     std::string value = (const char *)xmlGetProp(node, prop->name);
     std::string name;
     for (auto &chr : key) {
-      if (chr == '_') {
+      if (chr == '-') {
         name += ".";
       } else {
         name += chr;

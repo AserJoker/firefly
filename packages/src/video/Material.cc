@@ -29,6 +29,8 @@ bool Material::isTransparent() const { return _transparent; }
 
 const std::string &Material::getName() const { return _name; }
 
+void Material::setInstanced(uint32_t instanced) { _instanced = instanced; }
+
 const uint32_t &Material::getInstanced() const { return _instanced; }
 
 void Material::setName(const std::string &name) { _name = name; }
@@ -43,19 +45,19 @@ void Material::setBlendFunc(
   _blendFunc = func;
 }
 
- bool Material::isVisible() const { return _visible; }
+bool Material::isVisible() const { return _visible; }
 
 void Material::setVisible(bool value) { _visible = value; }
 
- bool Material::isStencilTest() const { return _stencilTest; }
+bool Material::isStencilTest() const { return _stencilTest; }
 
 void Material::setStencil(bool value) { _stencilTest = value; }
 
- bool Material::isDepthTest() const { return _depthTest; }
+bool Material::isDepthTest() const { return _depthTest; }
 
 void Material::setDepthTest(bool value) { _depthTest = value; }
 
- bool Material::isAlphaTest() const { return _alphaTest; }
+bool Material::isAlphaTest() const { return _alphaTest; }
 
 void Material::setAlphaTest(bool value) { _alphaTest = value; }
 

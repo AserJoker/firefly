@@ -20,39 +20,39 @@ Sprite2D::Sprite2D() : _zIndex(0) {
   watchProp(PROP_DESTINATION, &Sprite2D::applyMatrix);
   watchProp(PROP_SOURCE, &Sprite2D::applyTexMatrix);
   watchProp(PROP_SHADER, &Sprite2D::onShaderChange);
+  _material = new video::Material();
+  _matrix = glm::mat4(1.0f);
 }
 
 void Sprite2D::onLoad() {
   _geometry = new video::Geometry();
-  _material = new video::Material();
-  _matrix = glm::mat4(1.0f);
-
   core::AutoPtr attrPosition = new video::Attribute(internal::rectPosition, 3);
   core::AutoPtr attrCoord = new video::Attribute(internal::rectTextureCoord, 2);
 
   core::AutoPtr attrIndices = new video::AttributeIndex(internal::rectIndices);
 
-  _texture = new video::Texture();
-  if (!_texturePath.empty()) {
-    auto [width, height] = _texture->getTexture()->getSize();
-    if (_sourceRect.width == 0) {
-      _sourceRect.width = width;
-    }
-    if (_sourceRect.height == 0) {
-      _sourceRect.height = height;
-    }
-    if (_destinationRect.width == 0) {
-      _destinationRect.width = width;
-    }
-    if (_destinationRect.height == 0) {
-      _destinationRect.height = height;
-    }
-    _material->setTexture("diffuse", _texture);
-  }
-
   _geometry->setAttribute(0, attrPosition);
   _geometry->setAttribute(1, attrCoord);
   _geometry->setAttributeIndex(attrIndices);
+  if (!_texture) {
+    _texture = new video::Texture();
+    if (!_texturePath.empty()) {
+      auto [width, height] = _texture->getTexture()->getSize();
+      if (_sourceRect.width == 0) {
+        _sourceRect.width = width;
+      }
+      if (_sourceRect.height == 0) {
+        _sourceRect.height = height;
+      }
+      if (_destinationRect.width == 0) {
+        _destinationRect.width = width;
+      }
+      if (_destinationRect.height == 0) {
+        _destinationRect.height = height;
+      }
+      _material->setTexture("diffuse", _texture);
+    }
+  }
 
   _material->setIsTransparent(true);
   _material->setDepthTest(true);
@@ -66,8 +66,8 @@ void Sprite2D::onLoad() {
 void Sprite2D::applyMatrix() {
   _matrix = core::translate({_destinationRect.x * 1.0f,
                              _destinationRect.y * 1.0f, _zIndex * 1.0f}) *
-            glm::scale(glm::mat4(1.0f), {_destinationRect.width * 1.0f,
-                                         _destinationRect.height * 1.0f, 1.0f});
+            core::scale({_destinationRect.width * 1.0f,
+                         _destinationRect.height * 1.0f, 1.0f});
 }
 
 void Sprite2D::applyTexMatrix() {
@@ -76,10 +76,10 @@ void Sprite2D::applyTexMatrix() {
   }
   auto &[width, height] = _texture->getTexture()->getSize();
   _texture->getMatrix() =
-      core::scale({_sourceRect.width * 1.0f / width,
-                   _sourceRect.height * 1.0f / height, 1.0f}) *
       core::translate(
-          {_sourceRect.x * 1.0f / width, _sourceRect.y * 1.0f / height, 1.0f});
+          {_sourceRect.x * 1.0f / width, _sourceRect.y * 1.0f / height, 1.0f}) *
+      core::scale({_sourceRect.width * 1.0f / width,
+                   _sourceRect.height * 1.0f / height, 1.0f});
 }
 
 const core::AutoPtr<video::Geometry> &Sprite2D::getGeometry() const {
@@ -111,6 +111,11 @@ void Sprite2D::onShaderChange() {
 
 void Sprite2D::setTexture(const core::String_t &path) {
   setProperty(PROP_TEXTURE, path);
+}
+void Sprite2D::setTexture(const core::AutoPtr<video::Texture> &texture) {
+  _texture = texture;
+  _material->setTexture("diffuse", texture);
+  applyTexMatrix();
 }
 const core::String_t &Sprite2D::getTexture() const { return _texturePath; }
 

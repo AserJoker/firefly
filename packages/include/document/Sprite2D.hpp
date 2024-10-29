@@ -40,6 +40,7 @@ public:
   Sprite2D();
 
   void setTexture(const core::String_t &path);
+  void setTexture(const core::AutoPtr<video::Texture>& texture);
   const core::String_t &getTexture() const;
 
   void setShader(const core::String_t &shader);

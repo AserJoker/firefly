@@ -11,8 +11,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
-#include <SDL2/SDL_ttf.h>
-#include <SDL_video.h>
 #include <glad/glad.h>
 
 using namespace firefly;
@@ -31,9 +29,6 @@ void Application::onInitialize() {
   }
   if (!Mix_Init(MIX_INIT_FLAC | MIX_INIT_MID | MIX_INIT_MOD | MIX_INIT_MP3 |
                 MIX_INIT_OGG | MIX_INIT_OPUS | MIX_INIT_WAVPACK)) {
-    throw SDLException();
-  }
-  if (TTF_Init() != 0) {
     throw SDLException();
   }
   _media->addCurrentWorkspaceDirectory(cwd().append("media").string());
@@ -66,7 +61,6 @@ void Application::onMainLoop() {
 }
 
 void Application::onUnInitialize() {
-  TTF_Quit();
   Mix_Quit();
   IMG_Quit();
   SDL_Quit();

@@ -32,7 +32,8 @@ public:
                 uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,
                 const void *data);
 
-  core::AutoPtr<core::Buffer> getImage(uint32_t level);
+  core::AutoPtr<core::Buffer> getImage(uint32_t level,
+                                       PIXEL_FORMAT fmt = PIXEL_FORMAT::RGBA);
 
   void setSubImage(uint32_t level, uint32_t x, uint32_t y, uint32_t width,
                    uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,

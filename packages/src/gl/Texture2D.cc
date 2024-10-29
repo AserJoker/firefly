@@ -72,12 +72,14 @@ void Texture2D::setImage(uint32_t level, PIXEL_FORMAT internalFormat,
   glBindTexture(GL_TEXTURE_2D, _handle);
   glTexImage2D(GL_TEXTURE_2D, level, (GLint)internalFormat, width, height, 0,
                (GLint)format, (GLenum)type, data);
+  _size = {width, height};
 }
 
-core::AutoPtr<core::Buffer> Texture2D::getImage(uint32_t level) {
+core::AutoPtr<core::Buffer> Texture2D::getImage(uint32_t level,
+                                                PIXEL_FORMAT fmt) {
   core::AutoPtr buffer = new core::Buffer(_size.width * _size.height * 4);
   glBindTexture(GL_TEXTURE_2D, _handle);
-  glGetTexImage(GL_TEXTURE_2D, level, GL_RGBA, GL_UNSIGNED_BYTE,
+  glGetTexImage(GL_TEXTURE_2D, level, (GLenum)fmt, GL_UNSIGNED_BYTE,
                 (void *)buffer->getData());
   return buffer;
 }

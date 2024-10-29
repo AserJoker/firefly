@@ -32,5 +32,6 @@ public:
   template <class T> void write(uint32_t offset, const T &value) {
     write(offset, sizeof(T), &value);
   }
+  void write(uint32_t size, const void *data);
 };
 } // namespace firefly::video

@@ -113,6 +113,7 @@ Renderer::Renderer(SDL_Window *window) : _shaderName("internal") {
 
   glClearColor(0.2f, 0.3f, 0.2f, 1.0f);
   glDepthFunc(GL_LEQUAL);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
   int32_t width, height;
   SDL_GetWindowSize(window, &width, &height);

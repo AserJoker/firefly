@@ -2,6 +2,7 @@
 #include "core/AnyPtr.hpp"
 #include "core/Array.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Color.hpp"
 #include "core/CompileString.hpp"
 #include "core/Map.hpp"
 #include "core/Object.hpp"
@@ -10,6 +11,7 @@
 #include "core/Value.hpp"
 #include <functional>
 
+
 namespace firefly::document {
 class Node : public core::Object {
 private:
@@ -17,6 +19,7 @@ private:
   private:
   public:
     Property() = default;
+    Property(core::Byte_t *ptr) : core::AnyPtr(ptr){};
     Property(core::String_t *ptr) : core::AnyPtr(ptr){};
     Property(core::Integer_t *ptr) : core::AnyPtr(ptr){};
     Property(core::Unsigned_t *ptr) : core::AnyPtr(ptr){};
@@ -76,6 +79,14 @@ protected:
   }
 
   inline void defineProperty(const core::String_t &name,
+                             core::Color<> &property) {
+    defineProperty(name + ".r", property.r);
+    defineProperty(name + ".g", property.g);
+    defineProperty(name + ".b", property.b);
+    defineProperty(name + ".a", property.a);
+  }
+
+  inline void defineProperty(const core::String_t &name,
                              core::Point<> &property) {
     defineProperty(name + ".x", property.x);
     defineProperty(name + ".y", property.y);
@@ -112,7 +123,6 @@ protected:
   }
 
   void onPropChange(const core::String_t &name) {
-    fmt::print("{}\n",name);
     for (auto &[prop, watchers] : _propWatchers) {
       if (isProperty(prop, name)) {
         for (auto &watcher : watchers) {

@@ -35,3 +35,6 @@ const uint32_t &Attribute::getItemCount() const { return _itemCount; }
 void Attribute::write(uint32_t offset, uint32_t size, const void *data) {
   _vbo->write(offset, size, data);
 }
+void Attribute::write(uint32_t size, const void *data) {
+  _vbo->setData(size, data);
+}

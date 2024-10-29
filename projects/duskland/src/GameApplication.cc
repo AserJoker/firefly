@@ -2,9 +2,11 @@
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
 #include "document/Camera2D.hpp"
+#include "document/Font.hpp"
 #include "document/Node.hpp"
 #include "document/Scene2D.hpp"
 #include "document/Sprite2D.hpp"
+#include "document/Text2D.hpp"
 #include "document/Window.hpp"
 #include "input/ClickEvent.hpp"
 #include "input/KeyDownEvent.hpp"
@@ -45,6 +47,8 @@ void GameApplication::initDocument() {
   document::Scene2D::registerNode();
   document::Window::registerNode();
   document::Camera2D::registerNode();
+  document::Font::registerNode();
+  document::Text2D::registerNode();
 }
 
 void GameApplication::onInitialize() {
