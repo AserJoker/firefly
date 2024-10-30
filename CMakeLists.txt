@@ -55,3 +55,4 @@ endif()
 
 add_subdirectory(packages)
 add_subdirectory(projects)
+add_subdirectory(3rdparty/quickjs)
