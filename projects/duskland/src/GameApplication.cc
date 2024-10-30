@@ -82,7 +82,10 @@ void GameApplication::onKeyUp(input::KeyUpEvent &e) {}
 
 void GameApplication::onMouseMotion(input::MouseMotionEvent &e) {}
 
-void GameApplication::onMouseDown(input::MouseDownEvent &e) {}
+void GameApplication::onMouseDown(input::MouseDownEvent &e) {
+  auto text = document::Node::select("text1").cast<document::Text2D>();
+  text->setProperty("font-color", "{\"r\":1,\"g\":0,\"b\":0,\"a\":1}");
+}
 
 void GameApplication::onMouseWheel(input::MouseWheelEvent &e) {}
 

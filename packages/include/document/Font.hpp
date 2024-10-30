@@ -20,6 +20,7 @@ private:
     uint32_t size;
     core::Color<> color;
     bool visible;
+    size_t index;
   };
 
 private:
@@ -42,6 +43,7 @@ private:
   void onShaderChange();
 
   void update();
+  void updateText(Text &text);
 
 protected:
   const core::AutoPtr<video::Geometry> &getGeometry() const override;

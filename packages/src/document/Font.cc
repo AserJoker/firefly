@@ -77,6 +77,7 @@ uint32_t Font::createText(const core::String_t &source) {
       .size = 24,
       .color = {0, 0, 0, 1.0f},
       .visible = true,
+      .index = 0,
   };
   auto result = handle;
   handle++;
@@ -98,23 +99,71 @@ void Font::setTextSize(uint32_t handle, uint32_t size) {
   }
   auto &text = _texts.at(handle);
   text.size = size;
-  update();
+  if (text.index < _matrixs.size()) {
+    auto chrs = _font->draw(text.text);
+    auto offset = 0;
+    size_t index = 0;
+    for (auto &chr : chrs) {
+      _matrixs[text.index + index] =
+          core::translate({(offset + text.position.x) * 1.0f,
+                           text.position.y * 1.0f, 1.0f}) *
+          core::scale({chr.advance * text.size / 64.0f, text.size, 1.0f});
+      offset += chr.advance * text.size / 64.0f;
+      index++;
+    }
+    _attrInstanceModel->write(text.index * sizeof(glm::mat4),
+                              chrs.size() * sizeof(glm::mat4),
+                              &_matrixs[text.index]);
+
+  } else {
+    update();
+  }
 }
 
 void Font::setTextPosition(uint32_t handle, const core::Point<> &position) {
   if (!_texts.contains(handle)) {
     return;
   }
-  _texts.at(handle).position = position;
-  update();
+  auto &text = _texts.at(handle);
+  text.position = position;
+  if (text.index < _matrixs.size()) {
+    auto chrs = _font->draw(text.text);
+    auto offset = 0;
+    size_t index = 0;
+    for (auto &chr : chrs) {
+      _matrixs[text.index + index] =
+          core::translate({(offset + text.position.x) * 1.0f,
+                           text.position.y * 1.0f, 1.0f}) *
+          core::scale({chr.advance * text.size / 64.0f, text.size, 1.0f});
+      offset += chr.advance * text.size / 64.0f;
+      index++;
+    }
+    _attrInstanceModel->write(text.index * sizeof(glm::mat4),
+                              chrs.size() * sizeof(glm::mat4),
+                              &_matrixs[text.index]);
+  } else {
+    update();
+  }
 }
 
 void Font::setTextColor(uint32_t handle, const core::Color<> &color) {
   if (!_texts.contains(handle)) {
     return;
   }
-  _texts.at(handle).color = color;
-  update();
+  auto &text = _texts.at(handle);
+  text.color = color;
+  if (text.index < _matrixs.size()) {
+    auto chrs = _font->draw(text.text);
+    for (size_t index = 0; index < text.text.size(); index++) {
+      _colors[text.index + index] = {text.color.r, text.color.g, text.color.b,
+                                     text.color.a};
+    }
+    _attrInstanceColor->write(text.index * sizeof(glm::vec4),
+                              chrs.size() * sizeof(glm::vec4),
+                              &_colors[text.index]);
+  } else {
+    update();
+  }
 }
 
 void Font::setTextVisible(uint32_t handle, bool visible) {
@@ -139,6 +188,7 @@ void Font::update() {
     if (!text.visible) {
       continue;
     }
+    text.index = _matrixs.size();
     auto chrs = _font->draw(text.text);
     auto offset = 0;
     for (auto &chr : chrs) {

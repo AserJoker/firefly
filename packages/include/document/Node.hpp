@@ -11,7 +11,6 @@
 #include "core/Value.hpp"
 #include <functional>
 
-
 namespace firefly::document {
 class Node : public core::Object {
 private:
@@ -19,18 +18,11 @@ private:
   private:
   public:
     Property() = default;
-    Property(core::Byte_t *ptr) : core::AnyPtr(ptr){};
     Property(core::String_t *ptr) : core::AnyPtr(ptr){};
     Property(core::Integer_t *ptr) : core::AnyPtr(ptr){};
     Property(core::Unsigned_t *ptr) : core::AnyPtr(ptr){};
     Property(core::Float_t *ptr) : core::AnyPtr(ptr){};
     Property(core::Boolean_t *ptr) : core::AnyPtr(ptr){};
-
-    Property(core::Array<core::String_t> *ptr) : core::AnyPtr(ptr){};
-    Property(core::Array<core::Integer_t> *ptr) : core::AnyPtr(ptr){};
-    Property(core::Array<core::Unsigned_t> *ptr) : core::AnyPtr(ptr){};
-    Property(core::Array<core::Float_t> *ptr) : core::AnyPtr(ptr){};
-    Property(core::Array<core::Boolean_t> *ptr) : core::AnyPtr(ptr){};
 
     Property(const Property &attr) = default;
     Property &operator=(const Property &another) = default;

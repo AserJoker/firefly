@@ -111,22 +111,6 @@ const core::Value Node::getProperty(const core::String_t &name) const {
 }
 
 void Node::setProperty(const core::String_t &name, const core::Value &value) {
-  if (_propertyGroups.contains(name) &&
-      value.getType() == core::ValueType::STRING) {
-    std::string source = value.get<core::String_t>();
-    setProperty(name, core::Json::parse(source));
-    return;
-  }
-  if (_propertyGroups.contains(name) &&
-      value.getType() == core::ValueType::MAP) {
-    auto record = value.get<core::Map_t>();
-    beginPropGroup(name);
-    for (auto &[key, value] : record) {
-      setProperty(key, value);
-    }
-    endPropGroup();
-    return;
-  }
 
   core::String_t attrName;
   if (!_currentPropertyGroup.empty()) {
@@ -134,6 +118,22 @@ void Node::setProperty(const core::String_t &name, const core::Value &value) {
   }
   if (!_properties.contains(attrName)) {
     attrName = name;
+  }
+  if (_propertyGroups.contains(attrName) &&
+      value.getType() == core::ValueType::STRING) {
+    std::string source = value.get<core::String_t>();
+    setProperty(attrName, core::Json::parse(source));
+    return;
+  }
+  if (_propertyGroups.contains(attrName) &&
+      value.getType() == core::ValueType::MAP) {
+    auto record = value.get<core::Map_t>();
+    beginPropGroup(attrName);
+    for (auto &[key, value] : record) {
+      setProperty(key, value);
+    }
+    endPropGroup();
+    return;
   }
   if (_properties.contains(attrName)) {
     try {
@@ -225,7 +225,11 @@ static core::AutoPtr<Node> parseXML(xmlNodePtr node) {
         name += chr;
       }
     }
-    result->setProperty(name, value);
+    if (name == "id") {
+      result->setIdentity(value);
+    } else {
+      result->setProperty(name, value);
+    }
     prop = prop->next;
   }
   auto child = node->children;
