@@ -219,7 +219,7 @@ static core::AutoPtr<Node> parseXML(xmlNodePtr node) {
     std::string value = (const char *)xmlGetProp(node, prop->name);
     std::string name;
     for (auto &chr : key) {
-      if (chr == '-') {
+      if (chr == '_') {
         name += ".";
       } else {
         name += chr;
