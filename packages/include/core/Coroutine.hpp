@@ -12,7 +12,7 @@ public:
   static void start(const std::function<void()> &func);
   static void init();
   static void yield();
-  static bool done();
+  static core::Boolean_t done();
   template <class T, class Fn> static AutoPtr<Promise<T>> async(Fn &&func) {
     AutoPtr pro = new Promise<T>();
     start([=]() -> void {

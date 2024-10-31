@@ -3,23 +3,22 @@
 #include "core/AutoPtr.hpp"
 #include "core/Color.hpp"
 #include "core/Point.hpp"
-#include "core/Value.hpp"
 #include "document/Renderable.hpp"
 #include "video/Attribute.hpp"
 #include "video/Font.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
 #include "video/Texture.hpp"
-#include <string>
+
 namespace firefly::document {
 class Font : public Renderable, public Node::Register<"font", Font> {
 private:
   struct Text {
     std::wstring text;
     core::Point<> position;
-    uint32_t size;
+    core::Unsigned_t size;
     core::Color<> color;
-    bool visible;
+    core::Boolean_t visible;
     size_t index;
   };
 
@@ -28,7 +27,7 @@ private:
   core::String_t _source;
   core::String_t _shader;
   core::AutoPtr<video::Texture> _texture;
-  core::Map<uint32_t, Text> _texts;
+  core::Map<core::Unsigned_t, Text> _texts;
 
 private:
   core::AutoPtr<video::Geometry> _geometry;
@@ -59,13 +58,13 @@ protected:
 
 public:
   Font();
-  uint32_t createText(const core::String_t &source);
-  void setTextSource(uint32_t handle, const core::String_t &source);
-  void setTextSize(uint32_t handle, uint32_t size);
-  void setTextPosition(uint32_t handle, const core::Point<> &position);
-  void setTextColor(uint32_t handle, const core::Color<> &color);
-  void setTextVisible(uint32_t handle, bool visible);
-  void deleteText(uint32_t handle);
+  core::Unsigned_t createText(const core::String_t &source);
+  void setTextSource(core::Unsigned_t handle, const core::String_t &source);
+  void setTextSize(core::Unsigned_t handle, core::Unsigned_t size);
+  void setTextPosition(core::Unsigned_t handle, const core::Point<> &position);
+  void setTextColor(core::Unsigned_t handle, const core::Color<> &color);
+  void setTextVisible(core::Unsigned_t handle, core::Boolean_t visible);
+  void deleteText(core::Unsigned_t handle);
 
 public:
   static constexpr auto PROP_SOURCE = "source";

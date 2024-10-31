@@ -8,15 +8,13 @@
 #include "video/CompileException.hpp"
 #include "video/LinkException.hpp"
 #include <filesystem>
-#include <string>
-
 
 using namespace firefly;
 using namespace firefly::video;
 
-const core::Map<std::string, Shader::ShaderSource>
-Shader::load(const std::string &path) {
-  core::Map<std::string, ShaderSource> sources;
+const core::Map<core::String_t, Shader::ShaderSource>
+Shader::load(const core::String_t &path) {
+  core::Map<core::String_t, ShaderSource> sources;
   auto media = core::Singleton<runtime::Media>::instance();
   auto programs = media->scan(path);
   for (auto &program : programs) {
@@ -46,17 +44,17 @@ Shader::load(const std::string &path) {
           continue;
         }
         auto buffer = media->load(item)->read();
-        programSources[dtype] =
-            std::string((const char *)buffer->getData(), buffer->getSize());
+        programSources[dtype] = core::String_t(
+            (core::CString_t)buffer->getData(), buffer->getSize());
       }
     }
   }
   return sources;
 }
 
-Shader::Shader(const std::string &path) : Shader(load(path)) {}
+Shader::Shader(const core::String_t &path) : Shader(load(path)) {}
 
-Shader::Shader(const core::Map<std::string, ShaderSource> &sources)
+Shader::Shader(const core::Map<core::String_t, ShaderSource> &sources)
     : _sources(sources) {
   for (auto &[name, sources] : sources) {
     core::AutoPtr<gl::Program> program = new gl::Program();
@@ -76,21 +74,22 @@ Shader::Shader(const core::Map<std::string, ShaderSource> &sources)
   }
 }
 
-void Shader::setSource(const std::string &name, const gl::SHADER_TYPE &type,
-                       const std::string &source) {}
+void Shader::setSource(const core::String_t &name, const gl::SHADER_TYPE &type,
+                       const core::String_t &source) {}
 
-const core::Map<std::string, Shader::ShaderSource> &Shader::getSources() const {
+const core::Map<core::String_t, Shader::ShaderSource> &
+Shader::getSources() const {
   return _sources;
 }
-const core::Map<std::string, core::AutoPtr<gl::Program>> &
+const core::Map<core::String_t, core::AutoPtr<gl::Program>> &
 Shader::getPrograms() const {
   return _programs;
 }
-core::Map<std::string, core::AutoPtr<gl::Program>> &Shader::getPrograms() {
+core::Map<core::String_t, core::AutoPtr<gl::Program>> &Shader::getPrograms() {
   return _programs;
 }
 
-core::AutoPtr<gl::Program> Shader::getProgram(const std::string &name) {
+core::AutoPtr<gl::Program> Shader::getProgram(const core::String_t &name) {
   if (_programs.contains(name)) {
     return _programs.at(name);
   }

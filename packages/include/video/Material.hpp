@@ -10,7 +10,6 @@
 #include "gl/Uniform.hpp"
 #include <glm/fwd.hpp>
 #include <glm/glm.hpp>
-#include <string>
 
 namespace firefly::video {
 class Material : public core::Object, public core::Cache<Material> {
@@ -22,66 +21,66 @@ private:
 
   core::Map<core::String_t, core::AutoPtr<Texture>> _textures;
 
-  std::string _name;
+  core::String_t _name;
 
-  std::string _shader;
+  core::String_t _shader;
 
-  bool _wireframe;
+  core::Boolean_t _wireframe;
 
-  bool _transparent;
+  core::Boolean_t _transparent;
 
-  bool _cullBackface;
+  core::Boolean_t _cullBackface;
 
-  bool _alphaTest;
-  std::pair<gl::ALPHA_FUNC, float> _alphaFunc;
+  core::Boolean_t _alphaTest;
+  std::pair<gl::ALPHA_FUNC, core::Float_t> _alphaFunc;
 
-  bool _depthTest;
+  core::Boolean_t _depthTest;
 
-  bool _stencilTest;
+  core::Boolean_t _stencilTest;
 
   std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> _blendFunc;
 
-  bool _visible;
+  core::Boolean_t _visible;
 
-  uint32_t _instanced;
+  core::Unsigned_t _instanced;
 
 public:
   Material();
-  void setShader(const std::string &shader);
-  const std::string &getShader() const;
+  void setShader(const core::String_t &shader);
+  const core::String_t &getShader() const;
 
-  void setIsWireframe(bool value);
-  bool isWireframe() const;
+  void setIsWireframe(core::Boolean_t value);
+  core::Boolean_t isWireframe() const;
 
-  void setIsTransparent(bool value);
-  bool isTransparent() const;
+  void setIsTransparent(core::Boolean_t value);
+  core::Boolean_t isTransparent() const;
 
-  void setIsCullBackface(bool value);
-  bool isCullBackface() const;
+  void setIsCullBackface(core::Boolean_t value);
+  core::Boolean_t isCullBackface() const;
 
-  void setName(const std::string &name);
-  const std::string &getName() const;
+  void setName(const core::String_t &name);
+  const core::String_t &getName() const;
 
-  void setInstanced(uint32_t instanced);
-  const uint32_t &getInstanced() const;
+  void setInstanced(core::Unsigned_t instanced);
+  const core::Unsigned_t &getInstanced() const;
 
   const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &getBlendFunc() const;
   void setBlendFunc(const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &func);
 
-  bool isVisible() const;
-  void setVisible(bool value);
+  core::Boolean_t isVisible() const;
+  void setVisible(core::Boolean_t value);
 
-  bool isStencilTest() const;
-  void setStencil(bool value);
+  core::Boolean_t isStencilTest() const;
+  void setStencil(core::Boolean_t value);
 
-  bool isDepthTest() const;
-  void setDepthTest(bool value);
+  core::Boolean_t isDepthTest() const;
+  void setDepthTest(core::Boolean_t value);
 
-  bool isAlphaTest() const;
-  void setAlphaTest(bool value);
+  core::Boolean_t isAlphaTest() const;
+  void setAlphaTest(core::Boolean_t value);
 
-  const std::pair<gl::ALPHA_FUNC, float> &getAlphaFunc() const;
-  void setAlphaFunc(const std::pair<gl::ALPHA_FUNC, float> &func);
+  const std::pair<gl::ALPHA_FUNC, core::Float_t> &getAlphaFunc() const;
+  void setAlphaFunc(const std::pair<gl::ALPHA_FUNC, core::Float_t> &func);
 
   void setAttribute(const core::String_t &name, const Attribute &value);
   const Attribute &getAttribute(const core::String_t &name) const;

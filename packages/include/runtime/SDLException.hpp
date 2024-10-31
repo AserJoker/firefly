@@ -5,7 +5,7 @@ namespace firefly::runtime {
 class SDLException : public core::RuntimeException<"SDL"> {
 public:
   SDLException(
-      const std::string &message = "",
+      const core::String_t &message = "",
       const std::source_location &current = std::source_location::current())
       : core::RuntimeException<"SDL">(
             message.empty() ? SDL_GetError() : message, current) {}

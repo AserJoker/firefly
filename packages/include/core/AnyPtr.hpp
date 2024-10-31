@@ -7,14 +7,14 @@ class AnyPtr {
 private:
   struct Handle {
     virtual const core::Any get(void *ptr) const = 0;
-    virtual bool set(void *ptr, const core::Any &value) = 0;
+    virtual core::Boolean_t set(void *ptr, const core::Any &value) = 0;
     virtual Handle *clone() = 0;
     virtual ~Handle(){};
     virtual const std::type_info &type() = 0;
   };
   template <class T> struct HandleImpl : public Handle {
     const core::Any get(void *ptr) const override { return *(T *)ptr; }
-    bool set(void *ptr, const core::Any &value) override {
+    core::Boolean_t set(void *ptr, const core::Any &value) override {
       if (*(T *)ptr != value.as<T>()) {
         *(T *)ptr = value.as<T>();
         return true;
@@ -30,7 +30,7 @@ private:
   Handle *_handle;
 
 public:
-  AnyPtr() : _ptr(nullptr), _handle(new HandleImpl<std::nullptr_t>) {}
+  AnyPtr() : _ptr(nullptr), _handle(new HandleImpl<core::Nil_t>) {}
 
   template <class T> AnyPtr(T *ptr) : _ptr(ptr), _handle(new HandleImpl<T>) {}
 
@@ -49,7 +49,9 @@ public:
 
   const core::Any get() const { return _handle->get(_ptr); }
 
-  bool set(const core::Any &value) { return _handle->set(_ptr, value); }
+  core::Boolean_t set(const core::Any &value) {
+    return _handle->set(_ptr, value);
+  }
 
   const std::type_info &type() const { return _handle->type(); }
 };

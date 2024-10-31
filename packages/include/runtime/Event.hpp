@@ -1,8 +1,9 @@
 #pragma once
+#include "core/Type.hpp"
 namespace firefly::runtime {
 class Event {
 private:
-  bool _canceled;
+  core::Boolean_t _canceled;
 
 public:
   Event();
@@ -11,6 +12,6 @@ public:
 
   void cancel();
 
-  [[nodiscard]] bool isCanceled() const;
+  [[nodiscard]] core::Boolean_t isCanceled() const;
 };
 } // namespace firefly::runtime

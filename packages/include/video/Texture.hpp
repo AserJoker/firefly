@@ -20,7 +20,7 @@ public:
   Texture(const core::AutoPtr<gl::Texture2D> &texture,
           const glm::mat4 &matrix = glm::mat4(1.0f));
 
-  void bind(uint32_t index = 0) const;
+  void bind(core::Unsigned_t index = 0) const;
 
   void setTexture(const core::String_t &path);
 

@@ -73,8 +73,8 @@ void Application::onEvent(SystemEvent &event) {
   }
   if (event.getEvent().type == SDL_WINDOWEVENT) {
     if (event.getEvent().window.event == SDL_WINDOWEVENT_RESIZED) {
-      uint32_t width = event.getEvent().window.data1;
-      uint32_t height = event.getEvent().window.data2;
+      core::Unsigned_t width = event.getEvent().window.data1;
+      core::Unsigned_t height = event.getEvent().window.data2;
       _eventbus->emit<ResizeEvent>(core::Size<>(width, height),
                                    event.getEvent().window.windowID);
     }

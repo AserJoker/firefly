@@ -7,7 +7,7 @@
 namespace firefly::input {
 class Keyboard : public core::Object {
 private:
-  bool _bitmap[512];
+  core::Boolean_t _bitmap[512];
   core::Injector<runtime::EventBus, INJECTOR_EVENTBUS> _bus;
 
 private:
@@ -15,6 +15,6 @@ private:
 
 public:
   Keyboard();
-  const bool &getKeyState(uint32_t scancode) const;
+  const core::Boolean_t &getKeyState(core::Unsigned_t scancode) const;
 };
 }; // namespace firefly::input

@@ -3,18 +3,19 @@
 #include "gl/BufferUsage.hpp"
 using namespace firefly;
 using namespace firefly::gl;
-Buffer::Buffer(BUFFER_USAGE usage, uint32_t handle)
+Buffer::Buffer(BUFFER_USAGE usage, core::Unsigned_t handle)
     : _handle(handle), _usage(usage) {
   if (!_handle) {
     glGenBuffers(1, &_handle);
   }
 }
 
-void Buffer::setData(uint32_t size, const void *data) {
+void Buffer::setData(core::Unsigned_t size, const void *data) {
   glBindBuffer(GL_ARRAY_BUFFER, _handle);
   glBufferData(GL_ARRAY_BUFFER, size, data, (GLenum)_usage);
 }
-void Buffer::write(uint32_t offset, uint32_t size, const void *data) {
+void Buffer::write(core::Unsigned_t offset, core::Unsigned_t size,
+                   const void *data) {
   glBindBuffer(GL_ARRAY_BUFFER, _handle);
   glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
 }
@@ -30,8 +31,8 @@ void Buffer::unmap() const {
   glBindBuffer(GL_ARRAY_BUFFER, _handle);
   glUnmapBuffer(GL_ARRAY_BUFFER);
 }
-const uint32_t Buffer::getBufferSize() const {
-  int32_t size;
+const core::Unsigned_t Buffer::getBufferSize() const {
+  core::Integer_t size;
   glBindBuffer(GL_ARRAY_BUFFER, _handle);
   glGetBufferParameteriv(GL_ARRAY_BUFFER, GL_BUFFER_SIZE, &size);
   return size;
@@ -49,7 +50,7 @@ void Buffer::bind(BUFFER_TARGET target, const core::AutoPtr<Buffer> &buffer) {
     glBindBuffer((GLenum)target, buffer->_handle);
   }
 }
-void Buffer::bindBase(BUFFER_TARGET target, uint32_t index,
+void Buffer::bindBase(BUFFER_TARGET target, core::Unsigned_t index,
                       const core::AutoPtr<Buffer> &buffer) {
   glBindBufferBase((GLenum)target, index, buffer->_handle);
 }

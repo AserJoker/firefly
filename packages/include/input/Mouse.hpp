@@ -9,7 +9,7 @@ namespace firefly::input {
 class Mouse : public core::Object {
 private:
   core::Injector<runtime::EventBus, INJECTOR_EVENTBUS> _bus;
-  bool _captured;
+  core::Boolean_t _captured;
   glm::ivec2 _wheel;
 
 private:
@@ -20,6 +20,6 @@ public:
   const glm::ivec2 getPosition() const;
   void captureMouse();
   void releaseMouse();
-  const bool &isCaptured();
+  const core::Boolean_t &isCaptured();
 };
 }; // namespace firefly::input

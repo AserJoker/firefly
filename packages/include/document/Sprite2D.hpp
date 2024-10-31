@@ -3,7 +3,6 @@
 #include "core/Point.hpp"
 #include "core/Rect.hpp"
 #include "core/Size.hpp"
-#include "core/Value.hpp"
 #include "document/Renderable.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
@@ -19,9 +18,9 @@ private:
 
   core::Rect<> _sourceRect;
   core::Rect<> _destinationRect;
-  std::string _texturePath;
-  std::string _shader;
-  int32_t _zIndex;
+  core::String_t _texturePath;
+  core::String_t _shader;
+  core::Integer_t _zIndex;
 
 private:
   void applyMatrix();
@@ -40,7 +39,7 @@ public:
   Sprite2D();
 
   void setTexture(const core::String_t &path);
-  void setTexture(const core::AutoPtr<video::Texture>& texture);
+  void setTexture(const core::AutoPtr<video::Texture> &texture);
   const core::String_t &getTexture() const;
 
   void setShader(const core::String_t &shader);
@@ -64,8 +63,8 @@ public:
   void setSourceSize(const core::Size<> &size);
   const core::Size<> &getSourceSize() const;
 
-  void setZIndex(int32_t zIndex);
-  int32_t getZIndex() const;
+  void setZIndex(core::Integer_t zIndex);
+  core::Integer_t getZIndex() const;
 
 public:
   static inline constexpr auto PROP_SHADER = "shader";

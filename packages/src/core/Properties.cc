@@ -6,12 +6,12 @@ using namespace firefly;
 using namespace firefly::core;
 Properties::Properties(const core::AutoPtr<Buffer> &buffer) : _root(PObject{}) {
   if (buffer != nullptr) {
-    std::string key;
-    std::string value;
-    std::string *iterator = &key;
-    const char *data = (const char *)buffer->getData();
-    bool inValue = false;
-    for (uint32_t i = 0;; i++) {
+    core::String_t key;
+    core::String_t value;
+    core::String_t *iterator = &key;
+    core::CString_t data = (core::CString_t)buffer->getData();
+    core::Boolean_t inValue = false;
+    for (core::Unsigned_t i = 0;; i++) {
       if (data[i] == '\"') {
         inValue = !inValue;
         continue;
@@ -57,8 +57,8 @@ Properties::Properties(const core::AutoPtr<Buffer> &buffer) : _root(PObject{}) {
   }
 }
 
-const std::string Properties::encode(const std::string &source) const {
-  std::string result;
+const core::String_t Properties::encode(const core::String_t &source) const {
+  core::String_t result;
   for (auto &c : source) {
     if (c == '\n') {
       result += "\\n";
@@ -74,8 +74,8 @@ const std::string Properties::encode(const std::string &source) const {
   }
   return result;
 }
-const std::string Properties::decode(const std::string &source) const {
-  std::string result;
+const core::String_t Properties::decode(const core::String_t &source) const {
+  core::String_t result;
   for (size_t i = 0; i < source.size(); i++) {
     auto c = source[i];
     if (c == '\\') {
@@ -99,9 +99,10 @@ const std::string Properties::decode(const std::string &source) const {
   }
   return result;
 }
-const core::Array<std::string> Properties::parse(const std::string &key) const {
-  core::Array<std::string> result;
-  std::string part;
+const core::Array<core::String_t>
+Properties::parse(const core::String_t &key) const {
+  core::Array<core::String_t> result;
+  core::String_t part;
   for (auto &c : key) {
     if (c == '.' || c == '[') {
       if (!part.empty()) {
@@ -117,7 +118,7 @@ const core::Array<std::string> Properties::parse(const std::string &key) const {
   }
   return result;
 }
-const std::string Properties::get(const std::string &key) const {
+const core::String_t Properties::get(const core::String_t &key) const {
   auto parts = parse(key);
   auto iterator = &_root;
   for (auto &part : parts) {
@@ -131,7 +132,7 @@ const std::string Properties::get(const std::string &key) const {
   }
   return iterator->value;
 }
-void Properties::set(const std::string &key, const std::string &value) {
+void Properties::set(const core::String_t &key, const core::String_t &value) {
   auto parts = parse(key);
   Item *iterator = &_root;
   for (auto &part : parts) {
@@ -148,7 +149,8 @@ void Properties::set(const std::string &key, const std::string &value) {
   iterator->isObject = false;
   iterator->children.clear();
 }
-const core::Array<std::string> Properties::keys(const std::string &key) const {
+const core::Array<core::String_t>
+Properties::keys(const core::String_t &key) const {
   auto parts = parse(key);
   auto *iterator = &_root;
   for (auto &part : parts) {
@@ -160,13 +162,13 @@ const core::Array<std::string> Properties::keys(const std::string &key) const {
     }
     iterator = &iterator->children.at(part);
   }
-  core::Array<std::string> result;
+  core::Array<core::String_t> result;
   for (auto &[k, _] : iterator->children) {
     result.pushBack(k);
   }
   return result;
 }
-void Properties::del(const std::string &key) {
+void Properties::del(const core::String_t &key) {
   auto parts = parse(key);
   auto *iterator = &_root;
   size_t i = 0;
@@ -184,7 +186,7 @@ void Properties::del(const std::string &key) {
     i++;
   }
 }
-bool Properties::has(const std::string &key) const {
+core::Boolean_t Properties::has(const core::String_t &key) const {
   auto parts = parse(key);
   auto iterator = &_root;
   for (auto &part : parts) {
@@ -198,7 +200,7 @@ bool Properties::has(const std::string &key) const {
   }
   return true;
 }
-bool Properties::isObject(const std::string &key) const {
+core::Boolean_t Properties::isObject(const core::String_t &key) const {
   auto parts = parse(key);
   auto iterator = &_root;
   for (auto &part : parts) {
@@ -212,10 +214,11 @@ bool Properties::isObject(const std::string &key) const {
   }
   return iterator->isObject;
 }
-const std::string Properties::parseJSONField(const std::string &field) const {
-  std::string result = "{";
+const core::String_t
+Properties::parseJSONField(const core::String_t &field) const {
+  core::String_t result = "{";
   auto keys = this->keys(field);
-  for (uint32_t i = 0; i < keys.size(); i++) {
+  for (core::Unsigned_t i = 0; i < keys.size(); i++) {
     if (i != 0) {
       result += ",";
     }
@@ -230,7 +233,7 @@ const std::string Properties::parseJSONField(const std::string &field) const {
   result += "}";
   return result;
 }
-const std::string Properties::toJSON() const { return parseJSONField(); }
+const core::String_t Properties::toJSON() const { return parseJSONField(); }
 void Properties::mergeField(Item &a, const Item &b) {
   if (!b.isObject) {
     a.children.clear();
@@ -250,12 +253,12 @@ void Properties::mergeField(Item &a, const Item &b) {
 void Properties::merge(const core::AutoPtr<Properties> &prop) {
   mergeField(_root, prop->_root);
 }
-const std::string Properties::storeField(const std::string key,
-                                         const Item &item) const {
+const core::String_t Properties::storeField(const core::String_t key,
+                                            const Item &item) const {
   if (!item.isObject) {
     return fmt::format("{}=\"{}\"", key, decode(item.value));
   } else {
-    std::string result;
+    core::String_t result;
     for (auto &[k, v] : item.children) {
       if (!result.empty()) {
         result += '\n';
@@ -265,8 +268,8 @@ const std::string Properties::storeField(const std::string key,
     return result;
   }
 }
-const std::string Properties::store() const {
-  std::string result;
+const core::String_t Properties::store() const {
+  core::String_t result;
   for (auto &[k, v] : _root.children) {
     if (!result.empty()) {
       result += '\n';

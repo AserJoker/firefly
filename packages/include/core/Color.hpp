@@ -16,9 +16,11 @@ template <class T = Float_t> struct Color {
     return *this;
   }
 
-  bool operator==(const Color<T> &another) {
+  core::Boolean_t operator==(const Color<T> &another) {
     return r == another.r && g == another.g && b == another.b && a == another.a;
   }
-  bool operator!=(const Color<T> &another) { return !(*this == another); }
+  core::Boolean_t operator!=(const Color<T> &another) {
+    return !(*this == another);
+  }
 };
 }; // namespace firefly::core

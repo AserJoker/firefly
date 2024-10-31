@@ -17,7 +17,7 @@ struct CoContext {
   ucontext_t cpuinfo;
   char stack[NEO_COROUTINE_STACK_SIZE];
   std::function<void()> exec;
-  bool enable;
+  core::Boolean_t enable;
 };
 
 static ucontext_t master;
@@ -37,7 +37,7 @@ void Coroutine::init() {
   current = &master;
 }
 void Coroutine::start(const std::function<void()> &func) {
-  routines.push_back({.exec = func, .enable = true});
+  routines.pushBack({.exec = func, .enable = true});
   auto &last = *routines.rbegin();
   getcontext(&last.cpuinfo);
   last.cpuinfo.uc_stack.ss_sp = last.stack;
@@ -70,6 +70,6 @@ void Coroutine::yield() {
   }
   swapcontext(now, current);
 }
-bool Coroutine::done() { return routines.empty(); }
+core::Boolean_t Coroutine::done() { return routines.empty(); }
 
 #endif

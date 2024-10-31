@@ -1,7 +1,7 @@
 #pragma once
-#include <cstdint>
+#include "Type.hpp"
 namespace firefly::core {
-template <class T = uint32_t> struct Size {
+template <class T = core::Unsigned_t> struct Size {
   T width;
   T height;
 
@@ -17,7 +17,7 @@ template <class T = uint32_t> struct Size {
     return *this;
   }
 
-  bool operator==(const Size<T> &another) const {
+  core::Boolean_t operator==(const Size<T> &another) const {
     if (&another == this) {
       return true;
     }
@@ -28,11 +28,11 @@ template <class T = uint32_t> struct Size {
     return {width + another.width, height + another.height};
   }
 
-  Size<float> operator+(const float &value) const {
+  Size<core::Float_t> operator+(const core::Float_t &value) const {
     return {width + value, height + value};
   }
 
-  Size<T> operator+(const int32_t &value) const {
+  Size<T> operator+(const core::Integer_t &value) const {
     return {width + value, height + value};
   }
 
@@ -52,11 +52,11 @@ template <class T = uint32_t> struct Size {
     return {width - another.width, height - another.height};
   }
 
-  Size<T> operator-(int32_t value) const {
+  Size<T> operator-(core::Integer_t value) const {
     return {width - value, height - value};
   }
 
-  Size<float> operator-(float value) const {
+  Size<core::Float_t> operator-(core::Float_t value) const {
     return {width - value, height - value};
   }
 
@@ -76,11 +76,11 @@ template <class T = uint32_t> struct Size {
     return {width * another.width, height * another.height};
   }
 
-  Size<float> operator*(float value) const {
+  Size<core::Float_t> operator*(core::Float_t value) const {
     return {width * value, height * value};
   }
 
-  Size<T> operator*(int32_t value) const {
+  Size<T> operator*(core::Integer_t value) const {
     return {width * value, height * value};
   }
 

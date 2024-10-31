@@ -13,7 +13,7 @@
 #include <freetype/freetype.h>
 #include <glm/glm.hpp>
 #include <stdexcept>
-#include <string>
+
 using namespace firefly;
 using namespace firefly::video;
 Font::Font() : _fontSize(0), _face(nullptr), _baseline(0) {
@@ -21,7 +21,7 @@ Font::Font() : _fontSize(0), _face(nullptr), _baseline(0) {
     throw std::runtime_error("Failed to init freetype");
   }
 }
-Font::Font(const std::string &path, uint32_t size) : Font() {
+Font::Font(const core::String_t &path, core::Unsigned_t size) : Font() {
   setFont(path, size);
 }
 Font::~Font() {
@@ -34,7 +34,7 @@ Font::~Font() {
     _library = nullptr;
   }
 }
-void Font::setFont(const std::string &path, uint32_t size) {
+void Font::setFont(const core::String_t &path, core::Unsigned_t size) {
   _fontSize = size;
   auto media = core::Singleton<runtime::Media>::instance();
   _fontData = media->load(path)->read();
@@ -51,7 +51,7 @@ void Font::setFont(const std::string &path, uint32_t size) {
        L"abcdefghijklmnopqrstuvwxyz{|}~");
 }
 
-uint32_t Font::getFontSize() const { return _fontSize; }
+core::Unsigned_t Font::getFontSize() const { return _fontSize; }
 
 const core::AutoPtr<gl::Texture2D> &Font::getTexture() const {
   return _texture;
@@ -61,7 +61,7 @@ core::Array<Font::Character> Font::draw(const std::wstring &source) {
   core::Array<Font::Character> characters;
   core::Array<core::AutoPtr<core::Buffer>> buffers;
   core::Array<wchar_t> newCharacters;
-  uint32_t offset = 0;
+  core::Unsigned_t offset = 0;
   if (_texture != nullptr) {
     offset = _texture->getSize().width;
   }
@@ -72,10 +72,10 @@ core::Array<Font::Character> Font::draw(const std::wstring &source) {
       chr.advance = _face->glyph->advance.x >> 6;
       core::AutoPtr<core::Buffer> buffer =
           new core::Buffer(chr.advance * _fontSize);
-      auto dst = (uint8_t *)buffer->getData();
+      auto dst = (core::Byte_t *)buffer->getData();
       auto src = _face->glyph->bitmap.buffer;
-      for (uint32_t y = 0; y < _face->glyph->bitmap.rows; y++) {
-        for (uint32_t x = 0; x < _face->glyph->bitmap.width; x++) {
+      for (core::Unsigned_t y = 0; y < _face->glyph->bitmap.rows; y++) {
+        for (core::Unsigned_t x = 0; x < _face->glyph->bitmap.width; x++) {
           auto color = src[y * _face->glyph->bitmap.width + x];
           auto offset =
               (y + _baseline - _face->glyph->bitmap_top) * chr.advance + x +
@@ -98,7 +98,7 @@ core::Array<Font::Character> Font::draw(const std::wstring &source) {
   if (newCharacters.size()) {
     auto width = offset;
     core::AutoPtr<core::Buffer> buf = new core::Buffer(_fontSize * width);
-    auto dst = (uint8_t *)buf->getData();
+    auto dst = (core::Byte_t *)buf->getData();
     offset = 0;
     if (!_texture) {
       _texture =
@@ -106,9 +106,9 @@ core::Array<Font::Character> Font::draw(const std::wstring &source) {
     } else {
       auto old = _texture->getImage(0, gl::PIXEL_FORMAT::RED);
       offset = _texture->getSize().width;
-      auto src = (uint8_t *)old->getData();
-      for (uint32_t y = 0; y < _fontSize; y++) {
-        for (uint32_t x = 0; x < _texture->getSize().width; x++) {
+      auto src = (core::Byte_t *)old->getData();
+      for (core::Unsigned_t y = 0; y < _fontSize; y++) {
+        for (core::Unsigned_t x = 0; x < _texture->getSize().width; x++) {
           dst[y * width + x] = src[y * _texture->getSize().width + x];
         }
       }
@@ -117,9 +117,9 @@ core::Array<Font::Character> Font::draw(const std::wstring &source) {
     for (auto &ch : newCharacters) {
       auto &chr = _charactors[ch];
       auto &buffer = buffers[index];
-      auto src = (uint8_t *)buffer->getData();
-      for (uint32_t y = 0; y < _fontSize; y++) {
-        for (uint32_t x = 0; x < chr.advance; x++) {
+      auto src = (core::Byte_t *)buffer->getData();
+      for (core::Unsigned_t y = 0; y < _fontSize; y++) {
+        for (core::Unsigned_t x = 0; x < chr.advance; x++) {
           dst[y * width + x + offset] = src[y * chr.advance + x];
         }
       }

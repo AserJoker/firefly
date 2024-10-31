@@ -1,6 +1,7 @@
 #include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Singleton.hpp"
+#include "document/Animation.hpp"
 #include "document/Camera2D.hpp"
 #include "document/Font.hpp"
 #include "document/Node.hpp"
@@ -49,6 +50,7 @@ void GameApplication::initDocument() {
   document::Camera2D::registerNode();
   document::Font::registerNode();
   document::Text2D::registerNode();
+  document::Animation::registerNode();
 }
 
 void GameApplication::onInitialize() {
@@ -83,8 +85,11 @@ void GameApplication::onKeyUp(input::KeyUpEvent &e) {}
 void GameApplication::onMouseMotion(input::MouseMotionEvent &e) {}
 
 void GameApplication::onMouseDown(input::MouseDownEvent &e) {
-  auto text = document::Node::select("text1").cast<document::Text2D>();
-  text->setProperty("font-color", "{\"r\":1,\"g\":0,\"b\":0,\"a\":1}");
+  auto animation =
+      document::Node::select("animation").cast<document::Animation>();
+  animation->createChannel("position.x", 0, 50, 100, 200);
+  animation->createChannel("position.x", 50, 100, 200, 100);
+  animation->start();
 }
 
 void GameApplication::onMouseWheel(input::MouseWheelEvent &e) {}

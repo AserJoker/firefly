@@ -27,7 +27,7 @@ private:
   };
 
 private:
-  std::string _shaderName;
+  core::String_t _shaderName;
 
   core::AutoPtr<gl::Program> _shader;
 
@@ -37,7 +37,7 @@ private:
 
   core::Map<core::String_t, core::AutoPtr<Texture>> _textures;
 
-  core::Map<std::string, gl::Uniform> _uniforms;
+  core::Map<core::String_t, gl::Uniform> _uniforms;
 
   SDL_GLContext _ctx;
 
@@ -52,11 +52,12 @@ private:
 
   void setMaterial(const core::AutoPtr<Material> &material);
 
-  bool activeShader(const std::string &name, const std::string &stage);
+  core::Boolean_t activeShader(const core::String_t &name,
+                               const core::String_t &stage);
 
   void bindingTextures(
       const core::Map<core::String_t, core::AutoPtr<Texture>> &textures,
-      uint32_t offset = 0);
+      core::Unsigned_t offset = 0);
 
 public:
   Renderer(SDL_Window *window);
@@ -65,9 +66,9 @@ public:
   void draw(const core::AutoPtr<Material> &material,
             const core::AutoPtr<Geometry> &geometry, const glm::mat4 &matrix);
 
-  void setShader(const std::string &name);
+  void setShader(const core::String_t &name);
 
-  const std::string &getShader() const;
+  const core::String_t &getShader() const;
 
   void setViewport(const core::Rect<> &viewport);
 
@@ -79,7 +80,7 @@ public:
 
   void popContext(const core::AutoPtr<RenderContext> &ctx);
 
-  void setUniform(const std::string &name, const gl::Uniform &uniform);
+  void setUniform(const core::String_t &name, const gl::Uniform &uniform);
 
   void setTexture(const core::String_t &name, const core::String_t &path);
 

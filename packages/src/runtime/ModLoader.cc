@@ -2,6 +2,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/File.hpp"
 #include "core/Json.hpp"
+#include "core/Map.hpp"
 #include "core/Singleton.hpp"
 #include "core/Value.hpp"
 #include "runtime/Logger.hpp"
@@ -11,18 +12,17 @@
 #include <cjson/cJSON.h>
 #include <exception>
 #include <filesystem>
-#include <unordered_map>
 
 using namespace std::filesystem;
 using namespace firefly;
 using namespace firefly::runtime;
-void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
+void ModLoader::load(core::Map<core::String_t, Manifest> &workflow,
                      Manifest &manifest,
-                     const std::vector<std::string> &requirePath) {
+                     const core::Array<core::String_t> &requirePath) {
   for (auto &[name, version] : manifest.dependences) {
     if (std::find(requirePath.begin(), requirePath.end(), name) !=
         requirePath.end()) {
-      std::string path;
+      core::String_t path;
       for (auto &part : requirePath) {
         if (!path.empty()) {
           path += "->";
@@ -54,7 +54,7 @@ void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
     }
     if (!dep.loaded) {
       auto rpath = requirePath;
-      rpath.push_back(manifest.name);
+      rpath.pushBack(manifest.name);
       load(workflow, dep, rpath);
     }
   }
@@ -72,7 +72,7 @@ void ModLoader::load(std::unordered_map<std::string, Manifest> &workflow,
   }
   manifest.loaded = true;
 }
-void ModLoader::scan(const std::string &root) {
+void ModLoader::scan(const core::String_t &root) {
   auto logger = core::Singleton<Logger>::instance();
   _mods.clear();
   for (auto item : directory_iterator(root)) {
@@ -88,10 +88,10 @@ void ModLoader::scan(const std::string &root) {
     }
   }
 }
-void ModLoader::loadAll(const std::string &root) {
+void ModLoader::loadAll(const core::String_t &root) {
   scan(root);
-  std::unordered_map<std::string, Manifest> workflow = _mods;
-  std::unordered_map<std::string, Manifest> cache;
+  core::Map<core::String_t, Manifest> workflow = _mods;
+  core::Map<core::String_t, Manifest> cache;
   while (!workflow.empty()) {
     Manifest manifest = workflow.begin()->second;
     workflow.erase(manifest.name);
@@ -116,7 +116,8 @@ void ModLoader::loadAll(const std::string &root) {
 }
 
 template <class T>
-static void parseField(T &value, core::Map_t &root, const std::string &field) {
+static void parseField(T &value, core::Map_t &root,
+                       const core::String_t &field) {
   try {
     if (root.contains(field)) {
       value = root.at(field).get<T>();
@@ -126,7 +127,7 @@ static void parseField(T &value, core::Map_t &root, const std::string &field) {
   }
 }
 
-ModLoader::Manifest ModLoader::parseManifest(const std::string &source) {
+ModLoader::Manifest ModLoader::parseManifest(const core::String_t &source) {
   try {
     path modPath = source;
     path manifestPath = modPath;
@@ -137,7 +138,7 @@ ModLoader::Manifest ModLoader::parseManifest(const std::string &source) {
     auto buffer = file->read();
 
     auto json = core::Json::parse(
-        std::string((char *)buffer->getData(), buffer->getSize()));
+        core::String_t((char *)buffer->getData(), buffer->getSize()));
     if (json.getType() != core::ValueType::MAP) {
       throw ModLoaderException("invalid format");
     }
@@ -145,7 +146,7 @@ ModLoader::Manifest ModLoader::parseManifest(const std::string &source) {
     manifest.name = modPath.filename().string();
     manifest.path = source;
     manifest.loaded = false;
-    std::string version;
+    core::String_t version;
     parseField(manifest.displayName, map, "displayName");
     parseField(version, map, "version");
     manifest.version = Version::parse(version);
@@ -187,15 +188,15 @@ ModLoader::Manifest ModLoader::parseManifest(const std::string &source) {
   }
 }
 
-void ModLoader::loadMod(const std::string &name) {
+void ModLoader::loadMod(const core::String_t &name) {
   if (_mods.contains(name)) {
     Manifest &manifest = _mods.at(name);
-    std::unordered_map<std::string, Manifest> workflow;
+    core::Map<core::String_t, Manifest> workflow;
     load(workflow, manifest, {name});
   }
 }
 
-const std::unordered_map<std::string, ModLoader::Manifest> &
+const core::Map<core::String_t, ModLoader::Manifest> &
 ModLoader::getMods() const {
   return _mods;
 }

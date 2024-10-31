@@ -9,30 +9,31 @@
 namespace firefly::video {
 class Shader : public core::Object, public core::Cache<Shader> {
 public:
-  using ShaderSource = core::Map<gl::SHADER_TYPE, std::string>;
+  using ShaderSource = core::Map<gl::SHADER_TYPE, core::String_t>;
 
 private:
-  core::Map<std::string, ShaderSource> _sources;
-  core::Map<std::string, core::AutoPtr<gl::Program>> _programs;
+  core::Map<core::String_t, ShaderSource> _sources;
+  core::Map<core::String_t, core::AutoPtr<gl::Program>> _programs;
 
 private:
-  static const core::Map<std::string, ShaderSource>
-  load(const std::string &path);
+  static const core::Map<core::String_t, ShaderSource>
+  load(const core::String_t &path);
 
 public:
-  Shader(const std::string &path);
+  Shader(const core::String_t &path);
 
-  Shader(const core::Map<std::string, ShaderSource> &sources);
+  Shader(const core::Map<core::String_t, ShaderSource> &sources);
 
-  void setSource(const std::string &name, const gl::SHADER_TYPE &type,
-                 const std::string &source);
+  void setSource(const core::String_t &name, const gl::SHADER_TYPE &type,
+                 const core::String_t &source);
 
-  const core::Map<std::string, ShaderSource> &getSources() const;
+  const core::Map<core::String_t, ShaderSource> &getSources() const;
 
-  const core::Map<std::string, core::AutoPtr<gl::Program>> &getPrograms() const;
+  const core::Map<core::String_t, core::AutoPtr<gl::Program>> &
+  getPrograms() const;
 
-  core::Map<std::string, core::AutoPtr<gl::Program>> &getPrograms();
+  core::Map<core::String_t, core::AutoPtr<gl::Program>> &getPrograms();
 
-  core::AutoPtr<gl::Program> getProgram(const std::string &name);
+  core::AutoPtr<gl::Program> getProgram(const core::String_t &name);
 };
 }; // namespace firefly::video

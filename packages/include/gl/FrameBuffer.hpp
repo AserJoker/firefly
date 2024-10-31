@@ -1,29 +1,29 @@
 #pragma once
+#include "core/Array.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Object.hpp"
-#include "core/Rect.hpp"
 #include "gl/Texture2D.hpp"
 #include <glm/glm.hpp>
-#include <vector>
+
 
 namespace firefly::gl {
 class FrameBuffer : public core::Object {
 private:
-  uint32_t _handle;
-  uint32_t _renderBuffer;
-  std::vector<core::AutoPtr<Texture2D>> _attachments;
-  std::vector<uint32_t> _attachmentBuffers;
+  core::Unsigned_t _handle;
+  core::Unsigned_t _renderBuffer;
+  core::Array<core::AutoPtr<Texture2D>> _attachments;
+  core::Array<core::Unsigned_t> _attachmentBuffers;
   core::Size<> _size;
 
 public:
-  FrameBuffer(const core::Size<> &size, uint32_t handle = 0);
+  FrameBuffer(const core::Size<> &size, core::Unsigned_t handle = 0);
   ~FrameBuffer() override;
-  void bindAttachments(const std::vector<core::AutoPtr<Texture2D>> &textures);
-  const std::vector<core::AutoPtr<Texture2D>> &getAttachments() const;
-  bool check();
-  uint32_t getHandle() const;
+  void bindAttachments(const core::Array<core::AutoPtr<Texture2D>> &textures);
+  const core::Array<core::AutoPtr<Texture2D>> &getAttachments() const;
+  core::Boolean_t check();
+  core::Unsigned_t getHandle() const;
   const core::Size<> &getSize() const;
-  const std::vector<uint32_t> &getAttachmentBuffers() const;
+  const core::Array<core::Unsigned_t> &getAttachmentBuffers() const;
 
 public:
   static void bind(const core::AutoPtr<FrameBuffer> &framebuffer);

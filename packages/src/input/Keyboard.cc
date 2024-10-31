@@ -29,6 +29,6 @@ void Keyboard::onEvent(runtime::SystemEvent &e) {
     break;
   }
 }
-const bool &Keyboard::getKeyState(uint32_t scancode) const {
+const core::Boolean_t &Keyboard::getKeyState(core::Unsigned_t scancode) const {
   return _bitmap[scancode];
 }

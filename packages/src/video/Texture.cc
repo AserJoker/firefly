@@ -17,7 +17,7 @@ Texture::Texture(const core::AutoPtr<gl::Texture2D> &tex,
                  const glm::mat4 &matrix)
     : _texture(tex), _coordMatrix(matrix) {}
 
-void Texture::bind(uint32_t index) const {
+void Texture::bind(core::Unsigned_t index) const {
   gl::Texture2D::bind(_texture, index);
 }
 

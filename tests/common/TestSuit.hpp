@@ -1,31 +1,31 @@
 #pragma once
 #include "TestException.hpp"
 #include "core/CompileString.hpp"
+#include "core/Map.hpp"
 #include <CUnit/CUnit.h>
 #include <CUnit/TestDB.h>
 #include <fmt/format.h>
 #include <functional>
 #include <regex>
-#include <string>
-#include <unordered_map>
+
 using namespace firefly;
 class BaseTestSuit {
 private:
-  static inline std::unordered_map<std::string, BaseTestSuit *> _suits;
+  static inline core::Map<core::String_t, BaseTestSuit *> _suits;
 
 public:
-  static std::vector<BaseTestSuit *> get(const std::string &name) {
-    std::vector<BaseTestSuit *> suits;
+  static core::Array<BaseTestSuit *> get(const core::String_t &name) {
+    core::Array<BaseTestSuit *> suits;
     if (name.starts_with('/')) {
       std::regex regex(name.substr(1, name.length() - 2));
       for (auto &[sname, suit] : _suits) {
         if (std::regex_match(sname, regex)) {
-          suits.push_back(suit);
+          suits.pushBack(suit);
         }
       }
     } else {
       if (_suits.contains(name)) {
-        suits.push_back(_suits.at(name));
+        suits.pushBack(_suits.at(name));
       }
     }
     return suits;
@@ -73,11 +73,11 @@ private:
   };
 
 private:
-  std::string _name;
-  std::unordered_map<std::string, Test> _tests;
+  core::String_t _name;
+  core::Map<core::String_t, Test> _tests;
 
 public:
-  BaseTestSuit(const std::string &name) {
+  BaseTestSuit(const core::String_t &name) {
     _name = name;
     _suits[_name] = this;
   }
@@ -88,15 +88,15 @@ public:
     _tests = another._tests;
     _suits[_name] = this;
   }
-  const std::string &getSuitName() const { return _name; }
+  const core::String_t &getSuitName() const { return _name; }
 
-  virtual CU_ErrorCode enable(const std::string &name = "") = 0;
+  virtual CU_ErrorCode enable(const core::String_t &name = "") = 0;
 
 protected:
   virtual int beforeAll() { return 0; };
   virtual int afterAll() { return 0; };
 
-  void defineTest(const std::string &name, const std::function<void()> &test,
+  void defineTest(const core::String_t &name, const std::function<void()> &test,
                   const std::function<int()> &before,
                   const std::function<int()> &after) {
     _tests[name] = {before, after, test};
@@ -107,8 +107,8 @@ template <core::CompileString name, typename T>
 class TestSuit : public BaseTestSuit {
 private:
   CU_pSuite _suite;
-  std::unordered_map<std::string, std::function<void()>> _tests;
-  std::vector<std::string> _enableTests;
+  core::Map<core::String_t, std::function<void()>> _tests;
+  core::Array<core::String_t> _enableTests;
 
 private:
   static int defaultBefore() { return 0; }
@@ -146,12 +146,12 @@ public:
           _enableTests.end()) {
         return;
       }
-      _enableTests.push_back(test.value);
+      _enableTests.pushBack(test.value);
       CU_add_test(_suite, test.value, &BaseTestSuit::test<name, test>);
     };
   }
 
-  CU_ErrorCode enable(const std::string &test) override {
+  CU_ErrorCode enable(const core::String_t &test) override {
     if (test.empty()) {
       for (auto &[_, exec] : _tests) {
         exec();

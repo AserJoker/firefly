@@ -2,7 +2,6 @@
 #include "Array.hpp"
 #include <cstddef>
 #include <initializer_list>
-#include <string>
 #include <unordered_map>
 #include <utility>
 #include <variant>
@@ -48,7 +47,7 @@ public:
 
   virtual ~Map() {}
 
-  bool operator==(const Map<K, T> &data) const {
+  core::Boolean_t operator==(const Map<K, T> &data) const {
     if (_data.size() != data.size()) {
       return false;
     }
@@ -65,7 +64,7 @@ public:
 
   size_t size() const { return _data.size(); }
 
-  bool empty() const { return _data.empty(); }
+  core::Boolean_t empty() const { return _data.empty(); }
 
   Array<K> keys() const {
     Array<K> keys;
@@ -86,9 +85,11 @@ public:
 
   ConstIterator end() const { return _data.end(); }
 
-  bool contains(const K &key) const { return _data.contains(key); }
+  core::Boolean_t contains(const K &key) const { return _data.contains(key); }
 
-  bool contains(K &&key) const { return _data.contains(std::forward<K>(key)); }
+  core::Boolean_t contains(K &&key) const {
+    return _data.contains(std::forward<K>(key));
+  }
 
   ConstIterator find(const K &key) const {
     for (auto it = begin(); it != end(); it++) {
@@ -155,7 +156,7 @@ public:
     return _data.erase(begin, end);
   }
 
-  void erase(std::initializer_list<std::string> keys) {
+  void erase(std::initializer_list<core::String_t> keys) {
     for (auto &key : keys) {
       erase(key);
     }

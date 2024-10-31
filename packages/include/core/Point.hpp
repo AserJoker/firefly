@@ -1,7 +1,7 @@
 #pragma once
-#include <cstdint>
+#include "Type.hpp"
 namespace firefly::core {
-template <class T = int32_t> struct Point {
+template <class T = core::Integer_t> struct Point {
   T x;
   T y;
 
@@ -17,7 +17,7 @@ template <class T = int32_t> struct Point {
     return *this;
   }
 
-  bool operator==(const Point<T> &another) const {
+  core::Boolean_t operator==(const Point<T> &another) const {
     if (&another == this) {
       return true;
     }
@@ -34,9 +34,13 @@ template <class T = int32_t> struct Point {
     return *this;
   }
 
-  Point<float> operator+(float value) const { return {x + value, y + value}; }
+  Point<core::Float_t> operator+(core::Float_t value) const {
+    return {x + value, y + value};
+  }
 
-  Point<T> operator+(int32_t value) const { return {x + value, y + value}; }
+  Point<T> operator+(core::Integer_t value) const {
+    return {x + value, y + value};
+  }
 
   Point<T> &operator+=(T value) {
     x += value;
@@ -48,19 +52,21 @@ template <class T = int32_t> struct Point {
 
   Point<T> operator-(const Point &another) const { return *this + (-another); }
 
-  Point<float> operator-(float value) const { return *this + (-value); }
+  Point<core::Float_t> operator-(core::Float_t value) const {
+    return *this + (-value);
+  }
 
-  Point<T> operator-(int32_t value) const { return *this + (-value); }
+  Point<T> operator-(core::Integer_t value) const { return *this + (-value); }
 
   Point<T> &operator-=(const Point &another) { return *this += (-another); }
 
   Point<T> &operator-=(T value) { return *this += (-value); }
 
-  Point<float> operator*(const float &value) const {
+  Point<core::Float_t> operator*(const core::Float_t &value) const {
     return {x * value, y * value};
   }
 
-  Point<T> operator*(const int32_t &value) const {
+  Point<T> operator*(const core::Integer_t &value) const {
     return {x * value, y * value};
   }
 

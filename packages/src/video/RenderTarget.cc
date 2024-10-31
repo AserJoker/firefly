@@ -1,4 +1,5 @@
 #include "video/RenderTarget.hpp"
+#include "core/Array.hpp"
 #include "core/AutoPtr.hpp"
 #include "gl/FrameBuffer.hpp"
 #include "gl/PixelFormat.hpp"
@@ -8,20 +9,20 @@
 #include <SDL_pixels.h>
 #include <SDL_rwops.h>
 #include <SDL_surface.h>
-#include <vector>
 
 using namespace firefly;
 using namespace firefly::video;
 
-RenderTarget::RenderTarget(const std::string &stage, const core::Size<> &size,
-                           uint32_t attachment)
+RenderTarget::RenderTarget(const core::String_t &stage,
+                           const core::Size<> &size,
+                           core::Unsigned_t attachment)
     : _size(size), _stage(stage) {
   _frame = new gl::FrameBuffer(size);
-  std::vector<core::AutoPtr<gl::Texture2D>> textures;
-  for (uint32_t i = 0; i < attachment; i++) {
+  core::Array<core::AutoPtr<gl::Texture2D>> textures;
+  for (core::Unsigned_t i = 0; i < attachment; i++) {
     core::AutoPtr texture =
         new gl::Texture2D(size.width, size.height, gl::PIXEL_FORMAT::RGBA);
-    textures.push_back(texture);
+    textures.pushBack(texture);
   }
   _frame->bindAttachments(textures);
   if (!_frame->check()) {
@@ -29,7 +30,8 @@ RenderTarget::RenderTarget(const std::string &stage, const core::Size<> &size,
   }
 }
 
-RenderTarget::RenderTarget(const core::Size<> &size, uint32_t attachment)
+RenderTarget::RenderTarget(const core::Size<> &size,
+                           core::Unsigned_t attachment)
     : RenderTarget("basic", size, attachment) {}
 
 void RenderTarget::active() {
@@ -40,9 +42,9 @@ void RenderTarget::active() {
 
 const core::Size<> &RenderTarget::getSize() const { return _size; }
 
-const std::string &RenderTarget::getStage() const { return _stage; }
+const core::String_t &RenderTarget::getStage() const { return _stage; }
 
-const std::vector<core::AutoPtr<gl::Texture2D>> &
+const core::Array<core::AutoPtr<gl::Texture2D>> &
 RenderTarget::getAttachments() const {
   return _frame->getAttachments();
 }
@@ -58,11 +60,11 @@ void RenderTarget::resize(const core::Size<> &size) {
   _size = size;
   auto attachment = _frame->getAttachments().size();
   _frame = new gl::FrameBuffer(size);
-  std::vector<core::AutoPtr<gl::Texture2D>> textures;
-  for (uint32_t i = 0; i < attachment; i++) {
+  core::Array<core::AutoPtr<gl::Texture2D>> textures;
+  for (core::Unsigned_t i = 0; i < attachment; i++) {
     core::AutoPtr texture =
         new gl::Texture2D(size.width, size.height, gl::PIXEL_FORMAT::RGB);
-    textures.push_back(texture);
+    textures.pushBack(texture);
   }
   _frame->bindAttachments(textures);
   if (!_frame->check()) {

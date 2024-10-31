@@ -40,12 +40,12 @@ private:
 
   core::Map<core::String_t, core::Array<core::String_t>> _propertyGroups;
 
-  bool _ready;
+  core::Boolean_t _ready;
 
   core::String_t _currentPropertyGroup;
   core::Array<core::String_t> _propertyGroupStack;
 
-  core::Map<std::string, core::Array<std::function<void()>>> _propWatchers;
+  core::Map<core::String_t, core::Array<std::function<void()>>> _propWatchers;
 
 protected:
   template <class T>
@@ -53,7 +53,7 @@ protected:
     _properties[name] = &property;
     auto tmp = name;
     auto pos = tmp.find_last_of('.');
-    while (pos != std::string::npos) {
+    while (pos != core::String_t::npos) {
       auto group = tmp.substr(0, pos);
       auto &groups = _propertyGroups[group];
       groups.pushBack(tmp);
@@ -97,8 +97,8 @@ protected:
         [=, this]() -> void { (dynamic_cast<T *>(this)->*callback)(); }));
   }
 
-  inline bool isProperty(const core::String_t &key,
-                         const core::String_t &property) {
+  inline core::Boolean_t isProperty(const core::String_t &key,
+                                    const core::String_t &property) {
     return property == key || property.starts_with(key + ".");
   }
 

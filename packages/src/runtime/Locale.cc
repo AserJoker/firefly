@@ -12,10 +12,10 @@ void Locale::scan() {
   auto media = core::Singleton<Media>::instance();
   auto indices = media->scan("lang");
   for (auto &index : indices) {
-    _languages.push_back(index.substr(6, index.length() - 11));
+    _languages.pushBack(index.substr(6, index.length() - 11));
   }
 }
-const std::string Locale::i18n(const std::string &key) {
+const core::String_t Locale::i18n(const core::String_t &key) {
   if (_locales->has(key)) {
     return _locales->get(key);
   }
@@ -24,7 +24,7 @@ const std::string Locale::i18n(const std::string &key) {
   }
   return key;
 }
-void Locale::setLang(const std::string &lang) {
+void Locale::setLang(const core::String_t &lang) {
   auto media = core::Singleton<Media>::instance();
   try {
     core::AutoPtr locales = new core::Properties(
@@ -40,7 +40,7 @@ void Locale::setLang(const std::string &lang) {
     logger->warn("Failed to set locale '{}':\n\t{}", lang, e.what());
   }
 }
-void Locale::setDefaultLang(const std::string &lang) {
+void Locale::setDefaultLang(const core::String_t &lang) {
   auto media = core::Singleton<Media>::instance();
   try {
     _defaultLang = lang;
@@ -57,7 +57,7 @@ void Locale::reload() {
   setDefaultLang(_defaultLang);
   setLang(_lang);
 }
-const std::string &Locale::getLang() const { return _lang; }
-const std::vector<std::string> &Locale::getLanguages() const {
+const core::String_t &Locale::getLang() const { return _lang; }
+const core::Array<core::String_t> &Locale::getLanguages() const {
   return _languages;
 }

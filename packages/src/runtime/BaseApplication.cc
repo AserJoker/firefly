@@ -7,7 +7,8 @@ using namespace firefly;
 using namespace firefly::runtime;
 
 BaseApplication::BaseApplication(int argc, char *argv[])
-    : _args(argc), _exitcode(0) {
+    : _args(), _exitcode(0) {
+  _args.resize(argc);
   for (int index = 0; index < argc; index++) {
     _args[index] = argv[index];
   }

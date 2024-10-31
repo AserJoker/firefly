@@ -4,14 +4,14 @@
 namespace firefly::gl {
 class Shader : public core::Object {
 private:
-  uint32_t _handle;
+  core::Unsigned_t _handle;
 
 public:
   Shader(SHADER_TYPE type);
   ~Shader() override;
-  void setShaderSource(const std::string &source);
-  bool compile();
-  const std::string getInfoLog() const;
-  const uint32_t &getHandle() const;
+  void setShaderSource(const core::String_t &source);
+  core::Boolean_t compile();
+  const core::String_t getInfoLog() const;
+  const core::Unsigned_t &getHandle() const;
 };
 }; // namespace firefly::gl

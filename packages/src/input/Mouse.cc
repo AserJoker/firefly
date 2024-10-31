@@ -62,4 +62,4 @@ void Mouse::releaseMouse() {
   SDL_SetRelativeMouseMode(SDL_FALSE);
 }
 
-const bool &Mouse::isCaptured() { return _captured; }
+const core::Boolean_t &Mouse::isCaptured() { return _captured; }

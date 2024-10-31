@@ -11,29 +11,33 @@ Material::Material()
           {gl::BLEND_FUNC::SRC_ALPHA, gl::BLEND_FUNC::ONE_MINUS_SRC_ALPHA}),
       _visible(true), _instanced(1) {}
 
-void Material::setShader(const std::string &shader) { _shader = shader; }
+void Material::setShader(const core::String_t &shader) { _shader = shader; }
 
-const std::string &Material::getShader() const { return _shader; }
+const core::String_t &Material::getShader() const { return _shader; }
 
-void Material::setIsWireframe(bool value) { _wireframe = value; }
+void Material::setIsWireframe(core::Boolean_t value) { _wireframe = value; }
 
-bool Material::isWireframe() const { return _wireframe; }
+core::Boolean_t Material::isWireframe() const { return _wireframe; }
 
-void Material::setIsCullBackface(bool value) { _cullBackface = value; }
+void Material::setIsCullBackface(core::Boolean_t value) {
+  _cullBackface = value;
+}
 
-bool Material::isCullBackface() const { return _cullBackface; }
+core::Boolean_t Material::isCullBackface() const { return _cullBackface; }
 
-void Material::setIsTransparent(bool value) { _transparent = value; }
+void Material::setIsTransparent(core::Boolean_t value) { _transparent = value; }
 
-bool Material::isTransparent() const { return _transparent; }
+core::Boolean_t Material::isTransparent() const { return _transparent; }
 
-const std::string &Material::getName() const { return _name; }
+const core::String_t &Material::getName() const { return _name; }
 
-void Material::setInstanced(uint32_t instanced) { _instanced = instanced; }
+void Material::setInstanced(core::Unsigned_t instanced) {
+  _instanced = instanced;
+}
 
-const uint32_t &Material::getInstanced() const { return _instanced; }
+const core::Unsigned_t &Material::getInstanced() const { return _instanced; }
 
-void Material::setName(const std::string &name) { _name = name; }
+void Material::setName(const core::String_t &name) { _name = name; }
 
 const std::pair<gl::BLEND_FUNC, gl::BLEND_FUNC> &
 Material::getBlendFunc() const {
@@ -45,27 +49,28 @@ void Material::setBlendFunc(
   _blendFunc = func;
 }
 
-bool Material::isVisible() const { return _visible; }
+core::Boolean_t Material::isVisible() const { return _visible; }
 
-void Material::setVisible(bool value) { _visible = value; }
+void Material::setVisible(core::Boolean_t value) { _visible = value; }
 
-bool Material::isStencilTest() const { return _stencilTest; }
+core::Boolean_t Material::isStencilTest() const { return _stencilTest; }
 
-void Material::setStencil(bool value) { _stencilTest = value; }
+void Material::setStencil(core::Boolean_t value) { _stencilTest = value; }
 
-bool Material::isDepthTest() const { return _depthTest; }
+core::Boolean_t Material::isDepthTest() const { return _depthTest; }
 
-void Material::setDepthTest(bool value) { _depthTest = value; }
+void Material::setDepthTest(core::Boolean_t value) { _depthTest = value; }
 
-bool Material::isAlphaTest() const { return _alphaTest; }
+core::Boolean_t Material::isAlphaTest() const { return _alphaTest; }
 
-void Material::setAlphaTest(bool value) { _alphaTest = value; }
+void Material::setAlphaTest(core::Boolean_t value) { _alphaTest = value; }
 
-const std::pair<gl::ALPHA_FUNC, float> &Material::getAlphaFunc() const {
+const std::pair<gl::ALPHA_FUNC, core::Float_t> &Material::getAlphaFunc() const {
   return _alphaFunc;
 }
 
-void Material::setAlphaFunc(const std::pair<gl::ALPHA_FUNC, float> &func) {
+void Material::setAlphaFunc(
+    const std::pair<gl::ALPHA_FUNC, core::Float_t> &func) {
   _alphaFunc = func;
 }
 

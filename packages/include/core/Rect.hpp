@@ -2,7 +2,7 @@
 #include "Point.hpp"
 #include "Size.hpp"
 namespace firefly::core {
-template <class T = int32_t, class K = uint32_t> struct Rect {
+template <class T = core::Integer_t, class K = core::Unsigned_t> struct Rect {
   union {
     struct {
       T x, y;
@@ -37,14 +37,14 @@ template <class T = int32_t, class K = uint32_t> struct Rect {
     return *this;
   }
 
-  bool operator==(const Rect<T, K> &another) const {
+  core::Boolean_t operator==(const Rect<T, K> &another) const {
     if (this == &another) {
       return true;
     }
     return point == another.point && size == another.size;
   }
 
-  bool operator!=(const Rect<T, K> &another) const {
+  core::Boolean_t operator!=(const Rect<T, K> &another) const {
     return !(*this == another);
   }
 };

@@ -2,16 +2,15 @@
 #include "Node.hpp"
 #include "core/Color.hpp"
 #include "core/Point.hpp"
-#include "core/Value.hpp"
 namespace firefly::document {
 class Text2D : public Node, public Node::Register<"text-2d", Text2D> {
 private:
-  uint32_t _handle;
+  core::Unsigned_t _handle;
   core::String_t _text;
   core::Color<> _color;
-  uint32_t _size;
+  core::Unsigned_t _size;
   core::Point<> _position;
-  bool _visible;
+  core::Boolean_t _visible;
 
 protected:
   void onLoad() override;

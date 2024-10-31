@@ -5,7 +5,7 @@
 namespace firefly::runtime {
 class Resource : public core::Object {
 public:
-  virtual core::AutoPtr<core::Buffer> read(uint32_t size = 0) = 0;
+  virtual core::AutoPtr<core::Buffer> read(core::Unsigned_t size = 0) = 0;
   virtual void write(const core::AutoPtr<core::Buffer> &data) = 0;
 };
 template <class T> class ResourceTrait : public Resource {
@@ -16,7 +16,7 @@ public:
   template <class... ARGS> ResourceTrait(ARGS &&...args) {
     _handle = new T(args...);
   }
-  core::AutoPtr<core::Buffer> read(uint32_t size = 0) override {
+  core::AutoPtr<core::Buffer> read(core::Unsigned_t size = 0) override {
     return _handle->read(size);
   };
   void write(const core::AutoPtr<core::Buffer> &data) override {

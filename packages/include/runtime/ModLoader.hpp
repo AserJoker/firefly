@@ -1,9 +1,10 @@
 #pragma once
+#include "core/Array.hpp"
+#include "core/Map.hpp"
 #include "core/Object.hpp"
 #include <fmt/format.h>
-#include <string>
-#include <unordered_map>
-#include <vector>
+
+
 namespace firefly::runtime {
 class ModLoader : public core::Object {
 public:
@@ -11,7 +12,7 @@ public:
     int major;
     int minor;
     int patch;
-    const bool operator>=(const Version &another) const {
+    const core::Boolean_t operator>=(const Version &another) const {
       if (major > another.major) {
         return true;
       } else if (major == another.major) {
@@ -23,19 +24,19 @@ public:
       }
       return false;
     }
-    const bool operator<(const Version &another) const {
+    const core::Boolean_t operator<(const Version &another) const {
       return !(*this >= another);
     }
-    const std::string toString() const {
+    const core::String_t toString() const {
       return fmt::format("v{}.{}.{}", major, minor, patch);
     }
-    static Version parse(const std::string &src) {
-      const char *s = src.c_str();
+    static Version parse(const core::String_t &src) {
+      core::CString_t s = src.c_str();
       if (*s == 'v') {
         s++;
       }
       Version v;
-      std::string tmp;
+      core::String_t tmp;
       int *part = &v.major;
       while (*s) {
         if (*s == '.') {
@@ -58,34 +59,33 @@ public:
     }
   };
   struct Manifest {
-    std::string name;
-    std::string displayName;
+    core::String_t name;
+    core::String_t displayName;
     Version version;
-    std::unordered_map<std::string, Version> dependences;
-    std::unordered_map<std::string, Version> runtimeDependences;
-    std::string icon;
-    std::string preview;
-    std::string description;
-    std::string author;
-    std::string email;
-    std::string path;
-    bool loaded;
+    core::Map<core::String_t, Version> dependences;
+    core::Map<core::String_t, Version> runtimeDependences;
+    core::String_t icon;
+    core::String_t preview;
+    core::String_t description;
+    core::String_t author;
+    core::String_t email;
+    core::String_t path;
+    core::Boolean_t loaded;
   };
 
 private:
-  std::unordered_map<std::string, Manifest> _mods;
+  core::Map<core::String_t, Manifest> _mods;
 
 private:
-  Manifest parseManifest(const std::string &source);
-  void load(std::unordered_map<std::string, Manifest> &workflow,
-            Manifest &manifest,
-            const std::vector<std::string> &requirePath = {});
+  Manifest parseManifest(const core::String_t &source);
+  void load(core::Map<core::String_t, Manifest> &workflow, Manifest &manifest,
+            const core::Array<core::String_t> &requirePath = {});
 
 public:
-  void loadAll(const std::string &root);
-  void loadMod(const std::string &name);
-  void scan(const std::string &root);
-  const std::unordered_map<std::string, Manifest> &getMods() const;
-  const Manifest *getManifest(const std::string &name) const;
+  void loadAll(const core::String_t &root);
+  void loadMod(const core::String_t &name);
+  void scan(const core::String_t &root);
+  const core::Map<core::String_t, Manifest> &getMods() const;
+  const Manifest *getManifest(const core::String_t &name) const;
 };
 }; // namespace firefly::runtime

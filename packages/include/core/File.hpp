@@ -9,9 +9,9 @@ private:
   std::fstream _handle;
 
 public:
-  File(const std::string &name, bool append = true);
+  File(const core::String_t &name, core::Boolean_t append = true);
   ~File() override;
-  AutoPtr<Buffer> read(uint32_t size = 0);
+  AutoPtr<Buffer> read(core::Unsigned_t size = 0);
   void write(const AutoPtr<Buffer> &data);
 };
 } // namespace firefly::core

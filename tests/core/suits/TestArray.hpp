@@ -4,14 +4,14 @@
 class TestArray : public TestSuit<"TestArray", TestArray> {
 private:
   void TEST_accessor(void) {
-    core::Array<int32_t> array;
+    core::Array<core::Integer_t> array;
     array.pushBack({1, 2, 3, 4});
     CU_ASSERT_EQUAL_FATAL(array.size(), 4);
     CU_ASSERT_EQUAL_FATAL(array[0], 1);
   }
 
   void TEST_erase(void) {
-    core::Array<int32_t> array;
+    core::Array<core::Integer_t> array;
     array.pushBack({1, 1, 1, 4});
     array.erase(1);
     CU_ASSERT_EQUAL_FATAL(array.size(), 3);
@@ -20,19 +20,19 @@ private:
   }
 
   void TEST_indexOf(void) {
-    core::Array<int32_t> array{{0, 1, 2, 3, 4}};
+    core::Array<core::Integer_t> array{{0, 1, 2, 3, 4}};
     CU_ASSERT_EQUAL_FATAL(array.indexOf(1), 1);
     CU_ASSERT_EQUAL_FATAL(array.indexOf(-1), array.size());
   }
 
   void TEST_equal(void) {
-    core::Array<int32_t> array{{0, 1, 2, 3, 4}};
-    core::Array<int32_t> array2{{0, 1, 2, 3, 4}};
+    core::Array<core::Integer_t> array{{0, 1, 2, 3, 4}};
+    core::Array<core::Integer_t> array2{{0, 1, 2, 3, 4}};
     CU_ASSERT_FATAL(array == array2);
   }
 
   void TEST_replace(void) {
-    core::Array<int32_t> array{{0, 1, 1, 1, 4}};
+    core::Array<core::Integer_t> array{{0, 1, 1, 1, 4}};
     array.replace(1, 2);
     CU_ASSERT_FATAL(array.contains(1));
     CU_ASSERT_FATAL(array.contains(2));

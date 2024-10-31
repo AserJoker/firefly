@@ -1,38 +1,38 @@
 #pragma once
 #include "TestException.hpp"
 #include "TestSuit.hpp"
+#include "core/Array.hpp"
+#include "core/Map.hpp"
 #include <CUnit/Basic.h>
 #include <CUnit/TestDB.h>
 #include <fmt/format.h>
 #include <stdexcept>
 #include <tuple>
-#include <unordered_map>
-#include <vector>
 template <typename... SUITS> class Testing {
 private:
-  std::unordered_map<std::string, std::vector<std::string>> testingTests;
+  core::Map<core::String_t, core::Array<core::String_t>> testingTests;
 
 private:
   struct CmdLineOption {
-    std::string name;
-    std::string alias;
-    std::function<void(const std::vector<std::string> &)> exec;
-    std::string description;
+    core::String_t name;
+    core::String_t alias;
+    std::function<void(const core::Array<core::String_t> &)> exec;
+    core::String_t description;
   };
 
 private:
-  std::unordered_map<std::string, CmdLineOption> _options;
-  std::unordered_map<std::string, std::string> _alias;
+  core::Map<core::String_t, CmdLineOption> _options;
+  core::Map<core::String_t, core::String_t> _alias;
 
-  std::vector<std::string> splitStringWithRegex(const std::string &source,
-                                                char spliter) {
-    std::vector<std::string> result;
+  core::Array<core::String_t> splitStringWithRegex(const core::String_t &source,
+                                                   char spliter) {
+    core::Array<core::String_t> result;
     auto inRegex = false;
-    std::string item;
+    core::String_t item;
     for (size_t i = 0; i < source.length(); i++) {
       if (source[i] == spliter && !inRegex) {
         if (!item.empty()) {
-          result.push_back(item);
+          result.pushBack(item);
         }
         item.clear();
       } else if (source[i] == '/' && (i == 0 || source[i - 1] != '\\')) {
@@ -43,25 +43,25 @@ private:
       }
     }
     if (!item.empty()) {
-      result.push_back(item);
+      result.pushBack(item);
     }
     return result;
   }
 
   void parseArgs(int argc, char *argv[]) {
     for (auto index = 1; index < argc; index++) {
-      std::string arg = argv[index];
+      core::String_t arg = argv[index];
       if (arg.starts_with("-")) {
-        std::string opt;
-        std::string value;
+        core::String_t opt;
+        core::String_t value;
         auto pos = arg.find_first_of("=");
-        if (pos == std::string::npos) {
+        if (pos == core::String_t::npos) {
           opt = arg;
         } else {
           opt = arg.substr(0, pos);
           value = arg.substr(pos + 1);
         }
-        std::vector<std::string> params = splitStringWithRegex(value, ',');
+        core::Array<core::String_t> params = splitStringWithRegex(value, ',');
         if (!opt.starts_with("--")) {
           if (!_alias.contains(opt)) {
             throw std::runtime_error(
@@ -79,35 +79,36 @@ private:
     }
   }
 
-  void defineSuits(const std::vector<std::string> &suits) {
+  void defineSuits(const core::Array<core::String_t> &suits) {
     for (auto &suitName : suits) {
       testingTests[suitName] = {};
     }
   }
 
-  void defineTests(const std::vector<std::string> &tests) {
+  void defineTests(const core::Array<core::String_t> &tests) {
     for (auto &testFullName : tests) {
-      std::vector<std::string> params = splitStringWithRegex(testFullName, '.');
+      core::Array<core::String_t> params =
+          splitStringWithRegex(testFullName, '.');
       if (params.size() != 2) {
         throw TestException(fmt::format("Invald test name: '{}'", testFullName),
                             CUE_NO_TESTNAME);
       }
-      std::string suitName = params[0];
-      std::string testName = params[1];
+      core::String_t suitName = params[0];
+      core::String_t testName = params[1];
       if (suitName.empty() || testName.empty()) {
         throw TestException(fmt::format("Invald test name: '{}'", testFullName),
                             CUE_NO_TESTNAME);
       }
       auto &testings = testingTests[suitName];
-      testings.push_back(testName);
+      testings.pushBack(testName);
     }
   }
 
-  void help(const std::vector<std::string> &) {}
+  void help(const core::Array<core::String_t> &) {}
 
   template <class Fn>
-  void setOption(const std::string &name, const std::string &alias,
-                 const std::string &description, Fn exec) {
+  void setOption(const core::String_t &name, const core::String_t &alias,
+                 const core::String_t &description, Fn exec) {
     _options[fmt::format("--{}", name)] = {
         .name = name, .alias = alias, .exec = exec, .description = description};
     _alias[fmt::format("-{}", alias)] = fmt::format("--{}", name);
@@ -120,11 +121,11 @@ public:
     }
     CU_basic_set_mode(CU_BRM_VERBOSE);
     setOption("suits", "s", "set witch suits will be test",
-              [this](const std::vector<std::string> &args) -> void {
+              [this](const core::Array<core::String_t> &args) -> void {
                 defineSuits(args);
               });
     setOption("tests", "t", "set witch tests will be test",
-              [this](const std::vector<std::string> &args) -> void {
+              [this](const core::Array<core::String_t> &args) -> void {
                 defineTests(args);
               });
   }

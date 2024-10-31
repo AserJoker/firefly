@@ -13,13 +13,13 @@ void Logger::setMask(LEVEL mask) { _mask = mask; }
 
 Logger::LEVEL Logger::getMask() { return _mask; }
 
-void Logger::write(const std::string &msg) { std::cout << msg << std::endl; }
+void Logger::write(const core::String_t &msg) { std::cout << msg << std::endl; }
 
-void Logger::print(LEVEL level, const std::string &msg) {
+void Logger::print(LEVEL level, const core::String_t &msg) {
   if (level < _mask) {
     return;
   }
-  std::string slevel;
+  core::String_t slevel;
   switch (level) {
   case LEVEL::DEBUG:
     slevel = "DEBUG";

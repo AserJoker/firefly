@@ -4,7 +4,6 @@
 #include "core/Injector.hpp"
 #include "core/Point.hpp"
 #include "core/Size.hpp"
-#include "core/Value.hpp"
 #include "document/Node.hpp"
 #include "runtime/EventBus.hpp"
 #include "runtime/ResizeEvent.hpp"
@@ -21,7 +20,7 @@ private:
   core::String_t _title;
   core::Point<> _position;
   core::Size<> _size;
-  bool _fullscreen;
+  core::Boolean_t _fullscreen;
 
 protected:
   virtual void onResize(runtime::ResizeEvent &);
@@ -33,7 +32,7 @@ public:
   Window();
   const core::AutoPtr<video::Renderer> &getRenderer() const;
   core::AutoPtr<video::Renderer> &getRenderer();
-  uint32_t getWindowID() const;
+  core::Unsigned_t getWindowID() const;
 
 public:
   constexpr static inline auto PROP_TITLE = "title";

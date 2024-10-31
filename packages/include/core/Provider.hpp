@@ -10,12 +10,11 @@
 #include "Singleton.hpp"
 #include "core/CompileString.hpp"
 #include <functional>
-#include <string>
 
 namespace firefly::core {
 class Provider : public Object {
 private:
-  core::Map<std::string, std::function<AutoPtr<Object>()>> _constructors;
+  core::Map<core::String_t, std::function<AutoPtr<Object>()>> _constructors;
 
 public:
   template <class T, CompileString name> void provide() {
@@ -27,7 +26,7 @@ public:
     _constructors[name.value] = func;
   }
 
-  template <class T> AutoPtr<T> inject(const std::string &name) {
+  template <class T> AutoPtr<T> inject(const core::String_t &name) {
     if (_constructors.contains(name)) {
       auto &constructor = _constructors.at(name);
       auto ins = constructor().cast<T>();

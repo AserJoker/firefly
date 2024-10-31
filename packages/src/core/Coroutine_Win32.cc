@@ -12,7 +12,7 @@ using namespace firefly::core;
 struct CoContext {
   LPVOID fiber;
   std::function<void()> exec;
-  bool enable;
+  core::Boolean_t enable;
 };
 
 static LPVOID master;
@@ -63,5 +63,5 @@ void Coroutine::yield() {
   }
   SwitchToFiber(current);
 }
-bool Coroutine::done() { return routines.empty(); }
+core::Boolean_t Coroutine::done() { return routines.empty(); }
 #endif

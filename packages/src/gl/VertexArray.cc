@@ -2,7 +2,7 @@
 using namespace firefly;
 using namespace firefly::gl;
 
-VertexArray::VertexArray(uint32_t handle) : _handle(handle) {
+VertexArray::VertexArray(core::Unsigned_t handle) : _handle(handle) {
   if (!_handle) {
     glGenVertexArrays(1, &_handle);
   }
@@ -13,9 +13,11 @@ VertexArray::~VertexArray() {
     _handle = 0;
   }
 }
-void VertexArray::setAttribute(uint32_t index, DATA_TYPE dtype, uint32_t size,
-                               bool normalized, uint32_t stride,
-                               uint32_t offset) {
+void VertexArray::setAttribute(core::Unsigned_t index, DATA_TYPE dtype,
+                               core::Unsigned_t size,
+                               core::Boolean_t normalized,
+                               core::Unsigned_t stride,
+                               core::Unsigned_t offset) {
   switch (dtype) {
   case DATA_TYPE::BTYE:
   case DATA_TYPE::UNSIGNED_BYTE:
@@ -47,13 +49,14 @@ void VertexArray::setAttribute(uint32_t index, DATA_TYPE dtype, uint32_t size,
     break;
   }
 }
-void VertexArray::enableAttribute(uint32_t index) {
+void VertexArray::enableAttribute(core::Unsigned_t index) {
   glEnableVertexAttribArray(index);
 }
-void VertexArray::disableAttribute(uint32_t index) {
+void VertexArray::disableAttribute(core::Unsigned_t index) {
   glDisableVertexAttribArray(index);
 }
-void VertexArray::setVertexAttribDivisor(uint32_t index, uint32_t divisor) {
+void VertexArray::setVertexAttribDivisor(core::Unsigned_t index,
+                                         core::Unsigned_t divisor) {
   glVertexAttribDivisor(index, divisor);
 }
 void VertexArray::bind(const core::AutoPtr<VertexArray> &vao) {

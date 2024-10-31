@@ -121,7 +121,7 @@ void Node::setProperty(const core::String_t &name, const core::Value &value) {
   }
   if (_propertyGroups.contains(attrName) &&
       value.getType() == core::ValueType::STRING) {
-    std::string source = value.get<core::String_t>();
+    core::String_t source = value.get<core::String_t>();
     setProperty(attrName, core::Json::parse(source));
     return;
   }
@@ -138,7 +138,7 @@ void Node::setProperty(const core::String_t &name, const core::Value &value) {
   if (_properties.contains(attrName)) {
     try {
       auto &attr = _properties.at(attrName);
-      bool isChanged = false;
+      core::Boolean_t isChanged = false;
       if (attr.type() == typeid(core::String_t)) {
         isChanged = attr.set(value.to<core::String_t>());
       } else if (attr.type() == typeid(core::Integer_t)) {
@@ -209,15 +209,15 @@ void Node::onUnload() {
 static core::AutoPtr<Node> parseXML(xmlNodePtr node) {
 
   core::AutoPtr<Node> result =
-      Node::create(core::String_t((const char *)node->name));
+      Node::create(core::String_t((core::CString_t)node->name));
   if (!result) {
     result = new Node();
   }
   auto prop = node->properties;
   while (prop != nullptr) {
-    std::string key = (const char *)prop->name;
-    std::string value = (const char *)xmlGetProp(node, prop->name);
-    std::string name;
+    core::String_t key = (core::CString_t)prop->name;
+    core::String_t value = (core::CString_t)xmlGetProp(node, prop->name);
+    core::String_t name;
     for (auto &chr : key) {
       if (chr == '_') {
         name += ".";
@@ -248,7 +248,7 @@ core::AutoPtr<Node> Node::load(const core::String_t &name) {
   auto buf = media->load(fmt::format("document::{}", name))->read();
   xmlNodePtr root = nullptr;
   xmlDocPtr document =
-      xmlParseMemory((const char *)buf->getData(), buf->getSize());
+      xmlParseMemory((core::CString_t)buf->getData(), buf->getSize());
   if (!document) {
     return nullptr;
   }

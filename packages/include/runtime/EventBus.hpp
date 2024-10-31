@@ -1,47 +1,47 @@
 #pragma once
 
+#include "core/Array.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Map.hpp"
 #include "core/Object.hpp"
 #include "runtime/Event.hpp"
 #include <functional>
-#include <unordered_map>
-#include <vector>
 
 namespace firefly::runtime {
 class EventBus : public core::Object {
 private:
   struct Listener {
     std::function<void(Event &)> callback;
-    std::string identity;
-    bool enable;
+    core::String_t identity;
+    core::Boolean_t enable;
   };
 
 private:
-  std::unordered_map<std::string, std::vector<Listener>> _listeners;
+  core::Map<core::String_t, core::Array<Listener>> _listeners;
 
 public:
   template <class L, class E>
   void on(core::AutoPtr<L> listener, void (L::*func)(E &)) {
-    std::string type = typeid(E).name();
+    core::String_t type = typeid(E).name();
     auto &listeners = _listeners[type];
-    listeners.push_back({.callback = [=](Event &e) -> void {
-                           (const_cast<L &>(*listener).*func)((E &)e);
-                         },
-                         .identity = listener->getIdentity(),
-                         .enable = true});
+    listeners.pushBack({.callback = [=](Event &e) -> void {
+                          (const_cast<L &>(*listener).*func)((E &)e);
+                        },
+                        .identity = listener->getIdentity(),
+                        .enable = true});
   }
   template <class L, class E> void on(L *listener, void (L::*func)(E &)) {
-    std::string type = typeid(E).name();
+    core::String_t type = typeid(E).name();
     auto &listeners = _listeners[type];
-    listeners.push_back({.callback = [=](Event &e) -> void {
-                           (const_cast<L &>(*listener).*func)((E &)e);
-                         },
-                         .identity = listener->getIdentity(),
-                         .enable = true});
+    listeners.pushBack({.callback = [=](Event &e) -> void {
+                          (const_cast<L &>(*listener).*func)((E &)e);
+                        },
+                        .identity = listener->getIdentity(),
+                        .enable = true});
   }
 
   template <class L, class E> void off(const core::AutoPtr<L> &listener) {
-    std::string type = typeid(E).name();
+    core::String_t type = typeid(E).name();
     if (_listeners.contains(type)) {
       auto &listeners = _listeners.at(type);
       for (auto it = listeners.begin(); it != listeners.end(); it++) {
@@ -54,7 +54,7 @@ public:
   }
 
   template <class L, class E> void off(L *listener) {
-    std::string type = typeid(E).name();
+    core::String_t type = typeid(E).name();
     if (_listeners.contains(type)) {
       auto &listeners = _listeners.at(type);
       for (auto it = listeners.begin(); it != listeners.end(); it++) {
@@ -67,7 +67,7 @@ public:
   }
 
   template <class E, class... ARGS> void emit(ARGS... args) {
-    std::string type = typeid(E).name();
+    core::String_t type = typeid(E).name();
     if (_listeners.contains(type)) {
       auto &listeners = _listeners.at(type);
       E event(args...);

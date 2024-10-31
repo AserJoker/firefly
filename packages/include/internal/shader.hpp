@@ -5,7 +5,7 @@
 #include <utility>
 namespace firefly::internal {
 namespace {
-constexpr static const char *vertex =
+constexpr static core::CString_tvertex =
     "#version 330 core\n\r"
     "layout(location = 0) in vec3 position;\n\r"
     "layout(location = 1) in vec2 coord;\n\r"
@@ -17,7 +17,7 @@ constexpr static const char *vertex =
     "    gl_Position = projection * view * model * vec4(position, 1.0);\n\r"
     "    vertex_texture_coord = coord;\n\r"
     "}\n\r";
-constexpr static const char *fragment =
+constexpr static core::CString_tfragment =
     "#version 330 core"
     "in vec2 vertex_texture_coord;\n\r"
     "uniform sampler2D diffuse_texture;\n\r"

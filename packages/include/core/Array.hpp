@@ -4,6 +4,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
+#include "Type.hpp"
 namespace firefly::core {
 template <class T> class Array {
 public:
@@ -47,7 +48,7 @@ public:
 
   virtual ~Array(){};
 
-  bool operator==(const std::vector<T> &data) const {
+  core::Boolean_t operator==(const std::vector<T> &data) const {
     if (_data.size() != data.size()) {
       return false;
     }
@@ -59,7 +60,7 @@ public:
     return true;
   }
 
-  bool operator==(const Array<T> &another) const {
+  core::Boolean_t operator==(const Array<T> &another) const {
     auto &data = another._data;
     if (_data.size() != data.size()) {
       return false;
@@ -72,8 +73,12 @@ public:
     return true;
   }
 
-  bool operator!=(const std::vector<T> &data) const { return !(*this == data); }
-  bool operator!=(const Array<T> &data) const { return !(*this == data); }
+  core::Boolean_t operator!=(const std::vector<T> &data) const {
+    return !(*this == data);
+  }
+  core::Boolean_t operator!=(const Array<T> &data) const {
+    return !(*this == data);
+  }
 
   Array<T> &operator+=(const T &data) {
     pushBack(data);
@@ -100,7 +105,7 @@ public:
 
   size_t size() const { return _data.size(); }
 
-  bool empty() const { return _data.empty(); }
+  core::Boolean_t empty() const { return _data.empty(); }
 
   void resize(size_t size) { _data.resize(size); }
 
@@ -168,7 +173,7 @@ public:
     return std::find(_data.rbegin(), _data.rend(), data);
   }
 
-  bool contains(const T &data) const {
+  core::Boolean_t contains(const T &data) const {
     return std::find(_data.begin(), _data.end(), data) != _data.end();
   }
 
@@ -194,7 +199,7 @@ public:
     return _data.erase(begin, end);
   }
 
-  ConstIterator erase(const T &data, bool removeAll = false) {
+  ConstIterator erase(const T &data, core::Boolean_t removeAll = false) {
     auto it = find(data);
     if (it == end()) {
       return it;

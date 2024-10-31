@@ -7,18 +7,17 @@
 #include "Logger.hpp"
 #include "Media.hpp"
 #include "ModLoader.hpp"
+#include "core/Array.hpp"
 #include "core/Injector.hpp"
 #include "core/Object.hpp"
 #include <filesystem>
-#include <string>
-#include <vector>
 
 namespace firefly::runtime {
 class BaseApplication : public core::Object {
 private:
-  std::vector<std::string> _args;
+  core::Array<core::String_t> _args;
   int _exitcode;
-  bool _running;
+  core::Boolean_t _running;
 
 private:
   void showHelp();

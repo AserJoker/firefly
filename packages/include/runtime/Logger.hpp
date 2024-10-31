@@ -12,10 +12,10 @@ private:
   LEVEL _mask;
 
 private:
-  virtual void print(LEVEL level, const std::string &msg);
+  virtual void print(LEVEL level, const core::String_t &msg);
 
 protected:
-  virtual void write(const std::string &msg);
+  virtual void write(const core::String_t &msg);
 
 public:
   Logger();

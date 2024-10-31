@@ -3,15 +3,14 @@
 //
 
 #include "runtime/CmdLine.hpp"
-#include <fmt/format.h>
 #include <algorithm>
-
-
+#include <fmt/format.h>
+using namespace firefly;
 using namespace firefly::runtime;
 
-std::unordered_map<std::string, std::string>
-CmdLine::parse(const std::vector<std::string> &args) {
-  std::unordered_map<std::string, std::string> parsed;
+core::Map<core::String_t, core::String_t>
+CmdLine::parse(const core::Array<core::String_t> &args) {
+  core::Map<core::String_t, core::String_t> parsed;
   Param *param = nullptr;
   for (const auto &arg : args) {
     if (arg.starts_with("-")) {
@@ -51,17 +50,17 @@ CmdLine::parse(const std::vector<std::string> &args) {
   return parsed;
 }
 
-std::string CmdLine::help() {
-  std::string result;
+core::String_t CmdLine::help() {
+  core::String_t result;
   for (auto &param : _params) {
-    std::string item;
+    core::String_t item;
     if (param.alias.empty()) {
       item = fmt::format("--{}", param.name);
     } else {
       item = fmt::format("--{},-{}", param.name, param.alias);
     }
     if (item.length() < 20) {
-      item += std::string(20 - item.length(), ' ');
+      item += core::String_t(20 - item.length(), ' ');
     } else {
       item += ' ';
     }

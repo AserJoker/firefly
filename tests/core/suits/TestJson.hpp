@@ -13,11 +13,11 @@ private:
     object["string"] = "Hello world";
     object["number"] = 123;
     object["boolean"] = true;
-    std::string result = core::Json::stringify(object);
+    core::String_t result = core::Json::stringify(object);
 
     auto next = core::Json::parse(result).get<core::Map_t>();
 
-    CU_ASSERT_FATAL(next["null"].get<std::nullptr_t>() == nullptr);
+    CU_ASSERT_FATAL(next["null"].get<core::Nil_t>() == nullptr);
     CU_ASSERT_FATAL(next["string"].get<core::String_t>() == "Hello world");
     CU_ASSERT_FATAL(next["number"].get<core::Float_t>() == 123);
     CU_ASSERT_FATAL(next["boolean"].get<core::Boolean_t>() == true);

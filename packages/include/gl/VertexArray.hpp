@@ -6,16 +6,18 @@
 namespace firefly::gl {
 class VertexArray : public core::Object {
 private:
-  uint32_t _handle;
+  core::Unsigned_t _handle;
 
 public:
-  VertexArray(uint32_t handle = 0);
+  VertexArray(core::Unsigned_t handle = 0);
   ~VertexArray() override;
-  void setAttribute(uint32_t index, DATA_TYPE dtype, uint32_t size,
-                    bool normalized, uint32_t stride, uint32_t offset);
-  void enableAttribute(uint32_t index);
-  void disableAttribute(uint32_t index);
-  void setVertexAttribDivisor(uint32_t index, uint32_t divisor = 1);
+  void setAttribute(core::Unsigned_t index, DATA_TYPE dtype,
+                    core::Unsigned_t size, core::Boolean_t normalized,
+                    core::Unsigned_t stride, core::Unsigned_t offset);
+  void enableAttribute(core::Unsigned_t index);
+  void disableAttribute(core::Unsigned_t index);
+  void setVertexAttribDivisor(core::Unsigned_t index,
+                              core::Unsigned_t divisor = 1);
 
 public:
   static void bind(const core::AutoPtr<VertexArray> &vao);

@@ -12,31 +12,32 @@
 namespace firefly::gl {
 class Texture2D : public core::Object, public core::Cache<Texture2D> {
 private:
-  uint32_t _handle;
+  core::Unsigned_t _handle;
   core::Size<> _size;
 
 public:
-  Texture2D(uint32_t handle = 0);
-  Texture2D(const std::string &name,
+  Texture2D(core::Unsigned_t handle = 0);
+  Texture2D(const core::String_t &name,
             TEXTURE_WRAP_MODE swrap = TEXTURE_WRAP_MODE::REPEAT,
             TEXTURE_WRAP_MODE twrap = TEXTURE_WRAP_MODE::REPEAT);
 
-  Texture2D(uint32_t width, uint32_t height, PIXEL_FORMAT format,
-            void *data = 0);
+  Texture2D(core::Unsigned_t width, core::Unsigned_t height,
+            PIXEL_FORMAT format, void *data = 0);
 
   ~Texture2D() override;
 
-  const uint32_t &getHandle() const;
+  const core::Unsigned_t &getHandle() const;
 
-  void setImage(uint32_t level, PIXEL_FORMAT internalFormat, uint32_t width,
-                uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,
-                const void *data);
+  void setImage(core::Unsigned_t level, PIXEL_FORMAT internalFormat,
+                core::Unsigned_t width, core::Unsigned_t height,
+                PIXEL_FORMAT format, DATA_TYPE type, const void *data);
 
-  core::AutoPtr<core::Buffer> getImage(uint32_t level,
+  core::AutoPtr<core::Buffer> getImage(core::Unsigned_t level,
                                        PIXEL_FORMAT fmt = PIXEL_FORMAT::RGBA);
 
-  void setSubImage(uint32_t level, uint32_t x, uint32_t y, uint32_t width,
-                   uint32_t height, PIXEL_FORMAT format, DATA_TYPE type,
+  void setSubImage(core::Unsigned_t level, core::Unsigned_t x,
+                   core::Unsigned_t y, core::Unsigned_t width,
+                   core::Unsigned_t height, PIXEL_FORMAT format, DATA_TYPE type,
                    const void *data);
 
   void generateMipmap();
@@ -54,6 +55,7 @@ public:
   const core::Size<> &getSize() const;
 
 public:
-  static void bind(const core::AutoPtr<Texture2D> &tex, uint32_t index = 0);
+  static void bind(const core::AutoPtr<Texture2D> &tex,
+                   core::Unsigned_t index = 0);
 };
 } // namespace firefly::gl

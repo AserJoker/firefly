@@ -4,7 +4,6 @@
 #include "Type.hpp"
 #include <exception>
 #include <initializer_list>
-#include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -29,7 +28,7 @@ public:
 protected:
   Any _value;
   KeyType _type;
-  std::string _typename;
+  core::String_t _typename;
 
 public:
   template <class T>
@@ -56,14 +55,14 @@ public:
     return *this;
   }
 
-  bool operator==(const BaseValue &another) const {
+  core::Boolean_t operator==(const BaseValue &another) const {
     try {
       return _value == another._value;
     } catch (std::exception &e) {
       return false;
     }
   }
-  bool operator!=(const BaseValue &another) const {
+  core::Boolean_t operator!=(const BaseValue &another) const {
     return !(*this == another);
   }
 
@@ -72,6 +71,6 @@ public:
 
   inline KeyType getType() const { return _type; }
 
-  inline const std::string &getTypeName() const { return _typename; }
+  inline const core::String_t &getTypeName() const { return _typename; }
 };
 }; // namespace firefly::core

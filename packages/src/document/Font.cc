@@ -65,8 +65,8 @@ void Font::onSourceChange() {
 
 void Font::onShaderChange() { _material->setShader(_shader); }
 
-uint32_t Font::createText(const core::String_t &source) {
-  static uint32_t handle = 0;
+core::Unsigned_t Font::createText(const core::String_t &source) {
+  static core::Unsigned_t handle = 0;
   static std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
   while (_texts.contains(handle)) {
     handle++;
@@ -85,7 +85,8 @@ uint32_t Font::createText(const core::String_t &source) {
   return result;
 }
 
-void Font::setTextSource(uint32_t handle, const core::String_t &source) {
+void Font::setTextSource(core::Unsigned_t handle,
+                         const core::String_t &source) {
   if (!_texts.contains(handle)) {
     return;
   }
@@ -93,7 +94,7 @@ void Font::setTextSource(uint32_t handle, const core::String_t &source) {
   _texts.at(handle).text = converter.from_bytes(source);
   update();
 }
-void Font::setTextSize(uint32_t handle, uint32_t size) {
+void Font::setTextSize(core::Unsigned_t handle, core::Unsigned_t size) {
   if (!_texts.contains(handle)) {
     return;
   }
@@ -120,7 +121,8 @@ void Font::setTextSize(uint32_t handle, uint32_t size) {
   }
 }
 
-void Font::setTextPosition(uint32_t handle, const core::Point<> &position) {
+void Font::setTextPosition(core::Unsigned_t handle,
+                           const core::Point<> &position) {
   if (!_texts.contains(handle)) {
     return;
   }
@@ -146,7 +148,7 @@ void Font::setTextPosition(uint32_t handle, const core::Point<> &position) {
   }
 }
 
-void Font::setTextColor(uint32_t handle, const core::Color<> &color) {
+void Font::setTextColor(core::Unsigned_t handle, const core::Color<> &color) {
   if (!_texts.contains(handle)) {
     return;
   }
@@ -166,7 +168,7 @@ void Font::setTextColor(uint32_t handle, const core::Color<> &color) {
   }
 }
 
-void Font::setTextVisible(uint32_t handle, bool visible) {
+void Font::setTextVisible(core::Unsigned_t handle, core::Boolean_t visible) {
   if (!_texts.contains(handle)) {
     return;
   }
@@ -174,7 +176,7 @@ void Font::setTextVisible(uint32_t handle, bool visible) {
   update();
 }
 
-void Font::deleteText(uint32_t handle) {
+void Font::deleteText(core::Unsigned_t handle) {
   _texts.erase(handle);
   update();
 }
@@ -183,7 +185,7 @@ void Font::update() {
   _matrixs.clear();
   _coords.clear();
   _colors.clear();
-  uint32_t instanced = 0;
+  core::Unsigned_t instanced = 0;
   for (auto &[_, text] : _texts) {
     if (!text.visible) {
       continue;

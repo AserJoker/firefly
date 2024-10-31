@@ -1,7 +1,8 @@
 #include "core/Json.hpp"
-#include "core/Value.hpp"
 #include "core/JSONException.hpp"
+#include "core/Value.hpp"
 #include <cjson/cJSON.h>
+
 using namespace firefly;
 using namespace firefly::core;
 static Value cJSONtoValue(cJSON *node) {
@@ -84,12 +85,12 @@ Value Json::parse(const String_t &source) {
   return result;
 }
 
-std::string Json::stringify(const Value &object) {
+core::String_t Json::stringify(const Value &object) {
   cJSON *root = ValuetoCJSON(object);
   auto res = cJSON_Print(root);
   cJSON_Minify(res);
   cJSON_free(root);
-  std::string result = res;
+  core::String_t result = res;
   free(res);
   return result;
 }

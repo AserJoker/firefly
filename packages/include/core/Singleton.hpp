@@ -27,6 +27,6 @@ public:
 
   static AutoPtr<T> &instance() { return _instance; }
 
-  static bool isInitialized() { return _instance != nullptr; }
+  static core::Boolean_t isInitialized() { return _instance != nullptr; }
 };
 } // namespace firefly::core

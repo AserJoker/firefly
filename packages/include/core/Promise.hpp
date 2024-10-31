@@ -13,7 +13,7 @@ template <class T> class Promise : public Object {
 private:
   PROMISE_STATUS _status;
   T _value{};
-  std::string _messge;
+  core::String_t _messge;
   std::shared_mutex _mutex;
 
 public:
@@ -26,7 +26,7 @@ public:
     }
   }
 
-  void reject(const std::string &messge) {
+  void reject(const core::String_t &messge) {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     if (_status == PROMISE_STATUS::PENDDING) {
       _messge = messge;
@@ -43,7 +43,7 @@ public:
         const_cast<std::shared_mutex &>(_mutex));
     return _value;
   }
-  const std::string &getMessage() const {
+  const core::String_t &getMessage() const {
     std::shared_lock<std::shared_mutex> lock(
         const_cast<std::shared_mutex &>(_mutex));
     return _messge;

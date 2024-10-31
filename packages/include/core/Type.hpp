@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+#include <string>
 #include <type_traits>
 
 namespace firefly::core {
@@ -30,4 +32,12 @@ template <class T, class... NEXT> struct KeyType {
 template <class T> struct KeyType<T> {
   using type = typename T::keyType;
 };
+using Nil_t = std::nullptr_t;
+using Byte_t = uint8_t;
+using Boolean_t = bool;
+using String_t = std::string;
+using CString_t = const char *;
+using Integer_t = int32_t;
+using Unsigned_t = uint32_t;
+using Float_t = float;
 }; // namespace firefly::core

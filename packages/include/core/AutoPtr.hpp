@@ -1,7 +1,6 @@
 #pragma once
 
 #include "NullpointerException.hpp"
-#include <cstddef>
 
 namespace firefly::core {
 template <class T> class AutoPtr {
@@ -111,23 +110,25 @@ public:
     return *this;
   }
 
-  template <class K> bool operator==(const K *object) const {
+  template <class K> core::Boolean_t operator==(const K *object) const {
     return _object == object;
   }
 
-  template <class K> bool operator!=(const K *object) const {
+  template <class K> core::Boolean_t operator!=(const K *object) const {
     return _object != object;
   }
 
-  bool operator==(std::nullptr_t) const { return _object == nullptr; }
+  core::Boolean_t operator==(core::Nil_t) const { return _object == nullptr; }
 
-  bool operator!=(std::nullptr_t) const { return _object != nullptr; }
+  core::Boolean_t operator!=(core::Nil_t) const { return _object != nullptr; }
 
-  template <class K> bool operator==(const AutoPtr<K> &another) const {
+  template <class K>
+  core::Boolean_t operator==(const AutoPtr<K> &another) const {
     return _object == another.getRawPointer();
   }
 
-  template <class K> bool operator!=(const AutoPtr<K> &another) const {
+  template <class K>
+  core::Boolean_t operator!=(const AutoPtr<K> &another) const {
     return _object != another.getRawPointer();
   }
 
@@ -136,6 +137,6 @@ public:
     return dynamic_cast<K *>(_object);
   }
 
-  const bool operator!() const { return _object == nullptr; }
+  const core::Boolean_t operator!() const { return _object == nullptr; }
 };
 } // namespace firefly::core

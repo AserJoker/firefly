@@ -2,7 +2,6 @@
 #include "core/AutoPtr.hpp"
 #include "core/FileException.hpp"
 #include "core/Singleton.hpp"
-#include "core/Value.hpp"
 #include "gl/DrawMode.hpp"
 #include "runtime/Logger.hpp"
 #include "video/GLADException.hpp"
@@ -18,9 +17,9 @@
 using namespace firefly;
 using namespace firefly::video;
 
-static void APIENTRY showOpenGLMessage(GLenum source, GLenum type, uint32_t id,
-                                       GLenum severity, GLsizei length,
-                                       const char *message,
+static void APIENTRY showOpenGLMessage(GLenum source, GLenum type,
+                                       core::Unsigned_t id, GLenum severity,
+                                       GLsizei length, core::CString_t message,
                                        const void *userParam) {
   if (id == 131169 || id == 131185 || id == 131218 || id == 131204)
     return;
@@ -115,9 +114,9 @@ Renderer::Renderer(SDL_Window *window) : _shaderName("internal") {
   glDepthFunc(GL_LEQUAL);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-  int32_t width, height;
+  core::Integer_t width, height;
   SDL_GetWindowSize(window, &width, &height);
-  setViewport({0, 0, (uint32_t)width, (uint32_t)height});
+  setViewport({0, 0, (core::Unsigned_t)width, (core::Unsigned_t)height});
   _context = new RenderContext();
 }
 
@@ -132,8 +131,8 @@ const core::Rect<> &Renderer::getViewport() const { return _viewport; }
 
 void Renderer::bindingTextures(
     const core::Map<core::String_t, core::AutoPtr<Texture>> &textures,
-    uint32_t offset) {
-  int32_t index = (int32_t)offset;
+    core::Unsigned_t offset) {
+  core::Integer_t index = (core::Integer_t)offset;
   for (auto &[name, tex] : textures) {
     tex->bind(index);
     setUniform(fmt::format("{}_texture", name), index);
@@ -142,7 +141,8 @@ void Renderer::bindingTextures(
     index++;
   }
 }
-bool Renderer::activeShader(const std::string &name, const std::string &stage) {
+core::Boolean_t Renderer::activeShader(const core::String_t &name,
+                                       const core::String_t &stage) {
   try {
     auto shader = Shader::get(name, fmt::format("shader::{}", name));
     auto program = shader->getProgram(stage);
@@ -166,12 +166,12 @@ bool Renderer::activeShader(const std::string &name, const std::string &stage) {
 
 core::AutoPtr<gl::Program> Renderer::getShaderProgram() { return _shader; }
 
-void Renderer::setShader(const std::string &name) { _shaderName = name; }
+void Renderer::setShader(const core::String_t &name) { _shaderName = name; }
 
-const std::string &Renderer::getShader() const { return _shaderName; }
+const core::String_t &Renderer::getShader() const { return _shaderName; }
 
 void Renderer::setMaterial(const core::AutoPtr<Material> &material) {
-  bindingTextures(material->getTextures(), (uint32_t)_textures.size());
+  bindingTextures(material->getTextures(), (core::Unsigned_t)_textures.size());
 
   for (auto &[name, attribute] : material->getAttributes()) {
     setUniform(name, attribute);
@@ -217,7 +217,7 @@ void Renderer::draw(const core::AutoPtr<Material> &material,
     _context->solidRenderList.push_back({geometry, material, model});
   } else {
     _context->blendRenderList.push_back({geometry, material, model});
-    _context->blendRenderList.sort([](auto &a, auto &b) -> bool {
+    _context->blendRenderList.sort([](auto &a, auto &b) -> core::Boolean_t {
       return a.matrixModel[3][2] > b.matrixModel[3][2];
     });
   }
@@ -269,7 +269,8 @@ void Renderer::present() {
   _uniforms = uniforms;
 }
 
-void Renderer::setUniform(const std::string &name, const gl::Uniform &uniform) {
+void Renderer::setUniform(const core::String_t &name,
+                          const gl::Uniform &uniform) {
   _uniforms[name] = uniform;
 }
 

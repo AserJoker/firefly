@@ -9,12 +9,12 @@
 #include <glad/glad.h>
 using namespace firefly;
 using namespace firefly::gl;
-Texture2D::Texture2D(uint32_t handle) : _handle(handle) {
+Texture2D::Texture2D(core::Unsigned_t handle) : _handle(handle) {
   if (!_handle) {
     glGenTextures(1, &_handle);
   }
 }
-Texture2D::Texture2D(const std::string &name, TEXTURE_WRAP_MODE swrap,
+Texture2D::Texture2D(const core::String_t &name, TEXTURE_WRAP_MODE swrap,
                      TEXTURE_WRAP_MODE twrap)
     : Texture2D() {
   auto media = core::Singleton<runtime::Media>::instance();
@@ -48,12 +48,12 @@ Texture2D::Texture2D(const std::string &name, TEXTURE_WRAP_MODE swrap,
   generateMipmap();
   setSWrap(swrap);
   setTWrap(twrap);
-  _size = {(uint32_t)img->w, (uint32_t)img->h};
+  _size = {(core::Unsigned_t)img->w, (core::Unsigned_t)img->h};
   SDL_FreeSurface(img);
 }
 
-Texture2D::Texture2D(uint32_t width, uint32_t height, PIXEL_FORMAT format,
-                     void *data) {
+Texture2D::Texture2D(core::Unsigned_t width, core::Unsigned_t height,
+                     PIXEL_FORMAT format, void *data) {
 
   glGenTextures(1, &_handle);
   glBindTexture(GL_TEXTURE_2D, _handle);
@@ -66,16 +66,17 @@ Texture2D::Texture2D(uint32_t width, uint32_t height, PIXEL_FORMAT format,
 
 Texture2D::~Texture2D() { glDeleteTextures(1, &_handle); }
 
-void Texture2D::setImage(uint32_t level, PIXEL_FORMAT internalFormat,
-                         uint32_t width, uint32_t height, PIXEL_FORMAT format,
-                         DATA_TYPE type, const void *data) {
+void Texture2D::setImage(core::Unsigned_t level, PIXEL_FORMAT internalFormat,
+                         core::Unsigned_t width, core::Unsigned_t height,
+                         PIXEL_FORMAT format, DATA_TYPE type,
+                         const void *data) {
   glBindTexture(GL_TEXTURE_2D, _handle);
   glTexImage2D(GL_TEXTURE_2D, level, (GLint)internalFormat, width, height, 0,
                (GLint)format, (GLenum)type, data);
   _size = {width, height};
 }
 
-core::AutoPtr<core::Buffer> Texture2D::getImage(uint32_t level,
+core::AutoPtr<core::Buffer> Texture2D::getImage(core::Unsigned_t level,
                                                 PIXEL_FORMAT fmt) {
   core::AutoPtr buffer = new core::Buffer(_size.width * _size.height * 4);
   glBindTexture(GL_TEXTURE_2D, _handle);
@@ -84,10 +85,10 @@ core::AutoPtr<core::Buffer> Texture2D::getImage(uint32_t level,
   return buffer;
 }
 
-void Texture2D::setSubImage(uint32_t level, uint32_t x, uint32_t y,
-                            uint32_t width, uint32_t height,
-                            PIXEL_FORMAT format, DATA_TYPE type,
-                            const void *data) {
+void Texture2D::setSubImage(core::Unsigned_t level, core::Unsigned_t x,
+                            core::Unsigned_t y, core::Unsigned_t width,
+                            core::Unsigned_t height, PIXEL_FORMAT format,
+                            DATA_TYPE type, const void *data) {
   glBindTexture(GL_TEXTURE_2D, _handle);
   glTexSubImage2D(GL_TEXTURE_2D, level, x, y, width, height, (GLenum)format,
                   (GLenum)type, data);
@@ -125,10 +126,11 @@ void Texture2D::setTWrap(TEXTURE_WRAP_MODE mode) {
 
 const core::Size<> &Texture2D::getSize() const { return _size; }
 
-const uint32_t &Texture2D::getHandle() const { return _handle; }
+const core::Unsigned_t &Texture2D::getHandle() const { return _handle; }
 
-void Texture2D::bind(const core::AutoPtr<Texture2D> &tex, uint32_t index) {
-  static core::Map<uint32_t, gl::Texture2D *> bindings;
+void Texture2D::bind(const core::AutoPtr<Texture2D> &tex,
+                     core::Unsigned_t index) {
+  static core::Map<core::Unsigned_t, gl::Texture2D *> bindings;
   if (bindings.contains(index) && tex == bindings.at(index)) {
     return;
   }

@@ -26,7 +26,7 @@ void Window::onLoad() {
   if (y == -1) {
     y = SDL_WINDOWPOS_CENTERED;
   }
-  uint32_t flags = SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI;
+  core::Unsigned_t flags = SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI;
   if (_fullscreen) {
     flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
     x = 0;
@@ -67,6 +67,6 @@ const core::AutoPtr<video::Renderer> &Window::getRenderer() const {
 
 core::AutoPtr<video::Renderer> &Window::getRenderer() { return _renderer; }
 
-uint32_t Window::getWindowID() const {
+core::Unsigned_t Window::getWindowID() const {
   return SDL_GetWindowID((SDL_Window *)_window);
 }
