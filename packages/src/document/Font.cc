@@ -221,6 +221,9 @@ void Font::update() {
     }
     instanced += chrs.size();
   }
+  if (!_material) {
+    return;
+  }
   _material->setInstanced(instanced);
   if (!_attrInstanceModel) {
     _attrInstanceModel = new video::Attribute(
