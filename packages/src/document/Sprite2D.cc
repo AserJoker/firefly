@@ -1,6 +1,7 @@
 #include "document/Sprite2D.hpp"
 #include "core/Math.hpp"
 #include "core/Value.hpp"
+#include "document/Renderable.hpp"
 #include "internal/geometry.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
@@ -60,7 +61,7 @@ void Sprite2D::onLoad() {
 
   applyTexMatrix();
   applyMatrix();
-  Node::onLoad();
+  Renderable::onLoad();
 }
 
 void Sprite2D::applyMatrix() {

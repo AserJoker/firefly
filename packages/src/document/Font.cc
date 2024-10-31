@@ -60,7 +60,7 @@ void Font::onLoad() {
   _matrix = core::translate({0, 0, _zIndex});
 
   update();
-  Node::onLoad();
+  Renderable::onLoad();
 }
 
 void Font::onSourceChange() {
