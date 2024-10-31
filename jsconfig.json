@@ -2,9 +2,13 @@
   "compilerOptions": {
     "checkJs": true,
     "experimentalDecorators": true,
+    "noImplicitAny": true,
     "module": "commonjs",
-    "typeRoots": ["./definitions/javascript", "./mods/*/script/"]
+    "typeRoots": ["./definitions/javascript", "./mods/*/src/"],
+    "paths": {
+      "@mod/*": ["./mods/*/src"]
+    }
   },
   "exclude": ["3rdparty/**/*"],
-  "include": ["./script/", "./mods/*/script/"]
+  "include": ["./script/", "./mods/*/src/"]
 }
