@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE document SYSTEM "../../../definitions/firefly.dtd">
+<!DOCTYPE document SYSTEM "../../../definitions/xml/firefly.dtd">
 <document>
     <window title="duskland.system.title" width="1024" height="768" resizable="true">
         <scene-2d id="main">
