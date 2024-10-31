@@ -194,6 +194,7 @@ void Font::update() {
   _matrixs.clear();
   _coords.clear();
   _colors.clear();
+  _matrix = core::translate({0, 0, _zIndex});
   core::Unsigned_t instanced = 0;
   for (auto &[_, text] : _texts) {
     if (!text.visible) {
