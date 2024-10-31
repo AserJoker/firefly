@@ -8,6 +8,7 @@
 #include "core/Object.hpp"
 #include "core/Point.hpp"
 #include "core/Rect.hpp"
+#include "core/Type.hpp"
 #include "core/Value.hpp"
 #include <functional>
 
@@ -35,6 +36,7 @@ private:
   core::Array<core::AutoPtr<Node>> _children;
   Node *_parent;
   core::String_t _id;
+  core::String_t _name;
 
   core::Map<core::String_t, Property> _properties;
 
@@ -136,6 +138,9 @@ public:
 
   void setIdentity(const core::String_t &id);
   const core::String_t &getIdentity() const;
+
+  void setName(const core::String_t &name);
+  const core::String_t &getName() const;
 
   void appendChild(core::AutoPtr<Node> child);
   void removeChild(core::AutoPtr<Node> child);

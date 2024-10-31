@@ -2,18 +2,21 @@
 #include "document/Font.hpp"
 using namespace firefly;
 using namespace firefly::document;
-Text2D::Text2D() : _handle(0), _color(1, 1, 1, 1), _size(24), _visible(true) {
+Text2D::Text2D()
+    : _handle(0), _color(1, 1, 1, 1), _size(24), _visible(true), _zIndex(0) {
   defineProperty(PROP_TEXT, _text);
   defineProperty(PROP_POSITION, _position);
   defineProperty(PROP_FONT_COLOR, _color);
   defineProperty(PROP_FONT_SIZE, _size);
   defineProperty(PROP_VISIBLE, _visible);
+  defineProperty(PROP_ZINDEX, _zIndex);
 
   watchProp(PROP_TEXT, &Text2D::onTextChange);
   watchProp(PROP_POSITION, &Text2D::onPositionChange);
   watchProp(PROP_FONT_COLOR, &Text2D::onColorChange);
   watchProp(PROP_FONT_SIZE, &Text2D::onSizeChange);
   watchProp(PROP_VISIBLE, &Text2D::onVisibleChange);
+  watchProp(PROP_ZINDEX, &Text2D::onZIndexChange);
 }
 void Text2D::onLoad() {
   auto font = findParent<Font>();
@@ -25,8 +28,11 @@ void Text2D::onLoad() {
   font->setTextSize(_handle, _size);
   font->setTextPosition(_handle, _position);
   font->setTextVisible(_handle, _visible);
+  font->setTextZIndex(_handle, _zIndex);
+  Node::onLoad();
 }
 void Text2D::onUnload() {
+  Node::onUnload();
   auto font = findParent<Font>();
   if (!font) {
     return;
@@ -68,4 +74,11 @@ void Text2D::onPositionChange() {
     return;
   }
   font->setTextPosition(_handle, _position);
+}
+void Text2D::onZIndexChange() {
+  auto font = findParent<Font>();
+  if (!font) {
+    return;
+  }
+  font->setTextZIndex(_handle, _zIndex);
 }

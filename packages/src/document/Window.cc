@@ -49,6 +49,7 @@ void Window::onTick() {
 }
 
 void Window::onUnload() {
+  Node::onUnload();
   _renderer = nullptr;
   _eventBus->off<Window, runtime::ResizeEvent>(this);
   SDL_DestroyWindow(_window);

@@ -3,6 +3,7 @@
 #include "core/Singleton.hpp"
 #include "document/Animation.hpp"
 #include "document/Camera2D.hpp"
+#include "document/Channel.hpp"
 #include "document/Font.hpp"
 #include "document/Node.hpp"
 #include "document/Scene2D.hpp"
@@ -51,6 +52,7 @@ void GameApplication::initDocument() {
   document::Font::registerNode();
   document::Text2D::registerNode();
   document::Animation::registerNode();
+  document::Channel::registerNode();
 }
 
 void GameApplication::onInitialize() {
@@ -87,8 +89,6 @@ void GameApplication::onMouseMotion(input::MouseMotionEvent &e) {}
 void GameApplication::onMouseDown(input::MouseDownEvent &e) {
   auto animation =
       document::Node::select("animation").cast<document::Animation>();
-  animation->createChannel("position.x", 0, 50, 100, 200);
-  animation->createChannel("position.x", 50, 100, 200, 100);
   animation->start();
 }
 

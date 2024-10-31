@@ -47,6 +47,10 @@ void Node::setIdentity(const core::String_t &id) {
 
 const core::String_t &Node::getIdentity() const { return _id; }
 
+void Node::setName(const core::String_t &name) { _name = name; }
+
+const core::String_t &Node::getName() const { return _name; }
+
 void Node::appendChild(core::AutoPtr<Node> child) {
   if (child->_parent == this) {
     return;
@@ -190,14 +194,7 @@ core::AutoPtr<Node> Node::select(const core::String_t &identity) {
   return _indexedNodes.at(identity);
 }
 
-void Node::onLoad() {
-  for (auto &child : _children) {
-    if (!child->_ready) {
-      child->_ready = true;
-      child->onLoad();
-    }
-  }
-}
+void Node::onLoad() {}
 
 void Node::onUnload() {
   _ready = false;
@@ -207,12 +204,15 @@ void Node::onUnload() {
 }
 
 static core::AutoPtr<Node> parseXML(xmlNodePtr node) {
-
-  core::AutoPtr<Node> result =
-      Node::create(core::String_t((core::CString_t)node->name));
+  auto name = core::String_t((core::CString_t)node->name);
+  if (name == "text" || name == "comment") {
+    return nullptr;
+  }
+  core::AutoPtr<Node> result = Node::create(name);
   if (!result) {
     result = new Node();
   }
+  result->setName(name);
   auto prop = node->properties;
   while (prop != nullptr) {
     core::String_t key = (core::CString_t)prop->name;

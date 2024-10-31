@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!ELEMENT document (window)*>
+<!ATTLIST document id ID #IMPLIED>
+
+<!ELEMENT window ANY>
+<!ATTLIST window id ID #IMPLIED>
+<!ATTLIST window title CDATA #IMPLIED>
+<!ATTLIST window width CDATA #IMPLIED>
+<!ATTLIST window height CDATA #IMPLIED>
+<!ATTLIST window resizable (true|false) #IMPLIED>
+
+<!ELEMENT scene-2d ANY>
+<!ATTLIST scene-2d id ID #IMPLIED>
+
+<!ELEMENT camera-2d ANY>
+<!ATTLIST camera-2d id ID #IMPLIED>
+<!ATTLIST camera-2d position CDATA #IMPLIED>
+<!ATTLIST camera-2d position_x CDATA #IMPLIED>
+<!ATTLIST camera-2d position_y CDATA #IMPLIED>
+
+<!ELEMENT font ANY>
+<!ATTLIST font id ID #IMPLIED>
+<!ATTLIST font shader CDATA #IMPLIED>
+<!ATTLIST font source CDATA #IMPLIED>
+
+<!ELEMENT text-2d ANY>
+<!ATTLIST text-2d id ID #IMPLIED>
+<!ATTLIST text-2d text CDATA #IMPLIED>
+<!ATTLIST text-2d color CDATA #IMPLIED>
+<!ATTLIST text-2d color_r CDATA #IMPLIED>
+<!ATTLIST text-2d color_g CDATA #IMPLIED>
+<!ATTLIST text-2d color_b CDATA #IMPLIED>
+<!ATTLIST text-2d color_a CDATA #IMPLIED>
+<!ATTLIST text-2d position CDATA #IMPLIED>
+<!ATTLIST text-2d position_x CDATA #IMPLIED>
+<!ATTLIST text-2d position_y CDATA #IMPLIED>
+<!ATTLIST text-2d z-index CDATA #IMPLIED>
+
+<!ELEMENT sprite-2d ANY>
+<!ATTLIST sprite-2d id ID #IMPLIED>
+<!ATTLIST sprite-2d z-index CDATA #IMPLIED>
+<!ATTLIST sprite-2d shader CDATA #IMPLIED>
+<!ATTLIST sprite-2d texture CDATA #IMPLIED>
+<!ATTLIST sprite-2d destination CDATA #IMPLIED>
+<!ATTLIST sprite-2d destination_x CDATA #IMPLIED>
+<!ATTLIST sprite-2d destination_y CDATA #IMPLIED>
+<!ATTLIST sprite-2d destination_width CDATA #IMPLIED>
+<!ATTLIST sprite-2d destination_height CDATA #IMPLIED>
+<!ATTLIST sprite-2d source CDATA #IMPLIED>
+<!ATTLIST sprite-2d source_x CDATA #IMPLIED>
+<!ATTLIST sprite-2d source_y CDATA #IMPLIED>
+<!ATTLIST sprite-2d source_width CDATA #IMPLIED>
+<!ATTLIST sprite-2d source_height CDATA #IMPLIED>
+
+<!ELEMENT animation (channel)*>
+<!ATTLIST animation id ID #IMPLIED>
+<!ATTLIST animation delay CDATA #IMPLIED>
+<!ATTLIST animation loop (true|false) #IMPLIED>
+<!ATTLIST animation auto-start (true|false) #IMPLIED>
+
+<!ELEMENT channel EMPTY>
+<!ATTLIST channel id ID #IMPLIED>
+<!ATTLIST channel attribute CDATA #IMPLIED>
+<!ATTLIST channel start CDATA #IMPLIED>
+<!ATTLIST channel end CDATA #IMPLIED>
+<!ATTLIST channel init CDATA #IMPLIED>
+<!ATTLIST channel final CDATA #IMPLIED>

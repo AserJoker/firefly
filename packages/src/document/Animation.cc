@@ -42,28 +42,48 @@ void Animation::setChannelStart(core::Unsigned_t handle,
   if (!_channels.contains(handle)) {
     return;
   }
-  _channels[handle].start = start;
+  auto &channel = _channels[handle];
+  channel.start = start;
+  if (channel.end > channel.start) {
+    channel.step =
+        (channel.final - channel.init) / (channel.end - channel.start);
+  }
 }
 void Animation::setChannelEnd(core::Unsigned_t handle, core::Unsigned_t end) {
   if (!_channels.contains(handle)) {
     return;
   }
-  _channels[handle].end = end;
+  auto &channel = _channels[handle];
+  channel.end = end;
   if (end > _maxFrame) {
     _maxFrame = end;
+  }
+  if (channel.end > channel.start) {
+    channel.step =
+        (channel.final - channel.init) / (channel.end - channel.start);
   }
 }
 void Animation::setChannelInit(core::Unsigned_t handle, core::Float_t init) {
   if (!_channels.contains(handle)) {
     return;
   }
-  _channels[handle].init = init;
+  auto &channel = _channels[handle];
+  channel.init = init;
+  if (channel.end > channel.start) {
+    channel.step =
+        (channel.final - channel.init) / (channel.end - channel.start);
+  }
 }
 void Animation::setChannelFinal(core::Unsigned_t handle, core::Float_t final) {
   if (!_channels.contains(handle)) {
     return;
   }
-  _channels[handle].final = final;
+  auto &channel = _channels[handle];
+  channel.final = final;
+  if (channel.end > channel.start) {
+    channel.step =
+        (channel.final - channel.init) / (channel.end - channel.start);
+  }
 }
 void Animation::removeChannel(core::Unsigned_t handle) {
   _channels.erase(handle);
@@ -73,9 +93,11 @@ void Animation::onLoad() {
   if (_autoStart) {
     start();
   }
+  Node::onLoad();
 }
 
 void Animation::onTick() {
+  Node::onTick();
   static auto time = system_clock::now();
   auto now = system_clock::now();
   if (now - time < (_delay * 1ms)) {

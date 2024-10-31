@@ -3,6 +3,7 @@
 #include "core/AutoPtr.hpp"
 #include "core/Color.hpp"
 #include "core/Point.hpp"
+#include "core/Type.hpp"
 #include "document/Renderable.hpp"
 #include "video/Attribute.hpp"
 #include "video/Font.hpp"
@@ -19,6 +20,7 @@ private:
     core::Unsigned_t size;
     core::Color<> color;
     core::Boolean_t visible;
+    core::Integer_t zIndex;
     size_t index;
   };
 
@@ -64,6 +66,7 @@ public:
   void setTextPosition(core::Unsigned_t handle, const core::Point<> &position);
   void setTextColor(core::Unsigned_t handle, const core::Color<> &color);
   void setTextVisible(core::Unsigned_t handle, core::Boolean_t visible);
+  void setTextZIndex(core::Unsigned_t handle, core::Integer_t visible);
   void deleteText(core::Unsigned_t handle);
 
 public:

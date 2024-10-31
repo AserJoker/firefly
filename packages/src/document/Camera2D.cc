@@ -1,7 +1,6 @@
 #include "document/Camera2D.hpp"
 #include "core/AutoPtr.hpp"
 #include "core/Math.hpp"
-#include "core/Value.hpp"
 #include "document/Window.hpp"
 #include "runtime/ResizeEvent.hpp"
 #include "video/Renderer.hpp"
@@ -23,7 +22,10 @@ void Camera2D::onLoad() {
   Node::onLoad();
 }
 
-void Camera2D::onUnload() { _window = nullptr; }
+void Camera2D::onUnload() {
+  Node::onUnload();
+  _window = nullptr;
+}
 
 void Camera2D::setPosition(const core::Point<> &position) {
   setProperty(PROP_POSITION, position);
