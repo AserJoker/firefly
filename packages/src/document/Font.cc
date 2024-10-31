@@ -185,6 +185,21 @@ void Font::setZIndex(core::Float_t zIndex) {
   _zIndex = zIndex;
   update();
 }
+
+void Font::setSource(const core::String_t &source) {
+  setProperty(PROP_SOURCE, source);
+}
+
+void Font::setShader(const core::String_t &shader) {
+  setProperty(PROP_SHADER, _shader);
+}
+
+core::Float_t Font::getZIndex() const { return _zIndex; }
+
+const core::String_t &Font::getSource() const { return _source; }
+
+const core::String_t &Font::getShader() const { return _shader; }
+
 void Font::deleteText(core::Unsigned_t handle) {
   _texts.erase(handle);
   update();

@@ -3,6 +3,7 @@
 #include "core/Point.hpp"
 #include "core/Rect.hpp"
 #include "core/Size.hpp"
+#include "core/Type.hpp"
 #include "document/Renderable.hpp"
 #include "video/Geometry.hpp"
 #include "video/Material.hpp"
@@ -20,7 +21,7 @@ private:
   core::Rect<> _destinationRect;
   core::String_t _texturePath;
   core::String_t _shader;
-  core::Integer_t _zIndex;
+  core::Float_t _zIndex;
 
 private:
   void applyMatrix();
@@ -63,8 +64,8 @@ public:
   void setSourceSize(const core::Size<> &size);
   const core::Size<> &getSourceSize() const;
 
-  void setZIndex(core::Integer_t zIndex);
-  core::Integer_t getZIndex() const;
+  void setZIndex(core::Float_t zIndex);
+  core::Float_t getZIndex() const;
 
 public:
   static inline constexpr auto PROP_SHADER = "shader";

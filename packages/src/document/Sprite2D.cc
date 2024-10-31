@@ -163,8 +163,8 @@ void Sprite2D::setSourceSize(const core::Size<> &size) {
 }
 const core::Size<> &Sprite2D::getSourceSize() const { return _sourceRect.size; }
 
-void Sprite2D::setZIndex(core::Integer_t zIndex) {
+void Sprite2D::setZIndex(core::Float_t zIndex) {
   setProperty(PROP_ZINDEX, zIndex);
 }
 
-core::Integer_t Sprite2D::getZIndex() const { return _zIndex; }
+core::Float_t Sprite2D::getZIndex() const { return _zIndex; }

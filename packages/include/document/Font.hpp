@@ -61,13 +61,18 @@ protected:
 
 public:
   Font();
+  void setZIndex(core::Float_t visible);
+  void setSource(const core::String_t &source);
+  void setShader(const core::String_t &shader);
+  core::Float_t getZIndex() const;
+  const core::String_t &getSource() const;
+  const core::String_t &getShader() const;
   core::Unsigned_t createText(const core::String_t &source);
   void setTextSource(core::Unsigned_t handle, const core::String_t &source);
   void setTextSize(core::Unsigned_t handle, core::Unsigned_t size);
   void setTextPosition(core::Unsigned_t handle, const core::Point<> &position);
   void setTextColor(core::Unsigned_t handle, const core::Color<> &color);
   void setTextVisible(core::Unsigned_t handle, core::Boolean_t visible);
-  void setZIndex(core::Float_t visible);
   void deleteText(core::Unsigned_t handle);
 
 public:
