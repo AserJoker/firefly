@@ -89,7 +89,11 @@ void GameApplication::onMouseMotion(input::MouseMotionEvent &e) {}
 void GameApplication::onMouseDown(input::MouseDownEvent &e) {
   auto animation =
       document::Node::select("animation").cast<document::Animation>();
-  animation->start();
+  if (animation->isRunning()) {
+    animation->pause();
+  } else {
+    animation->start();
+  }
 }
 
 void GameApplication::onMouseWheel(input::MouseWheelEvent &e) {}

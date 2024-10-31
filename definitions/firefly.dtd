@@ -22,6 +22,7 @@
 <!ATTLIST font id ID #IMPLIED>
 <!ATTLIST font shader CDATA #IMPLIED>
 <!ATTLIST font source CDATA #IMPLIED>
+<!ATTLIST font z-index CDATA #IMPLIED>
 
 <!ELEMENT text-2d ANY>
 <!ATTLIST text-2d id ID #IMPLIED>
@@ -34,7 +35,6 @@
 <!ATTLIST text-2d position CDATA #IMPLIED>
 <!ATTLIST text-2d position_x CDATA #IMPLIED>
 <!ATTLIST text-2d position_y CDATA #IMPLIED>
-<!ATTLIST text-2d z-index CDATA #IMPLIED>
 
 <!ELEMENT sprite-2d ANY>
 <!ATTLIST sprite-2d id ID #IMPLIED>

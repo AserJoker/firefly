@@ -13,15 +13,17 @@
 
 using namespace firefly;
 using namespace firefly::document;
-Font::Font() {
+Font::Font() : _zIndex(0), _matrix(1.0f) {
   _shader = "font";
   _source = "simhei.ttf";
 
   defineProperty(PROP_SOURCE, _source);
   defineProperty(PROP_SHADER, _shader);
+  defineProperty(PROP_ZINDEX, _zIndex);
 
   watchProp(PROP_SOURCE, &Font::onSourceChange);
   watchProp(PROP_SHADER, &Font::onShaderChange);
+  watchProp(PROP_ZINDEX, &Font::update);
 }
 
 const core::AutoPtr<video::Geometry> &Font::getGeometry() const {
@@ -54,6 +56,8 @@ void Font::onLoad() {
   _material->setIsTransparent(true);
   _material->setDepthTest(true);
   _material->setShader(_shader);
+
+  _matrix = core::translate({0, 0, _zIndex});
 
   update();
   Node::onLoad();
@@ -108,7 +112,7 @@ void Font::setTextSize(core::Unsigned_t handle, core::Unsigned_t size) {
     for (auto &chr : chrs) {
       _matrixs[text.index + index] =
           core::translate({(offset + text.position.x) * 1.0f,
-                           text.position.y * 1.0f, text.zIndex * 1.0f}) *
+                           text.position.y * 1.0f, _zIndex}) *
           core::scale({chr.advance * text.size / 64.0f, text.size, 1.0f});
       offset += chr.advance * text.size / 64.0f;
       index++;
@@ -136,7 +140,7 @@ void Font::setTextPosition(core::Unsigned_t handle,
     for (auto &chr : chrs) {
       _matrixs[text.index + index] =
           core::translate({(offset + text.position.x) * 1.0f,
-                           text.position.y * 1.0f, text.zIndex * 1.0f}) *
+                           text.position.y * 1.0f, _zIndex}) *
           core::scale({chr.advance * text.size / 64.0f, text.size, 1.0f});
       offset += chr.advance * text.size / 64.0f;
       index++;
@@ -177,30 +181,9 @@ void Font::setTextVisible(core::Unsigned_t handle, core::Boolean_t visible) {
   update();
 }
 
-void Font::setTextZIndex(core::Unsigned_t handle, core::Integer_t zIndex) {
-  if (!_texts.contains(handle)) {
-    return;
-  }
-  auto &text = _texts.at(handle);
-  text.zIndex = zIndex;
-  if (text.index < _matrixs.size()) {
-    auto chrs = _font->draw(text.text);
-    auto offset = 0;
-    size_t index = 0;
-    for (auto &chr : chrs) {
-      _matrixs[text.index + index] =
-          core::translate({(offset + text.position.x) * 1.0f,
-                           text.position.y * 1.0f, text.zIndex * 1.0f}) *
-          core::scale({chr.advance * text.size / 64.0f, text.size, 1.0f});
-      offset += chr.advance * text.size / 64.0f;
-      index++;
-    }
-    _attrInstanceModel->write(text.index * sizeof(glm::mat4),
-                              chrs.size() * sizeof(glm::mat4),
-                              &_matrixs[text.index]);
-  } else {
-    update();
-  }
+void Font::setZIndex(core::Float_t zIndex) {
+  _zIndex = zIndex;
+  update();
 }
 void Font::deleteText(core::Unsigned_t handle) {
   _texts.erase(handle);
@@ -222,7 +205,7 @@ void Font::update() {
     for (auto &chr : chrs) {
       _matrixs.pushBack(
           core::translate({(offset + text.position.x) * 1.0f,
-                           text.position.y * 1.0f, text.zIndex * 1.0f}) *
+                           text.position.y * 1.0f, _zIndex * 1.0f}) *
           core::scale({chr.advance * text.size / 64.0f, text.size, 1.0f}));
 
       _coords.pushBack(

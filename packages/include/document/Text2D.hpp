@@ -11,7 +11,6 @@ private:
   core::Unsigned_t _size;
   core::Point<> _position;
   core::Boolean_t _visible;
-  uint32_t _zIndex;
 
 protected:
   void onLoad() override;
@@ -22,7 +21,6 @@ protected:
   void onSizeChange();
   void onVisibleChange();
   void onPositionChange();
-  void onZIndexChange();
 
 public:
   Text2D();
@@ -33,6 +31,5 @@ public:
   constexpr static auto PROP_FONT_SIZE = "font-size";
   constexpr static auto PROP_POSITION = "position";
   constexpr static auto PROP_VISIBLE = "visible";
-  constexpr static auto PROP_ZINDEX = "z-index";
 };
 }; // namespace firefly::document

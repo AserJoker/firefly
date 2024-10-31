@@ -5,10 +5,10 @@
         <scene-2d id="main">
             <camera-2d/>
             <sprite-2d destination='{"x":100,"y":100,"width":100,"height":100}' shader="red" z-index="-1"/>
-            <sprite-2d destination='{"x":50,"y":50,"width":100,"height":100}' shader="green" z-index="0"/>
-            <font>
-                <text-2d text="Hello world,中文测试" position_x="100" position_y="100" z-index="-1">
-                    <animation id="animation" delay="10" loop="true" auto-start="true">
+            <sprite-2d destination='{"x":50,"y":50,"width":100,"height":100}' shader="green" z-index="1"/>
+            <font z-index="0">
+                <text-2d text="Hello world,中文测试" position_x="100" position_y="100">
+                    <animation id="animation" delay="10" loop="true" auto-start="false">
                         <channel attribute="position.x" start="0" end="50" init="100" final="200"/>
                         <channel attribute="position.x" start="50" end="100" init="200" final="100"/>
                     </animation>

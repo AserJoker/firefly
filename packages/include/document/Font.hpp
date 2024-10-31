@@ -20,7 +20,6 @@ private:
     core::Unsigned_t size;
     core::Color<> color;
     core::Boolean_t visible;
-    core::Integer_t zIndex;
     size_t index;
   };
 
@@ -30,6 +29,7 @@ private:
   core::String_t _shader;
   core::AutoPtr<video::Texture> _texture;
   core::Map<core::Unsigned_t, Text> _texts;
+  float _zIndex;
 
 private:
   core::AutoPtr<video::Geometry> _geometry;
@@ -42,6 +42,7 @@ private:
 private:
   void onSourceChange();
   void onShaderChange();
+  void onZIndexChange();
 
   void update();
   void updateText(Text &text);
@@ -66,11 +67,12 @@ public:
   void setTextPosition(core::Unsigned_t handle, const core::Point<> &position);
   void setTextColor(core::Unsigned_t handle, const core::Color<> &color);
   void setTextVisible(core::Unsigned_t handle, core::Boolean_t visible);
-  void setTextZIndex(core::Unsigned_t handle, core::Integer_t visible);
+  void setZIndex(core::Float_t visible);
   void deleteText(core::Unsigned_t handle);
 
 public:
   static constexpr auto PROP_SOURCE = "source";
   static constexpr auto PROP_SHADER = "shader";
+  static constexpr auto PROP_ZINDEX = "z-index";
 };
 }; // namespace firefly::document

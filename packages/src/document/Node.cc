@@ -142,6 +142,9 @@ void Node::setProperty(const core::String_t &name, const core::Value &value) {
   if (_properties.contains(attrName)) {
     try {
       auto &attr = _properties.at(attrName);
+      if (attr.isReadonly()) {
+        return;
+      }
       core::Boolean_t isChanged = false;
       if (attr.type() == typeid(core::String_t)) {
         isChanged = attr.set(value.to<core::String_t>());

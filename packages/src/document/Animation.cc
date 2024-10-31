@@ -9,6 +9,7 @@ Animation::Animation()
   defineProperty(PROP_LOOP, _loop);
   defineProperty(PROP_AUTO_START, _autoStart);
   defineProperty(PROP_DELAY, _delay);
+  defineProperty(PROP_RUNNING, _running, true);
 }
 
 core::Unsigned_t Animation::createChannel(const core::String_t &attribute,
@@ -152,3 +153,5 @@ void Animation::reset() {
     parent->setProperty(channel.attribute, channel.init);
   }
 }
+
+bool Animation::isRunning() const { return _running; }

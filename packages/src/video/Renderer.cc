@@ -11,6 +11,7 @@
 #include "video/Texture.hpp"
 #include <SDL2/SDL.h>
 #include <SDL_video.h>
+#include <fmt/base.h>
 #include <fmt/format.h>
 #include <glm/ext/matrix_transform.hpp>
 

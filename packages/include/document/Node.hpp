@@ -17,6 +17,8 @@ class Node : public core::Object {
 private:
   class Property : public core::AnyPtr {
   private:
+    bool _readonly{};
+
   public:
     Property() = default;
     Property(core::String_t *ptr) : core::AnyPtr(ptr){};
@@ -27,6 +29,9 @@ private:
 
     Property(const Property &attr) = default;
     Property &operator=(const Property &another) = default;
+
+    bool isReadonly() const { return _readonly; };
+    void setReadonly(bool readonly) { _readonly = readonly; };
   };
 
 private:
@@ -45,14 +50,17 @@ private:
   core::Boolean_t _ready;
 
   core::String_t _currentPropertyGroup;
+
   core::Array<core::String_t> _propertyGroupStack;
 
   core::Map<core::String_t, core::Array<std::function<void()>>> _propWatchers;
 
 protected:
   template <class T>
-  void defineProperty(const core::String_t &name, T &property) {
+  void defineProperty(const core::String_t &name, T &property,
+                      bool readonly = false) {
     _properties[name] = &property;
+    _properties[name].setReadonly(readonly);
     auto tmp = name;
     auto pos = tmp.find_last_of('.');
     while (pos != core::String_t::npos) {
@@ -64,32 +72,32 @@ protected:
     }
   }
 
-  inline void defineProperty(const core::String_t &name,
-                             core::Rect<> &property) {
-    defineProperty(name + ".x", property.x);
-    defineProperty(name + ".y", property.y);
-    defineProperty(name + ".width", property.width);
-    defineProperty(name + ".height", property.height);
+  inline void defineProperty(const core::String_t &name, core::Rect<> &property,
+                             bool readonly = false) {
+    defineProperty(name + ".x", property.x, readonly);
+    defineProperty(name + ".y", property.y, readonly);
+    defineProperty(name + ".width", property.width, readonly);
+    defineProperty(name + ".height", property.height, readonly);
   }
 
   inline void defineProperty(const core::String_t &name,
-                             core::Color<> &property) {
-    defineProperty(name + ".r", property.r);
-    defineProperty(name + ".g", property.g);
-    defineProperty(name + ".b", property.b);
-    defineProperty(name + ".a", property.a);
+                             core::Color<> &property, bool readonly = false) {
+    defineProperty(name + ".r", property.r, readonly);
+    defineProperty(name + ".g", property.g, readonly);
+    defineProperty(name + ".b", property.b, readonly);
+    defineProperty(name + ".a", property.a, readonly);
   }
 
   inline void defineProperty(const core::String_t &name,
-                             core::Point<> &property) {
-    defineProperty(name + ".x", property.x);
-    defineProperty(name + ".y", property.y);
+                             core::Point<> &property, bool readonly = false) {
+    defineProperty(name + ".x", property.x, readonly);
+    defineProperty(name + ".y", property.y, readonly);
   }
 
-  inline void defineProperty(const core::String_t &name,
-                             core::Size<> &property) {
-    defineProperty(name + ".width", property.width);
-    defineProperty(name + ".height", property.height);
+  inline void defineProperty(const core::String_t &name, core::Size<> &property,
+                             bool readonly = false) {
+    defineProperty(name + ".width", property.width, readonly);
+    defineProperty(name + ".height", property.height, readonly);
   }
 
   template <class T>

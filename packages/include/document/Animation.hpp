@@ -47,10 +47,12 @@ public:
   void stop();
   void pause();
   void reset();
+  bool isRunning() const;
 
 public:
   static inline constexpr auto PROP_LOOP = "loop";
   static inline constexpr auto PROP_AUTO_START = "auto-start";
   static inline constexpr auto PROP_DELAY = "delay";
+  static inline constexpr auto PROP_RUNNING = "running";
 };
 }; // namespace firefly::document
