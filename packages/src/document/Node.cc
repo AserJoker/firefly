@@ -204,6 +204,7 @@ void Node::onUnload() {
   for (auto &child : _children) {
     child->onUnload();
   }
+  _children.clear();
 }
 
 static core::AutoPtr<Node> parseXML(xmlNodePtr node) {

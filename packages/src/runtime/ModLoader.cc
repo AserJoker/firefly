@@ -19,6 +19,10 @@ using namespace firefly::runtime;
 void ModLoader::load(core::Map<core::String_t, Manifest> &workflow,
                      Manifest &manifest,
                      const core::Array<core::String_t> &requirePath) {
+  std::string dispalyName = manifest.displayName;
+  if (dispalyName.empty()) {
+    dispalyName = manifest.name;
+  }
   for (auto &[name, version] : manifest.dependences) {
     if (std::find(requirePath.begin(), requirePath.end(), name) !=
         requirePath.end()) {
@@ -32,7 +36,7 @@ void ModLoader::load(core::Map<core::String_t, Manifest> &workflow,
       path += "->" + name;
       throw ModLoaderException(fmt::format(
           "Failed to load mod '{}':\n\t cycle dependices find:\n\t{}",
-          manifest.name, path));
+          dispalyName, path));
     }
     Manifest dep;
     if (workflow.contains(name)) {
@@ -43,14 +47,13 @@ void ModLoader::load(core::Map<core::String_t, Manifest> &workflow,
     } else {
       throw ModLoaderException(
           fmt::format("Failed to load mod '{}',dependence '{}' is not found",
-                      manifest.displayName, name));
+                      dispalyName, name));
     }
-    if (version >= dep.version) {
-      throw ModLoaderException(
-          fmt::format("Failed to load mod '{}',dependence '{}' is too "
-                      "old,need '{}',given '{}'",
-                      manifest.displayName, name, version.toString(),
-                      dep.version.toString()));
+    if (dep.version < version) {
+      throw ModLoaderException(fmt::format(
+          "Failed to load mod '{}',dependence '{}' is too "
+          "old,need '{}',given '{}'",
+          dispalyName, name, version.toString(), dep.version.toString()));
     }
     if (!dep.loaded) {
       auto rpath = requirePath;

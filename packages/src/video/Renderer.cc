@@ -265,7 +265,6 @@ void Renderer::present() {
   SDL_GL_MakeCurrent(_window, _ctx);
   auto uniforms = _uniforms;
   bindingTextures(_textures);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
   drawContext(_context);
   _uniforms = uniforms;
 }

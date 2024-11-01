@@ -6,6 +6,7 @@
 #include "document/Channel.hpp"
 #include "document/Font.hpp"
 #include "document/Node.hpp"
+#include "document/ParticleGenerator.hpp"
 #include "document/Scene2D.hpp"
 #include "document/Sprite2D.hpp"
 #include "document/Text2D.hpp"
@@ -53,6 +54,7 @@ void GameApplication::initDocument() {
   document::Text2D::registerNode();
   document::Animation::registerNode();
   document::Channel::registerNode();
+  document::ParticleGenerator::registerNode();
 }
 
 void GameApplication::onInitialize() {
@@ -77,6 +79,7 @@ void GameApplication::onMainLoop() {
 }
 
 void GameApplication::onUnInitialize() {
+  _document = nullptr;
   runtime::Application::onUnInitialize();
 }
 

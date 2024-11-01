@@ -1,7 +1,12 @@
 {
-    "name": "DemoMod",
+    "name": "demo",
     "version": "0.1.1",
-    "dependences": [],
+    "dependences": [
+        {
+            "name": "base",
+            "version": "0.1.1"
+        }
+    ],
     "runtimeDependences": [],
     "author": "aserjoker",
     "email": "aserjoker@outlook.com",

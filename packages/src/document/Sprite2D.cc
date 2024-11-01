@@ -36,7 +36,7 @@ void Sprite2D::onLoad() {
   _geometry->setAttribute(1, attrCoord);
   _geometry->setAttributeIndex(attrIndices);
   if (!_texture) {
-    _texture = new video::Texture();
+    _texture = new video::Texture(_texturePath);
     if (!_texturePath.empty()) {
       auto [width, height] = _texture->getTexture()->getSize();
       if (_sourceRect.width == 0) {

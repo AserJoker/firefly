@@ -1,18 +1,15 @@
 #version 330 core
 
-in vec2 vertexTexcoord;
-in vec3 vertexColor;
-
+in vec2 vertex_texture_coord;
 uniform sampler2D diffuse_texture;
-uniform float diffuse_texture_blend;
-uniform int diffuse_texture_enable;
+uniform int diffuse_enable;
+uniform mat4 diffuse_matrix;
 
 void main() {
-    if(diffuse_texture_enable == 1) {
-        vec4 color = texture(diffuse_texture, vertexTexcoord) * vec4(vertexColor, 1.0);
-        color.a *= diffuse_texture_blend;
+    if(diffuse_enable == 1) {
+        vec4 color = texture(diffuse_texture, (diffuse_matrix * vec4(vertex_texture_coord, 0.0, 1.0)).xy);
         gl_FragColor = color;
     } else {
-        gl_FragColor = vec4(vertexColor,1.0f);
+        gl_FragColor = vec4(1, 1, 1, 1);
     }
 }

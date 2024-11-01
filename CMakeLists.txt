@@ -23,13 +23,10 @@ elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG})
 endif()
 
-
-
 add_custom_target(copy)
-add_custom_command(TARGET copy PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/media  ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/media)
-add_custom_command(TARGET copy PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/mods  ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/mods)
-add_custom_command(TARGET copy PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/config  ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config)
-
+add_custom_command(TARGET copy PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/media ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/media)
+add_custom_command(TARGET copy PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/mods ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/mods)
+add_custom_command(TARGET copy PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${PROJECT_SOURCE_DIR}/config ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/config)
 
 find_package(fmt CONFIG REQUIRED)
 find_package(SDL2 CONFIG REQUIRED)
