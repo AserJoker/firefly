@@ -1,0 +1,130 @@
+#pragma once
+#include "core/CompileString.hpp"
+#include "core/Object.hpp"
+#include "core/Type.hpp"
+namespace firefly::script {
+class JSCompiler : public core::Object {
+public:
+  enum class NodeType {
+    IDENTIFIER,
+    PRIVATE_NAME,
+    LITERAL,
+    LITERAL_REGEX,
+    LITERAL_NULL,
+    LITERAL_STRING,
+    LITERAL_BOOLEAN,
+    LITERAL_NUMBER,
+    LITERAL_BIGINT,
+    LITERAL_DECIMAL,
+
+    PROGRAM,
+    FUNCTION_DEFINITION,
+    STATEMENT_BLOCK,
+    STATEMENT_EMPTY,
+    STATEMENT_DEBUGGER,
+    STATEMENT_WITH,
+    STATEMENT_RETURN,
+    STATEMENT_LABEL,
+    STATEMENT_BREAK,
+    STATEMENT_CONTINUE,
+    STATEMENT_IF,
+    STATEMENT_SWITCH,
+    STATEMENT_SWITCH_CASE,
+    STATEMENT_THROW,
+    STATEMENT_TRY,
+    STATEMENT_CACHE,
+    STATEMENT_WHILE,
+    STATEMENT_DO_WHILE,
+    STATEMENT_FOR,
+    STATEMENT_FOR_IN,
+    STATEMENT_FOR_OF,
+    FUNCTION_DECLARATION,
+    VARIABLE_DECLARATION,
+    VARIABLE_DECORATOR,
+    DECORATOR,
+    DIRECTIVE,
+    DIRECTIVE_LITERAL,
+    INTERPRETER_DIRECTIVE,
+    EXPRESSION_SUPER,
+    EXPRESSION_IMPORT,
+    EXPRESSION_THIS,
+    EXPRESSION_ARRAY_FUNCTION,
+    EXPRESSION_YIELD,
+    EXPRESSION_AWAIT,
+    EXPRESSION_ARRAY,
+    EXPRESSION_OBJECT,
+    OBJECT_MEMBER,
+    OBJECT_PROPERTY,
+    OBJECT_METHOD,
+    EXPRESSION_RECORD,
+    EXPRESSION_TUPLE,
+    EXPRESSION_FUNCTION,
+    EXPRESSION_UNARY,
+    EXPRESSION_UPDATE,
+    EXPRESSION_BINARY,
+    EXPRESSION_ASSIGMENT,
+    EXPRESSION_LOGICAL,
+    EXPRESSION_SPREAD,
+    EXPRESSION_ARGUMENT,
+    EXPRESSION_MEMBER,
+    EXPRESSION_OPTIONAL_MEMBER,
+    EXPRESSION_BIND,
+    EXPRESSION_CONDITION,
+    EXPRESSION_CALL,
+    EXPRESSION_OPTIONAL_CALL,
+    EXPRESSION_NEW,
+    EXPRESSION_SEQUENCE,
+    EXPRESSION_PARENTHESIZED,
+    EXPRESSION_DO,
+    EXPRESSION_MODULE,
+    EXPRESSION_TOPIC,
+    TEMPLATE,
+    EXPRESSION_TAGGED_TEMPLATE,
+    TEMPLATE_ELEMENT,
+    PATTERN_OBJECT,
+    PATTERN_ARRAY,
+    PATTERN_REST,
+    PATTERN_ASSIGMENT,
+    CLASS,
+    CLASS_BODY,
+    CLASS_METHOD,
+    CLASS_PRIVATE_METHOD,
+    CLASS_PROPERTY,
+    CLASS_PRIVATE_PROPERTY,
+    CLASS_ACCESSOR_PROPERTY,
+    STATIC_BLOCK,
+    CLASS_DECLARATION,
+    IMPORT_DECLARATION,
+    IMPORT_SPECIFIER,
+    IMPORT_DEFAULT,
+    IMPORT_NAMESPACE,
+    IMPORT_ATTARTUBE,
+    EXPORT_DECLARATION,
+    EXPORT_NAMED,
+    EXPORT_DEFAULT,
+    EXPORT_NAMESPACE,
+    EXPORT_ALL
+  };
+
+  struct Position {
+    core::Unsigned_t line;
+    core::Unsigned_t column;
+    core::Unsigned_t offset;
+  };
+
+  struct Location {
+    core::String_t source;
+    Position start;
+    Position end;
+  };
+
+  template <NodeType t, core::CompileString name> struct Node {
+    NodeType type = t;
+    core::String_t typeName = name.value;
+    Location location;
+  };
+
+public:
+  void compile(const std::string &filename, const std::string &source);
+};
+}; // namespace firefly::script
