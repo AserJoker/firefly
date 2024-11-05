@@ -841,7 +841,7 @@ JSCompiler::readExpressionStatement(const std::string &filename,
                                     const std::wstring &source,
                                     Position &position) {
   auto current = position;
-  skipNewLine(filename, source, current);
+  skipInvisible(filename, source, current);
   auto expr = readExpression(filename, source, current);
   if (!expr) {
     return nullptr;
@@ -1381,7 +1381,7 @@ JSCompiler::readConditionExpression(const std::string &filename,
     core::AutoPtr node = new ConditionExpression;
     node->level = 16;
     node->type = JSCompiler::NodeType::EXPRESSION_CONDITION;
-    
+
     core::AutoPtr vnode = new BinaryExpression;
     vnode->level = -2;
     vnode->type = NodeType::EXPRESSION_BINARY;
@@ -1458,7 +1458,7 @@ JSCompiler::readGroupExpression(const std::string &filename,
   skipInvisible(filename, source, current);
   auto token = readSymbolToken(filename, source, current);
   if (token != nullptr && token->location.getSource(source) == L"(") {
-    auto expr = readExpression(filename, source, current);
+    auto expr = readExpressionStatement(filename, source, current);
     if (!expr) {
       throw std::runtime_error(
           formatException("Unexcepted token", filename, source, current));
