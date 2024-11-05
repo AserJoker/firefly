@@ -799,6 +799,10 @@ JSCompiler::readStatement(const std::string &filename,
   }
 
   // if (!node) {
+  //   node = readDefStatement(filename,source,position);
+  // }
+
+  // if (!node) {
   //   node = readWhileStatement(filename,source,position);
   // }
 
@@ -820,10 +824,6 @@ JSCompiler::readStatement(const std::string &filename,
 
   // if (!node) {
   //   node = readForStatement(filename,source,position);
-  // }
-
-  // if (!node) {
-  //   node = readDefStatement(filename,source,position);
   // }
 
   // if (!node) {
@@ -886,6 +886,7 @@ JSCompiler::readExpressionStatement(const std::string &filename,
         formatException("Unexcepted token", filename, source, current));
   }
 }
+
 core::AutoPtr<JSCompiler::Node>
 JSCompiler::readBlockStatement(const std::string &filename,
                                const std::wstring &source, Position &position) {
@@ -965,9 +966,10 @@ JSCompiler::readExpression(const std::string &filename,
       if (!node) {
         node = readArrowFunctionDefinition(filename, source, next);
       }
-      if (!node) {
-        node = readIdentifierLiteral(filename, source, next);
-      }
+      // if (!node) {
+      //   node = readFunctionDefinition(filename, source, next);
+      // }
+
       if (!node) {
         node = readGroupExpression(filename, source, next);
       }
@@ -978,12 +980,9 @@ JSCompiler::readExpression(const std::string &filename,
       //   node = readObjectPattern(filename, source, next);
       // }
       // if (!node) {
-      //   node = readFunctionDefinition(filename, source, next);
-      // }
-      // if (!node) {
       //   node = readClassDefinition(filename, source, next);
       // }
-      // if (!node && root != nullptr) {
+      // if (!node) {
       //   node = readObjectDefinition(filename, source, next);
       // }
       // if (!node) {
@@ -991,6 +990,9 @@ JSCompiler::readExpression(const std::string &filename,
       // }
       if (!node) {
         node = readUnaryExpression(filename, source, next);
+      }
+      if (!node) {
+        node = readIdentifierLiteral(filename, source, next);
       }
     } else if (isComplete) {
       if (!node) {
