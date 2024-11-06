@@ -49,7 +49,7 @@ public:
     STATEMENT_FOR_OF,      // TODO:
 
     VARIABLE_DECLARATION, // TODO:
-    VARIABLE_DECORATOR,   // TODO:
+    VARIABLE_DECLARATOR,  // TODO:
 
     DECORATOR, // TODO:
 
@@ -109,13 +109,13 @@ public:
     EXPORT_NAMESPACE,   // TODO:
     EXPORT_ALL,         // TODO:
 
-    DECLARE_ARROW_FUNCTION,
-    DECLARE_FUNCTION, // TODO:
-    DECLARE_PARAMETER,
-    DECLARE_REST_PARAMETER,
-    DECLARE_OBJECT,
-    DECLARE_ARRAY,
-    DECLARE_CLASS, // TODO:
+    DECLARATION_ARROW_FUNCTION,
+    DECLARATION_FUNCTION,
+    DECLARATION_PARAMETER,
+    DECLARATION_REST_PARAMETER,
+    DECLARATION_OBJECT,
+    DECLARATION_ARRAY,
+    DECLARATION_CLASS, // TODO:
   };
 
   struct Position {
@@ -565,7 +565,7 @@ public:
     }
   };
 
-  struct ArrowFunctionDeclare : public Node {
+  struct ArrowFunctionDeclaration : public Node {
     std::wstring name;
 
     std::string sourceFile;
@@ -587,12 +587,12 @@ public:
         index++;
       }
       return fmt::format(
-          R"({{"type":"DECLARE_ARROW_FUNCTION","location":{},"arguments":[{}],"body":{},"async":{}}})",
+          R"({{"type":"DECLARATION_ARROW_FUNCTION","location":{},"arguments":[{}],"body":{},"async":{}}})",
           location.toJSON(source), params, body->toJSON(source), async);
     };
   };
 
-  struct FunctionDeclare : public Node {
+  struct FunctionDeclaration : public Node {
     core::Array<core::AutoPtr<Node>> arguments;
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> body;
@@ -609,7 +609,7 @@ public:
         index++;
       }
       return fmt::format(
-          R"({{"type":"DECLARE_FUNCTION","location":{},"identifier":{},"arguments":[{}],"body":{},"async":{},"generator":{}}})",
+          R"({{"type":"DECLARATION_FUNCTION","location":{},"identifier":{},"arguments":[{}],"body":{},"async":{},"generator":{}}})",
           location.toJSON(source),
           identifier == nullptr ? "null" : identifier->toJSON(source), params,
           body->toJSON(source), async, generator);
@@ -696,7 +696,7 @@ public:
     }
   };
 
-  struct ArrayDeclare : public Node {
+  struct ArrayDeclaration : public Node {
     core::Array<core::AutoPtr<Node>> items;
     std::string toJSON(const std::wstring &source) override {
       std::string sitems;
@@ -711,6 +711,46 @@ public:
       return fmt::format(
           R"({{"type":"DECALRE_ARRAY","items":[{}],"location":{}}})", sitems,
           location.toJSON(source));
+    }
+  };
+  struct VariableDeclarator : public Node {
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> value;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"VARIABLE_DECLARATOR","identifier":{},"value":{}}})",
+          identifier->toJSON(source),
+          value == nullptr ? "null" : value->toJSON(source));
+    }
+  };
+  struct VariableDeclaration : public Node {
+    enum class Kind { VAR, LET, CONST } kind;
+    core::Array<core::AutoPtr<Node>> declarations;
+    std::string toJSON(const std::wstring &source) override {
+      std::string skind;
+      switch (kind) {
+      case Kind::VAR:
+        skind = "var";
+        break;
+      case Kind::LET:
+        skind = "let";
+        break;
+      case Kind::CONST:
+        skind = "const";
+        break;
+      }
+      std::string sdeclarations;
+      size_t index = 0;
+      for (auto &declaration : declarations) {
+        sdeclarations += declaration->toJSON(source);
+        if (index != declarations.size() - 1) {
+          sdeclarations += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"VARIABLE_DECLARATION","kind":"{}","declarations":[{}]}})",
+          skind, sdeclarations);
     }
   };
 
@@ -892,13 +932,21 @@ private:
                                     const std::wstring &source,
                                     Position &position);
 
-  core::AutoPtr<Node> readArrowFunctionDeclare(const std::string &filename,
-                                               const std::wstring &source,
-                                               Position &position);
+  core::AutoPtr<Node> readArrowFunctionDeclaration(const std::string &filename,
+                                                   const std::wstring &source,
+                                                   Position &position);
 
-  core::AutoPtr<Node> readFunctionDeclare(const std::string &filename,
-                                          const std::wstring &source,
-                                          Position &position);
+  core::AutoPtr<Node> readFunctionDeclaration(const std::string &filename,
+                                              const std::wstring &source,
+                                              Position &position);
+
+  core::AutoPtr<Node> readVariableDeclarator(const std::string &filename,
+                                             const std::wstring &source,
+                                             Position &position);
+
+  core::AutoPtr<Node> readVariableDeclaration(const std::string &filename,
+                                              const std::wstring &source,
+                                              Position &position);
 
   core::AutoPtr<Node> readObjectPattern(const std::string &filename,
                                         const std::wstring &source,
@@ -920,9 +968,9 @@ private:
                                       const std::wstring &source,
                                       Position &position);
 
-  core::AutoPtr<Node> readArrayDeclare(const std::string &filename,
-                                       const std::wstring &source,
-                                       Position &position);
+  core::AutoPtr<Node> readArrayDeclaration(const std::string &filename,
+                                           const std::wstring &source,
+                                           Position &position);
 
   core::AutoPtr<Node> readBlockStatement(const std::string &filename,
                                          const std::wstring &source,
