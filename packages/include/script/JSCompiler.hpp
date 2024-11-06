@@ -82,22 +82,25 @@ public:
     EXPRESSION_ARGUMENT,
     EXPRESSION_MEMBER,
     EXPRESSION_OPTIONAL_MEMBER,
-    EXPRESSION_BIND,
+    EXPRESSION_COMPUTED_MEMBER,
+    EXPRESSION_OPTIONAL_COMPUTED_MEMBER,
     EXPRESSION_CONDITION,
     EXPRESSION_CALL,
     EXPRESSION_OPTIONAL_CALL,
     EXPRESSION_NEW,
-    EXPRESSION_SEQUENCE,
-    EXPRESSION_PARENTHESIZED,
     EXPRESSION_DO,
     EXPRESSION_MODULE,
     EXPRESSION_TOPIC,
     EXPRESSION_GROUP,
 
     PATTERN_OBJECT,
+    PATTERN_OBJECT_ITEM,
     PATTERN_ARRAY,
+    PATTERN_ARRAY_ITEM,
+    PATTERN_ARRAY_REST_ITEM,
     PATTERN_REST,
     PATTERN_ASSIGMENT,
+
     CLASS,
     CLASS_BODY,
     CLASS_METHOD,
@@ -107,6 +110,7 @@ public:
     CLASS_ACCESSOR_PROPERTY,
     STATIC_BLOCK,
     CLASS_DECLARATION,
+
     IMPORT_DECLARATION,
     IMPORT_SPECIFIER,
     IMPORT_DEFAULT,
@@ -118,8 +122,15 @@ public:
     EXPORT_NAMESPACE,
     EXPORT_ALL,
 
-    DEFINITION_ARROW_FUNCTION,
-    DEFINITION_PARAMETER,
+    DECLARE_ARROW_FUNCTION,
+    DECLARE_FUNCTION,
+    DECLARE_PARAMETER,
+    DECLARE_REST_PARAMETER,
+    DECLARE_OBJECT,
+    DECLARE_ARRAY,
+    DECLARE_CLASS,
+
+    DECALRE_ARRAY
   };
 
   struct Position {
@@ -402,7 +413,7 @@ public:
     core::AutoPtr<Node> left;
     core::AutoPtr<Node> right;
     std::wstring opt;
-    Position getStart() {
+    virtual Position getStart() {
       if (left != nullptr) {
         auto l = left.cast<BinaryExpression>();
         if (l != nullptr) {
@@ -413,11 +424,11 @@ public:
       }
       return location.start;
     }
-    Position getEnd() {
+    virtual Position getEnd() {
       if (right != nullptr) {
         auto r = right.cast<BinaryExpression>();
         if (r != nullptr) {
-          return r->getStart();
+          return r->getEnd();
         } else {
           return right->location.end;
         }
@@ -486,19 +497,90 @@ public:
     }
   };
 
+  struct MemberExpression : public BinaryExpression {
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"EXPRESSION_MEMBER","host":{},"field":{},"location":{}}})",
+          left->toJSON(source), right->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct OptionalMemberExpression : public BinaryExpression {
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"EXPRESSION_OPTIONAL_MEMBER","host":{},"field":{},"location":{}}})",
+          left->toJSON(source), right->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct ComputedMemberExpression : public BinaryExpression {
+    Position getEnd() override { return location.end; }
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"EXPRESSION_COMPUTED_MEMBER","host":{},"field":{},"location":{}}})",
+          left->toJSON(source), right->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct OptionalComputedMemberExpression : public BinaryExpression {
+
+    Position getEnd() override { return location.end; }
+
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"EXPRESSION_OPTIONAL_COMPUTED_MEMBER","host":{},"field":{},"location":{}}})",
+          left->toJSON(source), right->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct CallExpression : public BinaryExpression {
+    core::Array<core::AutoPtr<Node>> arguments;
+    Position getEnd() override { return location.end; }
+    std::string toJSON(const std::wstring &source) override {
+      std::string sargs;
+      size_t index = 0;
+      for (auto &arg : arguments) {
+        sargs += arg->toJSON(source);
+        if (index != arguments.size() - 1) {
+          sargs += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"EXPRESSION_CALL","callee":{},"arguments":[{}],"location":{}}})",
+          left->toJSON(source), sargs, location.toJSON(source));
+    }
+  };
+
+  struct OptionalCallExpression : public CallExpression {
+    std::string toJSON(const std::wstring &source) override {
+      std::string sargs;
+      size_t index = 0;
+      for (auto &arg : arguments) {
+        sargs += arg->toJSON(source);
+        if (index != arguments.size() - 1) {
+          sargs += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"EXPRESSION_OPTIONAL_CALL","callee":{},"arguments":[{}],"location":{}}})",
+          left->toJSON(source), sargs, location.toJSON(source));
+    }
+  };
+
   struct Parameter : public Node {
-    std::wstring identifier;
+    core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> value;
     std::string toJSON(const std::wstring &source) {
-      static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
       return fmt::format(
-          R"({{"type":"PARMETER","location":{},"identifier":"{}","value":{}}})",
-          location.toJSON(source), converter.to_bytes(identifier),
+          R"({{"type":"PARMETER","location":{},"identifier":{},"value":{}}})",
+          location.toJSON(source), identifier->toJSON(source),
           value == nullptr ? "null" : value->toJSON(source));
     }
   };
 
-  struct ArrowFunctionDefinition : public Node {
+  struct ArrowFunctionDeclare : public Node {
     std::wstring name;
 
     std::string sourceFile;
@@ -506,8 +588,6 @@ public:
     bool async;
 
     core::Array<core::AutoPtr<Node>> parameters;
-
-    core::AutoPtr<Node> restParameter;
 
     core::AutoPtr<Node> body;
 
@@ -522,11 +602,107 @@ public:
         index++;
       }
       return fmt::format(
-          R"({{"type":"DEFINITION_ARROW_FUNCTION","location":{},"restParameter":{},"parameters":[{}],"body":{},"async":{}}})",
-          location.toJSON(source),
-          restParameter == nullptr ? "null" : restParameter->toJSON(source),
-          params, body->toJSON(source), async);
+          R"({{"type":"DECLARE_ARROW_FUNCTION","location":{},"parameters":[{}],"body":{},"async":{}}})",
+          location.toJSON(source), params, body->toJSON(source), async);
     };
+  };
+
+  struct ObjectPatternItem : public Node {
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> alias;
+    core::AutoPtr<Node> value;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"PATTERN_OBJECT_ITEM","identifier":{},"alias":{},"value":{},"location":{}}})",
+          identifier->toJSON(source),
+          alias == nullptr ? "null" : alias->toJSON(source),
+          value == nullptr ? "null" : value->toJSON(source),
+          location.toJSON(source));
+    }
+  };
+
+  struct ObjectPatternRestItem : public Node {
+    core::AutoPtr<Node> identifier;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"PATTERN_REST","identifier":{},"location":{}}})",
+          identifier->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct ObjectPattern : public Node {
+    core::Array<core::AutoPtr<Node>> items;
+    std::string toJSON(const std::wstring &source) override {
+      std::string sitems;
+      size_t index = 0;
+      for (auto &item : items) {
+        sitems += item->toJSON(source);
+        if (index != items.size() - 1) {
+          sitems += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"PATTERN_OBJECT","items":[{}],"location":{}}})", sitems,
+          location.toJSON(source));
+    }
+  };
+
+  struct ArrayPatternItem : public Node {
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> value;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"PATTERN_ARRAY_ITEM","identifier":{},"value":{},"location":{}}})",
+          identifier->toJSON(source),
+          value == nullptr ? "null" : value->toJSON(source),
+          location.toJSON(source));
+    }
+  };
+
+  struct ArrayPatternRestItem : public Node {
+    core::AutoPtr<Node> identifier;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"PATTERN_ARRAY_REST_ITEM","identifier":{},"location":{}}})",
+          identifier->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct ArrayPattern : public Node {
+    core::Array<core::AutoPtr<Node>> items;
+    std::string toJSON(const std::wstring &source) override {
+      std::string sitems;
+      size_t index = 0;
+      for (auto &item : items) {
+        sitems += item->toJSON(source);
+        if (index != items.size() - 1) {
+          sitems += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"PATTERN_ARRAY","items":[{}],"location":{}}})", sitems,
+          location.toJSON(source));
+    }
+  };
+
+  struct ArrayDeclare : public Node {
+    core::Array<core::AutoPtr<Node>> items;
+    std::string toJSON(const std::wstring &source) override {
+      std::string sitems;
+      size_t index = 0;
+      for (auto &item : items) {
+        sitems += item->toJSON(source);
+        if (index != items.size() - 1) {
+          sitems += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"DECALRE_ARRAY","items":[{}],"location":{}}})", sitems,
+          location.toJSON(source));
+    }
   };
 
 private:
@@ -535,8 +711,8 @@ private:
                               const std::string &filename,
                               const std::wstring &source, Position position);
 
-  Location getLocation(const std::wstring &source, Position start,
-                       Position end);
+  Location getLocation(const std::wstring &source, Position &start,
+                       Position &end);
 
 private:
   bool skipWhiteSpace(const std::string &filename, const std::wstring &source,
@@ -631,6 +807,10 @@ private:
                                      const std::wstring &source,
                                      Position &position);
 
+  core::AutoPtr<Node> readExpressions(const std::string &filename,
+                                      const std::wstring &source,
+                                      Position &position);
+
   core::AutoPtr<Node> readInterpreterDirective(const std::string &filename,
                                                const std::wstring &source,
                                                Position &position);
@@ -675,6 +855,10 @@ private:
                                            const std::wstring &source,
                                            Position &position);
 
+  core::AutoPtr<Node> readConditionExpression(const std::string &filename,
+                                              const std::wstring &source,
+                                              Position &position);
+
   core::AutoPtr<Node> readUpdateExpression(const std::string &filename,
                                            const std::wstring &source,
                                            Position &position);
@@ -687,21 +871,45 @@ private:
                                           const std::wstring &source,
                                           Position &position);
 
-  core::AutoPtr<Node> readConditionExpression(const std::string &filename,
-                                              const std::wstring &source,
-                                              Position &position);
+  core::AutoPtr<Node> readMemberExpression(const std::string &filename,
+                                           const std::wstring &source,
+                                           Position &position);
+
+  core::AutoPtr<Node> readCallExpression(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
 
   core::AutoPtr<Node> readParameter(const std::string &filename,
                                     const std::wstring &source,
                                     Position &position);
 
-  core::AutoPtr<Node> readRestParameter(const std::string &filename,
+  core::AutoPtr<Node> readArrowFunctionDeclare(const std::string &filename,
+                                               const std::wstring &source,
+                                               Position &position);
+
+  core::AutoPtr<Node> readObjectPattern(const std::string &filename,
                                         const std::wstring &source,
                                         Position &position);
 
-  core::AutoPtr<Node> readArrowFunctionDefinition(const std::string &filename,
-                                                  const std::wstring &source,
-                                                  Position &position);
+  core::AutoPtr<Node> readObjectPatternItem(const std::string &filename,
+                                            const std::wstring &source,
+                                            Position &position);
+
+  core::AutoPtr<Node> readArrayPattern(const std::string &filename,
+                                       const std::wstring &source,
+                                       Position &position);
+
+  core::AutoPtr<Node> readArrayPatternItem(const std::string &filename,
+                                           const std::wstring &source,
+                                           Position &position);
+
+  core::AutoPtr<Node> readRestPattern(const std::string &filename,
+                                      const std::wstring &source,
+                                      Position &position);
+
+  core::AutoPtr<Node> readArrayDeclare(const std::string &filename,
+                                       const std::wstring &source,
+                                       Position &position);
 
   core::AutoPtr<Node> readBlockStatement(const std::string &filename,
                                          const std::wstring &source,
