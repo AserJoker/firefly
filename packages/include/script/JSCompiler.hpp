@@ -387,6 +387,7 @@ public:
         if (index != body.size() - 1) {
           str += ",";
         }
+        index++;
       }
       return fmt::format(
           R"({{"type":"STATEMENT_BLOCK","body":[{}],"location":{}}})", str,

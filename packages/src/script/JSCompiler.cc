@@ -1917,6 +1917,8 @@ JSCompiler::readVariableDeclarator(const std::string &filename,
       }
       node->value = value;
       next = current;
+    } else {
+      current = next;
     }
   }
   skipInvisible(filename, source, current);
