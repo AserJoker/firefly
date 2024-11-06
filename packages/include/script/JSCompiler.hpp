@@ -12,74 +12,61 @@ namespace firefly::script {
 class JSCompiler : public core::Object {
 public:
   enum class NodeType {
-    PRIVATE_NAME,
+    PRIVATE_NAME, // TODO:
+
     LITERAL_REGEX,
     LITERAL_NULL,
     LITERAL_STRING,
     LITERAL_BOOLEAN,
     LITERAL_NUMBER,
     LITERAL_COMMENT,
+    LITERAL_MULTILINE_COMMENT,
     LITERAL_UNDEFINED,
     LITERAL_IDENTITY,
     LITERAL_TEMPLATE,
 
-    LITERAL_BIGINT,
-    LITERAL_DECIMAL,
-    LITERAL_MULTILINE_COMMENT,
+    LITERAL_BIGINT,  // TODO:
+    LITERAL_DECIMAL, // TODO:
 
     PROGRAM,
-    FUNCTION_DEFINITION,
     STATEMENT_BLOCK,
-    STATEMENT_EMPTY,
-    STATEMENT_DEBUGGER,
-    STATEMENT_WITH,
-    STATEMENT_RETURN,
-    STATEMENT_LABEL,
-    STATEMENT_BREAK,
-    STATEMENT_CONTINUE,
-    STATEMENT_IF,
-    STATEMENT_SWITCH,
-    STATEMENT_SWITCH_CASE,
-    STATEMENT_THROW,
-    STATEMENT_TRY,
-    STATEMENT_CACHE,
-    STATEMENT_WHILE,
-    STATEMENT_DO_WHILE,
-    STATEMENT_FOR,
-    STATEMENT_FOR_IN,
-    STATEMENT_FOR_OF,
-    FUNCTION_DECLARATION,
-    VARIABLE_DECLARATION,
-    VARIABLE_DECORATOR,
+    STATEMENT_DEBUGGER,    // TODO:
+    STATEMENT_WITH,        // TODO:
+    STATEMENT_RETURN,      // TODO:
+    STATEMENT_LABEL,       // TODO:
+    STATEMENT_BREAK,       // TODO:
+    STATEMENT_CONTINUE,    // TODO:
+    STATEMENT_IF,          // TODO:
+    STATEMENT_SWITCH,      // TODO:
+    STATEMENT_SWITCH_CASE, // TODO:
+    STATEMENT_THROW,       // TODO:
+    STATEMENT_TRY,         // TODO:
+    STATEMENT_CACHE,       // TODO:
+    STATEMENT_WHILE,       // TODO:
+    STATEMENT_DO_WHILE,    // TODO:
+    STATEMENT_FOR,         // TODO:
+    STATEMENT_FOR_IN,      // TODO:
+    STATEMENT_FOR_OF,      // TODO:
 
-    DECORATOR,
+    VARIABLE_DECLARATION, // TODO:
+    VARIABLE_DECORATOR,   // TODO:
+
+    DECORATOR, // TODO:
+
     DIRECTIVE,
     DIRECTIVE_LITERAL,
     INTERPRETER_DIRECTIVE,
 
-    EXPRESSION_SUPER,
-    EXPRESSION_IMPORT,
-    EXPRESSION_THIS,
-    EXPRESSION_ARRAY_FUNCTION,
-    EXPRESSION_YIELD,
-    EXPRESSION_AWAIT,
-    EXPRESSION_ARRAY,
-    EXPRESSION_OBJECT,
+    OBJECT_MEMBER,   // TODO:
+    OBJECT_PROPERTY, // TODO:
+    OBJECT_METHOD,   // TODO:
 
-    OBJECT_MEMBER,
-    OBJECT_PROPERTY,
-    OBJECT_METHOD,
+    EXPRESSION_RECORD, // TODO:
+    EXPRESSION_TUPLE,  // TODO:
 
-    EXPRESSION_RECORD,
-    EXPRESSION_TUPLE,
-    EXPRESSION_FUNCTION,
     EXPRESSION_UNARY,
     EXPRESSION_UPDATE,
     EXPRESSION_BINARY,
-    EXPRESSION_ASSIGMENT,
-    EXPRESSION_LOGICAL,
-    EXPRESSION_SPREAD,
-    EXPRESSION_ARGUMENT,
     EXPRESSION_MEMBER,
     EXPRESSION_OPTIONAL_MEMBER,
     EXPRESSION_COMPUTED_MEMBER,
@@ -87,11 +74,12 @@ public:
     EXPRESSION_CONDITION,
     EXPRESSION_CALL,
     EXPRESSION_OPTIONAL_CALL,
-    EXPRESSION_NEW,
-    EXPRESSION_DO,
-    EXPRESSION_MODULE,
-    EXPRESSION_TOPIC,
+    EXPRESSION_NEW,    // TODO:
+    EXPRESSION_DELETE, // TODO:
     EXPRESSION_GROUP,
+
+    EXPRESSION_YIELD, // TODO:
+    EXPRESSION_AWAIT, // TODO:
 
     PATTERN_OBJECT,
     PATTERN_OBJECT_ITEM,
@@ -101,36 +89,33 @@ public:
     PATTERN_REST,
     PATTERN_ASSIGMENT,
 
-    CLASS,
-    CLASS_BODY,
-    CLASS_METHOD,
-    CLASS_PRIVATE_METHOD,
-    CLASS_PROPERTY,
-    CLASS_PRIVATE_PROPERTY,
-    CLASS_ACCESSOR_PROPERTY,
-    STATIC_BLOCK,
-    CLASS_DECLARATION,
+    CLASS_BODY,              // TODO:
+    CLASS_METHOD,            // TODO:
+    CLASS_PRIVATE_METHOD,    // TODO:
+    CLASS_PROPERTY,          // TODO:
+    CLASS_PRIVATE_PROPERTY,  // TODO:
+    CLASS_ACCESSOR_PROPERTY, // TODO:
+    STATIC_BLOCK,            // TODO:
+    CLASS_DECLARATION,       // TODO:
 
-    IMPORT_DECLARATION,
-    IMPORT_SPECIFIER,
-    IMPORT_DEFAULT,
-    IMPORT_NAMESPACE,
-    IMPORT_ATTARTUBE,
-    EXPORT_DECLARATION,
-    EXPORT_NAMED,
-    EXPORT_DEFAULT,
-    EXPORT_NAMESPACE,
-    EXPORT_ALL,
+    IMPORT_DECLARATION, // TODO:
+    IMPORT_SPECIFIER,   // TODO:
+    IMPORT_DEFAULT,     // TODO:
+    IMPORT_NAMESPACE,   // TODO:
+    IMPORT_ATTARTUBE,   // TODO:
+    EXPORT_DECLARATION, // TODO:
+    EXPORT_NAMED,       // TODO:
+    EXPORT_DEFAULT,     // TODO:
+    EXPORT_NAMESPACE,   // TODO:
+    EXPORT_ALL,         // TODO:
 
     DECLARE_ARROW_FUNCTION,
-    DECLARE_FUNCTION,
+    DECLARE_FUNCTION, // TODO:
     DECLARE_PARAMETER,
     DECLARE_REST_PARAMETER,
     DECLARE_OBJECT,
     DECLARE_ARRAY,
-    DECLARE_CLASS,
-
-    DECALRE_ARRAY
+    DECLARE_CLASS, // TODO:
   };
 
   struct Position {
@@ -587,23 +572,47 @@ public:
 
     bool async;
 
-    core::Array<core::AutoPtr<Node>> parameters;
+    core::Array<core::AutoPtr<Node>> arguments;
 
     core::AutoPtr<Node> body;
 
     std::string toJSON(const std::wstring &source) override {
       std::string params;
       size_t index = 0;
-      for (auto &param : parameters) {
+      for (auto &param : arguments) {
         params += param->toJSON(source);
-        if (index != parameters.size() - 1) {
+        if (index != arguments.size() - 1) {
           params += ",";
         }
         index++;
       }
       return fmt::format(
-          R"({{"type":"DECLARE_ARROW_FUNCTION","location":{},"parameters":[{}],"body":{},"async":{}}})",
+          R"({{"type":"DECLARE_ARROW_FUNCTION","location":{},"arguments":[{}],"body":{},"async":{}}})",
           location.toJSON(source), params, body->toJSON(source), async);
+    };
+  };
+
+  struct FunctionDeclare : public Node {
+    core::Array<core::AutoPtr<Node>> arguments;
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> body;
+    bool async;
+    bool generator;
+    std::string toJSON(const std::wstring &source) override {
+      std::string params;
+      size_t index = 0;
+      for (auto &param : arguments) {
+        params += param->toJSON(source);
+        if (index != arguments.size() - 1) {
+          params += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"DECLARE_FUNCTION","location":{},"identifier":{},"arguments":[{}],"body":{},"async":{},"generator":{}}})",
+          location.toJSON(source),
+          identifier == nullptr ? "null" : identifier->toJSON(source), params,
+          body->toJSON(source), async, generator);
     };
   };
 
@@ -886,6 +895,10 @@ private:
   core::AutoPtr<Node> readArrowFunctionDeclare(const std::string &filename,
                                                const std::wstring &source,
                                                Position &position);
+
+  core::AutoPtr<Node> readFunctionDeclare(const std::string &filename,
+                                          const std::wstring &source,
+                                          Position &position);
 
   core::AutoPtr<Node> readObjectPattern(const std::string &filename,
                                         const std::wstring &source,
