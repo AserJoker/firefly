@@ -749,8 +749,8 @@ public:
         index++;
       }
       return fmt::format(
-          R"({{"type":"VARIABLE_DECLARATION","kind":"{}","declarations":[{}]}})",
-          skind, sdeclarations);
+          R"({{"type":"VARIABLE_DECLARATION","kind":"{}","declarations":[{}],"location":{}}})",
+          skind, sdeclarations, location.toJSON(source));
     }
   };
 

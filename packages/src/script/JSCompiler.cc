@@ -946,7 +946,7 @@ JSCompiler::readExpression(const std::string &filename,
   bool isComplete = true;
   for (;;) {
     bool newline = false;
-    auto next = current;
+    auto clear = current;
     do {
       bool flag = true;
       while (flag) {
@@ -957,6 +957,7 @@ JSCompiler::readExpression(const std::string &filename,
         newline |= currentNewline;
       }
     } while (0);
+    auto next = current;
     core::AutoPtr<Node> node;
     if (root == nullptr || !isComplete) {
       if (!node) {
@@ -1055,13 +1056,13 @@ JSCompiler::readExpression(const std::string &filename,
           formatException("Unexpected token", filename, source, next));
     }
     if (isComplete && !node) {
-
+      skipInvisible(filename, source, next);
       if (newline || source[next.offset] == L'\0' ||
           source[next.offset] == L';' || source[next.offset] == L',' ||
           source[next.offset] == L'?' || source[next.offset] == L':' ||
           source[next.offset] == L'}' || source[next.offset] == L']' ||
           source[next.offset] == L')') {
-        current = next;
+        current = clear;
         break;
       }
       next.column += next.offset - current.offset;
@@ -1074,6 +1075,7 @@ JSCompiler::readExpression(const std::string &filename,
         throw std::runtime_error(
             formatException("Unexpected token", filename, source, next));
       } else {
+        current = clear;
         break;
       }
     } else {
