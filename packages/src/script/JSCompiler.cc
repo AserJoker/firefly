@@ -2029,6 +2029,7 @@ JSCompiler::readVariableDeclaration(const std::string &filename,
 core::AutoPtr<JSCompiler::Node>
 JSCompiler::readRestPattern(const std::string &filename,
                             const std::wstring &source, Position &position) {
+  // TDOO: Rest语法支持解构...[a,b]
   auto current = position;
   skipInvisible(filename, source, current);
   auto token = readSymbolToken(filename, source, current);
@@ -2052,63 +2053,7 @@ core::AutoPtr<JSCompiler::Node>
 JSCompiler::readObjectPatternItem(const std::string &filename,
                                   const std::wstring &source,
                                   Position &position) {
-  // TODO: 模式匹配支持圆括号，支持递归匹配
-  auto node = readRestPattern(filename, source, position);
-  if (node != nullptr) {
-    return node;
-  }
-  auto current = position;
-  skipInvisible(filename, source, current);
-  auto identifier = readIdentifierLiteral(filename, source, current);
-  if (identifier == nullptr) {
-    identifier = readStringLiteral(filename, source, current);
-  }
-  if (identifier != nullptr) {
-    core::AutoPtr node = new ObjectPatternItem;
-    node->type = NodeType::PATTERN_OBJECT_ITEM;
-    node->identifier = identifier;
-    auto next = current;
-    skipInvisible(filename, source, current);
-    auto token = readSymbolToken(filename, source, current);
-    if (!token) {
-      return nullptr;
-    }
-    if (token->location.getSource(source) == L":") {
-      auto alias = readIdentifierLiteral(filename, source, current);
-      if (!alias) {
-        return nullptr;
-      }
-      node->alias = alias;
-      next = current;
-      skipInvisible(filename, source, current);
-      token = readSymbolToken(filename, source, current);
-      if (!token) {
-        return nullptr;
-      }
-    } else if (identifier->type == NodeType::LITERAL_STRING) {
-      return nullptr;
-    }
-    if (token->location.getSource(source) == L"=") {
-      auto value = readExpression(filename, source, current);
-      if (!value) {
-        return nullptr;
-      }
-      node->value = value;
-      next = current;
-      skipInvisible(filename, source, current);
-      token = readSymbolToken(filename, source, current);
-      if (!token) {
-        return nullptr;
-      }
-    }
-    if (token->location.getSource(source) == L"," ||
-        token->location.getSource(source) == L"}") {
-      current = next;
-      node->location = getLocation(source, position, current);
-      position = current;
-      return node;
-    }
-  }
+  // TDOO: 模式匹配语法重新设计
   return nullptr;
 }
 
@@ -2159,45 +2104,7 @@ core::AutoPtr<JSCompiler::Node>
 JSCompiler::readArrayPatternItem(const std::string &filename,
                                  const std::wstring &source,
                                  Position &position) {
-  // TODO: 模式匹配支持圆括号，支持递归匹配
-  auto node = readRestPattern(filename, source, position);
-  if (node != nullptr) {
-    return node;
-  }
-  auto current = position;
-  skipInvisible(filename, source, current);
-  auto identifier = readIdentifierLiteral(filename, source, current);
-  if (identifier != nullptr) {
-    core::AutoPtr node = new ArrayPatternItem;
-    node->type = NodeType::PATTERN_ARRAY_ITEM;
-    node->identifier = identifier;
-    auto next = current;
-    skipInvisible(filename, source, current);
-    auto token = readSymbolToken(filename, source, current);
-    if (!token) {
-      return nullptr;
-    }
-    if (token->location.getSource(source) == L"=") {
-      auto value = readExpression(filename, source, current);
-      if (!value) {
-        return nullptr;
-      }
-      node->value = value;
-      next = current;
-      skipInvisible(filename, source, current);
-      token = readSymbolToken(filename, source, current);
-      if (!token) {
-        return nullptr;
-      }
-    }
-    if (token->location.getSource(source) == L"," ||
-        token->location.getSource(source) == L"]") {
-      current = next;
-      node->location = getLocation(source, position, current);
-      position = current;
-      return node;
-    }
-  }
+  // TDOO: 模式匹配语法重新设计
   return nullptr;
 }
 
