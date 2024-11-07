@@ -31,10 +31,11 @@ public:
 
     PROGRAM,
 
-    /// \details <statement_block>:<invisible|semi>token['{']<statement>*token['}']
+    /// \details
+    /// <statement_block>:<invisible|semi>token['{']<statement>*token['}']
     STATEMENT_BLOCK,
     /// \details <statement_block>:<invisible|semi><identifier['debugger']>
-    STATEMENT_DEBUGGER,    // TODO: 
+    STATEMENT_DEBUGGER,    // TODO:
     STATEMENT_WITH,        // TODO:
     STATEMENT_RETURN,      // TODO:
     STATEMENT_LABEL,       // TODO:
@@ -722,11 +723,25 @@ public:
   struct VariableDeclarator : public Node {
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> value;
+    enum class Assigment { SET, OF, IN } assigment;
     std::string toJSON(const std::wstring &source) override {
+      std::string sassigment;
+      switch (assigment) {
+      case Assigment::SET:
+        sassigment = "=";
+        break;
+      case Assigment::OF:
+        sassigment = "of";
+        break;
+      case Assigment::IN:
+        sassigment = "in";
+        break;
+      }
       return fmt::format(
-          R"({{"type":"VARIABLE_DECLARATOR","identifier":{},"value":{}}})",
-          identifier->toJSON(source),
-          value == nullptr ? "null" : value->toJSON(source));
+          R"({{"type":"VARIABLE_DECLARATOR","assigment":"{}","identifier":{},"value":{},"location":{}}})",
+          sassigment, identifier->toJSON(source),
+          value == nullptr ? "null" : value->toJSON(source),
+          location.toJSON(source));
     }
   };
 
@@ -763,6 +778,7 @@ public:
 
 private:
   bool isUnicodeVariableName(wchar_t chr);
+
   std::string formatException(const std::string &message,
                               const std::string &filename,
                               const std::wstring &source, Position position);
@@ -775,19 +791,20 @@ private:
                       Position &position);
 
   bool skipComment(const std::string &filename, const std::wstring &source,
-                   Position &position);
+                   Position &position, bool *isNewline = nullptr);
 
   bool skipLineTerminatior(const std::string &filename,
-                           const std::wstring &source, Position &position);
+                           const std::wstring &source, Position &position,
+                           bool *isNewLine = nullptr);
 
   bool skipSemi(const std::string &filename, const std::wstring &source,
                 Position &position);
 
   void skipInvisible(const std::string &filename, const std::wstring &source,
-                     Position &position);
+                     Position &position, bool *isNewline = nullptr);
 
   void skipNewLine(const std::string &filename, const std::wstring &source,
-                   Position &position);
+                   Position &position, bool *isNewline = nullptr);
 
 private:
   core::AutoPtr<Token> readStringToken(const std::string &filename,
