@@ -2024,11 +2024,28 @@ JSCompiler::readVariableDeclaration(const std::string &filename,
 core::AutoPtr<JSCompiler::Node>
 JSCompiler::readRestPattern(const std::string &filename,
                             const std::wstring &source, Position &position) {
-  // TDOO: Rest语法支持解构...[a,b]
   auto current = position;
   skipInvisible(filename, source, current);
   auto token = readSymbolToken(filename, source, current);
   if (token != nullptr && token->location.getSource(source) == L"...") {
+    auto identifier = readObjectPattern(filename, source, current);
+    if (!identifier) {
+      identifier = readArrayPattern(filename, source, current);
+    }
+    if (!identifier) {
+      identifier = readIdentifierLiteral(filename, source, current);
+    }
+    if (!identifier) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    auto node = new RestPatternItem;
+    node->type = NodeType::PATTERN_REST_ITEM;
+    node->level = 0;
+    node->identifier = identifier;
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
   }
   return nullptr;
 }
@@ -2088,7 +2105,38 @@ core::AutoPtr<JSCompiler::Node>
 JSCompiler::readArrayPatternItem(const std::string &filename,
                                  const std::wstring &source,
                                  Position &position) {
-  // TDOO: 模式匹配语法重新设计
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto rest = readRestPattern(filename, source, current);
+  if (rest != nullptr) {
+    return rest;
+  }
+  auto identifier = readObjectPattern(filename, source, current);
+  if (!identifier) {
+    identifier = readArrayPattern(filename, source, current);
+  }
+  if (!identifier) {
+    identifier = readIdentifierLiteral(filename, source, current);
+  }
+  if (identifier != nullptr) {
+    core::AutoPtr node = new ArrayPatternItem;
+    node->identifier = identifier;
+    node->type = NodeType::PATTERN_ARRAY_ITEM;
+    node->level = 0;
+    skipInvisible(filename, source, current);
+    auto token = readSymbolToken(filename, source, current);
+    if (token != nullptr && token->location.getSource(source) == L"=") {
+      auto value = readExpression(filename, source, current);
+      if (value == nullptr) {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+      node->value = value;
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
   return nullptr;
 }
 

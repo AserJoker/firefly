@@ -82,12 +82,11 @@ public:
     EXPRESSION_AWAIT, // TODO:
     EXPRESSION_REST,  // TODO:
 
+    PATTERN_REST_ITEM,
     PATTERN_OBJECT,
     PATTERN_OBJECT_ITEM,
     PATTERN_ARRAY,
     PATTERN_ARRAY_ITEM,
-    PATTERN_REST,
-    PATTERN_ASSIGMENT,
 
     CLASS_BODY,              // TODO:
     CLASS_METHOD,            // TODO:
@@ -617,6 +616,14 @@ public:
           identifier == nullptr ? "null" : identifier->toJSON(source), params,
           body->toJSON(source), async, generator);
     };
+  };
+
+  struct RestPatternItem : public Node {
+    core::AutoPtr<Node> identifier;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(R"({{"type":"PATTERN_REST_ITEM","identifier":{}}})",
+                         identifier->toJSON(source));
+    }
   };
 
   struct ObjectPatternItem : public Node {

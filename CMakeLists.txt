@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
 project(firefly)
-include_directories(./3rdparty/quickjs)
 set(FF_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/packages/include)
 set(FF_ROOT_PROJECT_NAME ${PROJECT_NAME})
 set(CMAKE_CXX_STANDARD 23)
@@ -49,4 +48,3 @@ endif()
 
 add_subdirectory(packages)
 add_subdirectory(projects)
-add_subdirectory(3rdparty/quickjs)
