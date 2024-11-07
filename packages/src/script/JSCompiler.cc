@@ -228,6 +228,8 @@ JSCompiler::readCommentToken(const std::string &filename,
               formatException("Incomplete comment", filename, source, current));
         }
         if (chr == '/' && source[current.offset - 1] == '*') {
+          current.column++;
+          current.offset++;
           break;
         }
         if (std::find(LTC.begin(), LTC.end(), chr) != LTC.end()) {
@@ -1027,9 +1029,9 @@ JSCompiler::readExpression(const std::string &filename,
       if (!node) {
         node = readNewExpression(filename, source, next);
       }
-      // if (!node) {
-      //   node = readObjectDeclaration(filename, source, next);
-      // }
+      if (!node) {
+        node = readObjectDeclaration(filename, source, next);
+      }
       // if (!node) {
       //   node = readClassDeclaration(filename, source, next);
       // }
@@ -2048,6 +2050,354 @@ JSCompiler::readFunctionDeclaration(const std::string &filename,
 }
 
 core::AutoPtr<JSCompiler::Node>
+JSCompiler::readArrayDeclaration(const std::string &filename,
+                                 const std::wstring &source,
+                                 Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readSymbolToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"[") {
+    core::AutoPtr node = new ArrayDeclaration;
+    node->level = -2;
+    node->type = NodeType::DECLARATION_ARRAY;
+    auto item = readRestExpression(filename, source, current);
+    if (item == nullptr) {
+      item = readExpression(filename, source, current);
+    }
+    for (;;) {
+      auto next = current;
+      skipInvisible(filename, source, current);
+      token = readSymbolToken(filename, source, current);
+      if (!token) {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+      if (token->location.getSource(source) == L"]") {
+        if (item != nullptr) {
+          node->items.pushBack(item);
+        }
+        current = next;
+        break;
+      }
+      if (token->location.getSource(source) != L",") {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+      node->items.pushBack(item);
+      item = readRestExpression(filename, source, current);
+      if (item == nullptr) {
+        item = readExpression(filename, source, current);
+      }
+    }
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    if (!token) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    if (token->location.getSource(source) != L"]") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readObjectDeclaration(const std::string &filename,
+                                  const std::wstring &source,
+                                  Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readSymbolToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"{") {
+    core::AutoPtr node = new ObjectDeclaration;
+    node->level = -2;
+    node->type = NodeType::DECLARATION_OBJECT;
+    auto item = readObjectProperty(filename, source, current);
+    for (;;) {
+      auto next = current;
+      skipInvisible(filename, source, current);
+      token = readSymbolToken(filename, source, current);
+      if (!token) {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+      if (token->location.getSource(source) == L"}") {
+        if (item != nullptr) {
+          node->properties.pushBack(item);
+        }
+        current = next;
+        break;
+      }
+      if (token->location.getSource(source) != L"," || !item) {
+        current = next;
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+      node->properties.pushBack(item);
+      item = readObjectProperty(filename, source, current);
+    }
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    if (!token) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    if (token->location.getSource(source) != L"}") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readObjectProperty(const std::string &filename,
+                               const std::wstring &source, Position &position) {
+  auto rest = readRestExpression(filename, source, position);
+  if (rest != nullptr) {
+    return rest;
+  }
+  auto method = readObjectMethod(filename, source, position);
+  if (method != nullptr) {
+    return method;
+  }
+  method = readObjectAccessorMethod(filename, source, position);
+  if (method != nullptr) {
+    return method;
+  }
+  auto current = position;
+  auto identifier = readIdentifierLiteral(filename, source, current);
+  if (!identifier) {
+    identifier = readStringLiteral(filename, source, current);
+  }
+  if (!identifier) {
+    identifier = readMemberExpression(filename, source, current);
+    if (identifier != nullptr &&
+        identifier->type == NodeType::EXPRESSION_COMPUTED_MEMBER) {
+      identifier = identifier.cast<ComputedMemberExpression>()->right;
+    } else {
+      current = position;
+      identifier = nullptr;
+    }
+  }
+  if (!identifier) {
+    return nullptr;
+  }
+  core::AutoPtr node = new ObjectProperty;
+  node->identifier = identifier;
+  auto next = current;
+  skipInvisible(filename, source, current);
+  auto token = readSymbolToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L":") {
+    auto impl = readExpression(filename, source, current);
+    if (!impl) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->implement = impl;
+    next = current;
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+  }
+  if (token != nullptr) {
+    if (token->location.getSource(source) == L"," ||
+        token->location.getSource(source) == L"}") {
+      current = next;
+      node->location = getLocation(source, position, current);
+      position = current;
+      return node;
+    }
+  }
+  throw std::runtime_error(
+      formatException("Unexcepted token", filename, source, current));
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readObjectMethod(const std::string &filename,
+                             const std::wstring &source, Position &position) {
+  auto current = position;
+  auto next = current;
+
+  skipInvisible(filename, source, current);
+  auto async = readIdentifierToken(filename, source, current);
+  if (async != nullptr && async->location.getSource(source) == L"async") {
+    next = current;
+  } else {
+    current = next;
+    async = nullptr;
+  }
+  
+  skipInvisible(filename, source, current);
+  auto generator = readSymbolToken(filename, source, current);
+  if (!generator || generator->location.getSource(source) != L"*") {
+    current = next;
+    generator = nullptr;
+  } else {
+    next = current;
+  }
+
+  auto identifier = readIdentifierLiteral(filename, source, current);
+  if (!identifier) {
+    identifier = readStringLiteral(filename, source, current);
+  }
+
+  if (!identifier) {
+    identifier = readMemberExpression(filename, source, current);
+    if (identifier != nullptr &&
+        identifier->type == NodeType::EXPRESSION_COMPUTED_MEMBER) {
+      identifier = identifier.cast<ComputedMemberExpression>()->right;
+    } else {
+      current = position;
+      identifier = nullptr;
+    }
+  }
+  if (!identifier) {
+    return nullptr;
+  }
+  skipInvisible(filename, source, current);
+  auto token = readSymbolToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"(") {
+    core::AutoPtr node = new ObjectMethod;
+    node->async = async != nullptr;
+    node->generator = generator != nullptr;
+    node->identifier = identifier;
+    node->level = 0;
+    node->type = NodeType::OBJECT_METHOD;
+    auto param = readParameter(filename, source, current);
+    while (param != nullptr) {
+      node->arguments.pushBack(param);
+      skipInvisible(filename, source, current);
+      auto next = current;
+      token = readSymbolToken(filename, source, current);
+      if (!token) {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+      if (token->location.getSource(source) != L",") {
+        if (token->location.getSource(source) == L")") {
+          current = next;
+          break;
+        } else {
+          throw std::runtime_error(
+              formatException("Unexcepted token", filename, source, current));
+        }
+      }
+      param = readParameter(filename, source, current);
+      if (!param) {
+        break;
+      }
+    }
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    if (!token || token->location.getSource(source) != L")") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    skipInvisible(filename, source, current);
+    node->body = readBlockStatement(filename, source, current);
+    if (!node->body) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readObjectAccessorMethod(const std::string &filename,
+                                     const std::wstring &source,
+                                     Position &position) {
+  auto current = position;
+
+  skipInvisible(filename, source, current);
+  auto accessor = readIdentifierToken(filename, source, current);
+  if (accessor == nullptr || (accessor->location.getSource(source) == L"get" &&
+                              accessor->location.getSource(source) == L"set")) {
+    return nullptr;
+  }
+
+  auto identifier = readIdentifierLiteral(filename, source, current);
+  if (!identifier) {
+    identifier = readStringLiteral(filename, source, current);
+  }
+
+  if (!identifier) {
+    identifier = readMemberExpression(filename, source, current);
+    if (identifier != nullptr &&
+        identifier->type == NodeType::EXPRESSION_COMPUTED_MEMBER) {
+      identifier = identifier.cast<ComputedMemberExpression>()->right;
+    } else {
+      current = position;
+      identifier = nullptr;
+    }
+  }
+  if (!identifier) {
+    return nullptr;
+  }
+  skipInvisible(filename, source, current);
+  auto token = readSymbolToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"(") {
+    core::AutoPtr node = new ObjectAccessorMethod;
+    node->kind = accessor->location.getSource(source) == L"get"
+                     ? ObjectAccessorMethod::KIND::GET
+                     : ObjectAccessorMethod::KIND::SET;
+    node->identifier = identifier;
+    node->level = 0;
+    node->type = NodeType::OBJECT_ACCESSOR_METHOD;
+    auto param = readParameter(filename, source, current);
+    while (param != nullptr) {
+      node->arguments.pushBack(param);
+      skipInvisible(filename, source, current);
+      auto next = current;
+      token = readSymbolToken(filename, source, current);
+      if (!token) {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+      if (token->location.getSource(source) != L",") {
+        if (token->location.getSource(source) == L")") {
+          current = next;
+          break;
+        } else {
+          throw std::runtime_error(
+              formatException("Unexcepted token", filename, source, current));
+        }
+      }
+      param = readParameter(filename, source, current);
+      if (!param) {
+        break;
+      }
+    }
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    if (!token || token->location.getSource(source) != L")") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    skipInvisible(filename, source, current);
+    node->body = readBlockStatement(filename, source, current);
+    if (!node->body) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
 JSCompiler::readVariableDeclarator(const std::string &filename,
                                    const std::wstring &source,
                                    Position &position) {
@@ -2440,63 +2790,6 @@ JSCompiler::readArrayPattern(const std::string &filename,
     }
     if (token->location.getSource(source) != L"]") {
       return nullptr;
-    }
-    node->location = getLocation(source, position, current);
-    position = current;
-    return node;
-  }
-  return nullptr;
-}
-
-core::AutoPtr<JSCompiler::Node>
-JSCompiler::readArrayDeclaration(const std::string &filename,
-                                 const std::wstring &source,
-                                 Position &position) {
-  auto current = position;
-  skipInvisible(filename, source, current);
-  auto token = readSymbolToken(filename, source, current);
-  if (token != nullptr && token->location.getSource(source) == L"[") {
-    core::AutoPtr node = new ArrayDeclaration;
-    node->level = -2;
-    node->type = NodeType::DECLARATION_ARRAY;
-    auto item = readRestExpression(filename, source, current);
-    if (item == nullptr) {
-      item = readExpression(filename, source, current);
-    }
-    for (;;) {
-      auto next = current;
-      skipInvisible(filename, source, current);
-      token = readSymbolToken(filename, source, current);
-      if (!token) {
-        throw std::runtime_error(
-            formatException("Unexcepted token", filename, source, current));
-      }
-      if (token->location.getSource(source) == L"]") {
-        if (item != nullptr) {
-          node->items.pushBack(item);
-        }
-        current = next;
-        break;
-      }
-      if (token->location.getSource(source) != L",") {
-        throw std::runtime_error(
-            formatException("Unexcepted token", filename, source, current));
-      }
-      node->items.pushBack(item);
-      item = readRestExpression(filename, source, current);
-      if (item == nullptr) {
-        item = readExpression(filename, source, current);
-      }
-    }
-    skipInvisible(filename, source, current);
-    token = readSymbolToken(filename, source, current);
-    if (!token) {
-      throw std::runtime_error(
-          formatException("Unexcepted token", filename, source, current));
-    }
-    if (token->location.getSource(source) != L"]") {
-      throw std::runtime_error(
-          formatException("Unexcepted token", filename, source, current));
     }
     node->location = getLocation(source, position, current);
     position = current;

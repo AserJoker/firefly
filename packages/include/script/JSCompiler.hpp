@@ -63,9 +63,9 @@ public:
     DIRECTIVE_LITERAL,
     INTERPRETER_DIRECTIVE,
 
-    OBJECT_MEMBER,   // TODO:
-    OBJECT_PROPERTY, // TODO:
-    OBJECT_METHOD,   // TODO:
+    OBJECT_PROPERTY,
+    OBJECT_METHOD,
+    OBJECT_ACCESSOR_METHOD,
 
     EXPRESSION_RECORD, // TODO:
     EXPRESSION_TUPLE,  // TODO:
@@ -85,8 +85,6 @@ public:
     EXPRESSION_AWAIT,
     EXPRESSION_VOID,
     EXPRESSION_TYPEOF,
-    EXPRESSION_IN,          // TODO:
-    EXPRESSION_INSTANCE_OF, // TODO:
     EXPRESSION_GROUP,
 
     EXPRESSION_REST,
@@ -673,6 +671,85 @@ public:
     };
   };
 
+  struct ObjectAccessorMethod : public Node {
+    enum class KIND { GET, SET } kind;
+    core::Array<core::AutoPtr<Node>> arguments;
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> body;
+    std::string toJSON(const std::wstring &source) override {
+      std::string params;
+      size_t index = 0;
+      for (auto &param : arguments) {
+        params += param->toJSON(source);
+        if (index != arguments.size() - 1) {
+          params += ",";
+        }
+        index++;
+      }
+      std::string skind;
+      switch (kind) {
+      case KIND::GET:
+        skind = "get";
+        break;
+      case KIND::SET:
+        skind = "set";
+        break;
+      }
+      return fmt::format(
+          R"({{"type":"OBJECT_ACCESSOR_METHOD","location":{},"identifier":{},"arguments":[{}],"body":{},"kind":"{}"}})",
+          location.toJSON(source), identifier->toJSON(source), params,
+          body->toJSON(source), skind);
+    };
+  };
+
+  struct ObjectMethod : public FunctionDeclaration {
+    std::string toJSON(const std::wstring &source) override {
+      std::string params;
+      size_t index = 0;
+      for (auto &param : arguments) {
+        params += param->toJSON(source);
+        if (index != arguments.size() - 1) {
+          params += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"OBJECT_METHOD","location":{},"identifier":{},"arguments":[{}],"body":{},"async":{},"generator":{}}})",
+          location.toJSON(source), identifier->toJSON(source), params,
+          body->toJSON(source), async, generator);
+    };
+  };
+
+  struct ObjectProperty : public Node {
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> implement;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"OBJECT_PROPERTY","identifier":{},"implement":{},"location":{}}})",
+          identifier == nullptr ? "null" : identifier->toJSON(source),
+          implement == nullptr ? "null" : implement->toJSON(source),
+          location.toJSON(source));
+    }
+  };
+
+  struct ObjectDeclaration : public Node {
+    core::Array<core::AutoPtr<Node>> properties;
+    std::string toJSON(const std::wstring &source) override {
+      std::string sproperties;
+      size_t index = 0;
+      for (auto &prop : properties) {
+        sproperties += prop->toJSON(source);
+        if (index != properties.size() - 1) {
+          sproperties += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"DECLARATION_OBJECT","properties":[{}],"location":{}}})",
+          sproperties, location.toJSON(source));
+    }
+  };
+
   struct RestPatternItem : public Node {
     core::AutoPtr<Node> identifier;
     std::string toJSON(const std::wstring &source) override {
@@ -1046,6 +1123,26 @@ private:
                                               const std::wstring &source,
                                               Position &position);
 
+  core::AutoPtr<Node> readArrayDeclaration(const std::string &filename,
+                                           const std::wstring &source,
+                                           Position &position);
+
+  core::AutoPtr<Node> readObjectDeclaration(const std::string &filename,
+                                            const std::wstring &source,
+                                            Position &position);
+
+  core::AutoPtr<Node> readObjectProperty(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
+
+  core::AutoPtr<Node> readObjectMethod(const std::string &filename,
+                                       const std::wstring &source,
+                                       Position &position);
+
+  core::AutoPtr<Node> readObjectAccessorMethod(const std::string &filename,
+                                               const std::wstring &source,
+                                               Position &position);
+
   core::AutoPtr<Node> readVariableDeclarator(const std::string &filename,
                                              const std::wstring &source,
                                              Position &position);
@@ -1073,10 +1170,6 @@ private:
   core::AutoPtr<Node> readRestPattern(const std::string &filename,
                                       const std::wstring &source,
                                       Position &position);
-
-  core::AutoPtr<Node> readArrayDeclaration(const std::string &filename,
-                                           const std::wstring &source,
-                                           Position &position);
 
   core::AutoPtr<Node> readBlockStatement(const std::string &filename,
                                          const std::wstring &source,
