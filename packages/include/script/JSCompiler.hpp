@@ -38,6 +38,7 @@ public:
     STATEMENT_DEBUGGER,    // TODO:
     STATEMENT_WITH,        // TODO:
     STATEMENT_RETURN,      // TODO:
+    STATEMENT_YIELD,       // TODO:
     STATEMENT_LABEL,       // TODO:
     STATEMENT_BREAK,       // TODO:
     STATEMENT_CONTINUE,    // TODO:
@@ -79,13 +80,16 @@ public:
     EXPRESSION_CONDITION,
     EXPRESSION_CALL,
     EXPRESSION_OPTIONAL_CALL,
-    EXPRESSION_NEW,    // TODO:
-    EXPRESSION_DELETE, // TODO:
+    EXPRESSION_NEW,
+    EXPRESSION_DELETE,
+    EXPRESSION_AWAIT,
+    EXPRESSION_VOID,
+    EXPRESSION_TYPEOF,
+    EXPRESSION_IN,          // TODO:
+    EXPRESSION_INSTANCE_OF, // TODO:
     EXPRESSION_GROUP,
 
-    EXPRESSION_YIELD, // TODO:
-    EXPRESSION_AWAIT, // TODO:
-    EXPRESSION_REST,  // TODO:
+    EXPRESSION_REST,
 
     PATTERN_REST_ITEM,
     PATTERN_OBJECT,
@@ -561,6 +565,52 @@ public:
     }
   };
 
+  struct AwaitExpression : public BinaryExpression {
+    std::string toJSON(const std::wstring &source) override {
+      static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+      return fmt::format(
+          R"({{"type":"EXPRESSION_AWAIT","right":{},"location":{}}})",
+          right->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct TypeofExpression : public BinaryExpression {
+
+    std::string toJSON(const std::wstring &source) override {
+      static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+      return fmt::format(
+          R"({{"type":"EXPRESSION_TYPEOF","right":{},"location":{}}})",
+          right->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct VoidExpression : public BinaryExpression {
+    std::string toJSON(const std::wstring &source) override {
+      static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+      return fmt::format(
+          R"({{"type":"EXPRESSION_VOID","right":{},"location":{}}})",
+          right->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct NewExpression : public BinaryExpression {
+    std::string toJSON(const std::wstring &source) override {
+      static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+      return fmt::format(
+          R"({{"type":"EXPRESSION_NEW","right":{},"location":{}}})",
+          right->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct DeleteExpression : public BinaryExpression {
+    std::string toJSON(const std::wstring &source) override {
+      static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+      return fmt::format(
+          R"({{"type":"EXPRESSION_DELETE","right":{},"location":{}}})",
+          right->toJSON(source), location.toJSON(source));
+    }
+  };
+
   struct Parameter : public Node {
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> value;
@@ -955,6 +1005,34 @@ private:
   core::AutoPtr<Node> readRestExpression(const std::string &filename,
                                          const std::wstring &source,
                                          Position &position);
+
+  core::AutoPtr<Node> readAwaitExpression(const std::string &filename,
+                                          const std::wstring &source,
+                                          Position &position);
+
+  core::AutoPtr<Node> readTypeofExpression(const std::string &filename,
+                                           const std::wstring &source,
+                                           Position &position);
+
+  core::AutoPtr<Node> readVoidExpression(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
+
+  core::AutoPtr<Node> readDeleteExpression(const std::string &filename,
+                                           const std::wstring &source,
+                                           Position &position);
+
+  core::AutoPtr<Node> readNewExpression(const std::string &filename,
+                                        const std::wstring &source,
+                                        Position &position);
+
+  core::AutoPtr<Node> readInExpression(const std::string &filename,
+                                       const std::wstring &source,
+                                       Position &position);
+
+  core::AutoPtr<Node> readInstanceOfExpression(const std::string &filename,
+                                               const std::wstring &source,
+                                               Position &position);
 
   core::AutoPtr<Node> readParameter(const std::string &filename,
                                     const std::wstring &source,
