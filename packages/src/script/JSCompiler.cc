@@ -992,31 +992,7 @@ JSCompiler::readExpression(const std::string &filename,
         node = readGroupExpression(filename, source, next);
       }
       if (!node) {
-        node = readArrayPattern(filename, source, next);
-        auto tmp = next;
-        skipInvisible(filename, source, next);
-        auto token = readSymbolToken(filename, source, next);
-        if (!token || token->location.getSource(source) != L"=") {
-          next = current;
-          node = nullptr;
-        } else {
-          next = tmp;
-        }
-      }
-      if (!node) {
         node = readArrayDeclaration(filename, source, next);
-      }
-      if (!node) {
-        node = readObjectPattern(filename, source, next);
-        auto tmp = next;
-        skipInvisible(filename, source, next);
-        auto token = readSymbolToken(filename, source, next);
-        if (!token || token->location.getSource(source) != L"=") {
-          next = current;
-          node = nullptr;
-        } else {
-          next = tmp;
-        }
       }
       // if (!node) {
       //   node = readObjectDeclaration(filename, source, next);
@@ -1596,6 +1572,7 @@ JSCompiler::readMemberExpression(const std::string &filename,
   }
   return nullptr;
 }
+
 core::AutoPtr<JSCompiler::Node>
 JSCompiler::readCallExpression(const std::string &filename,
                                const std::wstring &source, Position &position) {
@@ -1606,7 +1583,7 @@ JSCompiler::readCallExpression(const std::string &filename,
     core::AutoPtr node = new CallExpression;
     node->type = NodeType::EXPRESSION_CALL;
     node->level = 1;
-    auto arg = readRestPattern(filename, source, current);
+    auto arg = readRestExpression(filename, source, current);
     if (!arg) {
       arg = readExpression(filename, source, current);
     }
@@ -1623,7 +1600,7 @@ JSCompiler::readCallExpression(const std::string &filename,
         current = next;
         break;
       } else if (token->location.getSource(source) == L",") {
-        arg = readRestPattern(filename, source, current);
+        arg = readRestExpression(filename, source, current);
         if (!arg) {
           arg = readExpression(filename, source, current);
         }
@@ -1642,6 +1619,28 @@ JSCompiler::readCallExpression(const std::string &filename,
       throw std::runtime_error(
           formatException("Unexcepted token", filename, source, current));
     }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readRestExpression(const std::string &filename,
+                               const std::wstring &source, Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readSymbolToken(filename, source, current);
+  if (!token) {
+    return nullptr;
+  }
+  if (token->location.getSource(source) == L"...") {
+    core::AutoPtr node = new BinaryExpression;
+    node->level = 19;
+    node->opt = L"...";
+    node->type = NodeType::EXPRESSION_BINARY;
+    node->right = readExpression(filename, source, current);
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -1908,21 +1907,17 @@ JSCompiler::readVariableDeclarator(const std::string &filename,
   auto next = current;
   skipInvisible(filename, source, current);
   auto token = readSymbolToken(filename, source, current);
-  if (token != nullptr) {
-    if (token->location.getSource(source) == L"=") {
-      auto value = readExpression(filename, source, current);
-      if (!value) {
-        throw std::runtime_error(
-            formatException("Unexcepted token", filename, source, current));
-      }
-      node->value = value;
-      next = current;
-    } else {
-      current = next;
+  if (token != nullptr && token->location.getSource(source) == L"=") {
+    auto value = readExpression(filename, source, current);
+    if (!value) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
     }
+    node->value = value;
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    next = current;
   }
-  skipInvisible(filename, source, current);
-  token = readSymbolToken(filename, source, current);
   if (token != nullptr) {
     if (token->location.getSource(source) == L"," ||
         token->location.getSource(source) == L";") {
@@ -2034,17 +2029,6 @@ JSCompiler::readRestPattern(const std::string &filename,
   skipInvisible(filename, source, current);
   auto token = readSymbolToken(filename, source, current);
   if (token != nullptr && token->location.getSource(source) == L"...") {
-    core::AutoPtr node = new ObjectPatternRestItem;
-    node->identifier = readIdentifierLiteral(filename, source, current);
-    if (!node->identifier) {
-      throw std::runtime_error(
-          formatException("Unexcepted token", filename, source, current));
-    }
-    node->level = -2;
-    node->type = NodeType::PATTERN_REST;
-    node->location = getLocation(source, position, current);
-    position = current;
-    return node;
   }
   return nullptr;
 }
@@ -2162,11 +2146,11 @@ JSCompiler::readArrayDeclaration(const std::string &filename,
     core::AutoPtr node = new ArrayDeclaration;
     node->level = -2;
     node->type = NodeType::DECLARATION_ARRAY;
-    auto item = readRestPattern(filename, source, current);
+    auto item = readRestExpression(filename, source, current);
     if (item == nullptr) {
       item = readExpression(filename, source, current);
     }
-    while (item != nullptr) {
+    for (;;) {
       node->items.pushBack(item);
       auto next = current;
       skipInvisible(filename, source, current);
@@ -2183,7 +2167,7 @@ JSCompiler::readArrayDeclaration(const std::string &filename,
         throw std::runtime_error(
             formatException("Unexcepted token", filename, source, current));
       }
-      item = readRestPattern(filename, source, current);
+      item = readRestExpression(filename, source, current);
       if (item == nullptr) {
         item = readExpression(filename, source, current);
       }

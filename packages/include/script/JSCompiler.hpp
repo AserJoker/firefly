@@ -437,7 +437,9 @@ public:
       static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
       return fmt::format(
           R"({{"type":"EXPRESSION_BINARY","operator":"{}","left":{},"right":{},"location":{}}})",
-          converter.to_bytes(opt), left->toJSON(source), right->toJSON(source),
+          converter.to_bytes(opt),
+          left == nullptr ? "null" : left->toJSON(source),
+          right == nullptr ? "null" : right->toJSON(source),
           location.toJSON(source));
     }
   };
@@ -619,24 +621,15 @@ public:
 
   struct ObjectPatternItem : public Node {
     core::AutoPtr<Node> identifier;
-    core::AutoPtr<Node> alias;
+    core::AutoPtr<Node> match;
     core::AutoPtr<Node> value;
     std::string toJSON(const std::wstring &source) override {
       return fmt::format(
-          R"({{"type":"PATTERN_OBJECT_ITEM","identifier":{},"alias":{},"value":{},"location":{}}})",
+          R"({{"type":"PATTERN_OBJECT_ITEM","identifier":{},"match":{},"value":{},"location":{}}})",
           identifier->toJSON(source),
-          alias == nullptr ? "null" : alias->toJSON(source),
+          match == nullptr ? "null" : match->toJSON(source),
           value == nullptr ? "null" : value->toJSON(source),
           location.toJSON(source));
-    }
-  };
-
-  struct ObjectPatternRestItem : public Node {
-    core::AutoPtr<Node> identifier;
-    std::string toJSON(const std::wstring &source) override {
-      return fmt::format(
-          R"({{"type":"PATTERN_REST","identifier":{},"location":{}}})",
-          identifier->toJSON(source), location.toJSON(source));
     }
   };
 
@@ -664,18 +657,9 @@ public:
     std::string toJSON(const std::wstring &source) override {
       return fmt::format(
           R"({{"type":"PATTERN_ARRAY_ITEM","identifier":{},"value":{},"location":{}}})",
-          identifier->toJSON(source),
+          identifier == nullptr ? "null" : identifier->toJSON(source),
           value == nullptr ? "null" : value->toJSON(source),
           location.toJSON(source));
-    }
-  };
-
-  struct ArrayPatternRestItem : public Node {
-    core::AutoPtr<Node> identifier;
-    std::string toJSON(const std::wstring &source) override {
-      return fmt::format(
-          R"({{"type":"PATTERN_ARRAY_REST_ITEM","identifier":{},"location":{}}})",
-          identifier->toJSON(source), location.toJSON(source));
     }
   };
 
@@ -703,7 +687,11 @@ public:
       std::string sitems;
       size_t index = 0;
       for (auto &item : items) {
-        sitems += item->toJSON(source);
+        if (item != nullptr) {
+          sitems += item->toJSON(source);
+        } else {
+          sitems += "null";
+        }
         if (index != items.size() - 1) {
           sitems += ",";
         }
@@ -714,6 +702,7 @@ public:
           location.toJSON(source));
     }
   };
+
   struct VariableDeclarator : public Node {
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> value;
@@ -724,6 +713,7 @@ public:
           value == nullptr ? "null" : value->toJSON(source));
     }
   };
+
   struct VariableDeclaration : public Node {
     enum class Kind { VAR, LET, CONST } kind;
     core::Array<core::AutoPtr<Node>> declarations;
@@ -926,6 +916,10 @@ private:
                                            Position &position);
 
   core::AutoPtr<Node> readCallExpression(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
+
+  core::AutoPtr<Node> readRestExpression(const std::string &filename,
                                          const std::wstring &source,
                                          Position &position);
 
