@@ -750,16 +750,7 @@ bool JSCompiler::insertExpressionNode(core::AutoPtr<Node> &current,
       if (!next) {
         return false;
       }
-      if (next->type == NodeType::EXPRESSION_UNARY ||
-          next->type == NodeType::EXPRESSION_AWAIT ||
-          next->type == NodeType::EXPRESSION_TYPEOF ||
-          next->type == NodeType::EXPRESSION_DELETE ||
-          next->type == NodeType::EXPRESSION_VOID ||
-          next->type == NodeType::EXPRESSION_NEW) {
-        next->right = root;
-      } else {
-        next->left = root;
-      }
+      next->left = root;
       current = next;
     } else {
       auto r = root.cast<BinaryExpression>();
@@ -767,16 +758,7 @@ bool JSCompiler::insertExpressionNode(core::AutoPtr<Node> &current,
         r = r->right.cast<BinaryExpression>();
       }
       if (next != nullptr) {
-        if (next->type == NodeType::EXPRESSION_UNARY ||
-            next->type == NodeType::EXPRESSION_AWAIT ||
-            next->type == NodeType::EXPRESSION_TYPEOF ||
-            next->type == NodeType::EXPRESSION_DELETE ||
-            next->type == NodeType::EXPRESSION_VOID ||
-            next->type == NodeType::EXPRESSION_NEW) {
-          next->right = r->right;
-        } else {
-          next->left = r->right;
-        }
+        next->left = r->right;
         r->right = next;
       } else {
         r->right = child;
