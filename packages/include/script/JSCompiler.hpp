@@ -12,7 +12,8 @@ namespace firefly::script {
 class JSCompiler : public core::Object {
 public:
   enum class NodeType {
-    PRIVATE_NAME, // TODO:
+    /// \details <private_name>:<invisible>token['#']<identifier>
+    PRIVATE_NAME,
 
     LITERAL_REGEX,
     LITERAL_NULL,
@@ -29,8 +30,11 @@ public:
     LITERAL_DECIMAL, // TODO:
 
     PROGRAM,
+
+    /// \details <statement_block>:<invisible|semi>token['{']<statement>*token['}']
     STATEMENT_BLOCK,
-    STATEMENT_DEBUGGER,    // TODO:
+    /// \details <statement_block>:<invisible|semi><identifier['debugger']>
+    STATEMENT_DEBUGGER,    // TODO: 
     STATEMENT_WITH,        // TODO:
     STATEMENT_RETURN,      // TODO:
     STATEMENT_LABEL,       // TODO:
@@ -621,8 +625,9 @@ public:
   struct RestPatternItem : public Node {
     core::AutoPtr<Node> identifier;
     std::string toJSON(const std::wstring &source) override {
-      return fmt::format(R"({{"type":"PATTERN_REST_ITEM","identifier":{}}})",
-                         identifier->toJSON(source));
+      return fmt::format(
+          R"({{"type":"PATTERN_REST_ITEM","identifier":{},"location":{}}})",
+          identifier->toJSON(source), location.toJSON(source));
     }
   };
 
@@ -676,7 +681,11 @@ public:
       std::string sitems;
       size_t index = 0;
       for (auto &item : items) {
-        sitems += item->toJSON(source);
+        if (item == nullptr) {
+          sitems += "null";
+        } else {
+          sitems += item->toJSON(source);
+        }
         if (index != items.size() - 1) {
           sitems += ",";
         }

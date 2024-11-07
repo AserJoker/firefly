@@ -2105,12 +2105,12 @@ core::AutoPtr<JSCompiler::Node>
 JSCompiler::readArrayPatternItem(const std::string &filename,
                                  const std::wstring &source,
                                  Position &position) {
-  auto current = position;
-  skipInvisible(filename, source, current);
-  auto rest = readRestPattern(filename, source, current);
+  auto rest = readRestPattern(filename, source, position);
   if (rest != nullptr) {
     return rest;
   }
+  auto current = position;
+  skipInvisible(filename, source, current);
   auto identifier = readObjectPattern(filename, source, current);
   if (!identifier) {
     identifier = readArrayPattern(filename, source, current);
@@ -2123,6 +2123,7 @@ JSCompiler::readArrayPatternItem(const std::string &filename,
     node->identifier = identifier;
     node->type = NodeType::PATTERN_ARRAY_ITEM;
     node->level = 0;
+    auto next = current;
     skipInvisible(filename, source, current);
     auto token = readSymbolToken(filename, source, current);
     if (token != nullptr && token->location.getSource(source) == L"=") {
@@ -2132,7 +2133,9 @@ JSCompiler::readArrayPatternItem(const std::string &filename,
             formatException("Unexcepted token", filename, source, current));
       }
       node->value = value;
+      next = current;
     }
+    current = next;
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -2151,9 +2154,13 @@ JSCompiler::readArrayPattern(const std::string &filename,
     node->level = -2;
     node->type = NodeType::PATTERN_ARRAY;
     auto item = readArrayPatternItem(filename, source, current);
-    while (item != nullptr) {
+    for (;;) {
       node->items.pushBack(item);
       skipInvisible(filename, source, current);
+      if (source[current.offset] == '\0') {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
       auto next = current;
       token = readSymbolToken(filename, source, current);
       if (!token) {
