@@ -86,6 +86,7 @@ public:
     EXPRESSION_VOID,
     EXPRESSION_TYPEOF,
     EXPRESSION_GROUP,
+    EXPRESSION_ASSIGMENT,
 
     EXPRESSION_REST,
 
@@ -95,14 +96,11 @@ public:
     PATTERN_ARRAY,
     PATTERN_ARRAY_ITEM,
 
-    CLASS_BODY,              // TODO:
     CLASS_METHOD,            // TODO:
-    CLASS_PRIVATE_METHOD,    // TODO:
     CLASS_PROPERTY,          // TODO:
-    CLASS_PRIVATE_PROPERTY,  // TODO:
     CLASS_ACCESSOR_PROPERTY, // TODO:
+    CLASS_ACCESSOR_METHOD,   // TODO:
     STATIC_BLOCK,            // TODO:
-    CLASS_DECLARATION,       // TODO:
 
     IMPORT_DECLARATION, // TODO:
     IMPORT_SPECIFIER,   // TODO:
@@ -750,6 +748,28 @@ public:
     }
   };
 
+  struct ClassDeclaration : public Node {
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> extends;
+    core::Array<core::AutoPtr<Node>> properties;
+    std::string toJSON(const std::wstring &source) {
+      std::string sproperties;
+      size_t index = 0;
+      for (auto &prop : properties) {
+        sproperties += prop->toJSON(source);
+        if (index != properties.size() - 1) {
+          sproperties += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"DECLARATION_CLASS","identifier":{},"extends":{},"properties":[{}],"location":{}}})",
+          identifier == nullptr ? "null" : identifier->toJSON(source),
+          extends == nullptr ? "null" : extends->toJSON(source), sproperties,
+          location.toJSON(source));
+    }
+  };
+
   struct RestPatternItem : public Node {
     core::AutoPtr<Node> identifier;
     std::string toJSON(const std::wstring &source) override {
@@ -988,7 +1008,8 @@ private:
 
 private:
   bool insertExpressionNode(core::AutoPtr<Node> &current,
-                            core::AutoPtr<Node> &child, bool &isComplete);
+                            core::AutoPtr<Node> &child, bool &isComplete,
+                            int32_t level);
 
 private:
   core::AutoPtr<Node> readProgram(const std::string &filename,
@@ -1005,7 +1026,7 @@ private:
 
   core::AutoPtr<Node> readExpression(const std::string &filename,
                                      const std::wstring &source,
-                                     Position &position);
+                                     Position &position, int32_t maxLevel = -1);
 
   core::AutoPtr<Node> readExpressions(const std::string &filename,
                                       const std::wstring &source,
@@ -1054,6 +1075,10 @@ private:
   core::AutoPtr<Node> readBinaryExpression(const std::string &filename,
                                            const std::wstring &source,
                                            Position &position);
+
+  core::AutoPtr<Node> readAssigmentExpression(const std::string &filename,
+                                              const std::wstring &source,
+                                              Position &position);
 
   core::AutoPtr<Node> readConditionExpression(const std::string &filename,
                                               const std::wstring &source,
@@ -1142,6 +1167,14 @@ private:
   core::AutoPtr<Node> readObjectAccessorMethod(const std::string &filename,
                                                const std::wstring &source,
                                                Position &position);
+
+  core::AutoPtr<Node> readClassDeclaration(const std::string &filename,
+                                           const std::wstring &source,
+                                           Position &position);
+
+  core::AutoPtr<Node> readClassProperty(const std::string &filename,
+                                        const std::wstring &source,
+                                        Position &position);
 
   core::AutoPtr<Node> readVariableDeclarator(const std::string &filename,
                                              const std::wstring &source,
