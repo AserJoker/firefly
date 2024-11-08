@@ -383,6 +383,7 @@ public:
 
   struct BlockStatement : public Statement {
     core::Array<core::AutoPtr<Node>> body;
+    core::Array<core::AutoPtr<Node>> directives;
     std::string toJSON(const std::wstring &source) override {
       std::string str;
       size_t index = 0;
@@ -393,9 +394,18 @@ public:
         }
         index++;
       }
+      index = 0;
+      std::string sdirectives;
+      for (auto &directive : directives) {
+        sdirectives += directive->toJSON(source);
+        if (index != directives.size() - 1) {
+          sdirectives += ",";
+        }
+        index++;
+      }
       return fmt::format(
-          R"({{"type":"STATEMENT_BLOCK","body":[{}],"location":{}}})", str,
-          location.toJSON(source));
+          R"({{"type":"STATEMENT_BLOCK","directives":[{}],"body":[{}],"location":{}}})",
+          sdirectives, str, location.toJSON(source));
     }
   };
 
@@ -900,11 +910,10 @@ private:
                       Position &position);
 
   bool skipComment(const std::string &filename, const std::wstring &source,
-                   Position &position, bool *isNewline = nullptr);
+                   Position &position);
 
   bool skipLineTerminatior(const std::string &filename,
-                           const std::wstring &source, Position &position,
-                           bool *isNewLine = nullptr);
+                           const std::wstring &source, Position &position);
 
   bool skipSemi(const std::string &filename, const std::wstring &source,
                 Position &position);
