@@ -96,11 +96,10 @@ public:
     PATTERN_ARRAY,
     PATTERN_ARRAY_ITEM,
 
-    CLASS_METHOD,            // TODO:
-    CLASS_PROPERTY,          // TODO:
-    CLASS_ACCESSOR_PROPERTY, // TODO:
-    CLASS_ACCESSOR_METHOD,   // TODO:
-    STATIC_BLOCK,            // TODO:
+    CLASS_METHOD,   // TODO:
+    CLASS_PROPERTY, // TODO:
+    CLASS_ACCESSOR, // TODO:
+    STATIC_BLOCK,   // TODO:
 
     IMPORT_DECLARATION, // TODO:
     IMPORT_SPECIFIER,   // TODO:
@@ -720,6 +719,67 @@ public:
     }
   };
 
+  struct ClassProperty : public Node {
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> value;
+    bool static_;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"CLASS_PROPERTY","identifier":{},"value":{},"static":{},"location":{}}})",
+          identifier->toJSON(source), value->toJSON(source), static_,
+          location.toJSON(source));
+    }
+  };
+
+  struct ClassMethod : public FunctionDeclaration {
+    bool static_;
+    std::string toJSON(const std::wstring &source) {
+      std::string params;
+      size_t index = 0;
+      for (auto &param : arguments) {
+        params += param->toJSON(source);
+        if (index != arguments.size() - 1) {
+          params += ",";
+        }
+        index++;
+      }
+      return fmt::format(
+          R"({{"type":"CLASS_METHOD","identifier":{},"arguments":[{}],"body":{},"async":{},"generator":{},"static":{},"location":{}}})",
+          identifier->toJSON(source), params, body->toJSON(source), async,
+          generator, static_, location.toJSON(source));
+    }
+  };
+
+  struct ClassAccessor : public FunctionDeclaration {
+    bool static_;
+    enum class KIND { GET, SET } kind;
+    std::string toJSON(const std::wstring &source) {
+      std::string params;
+      size_t index = 0;
+      for (auto &param : arguments) {
+        params += param->toJSON(source);
+        if (index != arguments.size() - 1) {
+          params += ",";
+        }
+        index++;
+      }
+      std::string skind;
+      switch (kind) {
+
+      case KIND::GET:
+        skind = "get";
+        break;
+      case KIND::SET:
+        skind = "set";
+        break;
+      }
+      return fmt::format(
+          R"({{"type":"CLASS_ACCESSOR","identifier":{},"arguments":[{}],"body":{},"static":{},"kind":"{}","location":{}}})",
+          identifier->toJSON(source), params, body->toJSON(source), static_,
+          skind, location.toJSON(source));
+    }
+  };
+
   struct ClassDeclaration : public Node {
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> extends;
@@ -1148,6 +1208,18 @@ private:
   core::AutoPtr<Node> readClassProperty(const std::string &filename,
                                         const std::wstring &source,
                                         Position &position);
+
+  core::AutoPtr<Node> readClassMethod(const std::string &filename,
+                                      const std::wstring &source,
+                                      Position &position);
+
+  core::AutoPtr<Node> readClassAccessor(const std::string &filename,
+                                        const std::wstring &source,
+                                        Position &position);
+
+  core::AutoPtr<Node> readStaticBlock(const std::string &filename,
+                                      const std::wstring &source,
+                                      Position &position);
 
   core::AutoPtr<Node> readVariableDeclarator(const std::string &filename,
                                              const std::wstring &source,
