@@ -1,6 +1,7 @@
 #include "script/JSCompiler.hpp"
 #include "core/Array.hpp"
 #include "core/AutoPtr.hpp"
+#include <algorithm>
 #include <array>
 #include <codecvt>
 #include <locale>
@@ -729,71 +730,6 @@ JSCompiler::readTemplateEndToken(const std::string &filename,
   return nullptr;
 }
 
-bool JSCompiler::insertExpressionNode(core::AutoPtr<Node> &current,
-                                      core::AutoPtr<Node> &child,
-                                      bool &isComplete, int32_t level) {
-  if (level != -1 && child->level > level) {
-    return false;
-  }
-  if (current != nullptr && current->type == NodeType::EXPRESSION_ASSIGMENT &&
-      child->type == NodeType::EXPRESSION_ASSIGMENT) {
-    if (isComplete && current.cast<BinaryExpression>()->right->level >= 2) {
-      return false;
-    }
-  }
-  if (!current) {
-    current = child;
-    if (child->type == NodeType::EXPRESSION_UNARY ||
-        child->type == NodeType::EXPRESSION_AWAIT ||
-        child->type == NodeType::EXPRESSION_TYPEOF ||
-        child->type == NodeType::EXPRESSION_DELETE ||
-        child->type == NodeType::EXPRESSION_VOID ||
-        child->type == NodeType::EXPRESSION_NEW) {
-      isComplete = false;
-    } else {
-      isComplete = true;
-    }
-    return true;
-  } else {
-    auto next = child.cast<BinaryExpression>();
-    auto root = current;
-    if (root->level <= child->level) {
-      if (!next) {
-        return false;
-      }
-      next->left = root;
-      current = next;
-    } else {
-      auto r = root.cast<BinaryExpression>();
-      while (r->right != nullptr && r->right->level > child->level) {
-        r = r->right.cast<BinaryExpression>();
-      }
-      if (next != nullptr) {
-        next->left = r->right;
-        r->right = next;
-      } else {
-        r->right = child;
-      }
-    }
-    if (child->type == NodeType::EXPRESSION_BINARY ||
-        child->type == NodeType::EXPRESSION_ASSIGMENT ||
-        child->type == NodeType::EXPRESSION_UNARY ||
-        child->type == NodeType::EXPRESSION_MEMBER ||
-        child->type == NodeType::EXPRESSION_OPTIONAL_MEMBER ||
-        child->type == NodeType::EXPRESSION_AWAIT ||
-        child->type == NodeType::EXPRESSION_TYPEOF ||
-        child->type == NodeType::EXPRESSION_DELETE ||
-        child->type == NodeType::EXPRESSION_VOID ||
-        child->type == NodeType::EXPRESSION_NEW) {
-      isComplete = false;
-    } else {
-      isComplete = true;
-    }
-    return true;
-  }
-  return false;
-}
-
 core::AutoPtr<JSCompiler::Node>
 JSCompiler::readProgram(const std::string &filename, const std::wstring &source,
                         Position &position) {
@@ -884,6 +820,159 @@ JSCompiler::readExpressionStatement(const std::string &filename,
 }
 
 core::AutoPtr<JSCompiler::Node>
+JSCompiler::readValue(const std::string &filename, const std::wstring &source,
+                      Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto node = readGroupExpression(filename, source, current);
+  if (!node) {
+    node = readBooleanLiteral(filename, source, current);
+  }
+  if (!node) {
+    node = readStringLiteral(filename, source, current);
+  }
+  if (!node) {
+    node = readNumberLiteral(filename, source, current);
+  }
+  if (!node) {
+    node = readNullLiteral(filename, source, current);
+  }
+  if (!node) {
+    node = readUndefinedLiteral(filename, source, current);
+  }
+  if (!node) {
+    node = readTemplateLiteral(filename, source, current);
+  }
+  if (!node) {
+    node = readNewExpression(filename, source, current);
+  }
+  if (!node) {
+    node = readIdentifierLiteral(filename, source, current);
+  }
+  if (!node) {
+    node = readArrayDeclaration(filename, source, current);
+  }
+  if (!node) {
+    node = readObjectDeclaration(filename, source, current);
+  }
+  if (!node) {
+    node = readFunctionDeclaration(filename, source, current);
+  }
+  if (!node) {
+    node = readClassDeclaration(filename, source, current);
+  }
+  if (node != nullptr) {
+    for (;;) {
+      auto backup = current;
+      skipInvisible(filename, source, current);
+      auto token = readSymbolToken(filename, source, current);
+      if (token != nullptr) {
+        if (token->location.getSource(source) == L"." ||
+            token->location.getSource(source) == L"[" ||
+            token->location.getSource(source) == L"?.") {
+          auto expr = readMemberExpression(filename, source, current);
+          expr.cast<BinaryExpression>()->left = node;
+          node = expr;
+        } else if (token->location.getSource(source) == L"(") {
+          auto expr = readCallExpression(filename, source, current);
+          expr.cast<BinaryExpression>()->left = node;
+          node = expr;
+        } else {
+          current = backup;
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readExpression(const std::string &filename,
+                           const std::wstring &source, Position &position) {
+  auto current = position;
+  auto node = readRValue(filename, source, current, 999);
+  bool isNewLine = false;
+  skipInvisible(filename, source, current, &isNewLine);
+  if (!isNewLine && source[current.offset] != '\0') {
+    auto token = readSymbolToken(filename, source, current);
+    if (token == nullptr || token->location.getSource(source) != L";") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+  }
+  position = current;
+  return node;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readRValue(const std::string &filename, const std::wstring &source,
+                       Position &position, int level) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto node = readValue(filename, source, current);
+  if (!node) {
+    node = readUnaryExpression(filename, source, current);
+  }
+  if (!node) {
+    node = readVoidExpression(filename, source, current);
+  }
+  if (!node) {
+    node = readDeleteExpression(filename, source, current);
+  }
+  if (!node) {
+    node = readTypeofExpression(filename, source, current);
+  }
+  if (!node) {
+    node = readAwaitExpression(filename, source, current);
+  }
+  if (node != nullptr) {
+    for (;;) {
+      if (level < 3) {
+        break;
+      }
+      auto expr = readUpdateExpression(filename, source, current);
+      if (level >= 17 && expr == nullptr) {
+        expr = readAssigmentExpression(filename, source, current);
+      }
+      if (level >= 9 && expr == nullptr) {
+        expr = readInstanceOfExpression(filename, source, current);
+      }
+      if (level >= 9 && expr == nullptr) {
+        expr = readInExpression(filename, source, current);
+      }
+      if (level >= 4 && expr == nullptr) {
+        auto tmp = current;
+        expr = readBinaryExpression(filename, source, current);
+        if (expr != nullptr && expr->level > level) {
+          current = tmp;
+          expr = nullptr;
+        }
+      }
+      if (level >= 16 && expr == nullptr) {
+        expr = readConditionExpression(filename, source, current);
+      }
+      if (expr != nullptr) {
+        expr.cast<BinaryExpression>()->left = node;
+        node = expr;
+        node->location = getLocation(source, position, current);
+      } else {
+        break;
+      }
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
 JSCompiler::readExpressions(const std::string &filename,
                             const std::wstring &source, Position &position) {
   auto current = position;
@@ -892,7 +981,8 @@ JSCompiler::readExpressions(const std::string &filename,
   if (!expr) {
     return nullptr;
   }
-  if (source[current.offset == '\r'] || source[current.offset] == '\n') {
+  if (std::find(LTC.begin(), LTC.end(), source[current.offset]) != LTC.end() ||
+      source[current.offset] == '\0') {
     position = current;
     return expr;
   }
@@ -920,7 +1010,7 @@ JSCompiler::readExpressions(const std::string &filename,
     node->left = expr;
     node->right = right;
     node->type = NodeType::EXPRESSION_BINARY;
-    node->updateLocation(source);
+    node->location = getLocation(source, position, current);
     expr = node;
     position = current;
     return expr;
@@ -965,160 +1055,6 @@ JSCompiler::readBlockStatement(const std::string &filename,
     return node;
   }
   return nullptr;
-}
-
-core::AutoPtr<JSCompiler::Node>
-JSCompiler::readExpression(const std::string &filename,
-                           const std::wstring &source, Position &position,
-                           int32_t maxLevel) {
-  core::AutoPtr<Node> root;
-  auto current = position;
-  bool isComplete = true;
-  for (;;) {
-    bool newline = false;
-    auto clear = current;
-    do {
-      bool flag = true;
-      while (flag) {
-        bool currentNewline = false;
-        flag = skipComment(filename, source, current, &currentNewline);
-        flag |= skipWhiteSpace(filename, source, current);
-        currentNewline |= skipLineTerminatior(filename, source, current);
-        flag |= currentNewline;
-        newline |= currentNewline;
-      }
-    } while (0);
-    auto next = current;
-    core::AutoPtr<Node> node;
-    if (root == nullptr || !isComplete) {
-      if (!node) {
-        node = readStringLiteral(filename, source, next);
-      }
-      if (!node) {
-        node = readTemplateLiteral(filename, source, next);
-      }
-      if (!node) {
-        node = readNumberLiteral(filename, source, next);
-      }
-      if (!node) {
-        node = readRegexLiteral(filename, source, next);
-      }
-      if (!node) {
-        node = readBooleanLiteral(filename, source, next);
-      }
-      if (!node) {
-        node = readNullLiteral(filename, source, next);
-      }
-      if (!node) {
-        node = readUndefinedLiteral(filename, source, next);
-      }
-      if (!node) {
-        node = readArrowFunctionDeclaration(filename, source, next);
-      }
-      if (!node) {
-        node = readFunctionDeclaration(filename, source, next);
-      }
-
-      if (!node) {
-        node = readGroupExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readArrayDeclaration(filename, source, next);
-      }
-      if (!node) {
-        node = readAwaitExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readTypeofExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readVoidExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readDeleteExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readNewExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readObjectDeclaration(filename, source, next);
-      }
-      if (!node) {
-        node = readClassDeclaration(filename, source, next);
-      }
-      if (!node) {
-        node = readUnaryExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readIdentifierLiteral(filename, source, next);
-      }
-    } else if (isComplete) {
-      if (!node) {
-        node = readBinaryExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readAssigmentExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readInExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readInstanceOfExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readUpdateExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readConditionExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readMemberExpression(filename, source, next);
-      }
-      if (!node) {
-        node = readCallExpression(filename, source, next);
-      }
-    }
-    if (!root && !node) {
-      return nullptr;
-    }
-    if (!node && !isComplete) {
-      next.column += next.offset - current.offset;
-      throw std::runtime_error(
-          formatException("Unexpected token", filename, source, next));
-    }
-    if (isComplete && !node) {
-      skipInvisible(filename, source, next);
-      if (newline || source[next.offset] == L'\0' ||
-          source[next.offset] == L';' || source[next.offset] == L',' ||
-          source[next.offset] == L'?' || source[next.offset] == L':' ||
-          source[next.offset] == L'}' || source[next.offset] == L']' ||
-          source[next.offset] == L')') {
-        current = clear;
-        break;
-      }
-      next.column += next.offset - current.offset;
-      throw std::runtime_error(
-          formatException("Unexpected token", filename, source, next));
-    }
-    if (!insertExpressionNode(root, node, isComplete, maxLevel)) {
-      if (!isComplete) {
-        next.column += next.offset - current.offset;
-        throw std::runtime_error(
-            formatException("Unexpected token", filename, source, next));
-      } else {
-        current = clear;
-        break;
-      }
-    } else {
-      current = next;
-    }
-  }
-  position = current;
-  auto r = root.cast<BinaryExpression>();
-  if (r != nullptr) {
-    r->updateLocation(source);
-  }
-  return root;
 }
 
 core::AutoPtr<JSCompiler::Node>
@@ -1395,7 +1331,7 @@ JSCompiler::readBinaryExpression(const std::string &filename,
       {},
       {}};
   auto current = position;
-  skipWhiteSpace(filename, source, current);
+  skipInvisible(filename, source, current);
   auto token = readSymbolToken(filename, source, current);
   if (!token) {
     return nullptr;
@@ -1408,6 +1344,7 @@ JSCompiler::readBinaryExpression(const std::string &filename,
         node->level = level;
         node->opt = opt;
         node->type = NodeType::EXPRESSION_BINARY;
+        node->right = readRValue(filename, source, current, level);
         position = current;
         return node;
       }
@@ -1424,7 +1361,7 @@ JSCompiler::readAssigmentExpression(const std::string &filename,
       {L"=", L"+=", L"-=", L"**=", L"*=", L"/=", L"%=", L">>>=", L"<<=", L">>=",
        L"&&=", L"||=", L"&=", L"^=", L"|=", LR"(??=)"}};
   auto current = position;
-  skipWhiteSpace(filename, source, current);
+  skipInvisible(filename, source, current);
   auto token = readSymbolToken(filename, source, current);
   if (!token) {
     return nullptr;
@@ -1432,10 +1369,11 @@ JSCompiler::readAssigmentExpression(const std::string &filename,
   for (auto &opt : operators) {
     if (opt == token->location.getSource(source)) {
       core::AutoPtr node = new BinaryExpression;
-      node->location = token->location;
       node->level = 17;
       node->opt = opt;
       node->type = NodeType::EXPRESSION_ASSIGMENT;
+      node->right = readRValue(filename, source, current, 17);
+      node->location = getLocation(source, position, current);
       position = current;
       return node;
     }
@@ -1531,6 +1469,7 @@ JSCompiler::readUnaryExpression(const std::string &filename,
       node->level = 4;
       node->type = NodeType::EXPRESSION_UNARY;
       node->opt = token->location.getSource(source);
+      node->right = readRValue(filename, source, current, 4);
       position = current;
       return node;
     }
@@ -1583,6 +1522,7 @@ JSCompiler::readMemberExpression(const std::string &filename,
     node->level = 1;
     node->type = NodeType::EXPRESSION_MEMBER;
     node->location = getLocation(source, position, current);
+    node->right = readRValue(filename, source, current, 1);
     position = current;
     return node;
   }
@@ -1628,6 +1568,7 @@ JSCompiler::readMemberExpression(const std::string &filename,
     node->level = 1;
     node->type = NodeType::EXPRESSION_OPTIONAL_MEMBER;
     node->location = getLocation(source, position, current);
+    node->right = readRValue(filename, source, current, 1);
     position = current;
     return node;
   }
@@ -1721,7 +1662,7 @@ JSCompiler::readRestExpression(const std::string &filename,
     node->level = 19;
     node->opt = L"...";
     node->type = NodeType::EXPRESSION_BINARY;
-    node->right = readExpression(filename, source, current);
+    node->right = readRValue(filename, source, current, 999);
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -1741,6 +1682,7 @@ JSCompiler::readAwaitExpression(const std::string &filename,
     node->type = NodeType::EXPRESSION_AWAIT;
     node->level = 4;
     node->location = getLocation(source, position, current);
+    node->right = readRValue(filename, source, current, 4);
     position = current;
     return node;
   }
@@ -1759,6 +1701,7 @@ JSCompiler::readTypeofExpression(const std::string &filename,
     node->type = NodeType::EXPRESSION_TYPEOF;
     node->level = 4;
     node->location = getLocation(source, position, current);
+    node->right = readRValue(filename, source, current, 4);
     position = current;
     return node;
   }
@@ -1776,6 +1719,7 @@ JSCompiler::readVoidExpression(const std::string &filename,
     node->type = NodeType::EXPRESSION_VOID;
     node->level = 4;
     node->location = getLocation(source, position, current);
+    node->right = readRValue(filename, source, current, 4);
     position = current;
     return node;
   }
@@ -1793,6 +1737,7 @@ JSCompiler::readNewExpression(const std::string &filename,
     node->type = NodeType::EXPRESSION_NEW;
     node->level = 2;
     node->location = getLocation(source, position, current);
+    node->right = readRValue(filename, source, current, 2);
     position = current;
     return node;
   }
@@ -1811,6 +1756,7 @@ JSCompiler::readDeleteExpression(const std::string &filename,
     node->type = NodeType::EXPRESSION_DELETE;
     node->level = 4;
     node->location = getLocation(source, position, current);
+    node->right = readRValue(filename, source, current, 4);
     position = current;
     return node;
   }
@@ -1821,7 +1767,7 @@ core::AutoPtr<JSCompiler::Node>
 JSCompiler::readInExpression(const std::string &filename,
                              const std::wstring &source, Position &position) {
   auto current = position;
-  skipWhiteSpace(filename, source, current);
+  skipInvisible(filename, source, current);
   auto token = readIdentifierToken(filename, source, current);
   if (token != nullptr && token->location.getSource(source) == L"in") {
     core::AutoPtr node = new BinaryExpression;
@@ -1829,6 +1775,7 @@ JSCompiler::readInExpression(const std::string &filename,
     node->level = 9;
     node->opt = L"in";
     node->type = NodeType::EXPRESSION_BINARY;
+    node->right = readRValue(filename, source, current, 9);
     position = current;
     return node;
   }
@@ -1840,7 +1787,7 @@ JSCompiler::readInstanceOfExpression(const std::string &filename,
                                      const std::wstring &source,
                                      Position &position) {
   auto current = position;
-  skipWhiteSpace(filename, source, current);
+  skipInvisible(filename, source, current);
   auto token = readIdentifierToken(filename, source, current);
   if (token != nullptr && token->location.getSource(source) == L"instanceOf") {
     core::AutoPtr node = new BinaryExpression;
@@ -1848,6 +1795,7 @@ JSCompiler::readInstanceOfExpression(const std::string &filename,
     node->level = 9;
     node->opt = L"instanceOf";
     node->type = NodeType::EXPRESSION_BINARY;
+    node->right = readRValue(filename, source, current, 9);
     position = current;
     return node;
   }
@@ -2464,9 +2412,8 @@ JSCompiler::readClassDeclaration(const std::string &filename,
         }
       }
       current = next;
-      // TODO: readIdentifier
-      extends = readExpression(filename, source, current, 2);
-      
+      extends = readValue(filename, source, current);
+
       if (!extends) {
         throw std::runtime_error(
             formatException("Unexcepted token", filename, source, current));

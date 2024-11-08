@@ -403,40 +403,6 @@ public:
     core::AutoPtr<Node> left;
     core::AutoPtr<Node> right;
     std::wstring opt;
-    virtual Position getStart() {
-      if (left != nullptr) {
-        auto l = left.cast<BinaryExpression>();
-        if (l != nullptr) {
-          return l->getStart();
-        } else {
-          return left->location.start;
-        }
-      }
-      return location.start;
-    }
-    virtual Position getEnd() {
-      if (right != nullptr) {
-        auto r = right.cast<BinaryExpression>();
-        if (r != nullptr) {
-          return r->getEnd();
-        } else {
-          return right->location.end;
-        }
-      }
-      return location.end;
-    }
-    void updateLocation(const std::wstring &source) {
-      auto l = left.cast<BinaryExpression>();
-      auto r = right.cast<BinaryExpression>();
-      if (l != nullptr) {
-        l->updateLocation(source);
-      }
-      if (r != nullptr) {
-        r->updateLocation(source);
-      }
-      location = {getStart(), getEnd()};
-      location.source = location.getSource(source);
-    }
     std::string toJSON(const std::wstring &source) override {
       static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
       return fmt::format(
@@ -506,7 +472,6 @@ public:
   };
 
   struct ComputedMemberExpression : public BinaryExpression {
-    Position getEnd() override { return location.end; }
     std::string toJSON(const std::wstring &source) override {
       return fmt::format(
           R"({{"type":"EXPRESSION_COMPUTED_MEMBER","host":{},"field":{},"location":{}}})",
@@ -515,8 +480,6 @@ public:
   };
 
   struct OptionalComputedMemberExpression : public BinaryExpression {
-
-    Position getEnd() override { return location.end; }
 
     std::string toJSON(const std::wstring &source) override {
       return fmt::format(
@@ -527,7 +490,6 @@ public:
 
   struct CallExpression : public BinaryExpression {
     core::Array<core::AutoPtr<Node>> arguments;
-    Position getEnd() override { return location.end; }
     std::string toJSON(const std::wstring &source) override {
       std::string sargs;
       size_t index = 0;
@@ -1007,11 +969,6 @@ private:
                                             Position &position);
 
 private:
-  bool insertExpressionNode(core::AutoPtr<Node> &current,
-                            core::AutoPtr<Node> &child, bool &isComplete,
-                            int32_t level);
-
-private:
   core::AutoPtr<Node> readProgram(const std::string &filename,
                                   const std::wstring &source,
                                   Position &position);
@@ -1024,9 +981,16 @@ private:
                                               const std::wstring &source,
                                               Position &position);
 
+  core::AutoPtr<Node> readValue(const std::string &filename,
+                                const std::wstring &source, Position &position);
+
+  core::AutoPtr<Node> readRValue(const std::string &filename,
+                                 const std::wstring &source, Position &position,
+                                 int level);
+
   core::AutoPtr<Node> readExpression(const std::string &filename,
                                      const std::wstring &source,
-                                     Position &position, int32_t maxLevel = -1);
+                                     Position &position);
 
   core::AutoPtr<Node> readExpressions(const std::string &filename,
                                       const std::wstring &source,
