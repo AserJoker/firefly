@@ -65,7 +65,7 @@ public:
 
     OBJECT_PROPERTY,
     OBJECT_METHOD,
-    OBJECT_ACCESSOR_METHOD,
+    OBJECT_ACCESSOR,
 
     EXPRESSION_RECORD, // TODO:
     EXPRESSION_TUPLE,  // TODO:
@@ -96,10 +96,10 @@ public:
     PATTERN_ARRAY,
     PATTERN_ARRAY_ITEM,
 
-    CLASS_METHOD,   // TODO:
-    CLASS_PROPERTY, // TODO:
-    CLASS_ACCESSOR, // TODO:
-    STATIC_BLOCK,   // TODO:
+    CLASS_METHOD,
+    CLASS_PROPERTY,
+    CLASS_ACCESSOR,
+    STATIC_BLOCK,
 
     IMPORT_DECLARATION, // TODO:
     IMPORT_SPECIFIER,   // TODO:
@@ -118,7 +118,7 @@ public:
     DECLARATION_REST_PARAMETER,
     DECLARATION_OBJECT,
     DECLARATION_ARRAY,
-    DECLARATION_CLASS, // TODO:
+    DECLARATION_CLASS,
   };
 
   struct Position {
@@ -168,11 +168,25 @@ public:
     int32_t level;
     virtual std::string toJSON(const std::wstring &source) = 0;
   };
+  struct NodeArray : public core::Array<core::AutoPtr<Node>> {
+    std::string toJSON(const std::wstring &source) {
+      size_t index = 0;
+      std::string str;
+      for (auto &item : *this) {
+        str += item->toJSON(source);
+        if (index != size() - 1) {
+          str += ",";
+        }
+        index++;
+      }
+      return fmt::format("[{}]", str);
+    }
+  };
 
   struct Program : public Node {
     core::AutoPtr<Node> interpreter;
-    core::Array<core::AutoPtr<Node>> directives;
-    core::Array<core::AutoPtr<Node>> body;
+    NodeArray directives;
+    NodeArray body;
     std::string toJSON(const std::wstring &source) override {
       std::stringstream ss;
       ss << "{";
@@ -181,24 +195,10 @@ public:
         ss << "\"interpreter\":" << interpreter->toJSON(source) << ",";
       }
       ss << "\"directives\":[";
-      size_t index = 0;
-      for (auto &directive : directives) {
-        ss << directive->toJSON(source);
-        if (index != directives.size() - 1) {
-          ss << ",";
-        }
-        index++;
-      }
+      ss << directives.toJSON(source);
       ss << "],";
       ss << "\"body\":[";
-      index = 0;
-      for (auto &statement : body) {
-        ss << statement->toJSON(source);
-        if (index != body.size() - 1) {
-          ss << ",";
-        }
-        index++;
-      }
+      ss << body.toJSON(source);
       ss << "]";
       ss << "}";
       return ss.str();
@@ -316,7 +316,7 @@ public:
   struct TemplateLiteral : public Node {
     std::wstring tag;
     core::Array<std::wstring> quasis;
-    core::Array<core::AutoPtr<Node>> expressions;
+    NodeArray expressions;
     std::string toJSON(const std::wstring &source) override {
       std::string patterns;
       std::string exps;
@@ -342,17 +342,9 @@ public:
         }
         index++;
       }
-      index = 0;
-      for (auto &value : expressions) {
-        exps += value->toJSON(source);
-        if (index != expressions.size() - 1) {
-          exps += ",";
-        }
-        index++;
-      }
       return fmt::format(
-          R"({{"type":"LITERAL_TEMPLATE","quasis":[{}],"expressions":[{}],"location":{}}})",
-          patterns, exps, location.toJSON(source));
+          R"({{"type":"LITERAL_TEMPLATE","quasis":[{}],"expressions":{},"location":{}}})",
+          patterns, expressions.toJSON(source), location.toJSON(source));
     }
   };
 
@@ -381,30 +373,13 @@ public:
   struct Statement : public Node {};
 
   struct BlockStatement : public Statement {
-    core::Array<core::AutoPtr<Node>> body;
-    core::Array<core::AutoPtr<Node>> directives;
+    NodeArray body;
+    NodeArray directives;
     std::string toJSON(const std::wstring &source) override {
-      std::string str;
-      size_t index = 0;
-      for (auto &item : body) {
-        str += item->toJSON(source);
-        if (index != body.size() - 1) {
-          str += ",";
-        }
-        index++;
-      }
-      index = 0;
-      std::string sdirectives;
-      for (auto &directive : directives) {
-        sdirectives += directive->toJSON(source);
-        if (index != directives.size() - 1) {
-          sdirectives += ",";
-        }
-        index++;
-      }
       return fmt::format(
-          R"({{"type":"STATEMENT_BLOCK","directives":[{}],"body":[{}],"location":{}}})",
-          sdirectives, str, location.toJSON(source));
+          R"({{"type":"STATEMENT_BLOCK","directives":{},"body":{},"location":{}}})",
+          directives.toJSON(source), body.toJSON(source),
+          location.toJSON(source));
     }
   };
 
@@ -498,20 +473,12 @@ public:
   };
 
   struct CallExpression : public BinaryExpression {
-    core::Array<core::AutoPtr<Node>> arguments;
+    NodeArray arguments;
     std::string toJSON(const std::wstring &source) override {
-      std::string sargs;
-      size_t index = 0;
-      for (auto &arg : arguments) {
-        sargs += arg->toJSON(source);
-        if (index != arguments.size() - 1) {
-          sargs += ",";
-        }
-        index++;
-      }
       return fmt::format(
-          R"({{"type":"EXPRESSION_CALL","callee":{},"arguments":[{}],"location":{}}})",
-          left->toJSON(source), sargs, location.toJSON(source));
+          R"({{"type":"EXPRESSION_CALL","callee":{},"arguments":{},"location":{}}})",
+          left->toJSON(source), arguments.toJSON(source),
+          location.toJSON(source));
     }
   };
 
@@ -527,7 +494,7 @@ public:
         index++;
       }
       return fmt::format(
-          R"({{"type":"EXPRESSION_OPTIONAL_CALL","callee":{},"arguments":[{}],"location":{}}})",
+          R"({{"type":"EXPRESSION_OPTIONAL_CALL","callee":{},"arguments":{},"location":{}}})",
           left->toJSON(source), sargs, location.toJSON(source));
     }
   };
@@ -596,65 +563,39 @@ public:
 
     bool async;
 
-    core::Array<core::AutoPtr<Node>> arguments;
+    NodeArray arguments;
 
     core::AutoPtr<Node> body;
 
     std::string toJSON(const std::wstring &source) override {
-      std::string params;
-      size_t index = 0;
-      for (auto &param : arguments) {
-        params += param->toJSON(source);
-        if (index != arguments.size() - 1) {
-          params += ",";
-        }
-        index++;
-      }
       return fmt::format(
-          R"({{"type":"DECLARATION_ARROW_FUNCTION","location":{},"arguments":[{}],"body":{},"async":{}}})",
-          location.toJSON(source), params, body->toJSON(source), async);
+          R"({{"type":"DECLARATION_ARROW_FUNCTION","location":{},"arguments":{},"body":{},"async":{}}})",
+          location.toJSON(source), arguments.toJSON(source),
+          body->toJSON(source), async);
     };
   };
 
   struct FunctionDeclaration : public Node {
-    core::Array<core::AutoPtr<Node>> arguments;
+    NodeArray arguments;
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> body;
     bool async;
     bool generator;
     std::string toJSON(const std::wstring &source) override {
-      std::string params;
-      size_t index = 0;
-      for (auto &param : arguments) {
-        params += param->toJSON(source);
-        if (index != arguments.size() - 1) {
-          params += ",";
-        }
-        index++;
-      }
       return fmt::format(
-          R"({{"type":"DECLARATION_FUNCTION","location":{},"identifier":{},"arguments":[{}],"body":{},"async":{},"generator":{}}})",
+          R"({{"type":"DECLARATION_FUNCTION","location":{},"identifier":{},"arguments":{},"body":{},"async":{},"generator":{}}})",
           location.toJSON(source),
-          identifier == nullptr ? "null" : identifier->toJSON(source), params,
-          body->toJSON(source), async, generator);
+          identifier == nullptr ? "null" : identifier->toJSON(source),
+          arguments.toJSON(source), body->toJSON(source), async, generator);
     };
   };
 
-  struct ObjectAccessorMethod : public Node {
+  struct ObjectAccessor : public Node {
     enum class KIND { GET, SET } kind;
-    core::Array<core::AutoPtr<Node>> arguments;
+    NodeArray arguments;
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> body;
     std::string toJSON(const std::wstring &source) override {
-      std::string params;
-      size_t index = 0;
-      for (auto &param : arguments) {
-        params += param->toJSON(source);
-        if (index != arguments.size() - 1) {
-          params += ",";
-        }
-        index++;
-      }
       std::string skind;
       switch (kind) {
       case KIND::GET:
@@ -665,9 +606,9 @@ public:
         break;
       }
       return fmt::format(
-          R"({{"type":"OBJECT_ACCESSOR_METHOD","location":{},"identifier":{},"arguments":[{}],"body":{},"kind":"{}"}})",
-          location.toJSON(source), identifier->toJSON(source), params,
-          body->toJSON(source), skind);
+          R"({{"type":"OBJECT_ACCESSOR","location":{},"identifier":{},"arguments":{},"body":{},"kind":"{}"}})",
+          location.toJSON(source), identifier->toJSON(source),
+          arguments.toJSON(source), body->toJSON(source), skind);
     };
   };
 
@@ -683,7 +624,7 @@ public:
         index++;
       }
       return fmt::format(
-          R"({{"type":"OBJECT_METHOD","location":{},"identifier":{},"arguments":[{}],"body":{},"async":{},"generator":{}}})",
+          R"({{"type":"OBJECT_METHOD","location":{},"identifier":{},"arguments":{},"body":{},"async":{},"generator":{}}})",
           location.toJSON(source), identifier->toJSON(source), params,
           body->toJSON(source), async, generator);
     };
@@ -702,20 +643,11 @@ public:
   };
 
   struct ObjectDeclaration : public Node {
-    core::Array<core::AutoPtr<Node>> properties;
+    NodeArray properties;
     std::string toJSON(const std::wstring &source) override {
-      std::string sproperties;
-      size_t index = 0;
-      for (auto &prop : properties) {
-        sproperties += prop->toJSON(source);
-        if (index != properties.size() - 1) {
-          sproperties += ",";
-        }
-        index++;
-      }
       return fmt::format(
-          R"({{"type":"DECLARATION_OBJECT","properties":[{}],"location":{}}})",
-          sproperties, location.toJSON(source));
+          R"({{"type":"DECLARATION_OBJECT","properties":{},"location":{}}})",
+          properties.toJSON(source), location.toJSON(source));
     }
   };
 
@@ -744,7 +676,7 @@ public:
         index++;
       }
       return fmt::format(
-          R"({{"type":"CLASS_METHOD","identifier":{},"arguments":[{}],"body":{},"async":{},"generator":{},"static":{},"location":{}}})",
+          R"({{"type":"CLASS_METHOD","identifier":{},"arguments":{},"body":{},"async":{},"generator":{},"static":{},"location":{}}})",
           identifier->toJSON(source), params, body->toJSON(source), async,
           generator, static_, location.toJSON(source));
     }
@@ -774,7 +706,7 @@ public:
         break;
       }
       return fmt::format(
-          R"({{"type":"CLASS_ACCESSOR","identifier":{},"arguments":[{}],"body":{},"static":{},"kind":"{}","location":{}}})",
+          R"({{"type":"CLASS_ACCESSOR","identifier":{},"arguments":{},"body":{},"static":{},"kind":"{}","location":{}}})",
           identifier->toJSON(source), params, body->toJSON(source), static_,
           skind, location.toJSON(source));
     }
@@ -783,22 +715,14 @@ public:
   struct ClassDeclaration : public Node {
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> extends;
-    core::Array<core::AutoPtr<Node>> properties;
+    NodeArray properties;
     std::string toJSON(const std::wstring &source) {
-      std::string sproperties;
-      size_t index = 0;
-      for (auto &prop : properties) {
-        sproperties += prop->toJSON(source);
-        if (index != properties.size() - 1) {
-          sproperties += ",";
-        }
-        index++;
-      }
+
       return fmt::format(
-          R"({{"type":"DECLARATION_CLASS","identifier":{},"extends":{},"properties":[{}],"location":{}}})",
+          R"({{"type":"DECLARATION_CLASS","identifier":{},"extends":{},"properties":{},"location":{}}})",
           identifier == nullptr ? "null" : identifier->toJSON(source),
-          extends == nullptr ? "null" : extends->toJSON(source), sproperties,
-          location.toJSON(source));
+          extends == nullptr ? "null" : extends->toJSON(source),
+          properties.toJSON(source), location.toJSON(source));
     }
   };
 
@@ -826,20 +750,11 @@ public:
   };
 
   struct ObjectPattern : public Node {
-    core::Array<core::AutoPtr<Node>> items;
+    NodeArray items;
     std::string toJSON(const std::wstring &source) override {
-      std::string sitems;
-      size_t index = 0;
-      for (auto &item : items) {
-        sitems += item->toJSON(source);
-        if (index != items.size() - 1) {
-          sitems += ",";
-        }
-        index++;
-      }
       return fmt::format(
-          R"({{"type":"PATTERN_OBJECT","items":[{}],"location":{}}})", sitems,
-          location.toJSON(source));
+          R"({{"type":"PATTERN_OBJECT","items":{},"location":{}}})",
+          items.toJSON(source), location.toJSON(source));
     }
   };
 
@@ -856,46 +771,21 @@ public:
   };
 
   struct ArrayPattern : public Node {
-    core::Array<core::AutoPtr<Node>> items;
+    NodeArray items;
     std::string toJSON(const std::wstring &source) override {
-      std::string sitems;
-      size_t index = 0;
-      for (auto &item : items) {
-        if (item == nullptr) {
-          sitems += "null";
-        } else {
-          sitems += item->toJSON(source);
-        }
-        if (index != items.size() - 1) {
-          sitems += ",";
-        }
-        index++;
-      }
       return fmt::format(
-          R"({{"type":"PATTERN_ARRAY","items":[{}],"location":{}}})", sitems,
-          location.toJSON(source));
+          R"({{"type":"PATTERN_ARRAY","items":{},"location":{}}})",
+          items.toJSON(source), location.toJSON(source));
     }
   };
 
   struct ArrayDeclaration : public Node {
-    core::Array<core::AutoPtr<Node>> items;
+    NodeArray items;
     std::string toJSON(const std::wstring &source) override {
-      std::string sitems;
-      size_t index = 0;
-      for (auto &item : items) {
-        if (item != nullptr) {
-          sitems += item->toJSON(source);
-        } else {
-          sitems += "null";
-        }
-        if (index != items.size() - 1) {
-          sitems += ",";
-        }
-        index++;
-      }
+
       return fmt::format(
-          R"({{"type":"DECALRE_ARRAY","items":[{}],"location":{}}})", sitems,
-          location.toJSON(source));
+          R"({{"type":"DECALRE_ARRAY","items":{},"location":{}}})",
+          items.toJSON(source), location.toJSON(source));
     }
   };
 
@@ -926,7 +816,7 @@ public:
 
   struct VariableDeclaration : public Node {
     enum class Kind { VAR, LET, CONST } kind;
-    core::Array<core::AutoPtr<Node>> declarations;
+    NodeArray declarations;
     std::string toJSON(const std::wstring &source) override {
       std::string skind;
       switch (kind) {
@@ -940,18 +830,20 @@ public:
         skind = "const";
         break;
       }
-      std::string sdeclarations;
-      size_t index = 0;
-      for (auto &declaration : declarations) {
-        sdeclarations += declaration->toJSON(source);
-        if (index != declarations.size() - 1) {
-          sdeclarations += ",";
-        }
-        index++;
-      }
       return fmt::format(
-          R"({{"type":"VARIABLE_DECLARATION","kind":"{}","declarations":[{}],"location":{}}})",
-          skind, sdeclarations, location.toJSON(source));
+          R"({{"type":"VARIABLE_DECLARATION","kind":"{}","declarations":{},"location":{}}})",
+          skind, declarations.toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct ImportDeclaration : public Node {
+    core::AutoPtr<Node> source;
+    NodeArray items;
+    std::string toJSON(const std::wstring &source) {
+
+      return fmt::format(
+          R"({{"type":"IMPORT_DECLARATION","source":"{}","items":{}}})",
+          this->source->toJSON(source), items.toJSON(source));
     }
   };
 
@@ -1197,9 +1089,9 @@ private:
                                        const std::wstring &source,
                                        Position &position);
 
-  core::AutoPtr<Node> readObjectAccessorMethod(const std::string &filename,
-                                               const std::wstring &source,
-                                               Position &position);
+  core::AutoPtr<Node> readObjectAccessor(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
 
   core::AutoPtr<Node> readClassDeclaration(const std::string &filename,
                                            const std::wstring &source,

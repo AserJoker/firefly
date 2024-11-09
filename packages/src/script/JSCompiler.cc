@@ -2140,7 +2140,7 @@ JSCompiler::readObjectProperty(const std::string &filename,
   if (method != nullptr) {
     return method;
   }
-  method = readObjectAccessorMethod(filename, source, position);
+  method = readObjectAccessor(filename, source, position);
   if (method != nullptr) {
     return method;
   }
@@ -2292,9 +2292,8 @@ JSCompiler::readObjectMethod(const std::string &filename,
 }
 
 core::AutoPtr<JSCompiler::Node>
-JSCompiler::readObjectAccessorMethod(const std::string &filename,
-                                     const std::wstring &source,
-                                     Position &position) {
+JSCompiler::readObjectAccessor(const std::string &filename,
+                               const std::wstring &source, Position &position) {
   auto current = position;
 
   skipInvisible(filename, source, current);
@@ -2325,13 +2324,13 @@ JSCompiler::readObjectAccessorMethod(const std::string &filename,
   skipInvisible(filename, source, current);
   auto token = readSymbolToken(filename, source, current);
   if (token != nullptr && token->location.getSource(source) == L"(") {
-    core::AutoPtr node = new ObjectAccessorMethod;
+    core::AutoPtr node = new ObjectAccessor;
     node->kind = accessor->location.getSource(source) == L"get"
-                     ? ObjectAccessorMethod::KIND::GET
-                     : ObjectAccessorMethod::KIND::SET;
+                     ? ObjectAccessor::KIND::GET
+                     : ObjectAccessor::KIND::SET;
     node->identifier = identifier;
     node->level = 0;
-    node->type = NodeType::OBJECT_ACCESSOR_METHOD;
+    node->type = NodeType::OBJECT_ACCESSOR;
     auto param = readParameter(filename, source, current);
     while (param != nullptr) {
       node->arguments.pushBack(param);
