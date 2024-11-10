@@ -370,9 +370,7 @@ public:
     };
   };
 
-  struct Statement : public Node {};
-
-  struct BlockStatement : public Statement {
+  struct BlockStatement : public Node {
     NodeArray body;
     NodeArray directives;
     std::string toJSON(const std::wstring &source) override {
@@ -383,10 +381,53 @@ public:
     }
   };
 
-  struct EmptyStatement : public Statement {
+  struct EmptyStatement : public Node {
     std::string toJSON(const std::wstring &source) {
       return fmt::format(R"({{"type":"STATEMENT_EMPTY","location":{}}})",
                          location.toJSON(source));
+    }
+  };
+
+  struct DebuggerStatement : public Node {
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(R"({{"type":"STATEMENT_DEBUGGER","location":{}}})",
+                         location.toJSON(source));
+    }
+  };
+
+  struct WhileStatement : public Node {
+    core::AutoPtr<Node> condition;
+    core::AutoPtr<Node> body;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"STATEMENT_WHILE","condition":{},"body":{}}})",
+          condition->toJSON(source), body->toJSON(source));
+    }
+  };
+
+  struct YieldStatement : public Node {
+    core::AutoPtr<Node> value;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(R"({{"type":"STATEMENT_YIELD","value":{}}})",
+                         value != nullptr ? value->toJSON(source) : "null");
+    }
+  };
+
+  struct ReturnStatement : public Node {
+    core::AutoPtr<Node> value;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(R"({{"type":"STATEMENT_RETURN","value":{}}})",
+                         value != nullptr ? value->toJSON(source) : "null");
+    }
+  };
+
+  struct LabelStatement : public Node {
+    core::AutoPtr<Node> label;
+    core::AutoPtr<Node> statement;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"STATEMENT_LABEL","label":{},"statement":{}}})",
+          label->toJSON(source), statement->toJSON(source));
     }
   };
 
@@ -923,23 +964,6 @@ public:
     }
   };
 
-  struct DebuggerStatement : public Node {
-    std::string toJSON(const std::wstring &source) {
-      return fmt::format(R"({{"type":"STATEMENT_DEBUGGER","location":{}}})",
-                         location.toJSON(source));
-    }
-  };
-
-  struct WhileStatement : public Node {
-    core::AutoPtr<Node> condition;
-    core::AutoPtr<Node> body;
-    std::string toJSON(const std::wstring &source) {
-      return fmt::format(
-          R"({{"type":"STATEMENT_WHILE","condition":{},"body":{}}})",
-          condition->toJSON(source), body->toJSON(source));
-    }
-  };
-
 private:
   bool isUnicodeVariableName(wchar_t chr);
 
@@ -1032,6 +1056,18 @@ private:
                                     Position &position);
 
   core::AutoPtr<Node> readEmptyStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
+
+  core::AutoPtr<Node> readYieldStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
+
+  core::AutoPtr<Node> readReturnStatement(const std::string &filename,
+                                          const std::wstring &source,
+                                          Position &position);
+
+  core::AutoPtr<Node> readLabelStatement(const std::string &filename,
                                          const std::wstring &source,
                                          Position &position);
 

@@ -762,9 +762,14 @@ JSCompiler::readStatement(const std::string &filename,
                           const std::wstring &source, Position &position) {
   core::AutoPtr<Node> node = nullptr;
   if (!node) {
+    node = readEmptyStatement(filename, source, position);
+  }
+  if (!node) {
+    node = readLabelStatement(filename, source, position);
+  }
+  if (!node) {
     node = readBlockStatement(filename, source, position);
   }
-
   if (!node) {
     node = readImportDeclaration(filename, source, position);
   }
@@ -779,9 +784,12 @@ JSCompiler::readStatement(const std::string &filename,
   if (!node) {
     node = readWhileStatement(filename, source, position);
   }
-  // if (!node) {
-  //   node = readIfStatement(filename,source,position);
-  // }
+  if (!node) {
+    node = readYieldStatement(filename, source, position);
+  }
+  if (!node) {
+    node = readReturnStatement(filename, source, position);
+  }
 
   // if (!node) {
   //   node = readSwitchStatement(filename,source,position);
@@ -841,6 +849,77 @@ JSCompiler::readEmptyStatement(const std::string &filename,
     node->location = getLocation(source, position, current);
     position = current;
     return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readYieldStatement(const std::string &filename,
+                               const std::wstring &source, Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readIdentifierToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"yield") {
+    core::AutoPtr node = new YieldStatement;
+    node->type = NodeType::STATEMENT_YIELD;
+    node->level = 0;
+    auto isNewLine = false;
+    skipInvisible(filename, source, current, &isNewLine);
+    if (!isNewLine) {
+      node->value = readExpression(filename, source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readReturnStatement(const std::string &filename,
+                                const std::wstring &source,
+                                Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readIdentifierToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"return") {
+    core::AutoPtr node = new YieldStatement;
+    node->type = NodeType::STATEMENT_YIELD;
+    node->level = 0;
+    auto isNewLine = false;
+    skipInvisible(filename, source, current, &isNewLine);
+    if (!isNewLine) {
+      node->value = readExpression(filename, source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readLabelStatement(const std::string &filename,
+                               const std::wstring &source, Position &position) {
+
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto label = readIdentifierLiteral(filename, source, current);
+  if (label != nullptr) {
+    auto token = readSymbolToken(filename, source, current);
+    if (token != nullptr && token->location.getSource(source) == L":") {
+      core::AutoPtr node = new LabelStatement;
+      node->type = NodeType::STATEMENT_LABEL;
+      node->label = label;
+      node->statement = readStatement(filename, source, current);
+      if (!node->statement) {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+      node->location = getLocation(source, position, current);
+      position = current;
+      return node;
+    }
   }
   return nullptr;
 }
@@ -3503,9 +3582,6 @@ JSCompiler::readWhileStatement(const std::string &filename,
           formatException("Unexcepted token", filename, source, current));
     }
     node->body = readStatement(filename, source, current);
-    if (!node->body) {
-      node->body = readEmptyStatement(filename, source, current);
-    }
     if (!node->body) {
       throw std::runtime_error(
           formatException("Unexcepted token", filename, source, current));
