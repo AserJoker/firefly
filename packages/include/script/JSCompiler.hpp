@@ -101,16 +101,15 @@ public:
     CLASS_ACCESSOR,
     STATIC_BLOCK,
 
-    IMPORT_DECLARATION, // TODO:
-    IMPORT_SPECIFIER,   // TODO:
-    IMPORT_DEFAULT,     // TODO:
-    IMPORT_NAMESPACE,   // TODO:
-    IMPORT_ATTARTUBE,   // TODO:
-    EXPORT_DECLARATION, // TODO:
-    EXPORT_NAMED,       // TODO:
-    EXPORT_DEFAULT,     // TODO:
-    EXPORT_NAMESPACE,   // TODO:
-    EXPORT_ALL,         // TODO:
+    IMPORT_DECLARATION,
+    IMPORT_SPECIFIER,
+    IMPORT_DEFAULT,
+    IMPORT_NAMESPACE,
+    IMPORT_ATTARTUBE, // TODO:
+    EXPORT_DECLARATION,
+    EXPORT_DEFAULT,
+    EXPORT_SPECIFIER,
+    EXPORT_ALL,
 
     DECLARATION_ARROW_FUNCTION,
     DECLARATION_FUNCTION,
@@ -836,14 +835,83 @@ public:
     }
   };
 
+  struct ImportSpecifier : public Node {
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> alias;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"IMPORT_SPECIFIER","identifier":{},"alias":{},"location":{}}})",
+          identifier->toJSON(source),
+          alias == nullptr ? "null" : alias->toJSON(source),
+          location.toJSON(source));
+    }
+  };
+
+  struct ImportDefaultSpecifier : public Node {
+    core::AutoPtr<Node> identifier;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"IMPORT_DEFAULT_SPECIFIER","identifier":{},"location":{}}})",
+          identifier->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct ImportNamespaceSpecifier : public Node {
+    core::AutoPtr<Node> alias;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"IMPORT_NAMESPACE_SPECIFIER","alias":{},"location":{}}})",
+          alias->toJSON(source), location.toJSON(source));
+    }
+  };
+
   struct ImportDeclaration : public Node {
     core::AutoPtr<Node> source;
     NodeArray items;
     std::string toJSON(const std::wstring &source) {
 
       return fmt::format(
-          R"({{"type":"IMPORT_DECLARATION","source":"{}","items":{}}})",
-          this->source->toJSON(source), items.toJSON(source));
+          R"({{"type":"IMPORT_DECLARATION","source":{},"items":{},"location":{}}})",
+          this->source->toJSON(source), items.toJSON(source),
+          location.toJSON(source));
+    }
+  };
+
+  struct ExportDefaultSpecifier : public Node {
+    core::AutoPtr<Node> value;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"EXPORT_DEFAULT_SPECIFIER","value":{},"location":{}}})",
+          value->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct ExportSpecifier : public Node {
+    core::AutoPtr<Node> identifier;
+    core::AutoPtr<Node> alias;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"EXPORT_SPECIFIER","identifier":{},"alias":{},"location":{}}})",
+          identifier->toJSON(source), alias->toJSON(source),
+          location.toJSON(source));
+    }
+  };
+
+  struct ExportAllSpecifier : public Node {
+    core::AutoPtr<Node> source;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"EXPORT_ALL_SPECIFIER","source":{},"location":{}}})",
+          this->source->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct ExportDeclaration : public Node {
+    NodeArray items;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"EXPORT_DECLARATION","items":{},"location":{}}})",
+          items.toJSON(source), location.toJSON(source));
     }
   };
 
@@ -1148,6 +1216,38 @@ private:
   core::AutoPtr<Node> readComment(const std::string &filename,
                                   const std::wstring &source,
                                   Position &position);
+
+  core::AutoPtr<Node> readImportSpecifier(const std::string &filename,
+                                          const std::wstring &source,
+                                          Position &position);
+
+  core::AutoPtr<Node> readImportDefaultSpecifier(const std::string &filename,
+                                                 const std::wstring &source,
+                                                 Position &position);
+
+  core::AutoPtr<Node> readImportNamespaceSpecifier(const std::string &filename,
+                                                   const std::wstring &source,
+                                                   Position &position);
+
+  core::AutoPtr<Node> readImportDeclaration(const std::string &filename,
+                                            const std::wstring &source,
+                                            Position &position);
+
+  core::AutoPtr<Node> readExportSpecifier(const std::string &filename,
+                                          const std::wstring &source,
+                                          Position &position);
+
+  core::AutoPtr<Node> readExportDefaultSpecifier(const std::string &filename,
+                                                 const std::wstring &source,
+                                                 Position &position);
+
+  core::AutoPtr<Node> readExportAllSpecifier(const std::string &filename,
+                                             const std::wstring &source,
+                                             Position &position);
+
+  core::AutoPtr<Node> readExportDeclaration(const std::string &filename,
+                                            const std::wstring &source,
+                                            Position &position);
 
 public:
   core::AutoPtr<Node> compile(const std::string &filename,
