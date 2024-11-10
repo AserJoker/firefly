@@ -31,11 +31,12 @@ public:
 
     PROGRAM,
 
+    STATEMENT_EMPTY,
     /// \details
     /// <statement_block>:<invisible|semi>token['{']<statement>*token['}']
     STATEMENT_BLOCK,
     /// \details <statement_block>:<invisible|semi><identifier['debugger']>
-    STATEMENT_DEBUGGER,    // TODO:
+    STATEMENT_DEBUGGER,
     STATEMENT_WITH,        // TODO:
     STATEMENT_RETURN,      // TODO:
     STATEMENT_YIELD,       // TODO:
@@ -48,11 +49,11 @@ public:
     STATEMENT_THROW,       // TODO:
     STATEMENT_TRY,         // TODO:
     STATEMENT_CACHE,       // TODO:
-    STATEMENT_WHILE,       // TODO:
-    STATEMENT_DO_WHILE,    // TODO:
-    STATEMENT_FOR,         // TODO:
-    STATEMENT_FOR_IN,      // TODO:
-    STATEMENT_FOR_OF,      // TODO:
+    STATEMENT_WHILE,
+    STATEMENT_DO_WHILE, // TODO:
+    STATEMENT_FOR,      // TODO:
+    STATEMENT_FOR_IN,   // TODO:
+    STATEMENT_FOR_OF,   // TODO:
 
     VARIABLE_DECLARATION,
     VARIABLE_DECLARATOR,
@@ -133,7 +134,6 @@ public:
   struct Location {
     Position start;
     Position end;
-    std::wstring source;
     std::string toJSON(const std::wstring &source) {
       static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
       auto val = converter.to_bytes(getSource(source));
@@ -167,6 +167,7 @@ public:
     int32_t level;
     virtual std::string toJSON(const std::wstring &source) = 0;
   };
+
   struct NodeArray : public core::Array<core::AutoPtr<Node>> {
     std::string toJSON(const std::wstring &source) {
       size_t index = 0;
@@ -379,6 +380,13 @@ public:
           R"({{"type":"STATEMENT_BLOCK","directives":{},"body":{},"location":{}}})",
           directives.toJSON(source), body.toJSON(source),
           location.toJSON(source));
+    }
+  };
+
+  struct EmptyStatement : public Statement {
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(R"({{"type":"STATEMENT_EMPTY","location":{}}})",
+                         location.toJSON(source));
     }
   };
 
@@ -915,6 +923,23 @@ public:
     }
   };
 
+  struct DebuggerStatement : public Node {
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(R"({{"type":"STATEMENT_DEBUGGER","location":{}}})",
+                         location.toJSON(source));
+    }
+  };
+
+  struct WhileStatement : public Node {
+    core::AutoPtr<Node> condition;
+    core::AutoPtr<Node> body;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"STATEMENT_WHILE","condition":{},"body":{}}})",
+          condition->toJSON(source), body->toJSON(source));
+    }
+  };
+
 private:
   bool isUnicodeVariableName(wchar_t chr);
 
@@ -1005,6 +1030,10 @@ private:
   core::AutoPtr<Node> readStatement(const std::string &filename,
                                     const std::wstring &source,
                                     Position &position);
+
+  core::AutoPtr<Node> readEmptyStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
 
   core::AutoPtr<Node> readExpressionStatement(const std::string &filename,
                                               const std::wstring &source,
@@ -1248,6 +1277,14 @@ private:
   core::AutoPtr<Node> readExportDeclaration(const std::string &filename,
                                             const std::wstring &source,
                                             Position &position);
+
+  core::AutoPtr<Node> readDebuggerStatement(const std::string &filename,
+                                            const std::wstring &source,
+                                            Position &position);
+
+  core::AutoPtr<Node> readWhileStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
 
 public:
   core::AutoPtr<Node> compile(const std::string &filename,
