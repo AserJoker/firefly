@@ -305,20 +305,19 @@ public:
     std::string toJSON(const std::wstring &source) override {
       static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
       std::string val = converter.to_bytes(value);
-      std::string result = "";
-      for (auto &ch : val) {
-        if (ch == '\"') {
-          result += "\\\"";
-        } else if (ch == '\n') {
-          result += "\\n";
-        } else if (ch == '\r') {
-          result += "\\r";
-        } else {
-          result += ch;
-        }
-      }
       return fmt::format(
-          R"({{"type":"LITERAL_IDENTITY","value":"{}","location":{}}})", result,
+          R"({{"type":"LITERAL_IDENTITY","value":"{}","location":{}}})", val,
+          location.toJSON(source));
+    }
+  };
+
+  struct PrivateName : public Node {
+    std::wstring value;
+    std::string toJSON(const std::wstring &source) override {
+      static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+      std::string val = converter.to_bytes(value);
+      return fmt::format(
+          R"({{"type":"PRIVATE_NAME","value":"{}","location":{}}})", val,
           location.toJSON(source));
     }
   };
@@ -892,7 +891,8 @@ public:
     std::string toJSON(const std::wstring &source) {
       return fmt::format(
           R"({{"type":"CLASS_PROPERTY","identifier":{},"value":{},"static":{},"location":{}}})",
-          identifier->toJSON(source), value->toJSON(source), static_,
+          identifier->toJSON(source),
+          value == nullptr ? "null" : value->toJSON(source), static_,
           location.toJSON(source));
     }
   };
@@ -900,19 +900,12 @@ public:
   struct ClassMethod : public FunctionDeclaration {
     bool static_;
     std::string toJSON(const std::wstring &source) {
-      std::string params;
-      size_t index = 0;
-      for (auto &param : arguments) {
-        params += param->toJSON(source);
-        if (index != arguments.size() - 1) {
-          params += ",";
-        }
-        index++;
-      }
+
       return fmt::format(
           R"({{"type":"CLASS_METHOD","identifier":{},"arguments":{},"body":{},"async":{},"generator":{},"static":{},"location":{}}})",
-          identifier->toJSON(source), params, body->toJSON(source), async,
-          generator, static_, location.toJSON(source));
+          identifier->toJSON(source), arguments.toJSON(source),
+          body->toJSON(source), async, generator, static_,
+          location.toJSON(source));
     }
   };
 
@@ -1373,6 +1366,10 @@ private:
   core::AutoPtr<Node> readIdentifierLiteral(const std::string &filename,
                                             const std::wstring &source,
                                             Position &position);
+
+  core::AutoPtr<Node> readPrivateName(const std::string &filename,
+                                      const std::wstring &source,
+                                      Position &position);
 
   core::AutoPtr<Node> readRegexLiteral(const std::string &filename,
                                        const std::wstring &source,

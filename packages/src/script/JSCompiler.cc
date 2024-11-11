@@ -560,7 +560,7 @@ JSCompiler::readSymbolToken(const std::string &filename,
       L"||=",    L"&=",  L"^=",  L"|=",  L"=>",  L"?.",  L"=",   L"*",   L"/",
       L"%",      L"+",   L"-",   L"<",   L">",   L"&",   L"^",   L"|",   L",",
       L"!",      L"~",   L"(",   L")",   L"[",   L"]",   L"{",   L"}",   L"@",
-      L".",      L"?",   L":",   L";",
+      L"#",      L".",   L"?",   L":",   L";",
   };
   auto current = position;
   for (auto &opt : operators) {
@@ -2102,6 +2102,27 @@ JSCompiler::readIdentifierLiteral(const std::string &filename,
   position = current;
   return node;
 }
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readPrivateName(const std::string &filename,
+                            const std::wstring &source, Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readSymbolToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"#") {
+    token = readIdentifierToken(filename, source, current);
+    if (!token) {
+      return nullptr;
+    }
+    core::AutoPtr node = new PrivateName();
+    node->value = token->location.getSource(source);
+    node->location = getLocation(source, position, current);
+    node->level = -2;
+    node->type = NodeType::PRIVATE_NAME;
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
 
 core::AutoPtr<JSCompiler::Node>
 JSCompiler::readBinaryExpression(const std::string &filename,
@@ -3317,6 +3338,9 @@ JSCompiler::readClassMethod(const std::string &filename,
   backup = current;
   auto identifier = readIdentifierLiteral(filename, source, current);
   if (!identifier) {
+    identifier = readPrivateName(filename, source, current);
+  }
+  if (!identifier) {
     identifier = readStringLiteral(filename, source, current);
   }
   if (!identifier) {
@@ -3414,6 +3438,9 @@ JSCompiler::readClassAccessor(const std::string &filename,
   if (accessor != nullptr && (accessor->location.getSource(source) == L"get" ||
                               accessor->location.getSource(source) == L"set")) {
     auto identifier = readIdentifierLiteral(filename, source, current);
+    if (!identifier) {
+      identifier = readPrivateName(filename, source, current);
+    }
     if (!identifier) {
       identifier = readStringLiteral(filename, source, current);
     }
@@ -3518,6 +3545,9 @@ JSCompiler::readClassProperty(const std::string &filename,
   node->level = 0;
   node->identifier = readIdentifierLiteral(filename, source, current);
   node->static_ = staticFlag != nullptr;
+  if (!node->identifier) {
+    node->identifier = readPrivateName(filename, source, current);
+  }
   if (!node->identifier) {
     node->identifier = readStringLiteral(filename, source, current);
   }
