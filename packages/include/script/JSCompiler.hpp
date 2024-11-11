@@ -44,11 +44,11 @@ public:
     STATEMENT_BREAK,
     STATEMENT_CONTINUE,
     STATEMENT_IF,
-    STATEMENT_SWITCH,      // TODO:
-    STATEMENT_SWITCH_CASE, // TODO:
-    STATEMENT_THROW,       // TODO:
-    STATEMENT_TRY,         // TODO:
-    STATEMENT_CACHE,       // TODO:
+    STATEMENT_SWITCH,
+    STATEMENT_SWITCH_CASE,
+    STATEMENT_THROW,
+    STATEMENT_TRY,   // TODO:
+    STATEMENT_CACHE, // TODO:
     STATEMENT_WHILE,
     STATEMENT_DO_WHILE, // TODO:
     STATEMENT_FOR,      // TODO:
@@ -421,6 +421,14 @@ public:
     }
   };
 
+  struct ThrowStatement : public Node {
+    core::AutoPtr<Node> value;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(R"({{"type":"STATEMENT_Throw","value":{}}})",
+                         value != nullptr ? value->toJSON(source) : "null");
+    }
+  };
+
   struct LabelStatement : public Node {
     core::AutoPtr<Node> label;
     core::AutoPtr<Node> statement;
@@ -458,9 +466,32 @@ public:
     core::AutoPtr<Node> consequent;
     std::string toJSON(const std::wstring &source) override {
       return fmt::format(
-          R"({{"type":"STATEMENT_IF","condition":{},"alternate":{},"consequent":{}}})",
+          R"({{"type":"STATEMENT_IF","condition":{},"alternate":{},"consequent":{},"location":{}}})",
           condition->toJSON(source), alternate->toJSON(source),
-          consequent != nullptr ? consequent->toJSON(source) : "null");
+          consequent != nullptr ? consequent->toJSON(source) : "null",
+          location.toJSON(source));
+    }
+  };
+
+  struct SwitchCaseStatement : public Node {
+    core::AutoPtr<Node> match;
+    NodeArray statements;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"STATEMENT_SWITCH_CASE","match":{},"statements":{},"location":{}}})",
+          match == nullptr ? "null" : match->toJSON(source),
+          statements.toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct SwitchStatement : public Node {
+    core::AutoPtr<Node> expression;
+    NodeArray cases;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"STATEMENT_SWITCH","expression":{},"cases":{},"location":{}}})",
+          expression->toJSON(source), cases.toJSON(source),
+          location.toJSON(source));
     }
   };
 
@@ -1088,6 +1119,13 @@ private:
                                     const std::wstring &source,
                                     Position &position);
 
+  NodeArray readStatements(const std::string &filename,
+                           const std::wstring &source, Position &position);
+
+  core::AutoPtr<Node> readBlockStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
+
   core::AutoPtr<Node> readEmptyStatement(const std::string &filename,
                                          const std::wstring &source,
                                          Position &position);
@@ -1099,6 +1137,10 @@ private:
   core::AutoPtr<Node> readReturnStatement(const std::string &filename,
                                           const std::wstring &source,
                                           Position &position);
+
+  core::AutoPtr<Node> readThrowStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
 
   core::AutoPtr<Node> readBreakStatement(const std::string &filename,
                                          const std::wstring &source,
@@ -1115,6 +1157,14 @@ private:
   core::AutoPtr<Node> readIfStatement(const std::string &filename,
                                       const std::wstring &source,
                                       Position &position);
+
+  core::AutoPtr<Node> readSwitchStatement(const std::string &filename,
+                                          const std::wstring &source,
+                                          Position &position);
+
+  core::AutoPtr<Node> readSwitchCaseStatement(const std::string &filename,
+                                              const std::wstring &source,
+                                              Position &position);
 
   core::AutoPtr<Node> readExpressionStatement(const std::string &filename,
                                               const std::wstring &source,
@@ -1318,10 +1368,6 @@ private:
   core::AutoPtr<Node> readRestPattern(const std::string &filename,
                                       const std::wstring &source,
                                       Position &position);
-
-  core::AutoPtr<Node> readBlockStatement(const std::string &filename,
-                                         const std::wstring &source,
-                                         Position &position);
 
   core::AutoPtr<Node> readComment(const std::string &filename,
                                   const std::wstring &source,
