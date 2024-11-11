@@ -50,10 +50,10 @@ public:
     STATEMENT_TRY,
     STATEMENT_TRY_CATCH,
     STATEMENT_WHILE,
-    STATEMENT_DO_WHILE, // TODO:
-    STATEMENT_FOR,      // TODO:
-    STATEMENT_FOR_IN,   // TODO:
-    STATEMENT_FOR_OF,   // TODO:
+    STATEMENT_DO_WHILE,
+    STATEMENT_FOR,
+    STATEMENT_FOR_IN,
+    STATEMENT_FOR_OF,
 
     VARIABLE_DECLARATION,
     VARIABLE_DECLARATOR,
@@ -106,7 +106,7 @@ public:
     IMPORT_SPECIFIER,
     IMPORT_DEFAULT,
     IMPORT_NAMESPACE,
-    IMPORT_ATTARTUBE, // TODO:
+    IMPORT_ATTARTUBE,   // TODO:
     EXPORT_DECLARATION,
     EXPORT_DEFAULT,
     EXPORT_SPECIFIER,
@@ -120,6 +120,10 @@ public:
     DECLARATION_ARRAY,
     DECLARATION_CLASS,
   };
+
+  enum class AccessorKind { GET, SET };
+
+  enum class DeclarationKind { CONST, LET, VAR, UNKNOWN };
 
   struct Position {
     core::Unsigned_t line;
@@ -392,6 +396,77 @@ public:
     std::string toJSON(const std::wstring &source) {
       return fmt::format(R"({{"type":"STATEMENT_DEBUGGER","location":{}}})",
                          location.toJSON(source));
+    }
+  };
+
+  struct ForStatement : public Node {
+    core::AutoPtr<Node> init;
+    core::AutoPtr<Node> condition;
+    core::AutoPtr<Node> update;
+    core::AutoPtr<Node> body;
+
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"STATEMENT_FOR","init":{},"condition":{},"update":{},"body":{},"location":{}}})",
+          init == nullptr ? "null" : init->toJSON(source),
+          condition == nullptr ? "null" : condition->toJSON(source),
+          update == nullptr ? "null" : update->toJSON(source),
+          body->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct ForInStatement : public Node {
+    DeclarationKind kind;
+    core::AutoPtr<Node> declaration;
+    core::AutoPtr<Node> expression;
+    core::AutoPtr<Node> body;
+    std::string toJSON(const std::wstring &source) {
+      std::string skind;
+      switch (kind) {
+      case DeclarationKind::CONST:
+        skind = "const";
+        break;
+      case DeclarationKind::LET:
+        skind = "let";
+        break;
+      case DeclarationKind::VAR:
+        skind = "var";
+        break;
+      case DeclarationKind::UNKNOWN:
+        skind = "unknown";
+        break;
+      }
+      return fmt::format(
+          R"({{"type":"STATEMENT_FOR_IN","kind":"{}","declaration":{},"expression":{},"body":{},"location":{}}})",
+          skind, declaration->toJSON(source), expression->toJSON(source),
+          body->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct ForOfStatement : public Node {
+    DeclarationKind kind;
+    core::AutoPtr<Node> declaration;
+    core::AutoPtr<Node> expression;
+    core::AutoPtr<Node> body;
+    std::string toJSON(const std::wstring &source) {
+      std::string skind;
+      switch (kind) {
+      case DeclarationKind::CONST:
+        skind = "const";
+        break;
+      case DeclarationKind::LET:
+        skind = "let";
+        break;
+      case DeclarationKind::VAR:
+        skind = "var";
+      case DeclarationKind::UNKNOWN:
+        skind = "unknown";
+        break;
+      }
+      return fmt::format(
+          R"({{"type":"STATEMENT_FOR_OF","kind":"{}","declaration":{},"expression":{},"body":{},"location":{}}})",
+          skind, declaration->toJSON(source), expression->toJSON(source),
+          body->toJSON(source), location.toJSON(source));
     }
   };
 
@@ -744,17 +819,17 @@ public:
   };
 
   struct ObjectAccessor : public Node {
-    enum class KIND { GET, SET } kind;
+    AccessorKind kind;
     NodeArray arguments;
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> body;
     std::string toJSON(const std::wstring &source) override {
       std::string skind;
       switch (kind) {
-      case KIND::GET:
+      case AccessorKind::GET:
         skind = "get";
         break;
-      case KIND::SET:
+      case AccessorKind::SET:
         skind = "set";
         break;
       }
@@ -837,7 +912,7 @@ public:
 
   struct ClassAccessor : public FunctionDeclaration {
     bool static_;
-    enum class KIND { GET, SET } kind;
+    AccessorKind kind;
     std::string toJSON(const std::wstring &source) {
       std::string params;
       size_t index = 0;
@@ -851,10 +926,10 @@ public:
       std::string skind;
       switch (kind) {
 
-      case KIND::GET:
+      case AccessorKind::GET:
         skind = "get";
         break;
-      case KIND::SET:
+      case AccessorKind::SET:
         skind = "set";
         break;
       }
@@ -945,42 +1020,32 @@ public:
   struct VariableDeclarator : public Node {
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> value;
-    enum class Assigment { SET, OF, IN } assigment;
     std::string toJSON(const std::wstring &source) override {
-      std::string sassigment;
-      switch (assigment) {
-      case Assigment::SET:
-        sassigment = "=";
-        break;
-      case Assigment::OF:
-        sassigment = "of";
-        break;
-      case Assigment::IN:
-        sassigment = "in";
-        break;
-      }
       return fmt::format(
-          R"({{"type":"VARIABLE_DECLARATOR","assigment":"{}","identifier":{},"value":{},"location":{}}})",
-          sassigment, identifier->toJSON(source),
+          R"({{"type":"VARIABLE_DECLARATOR","identifier":{},"value":{},"location":{}}})",
+          identifier->toJSON(source),
           value == nullptr ? "null" : value->toJSON(source),
           location.toJSON(source));
     }
   };
 
   struct VariableDeclaration : public Node {
-    enum class Kind { VAR, LET, CONST } kind;
+    DeclarationKind kind;
     NodeArray declarations;
     std::string toJSON(const std::wstring &source) override {
       std::string skind;
       switch (kind) {
-      case Kind::VAR:
+      case DeclarationKind::VAR:
         skind = "var";
         break;
-      case Kind::LET:
+      case DeclarationKind::LET:
         skind = "let";
         break;
-      case Kind::CONST:
+      case DeclarationKind::CONST:
         skind = "const";
+        break;
+      case DeclarationKind::UNKNOWN:
+        skind = "unknown";
         break;
       }
       return fmt::format(
@@ -1046,26 +1111,31 @@ public:
     std::string toJSON(const std::wstring &source) override {
       return fmt::format(
           R"({{"type":"EXPORT_SPECIFIER","identifier":{},"alias":{},"location":{}}})",
-          identifier->toJSON(source), alias->toJSON(source),
+          identifier->toJSON(source),
+          alias != nullptr ? alias->toJSON(source) : "null",
           location.toJSON(source));
     }
   };
 
   struct ExportAllSpecifier : public Node {
-    core::AutoPtr<Node> source;
+    core::AutoPtr<Node> alias;
     std::string toJSON(const std::wstring &source) override {
       return fmt::format(
-          R"({{"type":"EXPORT_ALL_SPECIFIER","source":{},"location":{}}})",
-          this->source->toJSON(source), location.toJSON(source));
+          R"({{"type":"EXPORT_ALL_SPECIFIER","alias":{},"location":{}}})",
+          alias != nullptr ? alias->toJSON(source) : "null",
+          location.toJSON(source));
     }
   };
 
   struct ExportDeclaration : public Node {
     NodeArray items;
+    core::AutoPtr<Node> source;
     std::string toJSON(const std::wstring &source) {
+      auto src = this->source;
       return fmt::format(
-          R"({{"type":"EXPORT_DECLARATION","items":{},"location":{}}})",
-          items.toJSON(source), location.toJSON(source));
+          R"({{"type":"EXPORT_DECLARATION","items":{},"source":{},"location":{}}})",
+          items.toJSON(source), src != nullptr ? src->toJSON(source) : "null",
+          location.toJSON(source));
     }
   };
 
@@ -1178,6 +1248,18 @@ private:
   core::AutoPtr<Node> readDoWhileStatement(const std::string &filename,
                                            const std::wstring &source,
                                            Position &position);
+
+  core::AutoPtr<Node> readForStatement(const std::string &filename,
+                                       const std::wstring &source,
+                                       Position &position);
+
+  core::AutoPtr<Node> readForInStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
+
+  core::AutoPtr<Node> readForOfStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
 
   core::AutoPtr<Node> readBlockStatement(const std::string &filename,
                                          const std::wstring &source,

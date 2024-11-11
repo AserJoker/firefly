@@ -17,10 +17,10 @@ int main(int argc, char *argv[]) {
     core::AutoPtr<script::JSCompiler> compiler = new script::JSCompiler();
     core::AutoPtr media = new runtime::Media();
     media->addCurrentWorkspaceDirectory(dir.parent_path().string());
-    auto buf = media->load("main.js")->read();
+    auto buf = media->load("main.mjs")->read();
     std::string source({(const char *)buf->getData(), buf->getSize()});
     std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-    auto json = compiler->compile("main.js", source)
+    auto json = compiler->compile("main.mjs", source)
                     ->toJSON(converter.from_bytes(source));
     std::ofstream out("1.json");
     out << json;
