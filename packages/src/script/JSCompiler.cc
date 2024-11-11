@@ -773,16 +773,17 @@ JSCompiler::readStatement(const std::string &filename,
   if (!node) {
     node = readImportDeclaration(filename, source, position);
   }
-
   if (!node) {
     node = readExportDeclaration(filename, source, position);
   }
-
   if (!node) {
     node = readDebuggerStatement(filename, source, position);
   }
   if (!node) {
     node = readWhileStatement(filename, source, position);
+  }
+  if (!node) {
+    node = readDoWhileStatement(filename, source, position);
   }
   if (!node) {
     node = readYieldStatement(filename, source, position);
@@ -860,6 +861,110 @@ JSCompiler::NodeArray JSCompiler::readStatements(const std::string &filename,
   }
   return result;
 }
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readDebuggerStatement(const std::string &filename,
+                                  const std::wstring &source,
+                                  JSCompiler::Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto identifier = readIdentifierLiteral(filename, source, current);
+  if (identifier != nullptr &&
+      identifier->location.getSource(source) == L"debugger") {
+    core::AutoPtr node = new DebuggerStatement;
+    node->type = NodeType::STATEMENT_DEBUGGER;
+    node->level = 0;
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readWhileStatement(const std::string &filename,
+                               const std::wstring &source, Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readIdentifierToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"while") {
+    auto node = new WhileStatement;
+    node->level = 0;
+    node->type = NodeType::STATEMENT_WHILE;
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    if (!token || token->location.getSource(source) != L"(") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->condition = readExpression(filename, source, current);
+    if (!node->condition) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    if (!token || token->location.getSource(source) != L")") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->body = readStatement(filename, source, current);
+    if (!node->body) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readDoWhileStatement(const std::string &filename,
+                                 const std::wstring &source,
+                                 Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readIdentifierToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"do") {
+    core::AutoPtr node = new DoWhileStatement;
+    node->type = NodeType::STATEMENT_DO_WHILE;
+    node->body = readStatement(filename, source, current);
+    if (!node->body) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    skipInvisible(filename, source, current);
+    token = readIdentifierToken(filename, source, current);
+    if (token == nullptr || token->location.getSource(source) != L"while") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    if (!token || token->location.getSource(source) != L"(") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->condition = readExpression(filename, source, current);
+    if (!node->condition) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    if (!token || token->location.getSource(source) != L")") {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
 core::AutoPtr<JSCompiler::Node>
 JSCompiler::readEmptyStatement(const std::string &filename,
                                const std::wstring &source, Position &position) {
@@ -3866,64 +3971,6 @@ JSCompiler::readExportDeclaration(const std::string &filename,
         }
         specifier = readExportSpecifier(filename, source, current);
       }
-    }
-    node->location = getLocation(source, position, current);
-    position = current;
-    return node;
-  }
-  return nullptr;
-}
-
-core::AutoPtr<JSCompiler::Node>
-JSCompiler::readDebuggerStatement(const std::string &filename,
-                                  const std::wstring &source,
-                                  JSCompiler::Position &position) {
-  auto current = position;
-  skipInvisible(filename, source, current);
-  auto identifier = readIdentifierLiteral(filename, source, current);
-  if (identifier != nullptr &&
-      identifier->location.getSource(source) == L"debugger") {
-    core::AutoPtr node = new DebuggerStatement;
-    node->type = NodeType::STATEMENT_DEBUGGER;
-    node->level = 0;
-    node->location = getLocation(source, position, current);
-    position = current;
-    return node;
-  }
-  return nullptr;
-}
-
-core::AutoPtr<JSCompiler::Node>
-JSCompiler::readWhileStatement(const std::string &filename,
-                               const std::wstring &source, Position &position) {
-  auto current = position;
-  skipInvisible(filename, source, current);
-  auto token = readIdentifierToken(filename, source, current);
-  if (token != nullptr && token->location.getSource(source) == L"while") {
-    auto node = new WhileStatement;
-    node->level = 0;
-    node->type = NodeType::STATEMENT_WHILE;
-    skipInvisible(filename, source, current);
-    token = readSymbolToken(filename, source, current);
-    if (!token || token->location.getSource(source) != L"(") {
-      throw std::runtime_error(
-          formatException("Unexcepted token", filename, source, current));
-    }
-    node->condition = readExpression(filename, source, current);
-    if (!node->condition) {
-      throw std::runtime_error(
-          formatException("Unexcepted token", filename, source, current));
-    }
-    skipInvisible(filename, source, current);
-    token = readSymbolToken(filename, source, current);
-    if (!token || token->location.getSource(source) != L")") {
-      throw std::runtime_error(
-          formatException("Unexcepted token", filename, source, current));
-    }
-    node->body = readStatement(filename, source, current);
-    if (!node->body) {
-      throw std::runtime_error(
-          formatException("Unexcepted token", filename, source, current));
     }
     node->location = getLocation(source, position, current);
     position = current;

@@ -406,7 +406,14 @@ public:
     }
   };
 
-
+  struct DoWhileStatement : public WhileStatement {
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"STATEMENT_DO_WHILE","condition":{},"body":{},"location":{}}})",
+          condition->toJSON(source), body->toJSON(source),
+          location.toJSON(source));
+    }
+  };
 
   struct YieldStatement : public Node {
     core::AutoPtr<Node> value;
@@ -1153,14 +1160,26 @@ private:
                                     const std::wstring &source,
                                     Position &position);
 
-  NodeArray readStatements(const std::string &filename,
-                           const std::wstring &source, Position &position);
-
-  core::AutoPtr<Node> readBlockStatement(const std::string &filename,
+  core::AutoPtr<Node> readEmptyStatement(const std::string &filename,
                                          const std::wstring &source,
                                          Position &position);
 
-  core::AutoPtr<Node> readEmptyStatement(const std::string &filename,
+  NodeArray readStatements(const std::string &filename,
+                           const std::wstring &source, Position &position);
+
+  core::AutoPtr<Node> readDebuggerStatement(const std::string &filename,
+                                            const std::wstring &source,
+                                            Position &position);
+
+  core::AutoPtr<Node> readWhileStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
+
+  core::AutoPtr<Node> readDoWhileStatement(const std::string &filename,
+                                           const std::wstring &source,
+                                           Position &position);
+
+  core::AutoPtr<Node> readBlockStatement(const std::string &filename,
                                          const std::wstring &source,
                                          Position &position);
 
@@ -1446,14 +1465,6 @@ private:
   core::AutoPtr<Node> readExportDeclaration(const std::string &filename,
                                             const std::wstring &source,
                                             Position &position);
-
-  core::AutoPtr<Node> readDebuggerStatement(const std::string &filename,
-                                            const std::wstring &source,
-                                            Position &position);
-
-  core::AutoPtr<Node> readWhileStatement(const std::string &filename,
-                                         const std::wstring &source,
-                                         Position &position);
 
 public:
   core::AutoPtr<Node> compile(const std::string &filename,
