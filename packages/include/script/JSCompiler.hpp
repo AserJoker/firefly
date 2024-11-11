@@ -26,7 +26,7 @@ public:
     LITERAL_TEMPLATE,
 
     LITERAL_BIGINT,
-    LITERAL_DECIMAL, // TODO:
+    // LITERAL_DECIMAL,
 
     PROGRAM,
 
@@ -53,7 +53,7 @@ public:
     VARIABLE_DECLARATION,
     VARIABLE_DECLARATOR,
 
-    DECORATOR, // TODO:
+    DECORATOR,
 
     DIRECTIVE,
     DIRECTIVE_LITERAL,
@@ -63,8 +63,8 @@ public:
     OBJECT_METHOD,
     OBJECT_ACCESSOR,
 
-    EXPRESSION_RECORD, // TODO:
-    EXPRESSION_TUPLE,  // TODO:
+    // EXPRESSION_RECORD,
+    // EXPRESSION_TUPLE,
 
     EXPRESSION_UNARY,
     EXPRESSION_UPDATE,
@@ -101,7 +101,7 @@ public:
     IMPORT_SPECIFIER,
     IMPORT_DEFAULT,
     IMPORT_NAMESPACE,
-    IMPORT_ATTARTUBE, // TODO:
+    IMPORT_ATTARTUBE,
     EXPORT_DECLARATION,
     EXPORT_DEFAULT,
     EXPORT_SPECIFIER,
@@ -616,6 +616,15 @@ public:
     }
   };
 
+  struct Decorator : public Node {
+    core::AutoPtr<Node> expression;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"DECORATOR","expression":{},"location":{}}})",
+          expression->toJSON(source), location.toJSON(source));
+    }
+  };
+
   struct BinaryExpression : public Node {
     core::AutoPtr<Node> left;
     core::AutoPtr<Node> right;
@@ -887,11 +896,12 @@ public:
   struct ClassProperty : public Node {
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> value;
+    NodeArray decorators;
     bool static_;
     std::string toJSON(const std::wstring &source) {
       return fmt::format(
-          R"({{"type":"CLASS_PROPERTY","identifier":{},"value":{},"static":{},"location":{}}})",
-          identifier->toJSON(source),
+          R"({{"type":"CLASS_PROPERTY","decorators":{},"identifier":{},"value":{},"static":{},"location":{}}})",
+          decorators.toJSON(source), identifier->toJSON(source),
           value == nullptr ? "null" : value->toJSON(source), static_,
           location.toJSON(source));
     }
@@ -899,19 +909,21 @@ public:
 
   struct ClassMethod : public FunctionDeclaration {
     bool static_;
+    NodeArray decorators;
     std::string toJSON(const std::wstring &source) {
 
       return fmt::format(
-          R"({{"type":"CLASS_METHOD","identifier":{},"arguments":{},"body":{},"async":{},"generator":{},"static":{},"location":{}}})",
-          identifier->toJSON(source), arguments.toJSON(source),
-          body->toJSON(source), async, generator, static_,
-          location.toJSON(source));
+          R"({{"type":"CLASS_METHOD","decorators":{},"identifier":{},"arguments":{},"body":{},"async":{},"generator":{},"static":{},"location":{}}})",
+          decorators.toJSON(source), identifier->toJSON(source),
+          arguments.toJSON(source), body->toJSON(source), async, generator,
+          static_, location.toJSON(source));
     }
   };
 
   struct ClassAccessor : public FunctionDeclaration {
     bool static_;
     AccessorKind kind;
+    NodeArray decorators;
     std::string toJSON(const std::wstring &source) {
       std::string params;
       size_t index = 0;
@@ -933,20 +945,22 @@ public:
         break;
       }
       return fmt::format(
-          R"({{"type":"CLASS_ACCESSOR","identifier":{},"arguments":{},"body":{},"static":{},"kind":"{}","location":{}}})",
-          identifier->toJSON(source), params, body->toJSON(source), static_,
-          skind, location.toJSON(source));
+          R"({{"type":"CLASS_ACCESSOR","decorators":{},"identifier":{},"arguments":{},"body":{},"static":{},"kind":"{}","location":{}}})",
+          decorators.toJSON(source), identifier->toJSON(source), params,
+          body->toJSON(source), static_, skind, location.toJSON(source));
     }
   };
 
   struct ClassDeclaration : public Node {
     core::AutoPtr<Node> identifier;
     core::AutoPtr<Node> extends;
+    NodeArray decorators;
     NodeArray properties;
     std::string toJSON(const std::wstring &source) {
 
       return fmt::format(
-          R"({{"type":"DECLARATION_CLASS","identifier":{},"extends":{},"properties":{},"location":{}}})",
+          R"({{"type":"DECLARATION_CLASS","decorators":{},"identifier":{},"extends":{},"properties":{},"location":{}}})",
+          decorators.toJSON(source),
           identifier == nullptr ? "null" : identifier->toJSON(source),
           extends == nullptr ? "null" : extends->toJSON(source),
           properties.toJSON(source), location.toJSON(source));
@@ -1082,16 +1096,26 @@ public:
           alias->toJSON(source), location.toJSON(source));
     }
   };
+  struct ImportAttribute : public Node {
+    core::AutoPtr<Node> key;
+    core::AutoPtr<Node> value;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"IMPORT_ATTRIBUTE","key":{},"value":{},"location":{}}})",
+          key->toJSON(source), value->toJSON(source), location.toJSON(source));
+    }
+  };
 
   struct ImportDeclaration : public Node {
     core::AutoPtr<Node> source;
     NodeArray items;
+    NodeArray attributes;
     std::string toJSON(const std::wstring &source) {
 
       return fmt::format(
-          R"({{"type":"IMPORT_DECLARATION","source":{},"items":{},"location":{}}})",
-          this->source->toJSON(source), items.toJSON(source),
-          location.toJSON(source));
+          R"({{"type":"IMPORT_DECLARATION","attributes":{},"source":{},"items":{},"location":{}}})",
+          attributes.toJSON(source), this->source->toJSON(source),
+          items.toJSON(source), location.toJSON(source));
     }
   };
 
@@ -1129,11 +1153,13 @@ public:
   struct ExportDeclaration : public Node {
     NodeArray items;
     core::AutoPtr<Node> source;
+    NodeArray attributes;
     std::string toJSON(const std::wstring &source) {
       auto src = this->source;
       return fmt::format(
-          R"({{"type":"EXPORT_DECLARATION","items":{},"source":{},"location":{}}})",
-          items.toJSON(source), src != nullptr ? src->toJSON(source) : "null",
+          R"({{"type":"EXPORT_DECLARATION","attributes":{},"items":{},"source":{},"location":{}}})",
+          attributes.toJSON(source), items.toJSON(source),
+          src != nullptr ? src->toJSON(source) : "null",
           location.toJSON(source));
     }
   };
@@ -1322,6 +1348,10 @@ private:
   core::AutoPtr<Node> readRValue(const std::string &filename,
                                  const std::wstring &source, Position &position,
                                  int level);
+
+  core::AutoPtr<Node> readDecorator(const std::string &filename,
+                                    const std::wstring &source,
+                                    Position &position);
 
   core::AutoPtr<Node> readExpression(const std::string &filename,
                                      const std::wstring &source,
@@ -1528,6 +1558,10 @@ private:
                                   Position &position);
 
   core::AutoPtr<Node> readImportSpecifier(const std::string &filename,
+                                          const std::wstring &source,
+                                          Position &position);
+
+  core::AutoPtr<Node> readImportAttriabue(const std::string &filename,
                                           const std::wstring &source,
                                           Position &position);
 
