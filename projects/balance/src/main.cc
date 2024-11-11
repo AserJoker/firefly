@@ -18,6 +18,7 @@ int main(int argc, char *argv[]) {
     core::AutoPtr media = new runtime::Media();
     media->addCurrentWorkspaceDirectory(dir.parent_path().string());
     auto buf = media->load("main.mjs")->read();
+    
     std::string source({(const char *)buf->getData(), buf->getSize()});
     std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
     auto json = compiler->compile("main.mjs", source)

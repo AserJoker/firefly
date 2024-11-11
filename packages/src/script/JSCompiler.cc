@@ -524,6 +524,7 @@ core::AutoPtr<JSCompiler::Token>
 JSCompiler::readIdentifierToken(const std::string &filename,
                                 const std::wstring &source,
                                 Position &position) {
+  // TODO: unicode support
   auto current = position;
   auto &chr = source[current.offset];
   if ((chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z') || chr == '_' ||

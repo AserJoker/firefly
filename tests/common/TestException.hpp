@@ -1,6 +1,8 @@
 #pragma once
+#include "core/Type.hpp"
 #include <CUnit/CUnit.h>
 #include <stdexcept>
+using namespace firefly;
 class TestException : public std::runtime_error {
 private:
   int _error;

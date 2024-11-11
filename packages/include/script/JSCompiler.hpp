@@ -1175,8 +1175,6 @@ public:
   };
 
 private:
-  bool isUnicodeVariableName(wchar_t chr);
-
   std::string formatException(const std::string &message,
                               const std::string &filename,
                               const std::wstring &source, Position position);

@@ -8,6 +8,7 @@
 #include <fmt/format.h>
 #include <stdexcept>
 #include <tuple>
+using namespace firefly;
 template <typename... SUITS> class Testing {
 private:
   core::Map<core::String_t, core::Array<core::String_t>> testingTests;
@@ -81,7 +82,7 @@ private:
 
   void defineSuits(const core::Array<core::String_t> &suits) {
     for (auto &suitName : suits) {
-      testingTests[suitName] = {};
+      testingTests[suitName] = core::Array<core::String_t>{};
     }
   }
 
