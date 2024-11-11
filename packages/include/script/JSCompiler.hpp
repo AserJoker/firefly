@@ -135,7 +135,8 @@ public:
     Position end;
     std::string toJSON(const std::wstring &source) {
       static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
-      auto val = converter.to_bytes(getSource(source));
+      auto val = converter.to_bytes(
+          source.substr(start.offset, end.offset - start.offset + 1));
       std::string result = "";
       for (auto &ch : val) {
         if (ch == '\"') {
@@ -153,6 +154,15 @@ public:
     }
     std::wstring getSource(const std::wstring &source) {
       return source.substr(start.offset, end.offset - start.offset + 1);
+    }
+    bool startsWith(const std::wstring &source, const std::wstring &another) {
+      auto len = end.offset - start.offset;
+      for (size_t index = 0; index <= len; index++) {
+        if (source[index + start.offset] != another[index]) {
+          return false;
+        }
+      }
+      return true;
     }
   };
 
