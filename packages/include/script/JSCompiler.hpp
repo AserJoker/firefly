@@ -37,13 +37,13 @@ public:
     STATEMENT_BLOCK,
     /// \details <statement_block>:<invisible|semi><identifier['debugger']>
     STATEMENT_DEBUGGER,
-    STATEMENT_WITH,        // TODO:
-    STATEMENT_RETURN,      // TODO:
-    STATEMENT_YIELD,       // TODO:
-    STATEMENT_LABEL,       // TODO:
-    STATEMENT_BREAK,       // TODO:
-    STATEMENT_CONTINUE,    // TODO:
-    STATEMENT_IF,          // TODO:
+    STATEMENT_WITH, // TODO:
+    STATEMENT_RETURN,
+    STATEMENT_YIELD,
+    STATEMENT_LABEL,
+    STATEMENT_BREAK,
+    STATEMENT_CONTINUE,
+    STATEMENT_IF,
     STATEMENT_SWITCH,      // TODO:
     STATEMENT_SWITCH_CASE, // TODO:
     STATEMENT_THROW,       // TODO:
@@ -426,8 +426,41 @@ public:
     core::AutoPtr<Node> statement;
     std::string toJSON(const std::wstring &source) {
       return fmt::format(
-          R"({{"type":"STATEMENT_LABEL","label":{},"statement":{}}})",
-          label->toJSON(source), statement->toJSON(source));
+          R"({{"type":"STATEMENT_LABEL","label":{},"statement":{},"location":{}}})",
+          label->toJSON(source), statement->toJSON(source),
+          location.toJSON(source));
+    }
+  };
+
+  struct BreakStatement : public Node {
+    core::AutoPtr<Node> label;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"STATEMENT_BREAK","label":{},"location":{}}})",
+          label == nullptr ? "null" : label->toJSON(source),
+          location.toJSON(source));
+    }
+  };
+
+  struct ContinueStatement : public Node {
+    core::AutoPtr<Node> label;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"STATEMENT_CONTINUE","label":{},"location":{}}})",
+          label == nullptr ? "null" : label->toJSON(source),
+          location.toJSON(source));
+    }
+  };
+
+  struct IfStatement : public Node {
+    core::AutoPtr<Node> condition;
+    core::AutoPtr<Node> alternate;
+    core::AutoPtr<Node> consequent;
+    std::string toJSON(const std::wstring &source) override {
+      return fmt::format(
+          R"({{"type":"STATEMENT_IF","condition":{},"alternate":{},"consequent":{}}})",
+          condition->toJSON(source), alternate->toJSON(source),
+          consequent != nullptr ? consequent->toJSON(source) : "null");
     }
   };
 
@@ -1067,9 +1100,21 @@ private:
                                           const std::wstring &source,
                                           Position &position);
 
+  core::AutoPtr<Node> readBreakStatement(const std::string &filename,
+                                         const std::wstring &source,
+                                         Position &position);
+
+  core::AutoPtr<Node> readContinueStatement(const std::string &filename,
+                                            const std::wstring &source,
+                                            Position &position);
+
   core::AutoPtr<Node> readLabelStatement(const std::string &filename,
                                          const std::wstring &source,
                                          Position &position);
+
+  core::AutoPtr<Node> readIfStatement(const std::string &filename,
+                                      const std::wstring &source,
+                                      Position &position);
 
   core::AutoPtr<Node> readExpressionStatement(const std::string &filename,
                                               const std::wstring &source,
