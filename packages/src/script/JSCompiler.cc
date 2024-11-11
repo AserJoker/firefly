@@ -841,7 +841,9 @@ JSCompiler::readStatement(const std::string &filename,
         throw std::runtime_error(
             formatException("Unexcepted token", filename, source, current));
       } else {
-        position = current;
+        if (token != nullptr && token->location.getSource(source) == L";") {
+          position = current;
+        }
       }
     }
   }
