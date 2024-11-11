@@ -317,6 +317,75 @@ JSCompiler::readNumberToken(const std::string &filename,
 }
 
 core::AutoPtr<JSCompiler::Token>
+JSCompiler::readBigIntToken(const std::string &filename,
+                            const std::wstring &source, Position &position) {
+
+  auto current = position;
+  auto &chr = source[current.offset];
+  if ((chr >= '0' && chr <= '9')) {
+    if (chr == '0' && (source[current.offset + 1] == 'x' ||
+                       source[current.offset + 1] == 'X')) {
+      current.offset += 2;
+      for (;;) {
+        auto &chr = source[current.offset];
+        if ((chr >= '0' && chr <= '9') || (chr >= 'a' && chr <= 'f') ||
+            (chr >= 'A' && chr <= 'F')) {
+          current.offset++;
+        } else {
+          break;
+        }
+      }
+    } else if (chr == '0' && (source[current.offset + 1] == 'o' ||
+                              source[current.offset + 1] == 'O')) {
+      current.offset += 2;
+      for (;;) {
+        auto &chr = source[current.offset];
+        if (chr >= '0' && chr <= '7') {
+          current.offset++;
+        } else {
+          break;
+        }
+      }
+    } else {
+      for (;;) {
+        auto &chr = source[current.offset];
+        if (chr >= '0' && chr <= '9') {
+          current.offset++;
+        } else {
+          break;
+        }
+      }
+    }
+    auto &chr = source[current.offset];
+    if (chr == 'e' || chr == 'E') {
+      current.offset++;
+      for (;;) {
+        auto &chr = source[current.offset];
+        if (chr >= '0' && chr <= '9') {
+          current.offset++;
+        } else {
+          break;
+        }
+      }
+    }
+    auto flag = source[current.offset];
+    if (flag == 'n') {
+      current.offset++;
+    } else {
+      return nullptr;
+    }
+    current.offset--;
+    current.column += current.offset - position.offset;
+    core::AutoPtr<Token> token = new Token;
+    current.offset++;
+    current.column++;
+    token->location = getLocation(source, position, current);
+    position = current;
+    return token;
+  }
+  return nullptr;
+}
+core::AutoPtr<JSCompiler::Token>
 JSCompiler::readRegexToken(const std::string &filename,
                            const std::wstring &source, Position &position) {
   static std::array regexFlags = {'d', 'g', 'i', 'm', 's', 'y'};
@@ -1571,6 +1640,9 @@ JSCompiler::readValue(const std::string &filename, const std::wstring &source,
     node = readStringLiteral(filename, source, current);
   }
   if (!node) {
+    node = readBigIntLiteral(filename, source, current);
+  }
+  if (!node) {
     node = readNumberLiteral(filename, source, current);
   }
   if (!node) {
@@ -1899,6 +1971,25 @@ JSCompiler::readNumberLiteral(const std::string &filename,
     node->location = token->location;
     node->type = NodeType::LITERAL_NUMBER;
     node->level = -2;
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readBigIntLiteral(const std::string &filename,
+                              const std::wstring &source, Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readBigIntToken(filename, source, current);
+  if (token != nullptr) {
+    core::AutoPtr node = new BigIntLiteral;
+    node->location = token->location;
+    node->type = NodeType::LITERAL_BIGINT;
+    node->level = -2;
+    node->value = source.substr(token->location.start.offset,
+                                token->location.end.offset -
+                                    token->location.start.offset);
     position = current;
     return node;
   }

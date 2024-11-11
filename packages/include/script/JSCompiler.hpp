@@ -12,7 +12,6 @@ namespace firefly::script {
 class JSCompiler : public core::Object {
 public:
   enum class NodeType {
-    /// \details <private_name>:<invisible>token['#']<identifier>
     PRIVATE_NAME,
 
     LITERAL_REGEX,
@@ -26,18 +25,14 @@ public:
     LITERAL_IDENTITY,
     LITERAL_TEMPLATE,
 
-    LITERAL_BIGINT,  // TODO:
+    LITERAL_BIGINT,
     LITERAL_DECIMAL, // TODO:
 
     PROGRAM,
 
     STATEMENT_EMPTY,
-    /// \details
-    /// <statement_block>:<invisible|semi>token['{']<statement>*token['}']
     STATEMENT_BLOCK,
-    /// \details <statement_block>:<invisible|semi><identifier['debugger']>
     STATEMENT_DEBUGGER,
-    STATEMENT_WITH, // TODO:
     STATEMENT_RETURN,
     STATEMENT_YIELD,
     STATEMENT_LABEL,
@@ -106,7 +101,7 @@ public:
     IMPORT_SPECIFIER,
     IMPORT_DEFAULT,
     IMPORT_NAMESPACE,
-    IMPORT_ATTARTUBE,   // TODO:
+    IMPORT_ATTARTUBE, // TODO:
     EXPORT_DECLARATION,
     EXPORT_DEFAULT,
     EXPORT_SPECIFIER,
@@ -238,6 +233,17 @@ public:
       return fmt::format(
           R"({{"type":"LITERAL_NUMBER","location":{},"value":{:g}}})",
           location.toJSON(source), value);
+    }
+  };
+
+  struct BigIntLiteral : public Node {
+    std::wstring value;
+    std::string toJSON(const std::wstring &source) override {
+      static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+      std::string val = converter.to_bytes(value);
+      return fmt::format(
+          R"({{"type":"LITERAL_BIGINT","location":{},"value":"{}"}})",
+          location.toJSON(source), val);
     }
   };
 
@@ -1177,6 +1183,10 @@ private:
                                        const std::wstring &source,
                                        Position &position);
 
+  core::AutoPtr<Token> readBigIntToken(const std::string &filename,
+                                       const std::wstring &source,
+                                       Position &position);
+
   core::AutoPtr<Token> readRegexToken(const std::string &filename,
                                       const std::wstring &source,
                                       Position &position);
@@ -1341,6 +1351,10 @@ private:
                                         Position &position);
 
   core::AutoPtr<Node> readNumberLiteral(const std::string &filename,
+                                        const std::wstring &source,
+                                        Position &position);
+
+  core::AutoPtr<Node> readBigIntLiteral(const std::string &filename,
                                         const std::wstring &source,
                                         Position &position);
 
