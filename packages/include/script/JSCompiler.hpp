@@ -47,8 +47,8 @@ public:
     STATEMENT_SWITCH,
     STATEMENT_SWITCH_CASE,
     STATEMENT_THROW,
-    STATEMENT_TRY,   // TODO:
-    STATEMENT_CACHE, // TODO:
+    STATEMENT_TRY,
+    STATEMENT_TRY_CATCH,
     STATEMENT_WHILE,
     STATEMENT_DO_WHILE, // TODO:
     STATEMENT_FOR,      // TODO:
@@ -400,32 +400,66 @@ public:
     core::AutoPtr<Node> body;
     std::string toJSON(const std::wstring &source) {
       return fmt::format(
-          R"({{"type":"STATEMENT_WHILE","condition":{},"body":{}}})",
-          condition->toJSON(source), body->toJSON(source));
+          R"({{"type":"STATEMENT_WHILE","condition":{},"body":{},"location":{}}})",
+          condition->toJSON(source), body->toJSON(source),
+          location.toJSON(source));
     }
   };
+
+
 
   struct YieldStatement : public Node {
     core::AutoPtr<Node> value;
     std::string toJSON(const std::wstring &source) {
-      return fmt::format(R"({{"type":"STATEMENT_YIELD","value":{}}})",
-                         value != nullptr ? value->toJSON(source) : "null");
+      return fmt::format(
+          R"({{"type":"STATEMENT_YIELD","value":{},"location":{}}})",
+          value != nullptr ? value->toJSON(source) : "null",
+          location.toJSON(source));
     }
   };
 
   struct ReturnStatement : public Node {
     core::AutoPtr<Node> value;
     std::string toJSON(const std::wstring &source) {
-      return fmt::format(R"({{"type":"STATEMENT_RETURN","value":{}}})",
-                         value != nullptr ? value->toJSON(source) : "null");
+      return fmt::format(
+          R"({{"type":"STATEMENT_RETURN","value":{},"location":{}}})",
+          value != nullptr ? value->toJSON(source) : "null",
+          location.toJSON(source));
     }
   };
 
   struct ThrowStatement : public Node {
     core::AutoPtr<Node> value;
     std::string toJSON(const std::wstring &source) {
-      return fmt::format(R"({{"type":"STATEMENT_Throw","value":{}}})",
-                         value != nullptr ? value->toJSON(source) : "null");
+      return fmt::format(
+          R"({{"type":"STATEMENT_THROW","value":{},"location":{}}})",
+          value != nullptr ? value->toJSON(source) : "null",
+          location.toJSON(source));
+    }
+  };
+
+  struct TryCatchStatement : public Node {
+    core::AutoPtr<Node> binding;
+    core::AutoPtr<Node> statement;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"STATEMENT_TRY_CATCH","binding":{},"statement":{},"location":{}}})",
+          binding != nullptr ? binding->toJSON(source) : "null",
+          statement->toJSON(source), location.toJSON(source));
+    }
+  };
+
+  struct TryStatement : public Node {
+    core::AutoPtr<Node> try_;
+    core::AutoPtr<Node> catch_;
+    core::AutoPtr<Node> finally;
+    std::string toJSON(const std::wstring &source) {
+      return fmt::format(
+          R"({{"type":"STATEMENT_TRY","try":{},"catch":{},"finally":{},"location":{}}})",
+          try_->toJSON(source),
+          catch_ != nullptr ? catch_->toJSON(source) : "null",
+          finally != nullptr ? finally->toJSON(source) : "null",
+          location.toJSON(source));
     }
   };
 
@@ -1165,6 +1199,14 @@ private:
   core::AutoPtr<Node> readSwitchCaseStatement(const std::string &filename,
                                               const std::wstring &source,
                                               Position &position);
+
+  core::AutoPtr<Node> readTryStatement(const std::string &filename,
+                                       const std::wstring &source,
+                                       Position &position);
+
+  core::AutoPtr<Node> readTryCatchStatement(const std::string &filename,
+                                            const std::wstring &source,
+                                            Position &position);
 
   core::AutoPtr<Node> readExpressionStatement(const std::string &filename,
                                               const std::wstring &source,

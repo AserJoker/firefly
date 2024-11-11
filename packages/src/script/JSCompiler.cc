@@ -802,7 +802,9 @@ JSCompiler::readStatement(const std::string &filename,
   if (!node) {
     node = readSwitchStatement(filename, source, position);
   }
-
+  if (!node) {
+    node = readTryStatement(filename, source, position);
+  }
   // if (!node) {
   //   node = readForOfStatement(filename,source,position);
   // }
@@ -1169,6 +1171,92 @@ JSCompiler::readSwitchCaseStatement(const std::string &filename,
     } else {
       current = backup;
     }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readTryStatement(const std::string &filename,
+                             const std::wstring &source, Position &position) {
+
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readIdentifierToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"try") {
+    core::AutoPtr node = new TryStatement;
+    node->type = NodeType::STATEMENT_TRY;
+    node->try_ = readBlockStatement(filename, source, current);
+    if (!node->try_) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->catch_ = readTryCatchStatement(filename, source, current);
+    auto backup = current;
+    skipInvisible(filename, source, current);
+    token = readIdentifierToken(filename, source, current);
+    if (token != nullptr && token->location.getSource(source) == L"finally") {
+      node->finally = readBlockStatement(filename, source, current);
+      if (!node->finally) {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+    } else {
+      current = backup;
+    }
+    if (!node->catch_ && !node->finally) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  return nullptr;
+}
+
+core::AutoPtr<JSCompiler::Node>
+JSCompiler::readTryCatchStatement(const std::string &filename,
+                                  const std::wstring &source,
+                                  Position &position) {
+  auto current = position;
+  skipInvisible(filename, source, current);
+  auto token = readIdentifierToken(filename, source, current);
+  if (token != nullptr && token->location.getSource(source) == L"catch") {
+    core::AutoPtr node = new TryCatchStatement;
+    node->level = 0;
+    node->type = NodeType::STATEMENT_TRY_CATCH;
+    auto backup = current;
+    skipInvisible(filename, source, current);
+    token = readSymbolToken(filename, source, current);
+    if (!token) {
+      throw std::runtime_error(
+          formatException("Unexcepted token", filename, source, current));
+    }
+    if (token->location.getSource(source) == L"(") {
+      node->binding = readIdentifierLiteral(filename, source, current);
+      if (!node->binding) {
+        node->binding = readObjectPattern(filename, source, current);
+      }
+      if (!node->binding) {
+        node->binding = readArrayPattern(filename, source, current);
+      }
+      if (!node->binding) {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+      skipInvisible(filename, source, current);
+      token = readSymbolToken(filename, source, current);
+      if (!token || token->location.getSource(source) != L")") {
+        throw std::runtime_error(
+            formatException("Unexcepted token", filename, source, current));
+      }
+    } else {
+      current = backup;
+    }
+    node->statement = readBlockStatement(filename, source, current);
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -2130,11 +2218,11 @@ JSCompiler::readInstanceOfExpression(const std::string &filename,
   auto current = position;
   skipInvisible(filename, source, current);
   auto token = readIdentifierToken(filename, source, current);
-  if (token != nullptr && token->location.getSource(source) == L"instanceOf") {
+  if (token != nullptr && token->location.getSource(source) == L"instanceof") {
     core::AutoPtr node = new BinaryExpression;
     node->location = token->location;
     node->level = 9;
-    node->opt = L"instanceOf";
+    node->opt = L"instanceof";
     node->type = NodeType::EXPRESSION_BINARY;
     node->right = readRValue(filename, source, current, 9);
     position = current;
