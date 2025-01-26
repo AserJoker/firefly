@@ -1,230 +1,118 @@
 #pragma once
-#include "Any.hpp"
-#include "Array.hpp"
-#include "BaseValue.hpp"
-#include "CompileString.hpp"
-#include "Map.hpp"
-#include "core/CompileString.hpp"
-#include <cjson/cJSON.h>
-#include <cstddef>
-#include <fmt/format.h>
-#include <stdexcept>
-
+#include <any>
+#include <functional>
+#include <string>
+#include <type_traits>
+#include <unordered_map>
+#include <vector>
 namespace firefly::core {
-class Value;
-using Array_t = core::Array<Value>;
-using Map_t = core::Map<String_t, Value>;
-
-enum class ValueType {
-  NIL = 0,
-  BYTE,
-  BOOLEAN,
-  STRING,
-  INTEGER,
-  UNSIGNED,
-  FLOAT,
-  ARRAY,
-  MAP
-};
-template <class T, auto v, CompileString n, class V = T>
-struct TypeEx : Type<T, v, n> {
-  static Any as(const Any &value, const ValueType &type,
-                const core::String_t &stype) {
-    throw std::runtime_error(
-        fmt::format("Cannot convert '{}' to '{}'", stype, n.value));
-  }
-};
-template <auto v, CompileString n>
-struct TypeEx<Nil_t, v, n> : Type<Nil_t, v, n> {
-  static Any as(const Any &value, const ValueType &type,
-                const core::String_t &stype) {
-    return nullptr;
-  }
-};
-
-template <auto v, CompileString n>
-struct TypeEx<Byte_t, v, n> : Type<Byte_t, v, n> {
-  static Any as(const Any &value, const ValueType &type,
-                const core::String_t &stype) {
-    switch (type) {
-    case ValueType::NIL:
-      return Byte_t(0);
-    case ValueType::BYTE:
-      return value;
-    case ValueType::BOOLEAN:
-      return Byte_t(value.as<Boolean_t>() ? 1 : 0);
-    case ValueType::STRING:
-      return (Byte_t)(std::stoi(value.as<String_t>(), NULL, 0));
-    case ValueType::INTEGER:
-      return (Byte_t)value.as<Integer_t>();
-    case ValueType::UNSIGNED:
-      return (Byte_t)value.as<Unsigned_t>();
-    case ValueType::FLOAT:
-      return (Byte_t)value.as<Float_t>();
-    default:
-      break;
-    }
-    throw std::runtime_error(
-        fmt::format("Cannot convert '{}' to '{}'", stype, n.value));
-  }
-};
-
-template <auto v, CompileString n>
-struct TypeEx<Boolean_t, v, n> : Type<Boolean_t, v, n> {
-  static Any as(const Any &value, const ValueType &type,
-                const core::String_t &stype) {
-    switch (type) {
-    case ValueType::NIL:
-      return false;
-    case ValueType::BYTE:
-      return value.as<Byte_t>() == 1;
-    case ValueType::BOOLEAN:
-      return value;
-    case ValueType::STRING:
-      return value.as<String_t>() != "false";
-    case ValueType::INTEGER:
-      return value.as<Integer_t>() == 1;
-    case ValueType::UNSIGNED:
-      return value.as<Unsigned_t>() == 1;
-    case ValueType::FLOAT:
-      return value.as<Float_t>() == 1;
-    default:
-      break;
-    }
-    throw std::runtime_error(
-        fmt::format("Cannot convert '{}' to '{}'", stype, n.value));
-  }
-};
-
-template <auto v, CompileString n>
-struct TypeEx<String_t, v, n> : Type<String_t, v, n> {
-  static Any as(const Any &value, const ValueType &type,
-                const core::String_t &stype) {
-    switch (type) {
-    case ValueType::NIL:
-      return nullptr;
-    case ValueType::BYTE:
-      return fmt::format("{:d}", (Unsigned_t)value.as<Byte_t>());
-    case ValueType::BOOLEAN:
-      return value.as<Boolean_t>() ? "true" : "false";
-    case ValueType::STRING:
-      return value;
-    case ValueType::INTEGER:
-      return fmt::format("{:d}", value.as<Integer_t>());
-    case ValueType::UNSIGNED:
-      return fmt::format("{:d}", value.as<Unsigned_t>());
-    case ValueType::FLOAT:
-      return fmt::format("{:g}", value.as<Float_t>());
-    default:
-      break;
-    }
-    throw std::runtime_error(
-        fmt::format("Cannot convert '{}' to '{}'", stype, n.value));
-  }
-};
-template <auto v, CompileString n>
-struct TypeEx<Integer_t, v, n> : Type<Integer_t, v, n> {
-  static Any as(const Any &value, const ValueType &type,
-                const core::String_t &stype) {
-    switch (type) {
-    case ValueType::NIL:
-      return Integer_t(0);
-    case ValueType::BYTE:
-      return Integer_t(value.as<Byte_t>());
-    case ValueType::BOOLEAN:
-      return Integer_t(value.as<Boolean_t>() ? 1 : 0);
-    case ValueType::STRING:
-      return Integer_t(std::stoi(value.as<String_t>(), NULL, 0));
-    case ValueType::INTEGER:
-      return value;
-    case ValueType::UNSIGNED:
-      return (Integer_t)value.as<Unsigned_t>();
-    case ValueType::FLOAT:
-      return (Integer_t)value.as<Float_t>();
-    default:
-      break;
-    }
-    throw std::runtime_error(
-        fmt::format("Cannot convert '{}' to '{}'", stype, n.value));
-  }
-};
-template <auto v, CompileString n>
-struct TypeEx<Unsigned_t, v, n> : Type<Unsigned_t, v, n> {
-  static Any as(const Any &value, const ValueType &type,
-                const core::String_t &stype) {
-    switch (type) {
-    case ValueType::NIL:
-      return Unsigned_t(0);
-    case ValueType::BYTE:
-      return Unsigned_t(value.as<Byte_t>());
-    case ValueType::BOOLEAN:
-      return Unsigned_t(value.as<Boolean_t>() ? 1 : 0);
-    case ValueType::STRING:
-      return Unsigned_t(std::stoi(value.as<String_t>(), NULL, 0));
-    case ValueType::INTEGER:
-      return (Unsigned_t)value.as<Integer_t>();
-    case ValueType::UNSIGNED:
-      return value;
-    case ValueType::FLOAT:
-      return (Unsigned_t)value.as<Float_t>();
-    default:
-      break;
-    }
-    throw std::runtime_error(
-        fmt::format("Cannot convert '{}' to '{}'", stype, n.value));
-  }
-};
-
-template <auto v, CompileString n>
-struct TypeEx<Float_t, v, n> : Type<Float_t, v, n> {
-  static Any as(const Any &value, const ValueType &type,
-                const core::String_t &stype) {
-    switch (type) {
-    case ValueType::NIL:
-      return Float_t(0);
-    case ValueType::BYTE:
-      return Float_t(value.as<Byte_t>());
-    case ValueType::BOOLEAN:
-      return Float_t(value.as<Boolean_t>() ? 1 : 0);
-    case ValueType::STRING:
-      return Float_t(std::stof(value.as<String_t>()));
-    case ValueType::INTEGER:
-      return (Float_t)value.as<Integer_t>();
-    case ValueType::UNSIGNED:
-      return (Float_t)value.as<Unsigned_t>();
-    case ValueType::FLOAT:
-      return value;
-    default:
-      break;
-    }
-    throw std::runtime_error(
-        fmt::format("Cannot convert '{}' to '{}'", stype, n.value));
-  }
-};
-
-using NilType = TypeEx<Nil_t, ValueType::NIL, "nil">;
-using ByteType = TypeEx<Byte_t, ValueType::BYTE, "byte">;
-using BooleanType = TypeEx<Boolean_t, ValueType::BOOLEAN, "boolean">;
-using StringType = TypeEx<String_t, ValueType::STRING, "string">;
-using IntegerType = TypeEx<Integer_t, ValueType::INTEGER, "integer">;
-using UnsignedType = TypeEx<Unsigned_t, ValueType::UNSIGNED, "unsigned">;
-using FloatType = TypeEx<Float_t, ValueType::FLOAT, "core::Float_t">;
-using ArrayType = TypeEx<Array_t, ValueType::ARRAY, "array">;
-using MapType = TypeEx<Map_t, ValueType::MAP, "map">;
-
-using TypedBaseValue =
-    BaseValue<NilType, ByteType, BooleanType, StringType, IntegerType,
-              UnsignedType, FloatType, ArrayType, MapType>;
-
-class Value : public TypedBaseValue {
+class Value {
 public:
-  Value() : TypedBaseValue(nullptr) {}
-  template <class T> Value(T value) : TypedBaseValue(value) {}
-  Value(CString_t value) : Value(core::String_t(value)) {}
-  template <class T> Value as() const {
-    return Select<T>::as(_value, _type, _typename).template as<T>();
-  }
-  template <class T> T to() const { return as<T>().template get<T>(); }
-};
+  enum class TYPE { NIL, NUMBER, STRING, BOOLEAN, ARRAY, OBJECT };
 
+  using Array = std::vector<Value>;
+  using Object = std::unordered_map<std::string, Value>;
+
+private:
+  TYPE _type;
+  std::any _store;
+  bool _bind;
+
+  std::function<void(double)> _setNumber;
+  std::function<double()> _getNumber;
+
+public:
+  Value();
+
+  Value(const std::nullptr_t &);
+
+  Value(const std::string &value);
+
+  Value(const char *value);
+
+  Value(double value);
+
+  Value(bool value);
+
+  Value(const Array &value);
+
+  Value(const Object &value);
+
+  Value(const Value &another);
+
+  Value(Value &&another);
+
+  virtual ~Value();
+
+  const TYPE &getType() const;
+
+  bool isBind() const;
+
+  void setNil();
+
+  bool isNil() const;
+
+  void setArray();
+
+  bool isArray() const;
+
+  void setObject();
+
+  bool isObject() const;
+
+  void setString(const std::string &value);
+
+  const std::string &getString() const;
+
+  const std::string &checkString() const;
+
+  void setNumber(double value);
+
+  double getNumber() const;
+
+  double checkNumber() const;
+
+  void setBoolean(bool value);
+
+  bool getBoolean() const;
+
+  bool checkBoolean() const;
+
+  const Array &getArray() const;
+
+  Array &getArray();
+
+  const Array &checkArray() const;
+
+  const Object &getObject() const;
+
+  Object &getObject();
+
+  const Object &checkObject() const;
+
+  Value &operator=(const Value &another);
+
+  bool operator==(const Value &another) const;
+
+public:
+  static Value bindString(std::string *src);
+
+  template <class T>
+  static Value bindNumber(T *src)
+    requires(std::is_integral_v<T> || std::is_floating_point_v<T>)
+  {
+    Value val;
+    val._getNumber = [=]() -> double { return (double)*src; };
+    val._setNumber = [=](double value) -> void { *src = (T)value; };
+    val._bind = true;
+    val._type = TYPE::NUMBER;
+    return val;
+  }
+
+  static Value bindBoolean(bool *src);
+
+  static Value bindArray(Array *src);
+
+  static Value bindObject(Object *src);
+};
 } // namespace firefly::core

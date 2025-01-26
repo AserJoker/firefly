@@ -1,31 +1,18 @@
-//
-// Created by w30029682 on 2024/7/5.
-//
 #pragma once
-
-#include "BaseApplication.hpp"
-#include "ExitEvent.hpp"
-#include "SystemEvent.hpp"
-#include "runtime/ResizeEvent.hpp"
+#include "core/Object.hpp"
 #include <SDL2/SDL.h>
+#include <vector>
 
 namespace firefly::runtime {
-class Application : public BaseApplication {
+class Application : public core::Object {
 private:
+  std::vector<std::string> _argv;
+
 public:
-  Application(int argc, char **argv);
+  Application();
 
-protected:
-  void onInitialize() override;
+  int start(int argc, char *argv[]);
 
-  void onMainLoop() override;
-
-  void onUnInitialize() override;
-
-  virtual void onEvent(SystemEvent &);
-
-  virtual void onResize(ResizeEvent &);
-
-  virtual void onExit(ExitEvent &);
+  const std::string &argv(uint32_t index) const;
 };
 } // namespace firefly::runtime

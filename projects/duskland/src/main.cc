@@ -1,12 +1,7 @@
 
 
-#define _CRT_SECURE_NO_WARNINGS
-#include "GameApplication.hpp"
 #include "core/AutoPtr.hpp"
-#include "core/Singleton.hpp"
-#include "firefly.hpp"
-#include <SDL2/SDL.h>
-#include <clocale>
+#include "runtime/Application.hpp"
 #include <exception>
 #include <iostream>
 
@@ -15,7 +10,6 @@
 #endif
 
 using namespace firefly;
-using namespace duskland;
 
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, NULL);
@@ -24,15 +18,12 @@ int main(int argc, char *argv[]) {
   setvbuf(stdout, nullptr, _IOFBF, 1000);
 #endif
   try {
-    InitFirefly();
-    core::Singleton<runtime::Application>::initialize<GameApplication>(argc,
-                                                                       argv);
-    return core::Singleton<runtime::Application>::instance()->run();
+    core::AutoPtr app = new runtime::Application();
+    return app->start(argc, argv);
   } catch (std::exception &e) {
-    auto &theLogger = core::Singleton<runtime::Logger>::instance();
-    theLogger->panic("{}", e.what());
+    std::cerr << e.what() << std::endl;
   } catch (...) {
-    std::cerr << "Unknown error" << std::endl;
+    std::cerr << "Unknown exception" << std::endl;
   }
-  return 0;
+  return -1;
 }

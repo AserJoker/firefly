@@ -1,32 +1,35 @@
 #pragma once
-
-#include "core/AutoPtr.hpp"
-
+#include "AutoPtr.hpp"
+#include "Factory.hpp"
+#include "Registry.hpp"
+#include <type_traits>
 namespace firefly::core {
+
 template <class T> class Singleton {
-private:
-  inline static AutoPtr<T> _instance;
-
 public:
-  static AutoPtr<T> &instance()
-    requires std::is_default_constructible_v<T>
+  static AutoPtr<T> instance()
+    requires(std::is_default_constructible_v<T>)
   {
-    if (!_instance) {
-      _instance = new T();
+    auto name = typeid(T).name();
+    if (!Registry::contains(name)) {
+      auto obj = Factory::create(name);
+      if (!obj) {
+        obj = new T();
+      }
+      Registry::store(name, obj);
     }
-    return _instance;
+    return Registry::query(name).cast<T>();
   }
-
-  template <class K = T, class... ARGS>
-  static void initialize(ARGS... args)
-    requires std::is_constructible_v<K, ARGS...> &&
-             std::is_convertible_v<K *, T *>
-  {
-    _instance = new K(args...);
+  static AutoPtr<T> instance() {
+    auto name = typeid(T).name();
+    if (!Registry::contains(name)) {
+      auto obj = Factory::create(name);
+      if (!obj) {
+        return nullptr;
+      }
+      Registry::store(name, obj);
+    }
+    return Registry::query(name).cast<T>();
   }
-
-  static AutoPtr<T> &instance() { return _instance; }
-
-  static core::Boolean_t isInitialized() { return _instance != nullptr; }
 };
 } // namespace firefly::core

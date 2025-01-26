@@ -1,142 +1,135 @@
 #pragma once
-
-#include "NullpointerException.hpp"
-
+#include "Ref.hpp"
+#include <stdexcept>
 namespace firefly::core {
 template <class T> class AutoPtr {
-public:
-  using innerType = T;
-
 private:
-  T *_object;
-
-  void dispose() {
-    if (_object) {
-      if (!_object->subRef()) {
-        delete _object;
-        _object = nullptr;
-      }
-    }
-  }
+  const T *_instance;
 
 public:
-  AutoPtr(T *object = nullptr) : _object(object) {
-    if (_object) {
-      _object->addRef();
+  AutoPtr(const T *instance = nullptr) : _instance(instance) {
+    if (_instance) {
+      Ref::addRef(_instance);
     }
   }
 
-  virtual ~AutoPtr() { dispose(); }
-
-  AutoPtr(const AutoPtr<T> &another) : _object(nullptr) {
-    if (another != nullptr) {
-      _object = const_cast<T *>(&(*another));
-    }
-    if (_object) {
-      _object->addRef();
-    }
-  }
-  const T *getRawPointer() const { return _object; }
-  template <class K> AutoPtr(const AutoPtr<K> &another) : _object(nullptr) {
-    if (another != nullptr) {
-      _object = const_cast<K *>(another.getRawPointer());
-    }
-    if (_object) {
-      _object->addRef();
+  AutoPtr(const AutoPtr<T> &another) : _instance(another._instance) {
+    if (_instance) {
+      Ref::addRef(_instance);
     }
   }
 
-  T &operator*() {
-    if (!_object) {
-      throw NullpointerException();
+  template <class K>
+  AutoPtr(const AutoPtr<K> &another) : _instance(another.raw()) {
+    if (_instance) {
+      Ref::addRef(_instance);
     }
-    return *_object;
+  }
+
+  virtual ~AutoPtr() {
+    if (!Ref::dispose(_instance)) {
+      delete _instance;
+      _instance = nullptr;
+    }
   }
 
   T *operator->() {
-    if (!_object) {
-      throw NullpointerException();
+    if (!_instance) {
+      throw std::runtime_error("Nullpointer exception");
     }
-    return _object;
+    return (T *)_instance;
   }
 
-  const T &operator*() const {
-    if (!_object) {
-      throw NullpointerException();
+  T &operator*() {
+    if (!_instance) {
+      throw std::runtime_error("Nullpointer exception");
     }
-    return *_object;
+    return *(T *)_instance;
   }
 
-  const T *operator->() const {
-    if (!_object) {
-      throw NullpointerException();
+  T *operator->() const {
+    if (!_instance) {
+      throw std::runtime_error("Nullpointer exception");
     }
-    return _object;
+    return (T *)_instance;
   }
 
-  template <class K> AutoPtr<T> &operator=(K *object) {
-    if (_object && _object != object) {
-      dispose();
+  T &operator*() const {
+    if (!_instance) {
+      throw std::runtime_error("Nullpointer exception");
     }
-    _object = object;
-    if (_object) {
-      _object->addRef();
-    }
-    return *this;
+    return *(T *)_instance;
   }
 
-  template <class K> AutoPtr<T> &operator=(const AutoPtr<K> &another) {
-    if (_object && _object != another.getRawPointer()) {
-      dispose();
+  AutoPtr<T> &operator=(const T *object) {
+    if (_instance == object) {
+      return *this;
     }
-    _object = const_cast<K *>(another.getRawPointer());
-    if (_object) {
-      _object->addRef();
+    if (_instance) {
+      if (!Ref::dispose(_instance)) {
+        delete (T *)_instance;
+        _instance = nullptr;
+      }
+    }
+    _instance = object;
+    if (_instance) {
+      Ref::addRef(_instance);
     }
     return *this;
   }
 
   AutoPtr<T> &operator=(const AutoPtr<T> &another) {
-    if (this == &another) {
+    if (_instance == another._instance) {
       return *this;
     }
-    if (_object && _object != another.getRawPointer()) {
-      dispose();
+    if (_instance) {
+      if (Ref::dispose(_instance)) {
+        delete (T *)_instance;
+        _instance = nullptr;
+      }
     }
-    _object = (T *)another.getRawPointer();
-    if (_object) {
-      _object->addRef();
+    _instance = another._instance;
+    if (_instance) {
+      Ref::addRef(_instance);
+    }
+    return *this;
+  }
+  template <class K> AutoPtr<T> &operator=(const AutoPtr<K> &another) {
+    if (_instance == another.raw()) {
+      return *this;
+    }
+    if (_instance) {
+      if (Ref::dispose(_instance)) {
+        delete (T *)_instance;
+        _instance = nullptr;
+      }
+    }
+    _instance = another.raw();
+    if (_instance) {
+      Ref::addRef(_instance);
     }
     return *this;
   }
 
-  template <class K> core::Boolean_t operator==(const K *object) const {
-    return _object == object;
+  bool operator==(const T *another) const { return _instance == another; }
+
+  bool operator==(const AutoPtr<T> &another) const {
+    return _instance == another._instance;
   }
 
-  template <class K> core::Boolean_t operator!=(const K *object) const {
-    return _object != object;
+  template <class K> bool operator==(const AutoPtr<K> &another) const {
+    return _instance == another.raw();
   }
 
-  core::Boolean_t operator==(core::Nil_t) const { return _object == nullptr; }
+  T *raw() const { return (T *)_instance; }
 
-  core::Boolean_t operator!=(core::Nil_t) const { return _object != nullptr; }
-
-  template <class K>
-  core::Boolean_t operator==(const AutoPtr<K> &another) const {
-    return _object == another.getRawPointer();
+  template <class K> AutoPtr<K> cast() const {
+    return dynamic_cast<K *>((T *)_instance);
   }
 
-  template <class K>
-  core::Boolean_t operator!=(const AutoPtr<K> &another) const {
-    return _object != another.getRawPointer();
-  }
+  bool operator!() const { return _instance == nullptr; }
 
-  template <class K> AutoPtr<K> cast() { return dynamic_cast<K *>(_object); }
-  template <class K> const AutoPtr<K> cast() const {
-    return dynamic_cast<K *>(_object);
-  }
-
-  const core::Boolean_t operator!() const { return _object == nullptr; }
+  operator bool() const { return _instance != nullptr; }
 };
-} // namespace firefly::core
+template <class T> using AutoConstPtr = AutoPtr<const T>;
+}; // namespace firefly::core

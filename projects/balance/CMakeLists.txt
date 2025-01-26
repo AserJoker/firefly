@@ -1,6 +1,0 @@
-include_directories(${FF_INCLUDE_DIR})
-include_directories(./include)
-file(GLOB SOURCES src/*.cc)
-add_executable(${FF_PROJECT_NAME} ${SOURCES})
-target_link_libraries(${FF_PROJECT_NAME} PUBLIC firefly)
-add_dependencies(${FF_PROJECT_NAME} copy)

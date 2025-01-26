@@ -1,29 +1,19 @@
 #pragma once
-#include "core/CompileString.hpp"
-#include <exception>
+#include <fmt/format.h>
 #include <source_location>
-#include "Type.hpp"
 #include <stdexcept>
 namespace firefly::core {
 class Exception : public std::runtime_error {
+private:
+  static std::string format(const std::string &message,
+                            const std::source_location &loc) {
+    return fmt::format("{} \n  at {}({}:{}:{})", message, loc.function_name(),
+                       loc.file_name(), loc.line(), loc.column());
+  }
+
 public:
-  Exception(
-      const core::String_t &type, const core::String_t &message,
-      const std::exception &caused,
-      const std::source_location &current = std::source_location::current());
-  Exception(
-      const core::String_t &type, const core::String_t &message,
-      const std::source_location &current = std::source_location::current());
-};
-template <core::CompileString type> class RuntimeException : public Exception {
-public:
-  RuntimeException(
-      const core::String_t &message, const std::exception &caused,
-      const std::source_location &current = std::source_location::current())
-      : Exception(type.value, message, caused, current) {}
-  RuntimeException(
-      const core::String_t &message = "",
-      const std::source_location &current = std::source_location::current())
-      : Exception(type.value, message, current) {}
+  Exception(const std::string &message,
+            const std::source_location &loc = std::source_location::current())
+      : std::runtime_error(format(message, loc)) {}
 };
 }; // namespace firefly::core
