@@ -13,6 +13,7 @@ Window::Window(const std::string &title, uint32_t width, uint32_t height,
         fmt::format("Failed to create window: {}", SDL_GetError()));
   }
 }
+
 Window::~Window() {
   SDL_DestroyWindow(_window);
   _window = nullptr;
