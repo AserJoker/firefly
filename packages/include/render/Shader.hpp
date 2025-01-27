@@ -1,15 +1,10 @@
 #pragma once
-#include "core/ObjectBase.hpp"
-#include <string>
+#include "core/Native.hpp"
 namespace firefly::render {
-class Shader : public core::ObjectBase {
-public:
-  enum class TYPE { VERTEX, HULL, DOMAIN, GEOMETRY, PIXEL, COMPUTE };
-
+class Shader : public core::Native {
 public:
   Shader();
+
   ~Shader() override;
-  void setShader(const TYPE &type, const std::string &source);
-  
 };
 } // namespace firefly::render

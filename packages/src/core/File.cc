@@ -38,6 +38,16 @@ core::AutoPtr<File> File::open(const std::string &path) {
   return file;
 }
 
+std::string File::readText(const std::string &path) {
+  auto file = open(path);
+  auto buf = file->read();
+  return {(char *)buf->getRaw(), buf->getSize()};
+}
+
+core::AutoPtr<Buffer> File::read(const std::string &path) {
+  return open(path)->read();
+}
+
 const core::AutoPtr<Buffer> File::read(size_t offset, size_t size) const {
   if (!_file.is_open()) {
     return new MemoryBuffer();

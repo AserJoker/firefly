@@ -2,12 +2,11 @@
 #include "core/Exception.hpp"
 #include "core/Registry.hpp"
 #include "core/Singleton.hpp"
-#include "render/OpenGLRenderer.hpp"
+#include "render/opengl/OpenGLRenderer.hpp"
 #include "runtime/Configuration.hpp"
 #include "runtime/OpenGLWindow.hpp"
 #include "runtime/VulkanWindow.hpp"
-#include <SDL.h>
-#include <SDL_video.h>
+#include <SDL2/SDL.h>
 #include <glad/glad.h>
 #include <thread>
 
@@ -25,9 +24,9 @@ ClientProxy::ClientProxy() {
   auto x = conf.project.window.x;
   auto y = conf.project.window.y;
 
-  auto renderer = conf.project.device.renderer.type;
+  auto renderer = conf.project.device.renderer;
 
-  if (renderer.starts_with("OpenGL")) {
+  if (renderer.type.starts_with("OpenGL")) {
     _renderer = new render::OpenGLRenderer();
   }
 
@@ -35,9 +34,9 @@ ClientProxy::ClientProxy() {
     core::Registry::store(typeid(render::Renderer).name(), _renderer);
   }
 
-  if (renderer.starts_with("OpenGL")) {
+  if (renderer.type.starts_with("OpenGL")) {
     _window = new OpenGLWindow(title, width, height, x, y);
-  } else if (renderer.starts_with("Vulkan")) {
+  } else if (renderer.type.starts_with("Vulkan")) {
     _window = new VulkanWindow(title, width, height, x, y);
   } else {
     _window = new Window(title, width, height, x, y);
@@ -64,9 +63,8 @@ int ClientProxy::run() {
     } else {
       std::this_thread::sleep_for(4ms);
     }
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     if (_renderer) {
+      _renderer->clear({0.2f, 0.3f, 0.3f, 1.0f});
       _renderer->present();
     }
   }

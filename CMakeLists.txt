@@ -39,6 +39,7 @@ find_package(cJSON CONFIG REQUIRED)
 find_package(Lua REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(Freetype REQUIRED)
+find_package(libzip CONFIG REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
 
 if(DEBUG_ENABLE MATCHES "on")

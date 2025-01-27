@@ -13,6 +13,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC cjson)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${LUA_LIBRARIES})
 target_link_libraries(${PROJECT_NAME} PUBLIC imgui::imgui)
 target_link_libraries(${PROJECT_NAME} PUBLIC Freetype::Freetype)
+target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 target_link_libraries(${PROJECT_NAME}
 PUBLIC
 $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>

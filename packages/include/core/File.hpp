@@ -2,6 +2,7 @@
 #include "Readable.hpp"
 #include "Writable.hpp"
 #include "core/AutoPtr.hpp"
+#include "core/Buffer.hpp"
 #include "core/ObjectBase.hpp"
 #include <fstream>
 #include <string>
@@ -32,5 +33,9 @@ public:
   static core::AutoPtr<File> create(const std::string &path);
 
   static core::AutoPtr<File> open(const std::string &path);
+
+  static std::string readText(const std::string &path);
+
+  static core::AutoPtr<Buffer> read(const std::string &path);
 };
 }; // namespace firefly::core
