@@ -20,7 +20,7 @@ public:
   }
 
   template <class K>
-  AutoPtr(const AutoPtr<K> &another) : _instance(another.raw()) {
+  AutoPtr(const AutoPtr<K> &another) : _instance((const T *)another.raw()) {
     if (_instance) {
       Ref::addRef(_instance);
     }
