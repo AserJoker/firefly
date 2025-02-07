@@ -242,6 +242,13 @@ struct JSBooleanLiteralNode : public JSNode {
   JSBooleanLiteralNode() { type = JS_NODE_TYPE::LITERAL_BOOLEAN; }
 };
 
+struct JSTemplateLiteralNode : public JSNode {
+  JSNode *tag;
+  std::vector<JSNode *> quasis;
+  std::vector<JSNode *> expressions;
+  JSTemplateLiteralNode() { type = JS_NODE_TYPE::LITERAL_TEMPLATE; }
+};
+
 struct JSThisNode : public JSNode {
   JSThisNode() { type = JS_NODE_TYPE::THIS; }
 };
@@ -468,12 +475,15 @@ private:
     loc.end = {.funcname = L"neo.compile", .line = 1, .column = 1, .offset = 0};
     while (loc.end.offset < end.offset) {
       if (isLineTerminatior(source[loc.end.offset])) {
+        while (isLineTerminatior(source[loc.end.offset])) {
+          loc.end.offset++;
+        }
         loc.end.column = 1;
         loc.end.line++;
       } else {
         loc.end.column++;
+        loc.end.offset++;
       }
-      loc.end.offset++;
     }
     return loc;
   }
@@ -550,6 +560,84 @@ private:
   }
 
 private:
+  JSNode *readTemplateLiteral(const std::wstring &source, JSPosition &position,
+                              JSNode *tag = nullptr) {
+    auto current = position;
+    if (source[current.offset] != '`') {
+      return nullptr;
+    }
+    auto node = new JSTemplateLiteralNode{};
+    current.offset++;
+    auto start = current;
+    JSNode *quasi = nullptr;
+    for (;;) {
+      if (!source[current.offset]) {
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      if (source[current.offset] == '`') {
+        auto end = current;
+        quasi = new JSStringLiteralNode{};
+        quasi->location = getLocation(source, start, end);
+        node->quasis.push_back(quasi);
+        quasi->addParent(node);
+        current.offset++;
+        break;
+      }
+      if (source[current.offset] == '$' && source[current.offset + 1] == '{') {
+        auto end = current;
+        quasi = new JSStringLiteralNode{};
+        quasi->location = getLocation(source, start, end);
+        node->quasis.push_back(quasi);
+        quasi->addParent(node);
+        current.offset++;
+        current.offset++;
+        while (skipInvisible(source, current)) {
+        }
+        auto err = readComments(source, current, node->comments);
+        if (err != nullptr) {
+          delete node;
+          return err;
+        }
+        auto exp = readExpression(source, current);
+        if (!exp) {
+          delete node;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (exp->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return exp;
+        }
+        node->expressions.push_back(exp);
+        exp->addParent(node);
+        while (skipInvisible(source, current)) {
+        }
+        err = readComments(source, current, node->comments);
+        if (err != nullptr) {
+          delete node;
+          return err;
+        }
+        if (source[current.offset] != '}') {
+          delete node;
+          return createError(L"Invalid or unexpected token", source, current);
+        } else {
+          start.offset = current.offset + 1;
+        }
+      }
+      if (source[current.offset] == '\\') {
+        current.offset++;
+      }
+      current.offset++;
+    }
+    node->location = getLocation(source, position, current);
+    node->tag = tag;
+    if (tag) {
+      tag->addParent(node);
+    }
+    position = current;
+    return node;
+  }
+
   JSNode *readIdentifyLiteral(const std::wstring &source,
                               JSPosition &position) {
     auto current = position;
@@ -979,6 +1067,9 @@ private:
       node = readFunctionDeclaration(source, position);
     }
     if (!node) {
+      node = readTemplateLiteral(source, position);
+    }
+    if (!node) {
       auto current = position;
       node = readIdentifyLiteral(source, current);
       if (node) {
@@ -1117,19 +1208,22 @@ private:
       if (next) {
         delete next;
         delete node;
-        return createError(L"Invalid or unexpected token", source, current);
+        return createError(L"Invalid optional chain from new expression",
+                           source, current);
       }
       next = readOptionalComputedMemberExpression(source, current, callee);
       if (next) {
         delete next;
         delete node;
-        return createError(L"Invalid or unexpected token", source, current);
+        return createError(L"Invalid optional chain from new expression",
+                           source, current);
       }
       next = readOptionalCallExpression(source, current, callee);
       if (next) {
         delete next;
         delete node;
-        return createError(L"Invalid or unexpected token", source, current);
+        return createError(L"Invalid optional chain from new expression",
+                           source, current);
       }
       next = readMemberExpression(source, current, callee);
       if (!next) {
@@ -1168,7 +1262,11 @@ private:
       return err;
     }
     auto identifier = readIdentifyLiteral(source, current);
-    if (!identifier || (isKeyword(source, identifier->location))) {
+    if (!identifier) {
+      delete node;
+      return createError(L"Unexpected end of input", source, current);
+    }
+    if (isKeyword(source, identifier->location)) {
       delete identifier;
       delete node;
       return createError(L"Invalid or unexpected token", source,
@@ -1207,7 +1305,11 @@ private:
       return err;
     }
     auto field = readExpression(source, current);
-    if (!field || field->type == JS_NODE_TYPE::ERROR) {
+    if (!field) {
+      delete node;
+      return createError(L"Unexpected token", source, current);
+    }
+    if (field->type == JS_NODE_TYPE::ERROR) {
       delete node;
       return field;
     }
@@ -1438,6 +1540,7 @@ private:
     }
     if (node) {
       auto current = position;
+      bool optional = false;
       for (;;) {
         while (skipInvisible(source, current)) {
         };
@@ -1455,12 +1558,26 @@ private:
         }
         if (!next) {
           next = readOptionalMemberExpression(source, current, node);
+          optional = true;
         }
         if (!next) {
           next = readOptionalComputedMemberExpression(source, current, node);
+          optional = true;
         }
         if (!next) {
           next = readOptionalCallExpression(source, current, node);
+          optional = true;
+        }
+        if (!next) {
+          next = readTemplateLiteral(source, current, node);
+          if (next && next->type != JS_NODE_TYPE::ERROR) {
+            if (optional) {
+              delete next;
+              current = next->location.start;
+              return createError(L"Invalid tagged template on optional chain",
+                                 source, current);
+            }
+          }
         }
         if (!next) {
           break;
@@ -1470,6 +1587,7 @@ private:
           return next;
         }
         node = next;
+        position = current;
       }
     }
     return node;
@@ -1510,7 +1628,8 @@ private:
     }
     if (!callee) {
       delete node;
-      return createError(L"Invalid or unexpected token", source, current);
+      return createError(L"Invalid optional chain from new expression", source,
+                         current);
     }
     if (callee->type == JS_NODE_TYPE::ERROR) {
       delete node;
@@ -1576,6 +1695,7 @@ private:
   }
 
   JSNode *readExpression15(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression16(source, position);
     if (node && node->type == JS_NODE_TYPE::ERROR) {
       return node;
@@ -1620,7 +1740,7 @@ private:
             token->addParent(n);
             n->left = node;
             node->addParent(n);
-            n->location = getLocation(source, position, current);
+            n->location = getLocation(source, base, current);
             position = current;
             node = n;
           }
@@ -1777,6 +1897,7 @@ private:
   }
 
   JSNode *readExpression14(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readTypeofExpression(source, position);
     if (!node) {
       node = readVoidExpression(source, position);
@@ -1815,7 +1936,7 @@ private:
           }
           n->right = value;
           value->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         } else {
@@ -1832,6 +1953,7 @@ private:
   }
 
   JSNode *readExpression13(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression14(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -1876,7 +1998,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -1888,6 +2010,7 @@ private:
   }
 
   JSNode *readExpression12(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression13(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -1934,7 +2057,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -1946,6 +2069,7 @@ private:
   }
 
   JSNode *readExpression11(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression12(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -1991,7 +2115,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -2003,6 +2127,7 @@ private:
   }
 
   JSNode *readExpression10(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression11(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -2049,7 +2174,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -2061,6 +2186,7 @@ private:
   }
 
   JSNode *readExpression9(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression10(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -2113,7 +2239,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -2125,6 +2251,7 @@ private:
   }
 
   JSNode *readExpression8(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression9(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -2172,7 +2299,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -2184,7 +2311,7 @@ private:
   }
 
   JSNode *readExpression7(const std::wstring &source, JSPosition &position) {
-
+    auto base = position;
     auto node = readExpression8(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -2229,7 +2356,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -2241,6 +2368,7 @@ private:
   }
 
   JSNode *readExpression6(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression7(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -2285,7 +2413,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -2297,7 +2425,7 @@ private:
   }
 
   JSNode *readExpression5(const std::wstring &source, JSPosition &position) {
-
+    auto base = position;
     auto node = readExpression6(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -2342,7 +2470,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -2354,6 +2482,7 @@ private:
   }
 
   JSNode *readExpression4(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression5(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -2398,7 +2527,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -2410,6 +2539,7 @@ private:
   }
 
   JSNode *readExpression3(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression4(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -2455,7 +2585,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
@@ -2521,6 +2651,7 @@ private:
   }
 
   JSNode *readExpression2(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readYieldExpression(source, position);
     if (!node) {
       node = readArrowFunctionDeclaration(source, position);
@@ -2611,7 +2742,7 @@ private:
             }
             n->alternate = alternate;
             alternate->addParent(n);
-            n->location = getLocation(source, position, current);
+            n->location = getLocation(source, base, current);
             position = current;
             node = n;
           } else if (!token->location.is(source, L"=") &&
@@ -2656,7 +2787,7 @@ private:
             }
             n->right = right;
             right->addParent(n);
-            n->location = getLocation(source, position, current);
+            n->location = getLocation(source, base, current);
             position = current;
             node = n;
           }
@@ -2669,6 +2800,7 @@ private:
   }
 
   JSNode *readExpression1(const std::wstring &source, JSPosition &position) {
+    auto base = position;
     auto node = readExpression2(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
@@ -2713,7 +2845,7 @@ private:
           }
           n->right = right;
           right->addParent(n);
-          n->location = getLocation(source, position, current);
+          n->location = getLocation(source, base, current);
           position = current;
           node = n;
         }
