@@ -1008,7 +1008,42 @@ private:
     auto node = new JSExpressionStatementNode{};
     node->expression = expression;
     expression->addParent(node);
-    node->location = expression->location;
+    auto newline = false;
+    auto n = new JSBinaryExpressionNode{};
+    for (;;) {
+      if (skipWhiteSpace(source, current)) {
+        continue;
+      }
+      if (skipLineTerminator(source, current)) {
+        newline = true;
+        break;
+      }
+      auto comment = readComment(source, current);
+      if (comment) {
+        if (comment->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          delete node;
+          return comment;
+        }
+        n->comments.push_back(comment);
+        continue;
+      }
+      break;
+    }
+    auto token = readSymbolToken(source, current);
+    if (token && token->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return token;
+    }
+    if (token && !token->location.is(source, L";")) {
+      current = token->location.start;
+    }
+    delete token;
+    if (!newline) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    node->location = getLocation(source, position, current);
     position = current;
     return node;
   }
