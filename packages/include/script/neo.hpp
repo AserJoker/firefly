@@ -58,6 +58,9 @@ struct JSLocation {
     return result;
   }
 };
+enum class ACCESSOR_TYPE { GET, SET };
+
+enum class DECLARATION_TYPE { VAR, CONST, LET };
 
 enum class JS_NODE_TYPE {
 
@@ -141,10 +144,9 @@ enum class JS_NODE_TYPE {
   EXPRESSION_TYPEOF,
   EXPRESSION_GROUP,
   EXPRESSION_ASSIGMENT,
+  EXPRESSION_SPREAD,
 
-  EXPRESSION_REST,
-
-  PATTERN_REST_ITEM,
+  PATTERN_SPREAD_ITEM,
   PATTERN_OBJECT,
   PATTERN_OBJECT_ITEM,
   PATTERN_ARRAY,
@@ -165,6 +167,7 @@ enum class JS_NODE_TYPE {
   EXPORT_SPECIFIER,
   EXPORT_ALL,
 
+  DECLARATION_FUNCTION_ARGUMENT,
   DECLARATION_ARROW_FUNCTION,
   DECLARATION_FUNCTION,
   DECLARATION_FUNCTION_BODY,
@@ -299,6 +302,12 @@ struct JSBinaryExpressionNode : public JSNode {
   JSNode *opt;
   JSBinaryExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_BINARY; }
 };
+struct JSAssigmentExpressionNode : public JSNode {
+  JSNode *left;
+  JSNode *right;
+  JSNode *opt;
+  JSAssigmentExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_ASSIGMENT; }
+};
 
 struct JSGroupExpressionNode : public JSNode {
   JSNode *expression;
@@ -382,9 +391,62 @@ struct JSConditionExpressionNode : public JSNode {
   JSConditionExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_CONDITION; }
 };
 
-struct JSRestExpressionNode : public JSNode {
+struct JSSpreadExpression : public JSNode {
   JSNode *value;
-  JSRestExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_REST; }
+  JSSpreadExpression() { type = JS_NODE_TYPE::EXPRESSION_SPREAD; }
+};
+
+struct JSObjectProperty : public JSNode {
+  JSNode *key;
+  JSNode *value;
+  JSObjectProperty() { type = JS_NODE_TYPE::OBJECT_PROPERTY; }
+};
+
+struct JSObjectMethod : public JSNode {
+  JSNode *key;
+  std::vector<JSNode *> arguments;
+  JSNode *body;
+  bool async;
+  bool generator;
+  JSObjectMethod() { type = JS_NODE_TYPE::OBJECT_METHOD; }
+};
+
+struct JSObjectAccessor : public JSNode {
+  JSNode *key;
+  std::vector<JSNode *> arguments;
+  JSNode *body;
+  ACCESSOR_TYPE accessor;
+  JSObjectAccessor() { type = JS_NODE_TYPE::OBJECT_ACCESSOR; }
+};
+
+struct JSObjectDeclarationNode : public JSNode {
+  std::vector<JSNode *> properties;
+  JSObjectDeclarationNode() { type = JS_NODE_TYPE::DECLARATION_OBJECT; }
+};
+
+struct JSFunctionArgumentDeclaration : public JSNode {
+  JSNode *identifier;
+  JSNode *value;
+  JSFunctionArgumentDeclaration() {
+    type = JS_NODE_TYPE::DECLARATION_FUNCTION_ARGUMENT;
+  }
+};
+
+struct JSFunctionBodyDeclaration : public JSNode {
+  std::vector<JSNode *> directives;
+  std::vector<JSNode *> statements;
+  JSFunctionBodyDeclaration() {
+    type = JS_NODE_TYPE::DECLARATION_FUNCTION_BODY;
+  }
+};
+
+struct JSFunctionDeclaration : public JSNode {
+  JSNode *name;
+  JSNode *body;
+  std::vector<JSNode *> arguments;
+  bool async;
+  bool generator;
+  JSFunctionDeclaration() { type = JS_NODE_TYPE::DECLARATION_FUNCTION; }
 };
 
 class JSParser {
@@ -457,6 +519,57 @@ private:
   }
 
 private:
+  JSNode *findOptional(JSNode *node) {
+    if (node->type == JS_NODE_TYPE::EXPRESSION_OPTIONAL_CALL ||
+        node->type == JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER ||
+        node->type == JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER) {
+      return node;
+    }
+    if (node->type == JS_NODE_TYPE::EXPRESSION_MEMBER) {
+      return findOptional(dynamic_cast<JSMemberExpressionNode *>(node)->host);
+    }
+    if (node->type == JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER) {
+      return findOptional(
+          dynamic_cast<JSComputedMemberExpressionNode *>(node)->host);
+    }
+    return nullptr;
+  }
+
+  JSNode *checkAssigment(JSNode *node, const std::wstring &source) {
+    if (node->type == JS_NODE_TYPE::EXPRESSION_GROUP) {
+      return checkAssigment(
+          dynamic_cast<JSGroupExpressionNode *>(node)->expression, source);
+    }
+    if (node->type == JS_NODE_TYPE::LITERAL_IDENTITY) {
+      return nullptr;
+    }
+    auto opt = findOptional(node);
+    if (opt) {
+      if (opt->type == JS_NODE_TYPE::EXPRESSION_OPTIONAL_CALL) {
+        return createError(L"Invalid left-hand side in assignment", source,
+                           dynamic_cast<JSOptionalCallExpressionNode *>(opt)
+                               ->callee->location.end);
+      }
+      if (opt->type == JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER) {
+        return createError(L"Invalid left-hand side in assignment", source,
+                           dynamic_cast<JSOptionalMemberExpressionNode *>(opt)
+                               ->host->location.end);
+      }
+      if (opt->type == JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER) {
+        return createError(
+            L"Invalid left-hand side in assignment", source,
+            dynamic_cast<JSOptionalComputedMemberExpressionNode *>(opt)
+                ->host->location.end);
+      }
+    }
+    if (node->type == JS_NODE_TYPE::EXPRESSION_MEMBER ||
+        node->type == JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER) {
+      return nullptr;
+    }
+    return createError(L"Invalid left-hand side in assignment", source,
+                       node->location.start);
+  }
+
   JSLocation getLocation(const std::wstring &source, const JSPosition &start,
                          const JSPosition &end) {
     JSLocation loc;
@@ -510,6 +623,50 @@ private:
   }
 
 private:
+  bool checkIdentifier(const std::vector<std::wstring> &identifiers,
+                       const std::wstring &source, JSPosition &position,
+                       JSNode **ptoken = nullptr) {
+    auto current = position;
+    auto token = readIdentifyLiteral(source, current);
+    if (!token) {
+      return false;
+    }
+    for (auto &identifier : identifiers) {
+      if (token->location.is(source, identifier)) {
+        position = current;
+        if (ptoken) {
+          *ptoken = token;
+        } else {
+          delete token;
+        }
+        return true;
+      }
+    }
+    delete token;
+    return false;
+  }
+  bool checkSymbol(const std::vector<std::wstring> &symbols,
+                   const std::wstring &source, JSPosition &position,
+                   JSNode **ptoken = nullptr) {
+    auto current = position;
+    auto token = readSymbolToken(source, current);
+    if (!token) {
+      return false;
+    }
+    for (auto &symbol : symbols) {
+      if (token->location.is(source, symbol)) {
+        position = current;
+        if (ptoken) {
+          *ptoken = token;
+        } else {
+          delete token;
+        }
+        return true;
+      }
+    }
+    delete token;
+    return false;
+  }
   JSNode *readSymbolToken(const std::wstring &source, JSPosition &position) {
     static const std::vector<std::wstring> operators = {
         L">>>=", L"...",    L"<<=", L">>>", L"===", L"!==", L"**=", L">>=",
@@ -959,23 +1116,28 @@ private:
 
   JSNode *readDirective(const std::wstring &source, JSPosition &position) {
     auto current = position;
-    auto node = readExpression(source, current);
+    auto node = readStringLiteral(source, current);
     if (!node || node->type == JS_NODE_TYPE::ERROR) {
       return node;
     }
-    JS_NODE_TYPE type = node->type;
     delete node;
-    if (type != JS_NODE_TYPE::LITERAL_STRING) {
-      return nullptr;
-    }
     node = new JSDirectiveNode();
     node->location = getLocation(source, position, current);
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err != nullptr) {
+      delete node;
+      return err;
+    }
+    if (checkSymbol({L";"}, source, current)) {
+    }
     position = current;
     return node;
   }
 
   JSNode *readEmptyStatement(const std::wstring &source, JSPosition &position) {
-    if (source[position.offset] == ';') {
+    if (checkSymbol({L";"}, source, position)) {
       auto current = position;
       current.offset++;
       auto node = new JSEmptyStatementNode{};
@@ -1030,16 +1192,8 @@ private:
       }
       break;
     }
-    auto token = readSymbolToken(source, current);
-    if (token && token->type == JS_NODE_TYPE::ERROR) {
-      delete node;
-      return token;
-    }
-    if (token && !token->location.is(source, L";")) {
-      current = token->location.start;
-    }
-    delete token;
-    if (!newline) {
+    if (!checkSymbol({L";"}, source, current) && !newline &&
+        source[current.offset]) {
       delete node;
       return createError(L"Invalid or unexpected token", source, current);
     }
@@ -1048,25 +1202,245 @@ private:
     return node;
   }
 
-  JSNode *readObjectPattern(const std::wstring &source, JSPosition &position) {
+  JSNode *readObjectDeclaration(const std::wstring &source,
+                                JSPosition &position) {
     // TODO: not implement
     return nullptr;
   }
 
-  JSNode *readArrayPattern(const std::wstring &source, JSPosition &position) {
+  JSNode *readArrayDeclaration(const std::wstring &source,
+                               JSPosition &position) {
     // TODO: not implement
     return nullptr;
   }
 
-  JSNode *readClassPattern(const std::wstring &source, JSPosition &position) {
+  JSNode *readSpreadPattern(const std::wstring &source, JSPosition &position) {
     // TODO: not implement
     return nullptr;
+  }
+
+  JSNode *readFunctionArgument(const std::wstring &source,
+                               JSPosition &position) {
+    auto current = position;
+    auto node = new JSFunctionArgumentDeclaration{};
+    auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier) {
+      identifier = readSpreadPattern(source, current);
+    }
+    if (!identifier) {
+      delete node;
+      return nullptr;
+    }
+    node->identifier = identifier;
+    identifier->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err != nullptr) {
+      delete node;
+      return err;
+    }
+    if (checkSymbol({L"="}, source, current)) {
+      auto value = readExpression3(source, current);
+      if (!value) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+      if (value->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return value;
+      }
+      node->value = value;
+      value->addParent(node);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readFunctionBodyDeclaration(const std::wstring &source,
+                                      JSPosition &position) {
+    auto current = position;
+    auto node = new JSFunctionBodyDeclaration{};
+    if (!checkSymbol({L"{"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    for (;;) {
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
+      if (err != nullptr) {
+        delete node;
+        return err;
+      }
+      auto directive = readDirective(source, current);
+      if (!directive) {
+        break;
+      }
+      if (directive->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return directive;
+      }
+      node->directives.push_back(directive);
+      directive->addParent(node);
+    }
+    for (;;) {
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
+      if (err != nullptr) {
+        delete node;
+        return err;
+      }
+      auto statement = readStatement(source, current);
+      if (!statement) {
+        break;
+      }
+      if (statement->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return statement;
+      }
+      node->statements.push_back(statement);
+      statement->addParent(node);
+    }
+    if (!checkSymbol({L"}"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
   }
 
   JSNode *readFunctionDeclaration(const std::wstring &source,
                                   JSPosition &position) {
-    // TODO: not implement
-    return nullptr;
+    auto current = position;
+    auto node = new JSFunctionDeclaration{};
+    if (checkIdentifier({L"async"}, source, current)) {
+      node->async = true;
+    }
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkIdentifier({L"function"}, source, current)) {
+      delete node;
+      return nullptr;
+    }
+    while (skipInvisible(source, current)) {
+    };
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (checkSymbol({L"*"}, source, current)) {
+      node->generator = true;
+    }
+    while (skipInvisible(source, current)) {
+    };
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto identifier = readIdentifyLiteral(source, current);
+    if (identifier) {
+      node->name = identifier;
+      identifier->addParent(node);
+      if (isKeyword(source, identifier->location)) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+    }
+    while (skipInvisible(source, current)) {
+    };
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+
+    if (!checkSymbol({L"("}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    };
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto argument = readFunctionArgument(source, current);
+    while (argument) {
+      if (argument->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return argument;
+      }
+      node->arguments.push_back(argument);
+      argument->addParent(node);
+      while (skipInvisible(source, current)) {
+      };
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto backup = current;
+      if (checkSymbol({L")"}, source, current)) {
+        current = backup;
+        break;
+      }
+      if (!checkSymbol({L","}, source, current)) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+      while (skipInvisible(source, current)) {
+      };
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      argument = readFunctionArgument(source, current);
+    }
+    while (skipInvisible(source, current)) {
+    };
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L")"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    };
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto body = readFunctionBodyDeclaration(source, current);
+    if (!body) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (body->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return body;
+    }
+    node->body = body;
+    body->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
   }
 
   JSNode *readArrowFunctionDeclaration(const std::wstring &source,
@@ -1093,10 +1467,10 @@ private:
       node = readUndefinedLiteral(source, position);
     }
     if (!node) {
-      node = readObjectPattern(source, position);
+      node = readObjectDeclaration(source, position);
     }
     if (!node) {
-      node = readClassPattern(source, position);
+      node = readArrayDeclaration(source, position);
     }
     if (!node) {
       node = readFunctionDeclaration(source, position);
@@ -1124,12 +1498,7 @@ private:
   JSNode *readGroupExpression(const std::wstring &source,
                               JSPosition &position) {
     auto current = position;
-    auto token = readSymbolToken(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (token->location.is(source, L"(")) {
-      delete token;
+    if (checkSymbol({L"("}, source, current)) {
       auto node = new JSGroupExpressionNode{};
       while (skipInvisible(source, current)) {
       };
@@ -1157,17 +1526,10 @@ private:
         delete node;
         return err;
       }
-      token = readSymbolToken(source, current);
-      if (!token || token->type == JS_NODE_TYPE::ERROR) {
-        delete node;
-        return token;
-      }
-      if (!token->location.is(source, L")")) {
-        delete token;
+      if (!checkSymbol({L")"}, source, current)) {
         delete node;
         return createError(L"Invalid or unexpected token", source, current);
       }
-      delete token;
       node->location = getLocation(source, position, current);
       position = current;
       return node;
@@ -1187,15 +1549,9 @@ private:
                                 JSPosition &position) {
 
     auto current = position;
-    auto token = readIdentifyLiteral(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"new")) {
-      delete token;
+    if (!checkIdentifier({L"new"}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto node = new JSNewExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -1279,15 +1635,9 @@ private:
   JSNode *readMemberExpression(const std::wstring &source, JSPosition &position,
                                JSNode *left) {
     auto current = position;
-    auto token = readSymbolToken(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L".")) {
-      delete token;
+    if (!checkSymbol({L"."}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto node = new JSMemberExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -1322,15 +1672,9 @@ private:
   JSNode *readComputedMemberExpression(const std::wstring &source,
                                        JSPosition &position, JSNode *left) {
     auto current = position;
-    auto token = readSymbolToken(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"[")) {
-      delete token;
+    if (!checkSymbol({L"["}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto node = new JSComputedMemberExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -1342,7 +1686,7 @@ private:
     auto field = readExpression(source, current);
     if (!field) {
       delete node;
-      return createError(L"Unexpected token", source, current);
+      return createError(L"Invalid or unexpected token", source, current);
     }
     if (field->type == JS_NODE_TYPE::ERROR) {
       delete node;
@@ -1356,22 +1700,10 @@ private:
       delete node;
       return err;
     }
-    token = readSymbolToken(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token) {
-      delete node;
-      return createError(L"Invalid or unexpected token", source, current);
-    } else if (token->type == JS_NODE_TYPE::ERROR) {
-      delete node;
-      return token;
-    } else if (!token->location.is(source, L"]")) {
-      delete token;
+    if (!checkSymbol({L"]"}, source, current)) {
       delete node;
       return createError(L"Invalid or unexpected token", source, current);
     }
-    delete token;
     node->host = left;
     left->addParent(node);
     field->addParent(node);
@@ -1380,18 +1712,33 @@ private:
     return node;
   }
 
+  JSNode *readSpreadExpression(const std::wstring &source,
+                               JSPosition &position) {
+    auto current = position;
+    if (!checkSymbol({L"..."}, source, current)) {
+      return nullptr;
+    }
+    auto value = readExpression2(source, current);
+    if (!value) {
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (value->type == JS_NODE_TYPE::ERROR) {
+      return value;
+    }
+    auto node = new JSSpreadExpression{};
+    node->value = value;
+    value->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
   JSNode *readCallExpression(const std::wstring &source, JSPosition &position,
                              JSNode *left) {
     auto current = position;
-    auto token = readSymbolToken(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"(")) {
-      delete token;
+    if (!checkSymbol({L"("}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto node = new JSCallExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -1400,7 +1747,10 @@ private:
       delete node;
       return err;
     }
-    auto arg = readExpression18(source, current);
+    auto arg = readExpression2(source, current);
+    if (!arg) {
+      arg = readSpreadExpression(source, current);
+    }
     if (arg && arg->type == JS_NODE_TYPE::ERROR) {
       delete node;
       return arg;
@@ -1410,24 +1760,17 @@ private:
       arg->addParent(node);
       while (skipInvisible(source, current)) {
       };
-      auto err = readComments(source, current, node->comments);
+      err = readComments(source, current, node->comments);
       if (err) {
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (!token || token->type == JS_NODE_TYPE::ERROR) {
-        delete node;
-        return token;
-      }
-      if (token->location.is(source, L",")) {
-        delete token;
-      } else if (token->location.is(source, L")")) {
-        current = token->location.start;
-        delete token;
+      auto backup = current;
+      if (checkSymbol({L","}, source, current)) {
+      } else if (checkSymbol({L")"}, source, current)) {
+        current = backup;
         break;
       } else {
-        delete token;
         delete node;
         return createError(L"Invalid or unexpected token", source, current);
       }
@@ -1438,7 +1781,10 @@ private:
         delete node;
         return err;
       }
-      auto arg = readExpression18(source, current);
+      arg = readExpression2(source, current);
+      if (!arg) {
+        arg = readSpreadExpression(source, current);
+      }
       if (arg && arg->type == JS_NODE_TYPE::ERROR) {
         delete node;
         return arg;
@@ -1451,20 +1797,10 @@ private:
       delete node;
       return err;
     }
-    token = readSymbolToken(source, current);
-    if (!token) {
-      delete node;
-      return createError(L"Invalid or unexpected token", source, current);
-    } else if (token->type == JS_NODE_TYPE::ERROR) {
-      delete node;
-      return token;
-    } else if (!token->location.is(source, L")")) {
-      delete token;
+    if (!checkSymbol({L")"}, source, current)) {
       delete node;
       return createError(L"Invalid or unexpected token", source, current);
     }
-
-    delete token;
     node->callee = left;
     left->addParent(node);
     node->location = getLocation(source, left->location.start, current);
@@ -1475,15 +1811,10 @@ private:
   JSNode *readOptionalMemberExpression(const std::wstring &source,
                                        JSPosition &position, JSNode *left) {
     auto current = position;
-    auto token = readSymbolToken(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"?.")) {
-      delete token;
+
+    if (!checkSymbol({L"?."}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto node = new JSOptionalMemberExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -1510,15 +1841,11 @@ private:
                                                JSPosition &position,
                                                JSNode *left) {
     auto current = position;
-    auto token = readSymbolToken(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"?.")) {
-      delete token;
+
+    if (!checkSymbol({L"?."}, source, current)) {
+
       return nullptr;
     }
-    delete token;
     auto computed = readComputedMemberExpression(source, current, left);
     if (!computed || computed->type == JS_NODE_TYPE::ERROR) {
       return computed;
@@ -1541,15 +1868,10 @@ private:
   JSNode *readOptionalCallExpression(const std::wstring &source,
                                      JSPosition &position, JSNode *left) {
     auto current = position;
-    auto token = readSymbolToken(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"?.")) {
-      delete token;
+
+    if (!checkSymbol({L"?."}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto call = readCallExpression(source, current, left);
     if (!call || call->type == JS_NODE_TYPE::ERROR) {
       return call;
@@ -1629,15 +1951,11 @@ private:
   }
   JSNode *readNewExpression(const std::wstring &source, JSPosition &position) {
     auto current = position;
-    auto token = readIdentifyLiteral(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"new")) {
-      delete token;
+    if (!checkIdentifier({L"new"}, source, current)) {
+
       return nullptr;
     }
-    delete token;
+
     auto node = new JSNewExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -1759,27 +2077,15 @@ private:
         }
         break;
       }
-      if (!newline) {
-        auto token = readSymbolToken(source, current);
-        if (token) {
-          if (token->type == JS_NODE_TYPE::ERROR) {
-            delete node;
-            delete n;
-            return token;
-          } else if (!token->location.is(source, L"++") &&
-                     !token->location.is(source, L"--")) {
-            delete token;
-            delete n;
-          } else {
-            n->opt = token;
-            token->addParent(n);
-            n->left = node;
-            node->addParent(n);
-            n->location = getLocation(source, base, current);
-            position = current;
-            node = n;
-          }
-        }
+      JSNode *token = nullptr;
+      if (!newline && checkSymbol({L"++", L"--"}, source, current, &token)) {
+        n->opt = token;
+        token->addParent(n);
+        n->left = node;
+        node->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -1790,12 +2096,8 @@ private:
   JSNode *readTypeofExpression(const std::wstring &source,
                                JSPosition &position) {
     auto current = position;
-    auto token = readIdentifyLiteral(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"typeof")) {
-      delete token;
+    JSNode *token = nullptr;
+    if (!checkIdentifier({L"typeof"}, source, current, &token)) {
       return nullptr;
     }
     auto node = new JSBinaryExpressionNode{};
@@ -1826,15 +2128,9 @@ private:
 
   JSNode *readVoidExpression(const std::wstring &source, JSPosition &position) {
     auto current = position;
-    auto token = readIdentifyLiteral(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"void")) {
-      delete token;
+    if (!checkIdentifier({L"void"}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto node = new JSVoidExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -1862,15 +2158,9 @@ private:
   JSNode *readDeleteExpression(const std::wstring &source,
                                JSPosition &position) {
     auto current = position;
-    auto token = readIdentifyLiteral(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"delete")) {
-      delete token;
+    if (!checkIdentifier({L"delete"}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto node = new JSDeleteExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -1898,15 +2188,9 @@ private:
   JSNode *readAwaitExpression(const std::wstring &source,
                               JSPosition &position) {
     auto current = position;
-    auto token = readIdentifyLiteral(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"await")) {
-      delete token;
+    if (!checkIdentifier({L"await"}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto node = new JSAwaitExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -1945,40 +2229,29 @@ private:
     }
     if (!node) {
       auto current = position;
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
+      JSNode *token = nullptr;
+      if (checkSymbol({L"~", L"!", L"+", L"-", L"++", L"--"}, source, current,
+                      &token)) {
+        auto n = new JSBinaryExpressionNode{};
+        n->opt = token;
+        token->addParent(n);
+        auto value = readExpression14(source, current);
+        if (!value) {
           delete node;
-          return token;
+          return createError(L"Invalid or unexpected token", source, current);
         }
-        if (token->location.is(source, L"~") ||
-            token->location.is(source, L"!") ||
-            token->location.is(source, L"+") ||
-            token->location.is(source, L"-") ||
-            token->location.is(source, L"++") ||
-            token->location.is(source, L"--")) {
-          auto n = new JSBinaryExpressionNode{};
-          n->opt = token;
-          token->addParent(n);
-          auto value = readExpression14(source, current);
-          if (!value) {
-            delete node;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (value->type == JS_NODE_TYPE::ERROR) {
-            delete node;
-            return value;
-          }
-          n->right = value;
-          value->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
-        } else {
-          delete token;
+        if (value->type == JS_NODE_TYPE::ERROR) {
           delete node;
-          node = nullptr;
+          return value;
         }
+        n->right = value;
+        value->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
+      } else {
+        delete node;
+        node = nullptr;
       }
     }
     if (!node) {
@@ -2001,42 +2274,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"**")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression13(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"**"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression13(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2058,44 +2323,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"*") &&
-                   !token->location.is(source, L"/") &&
-                   !token->location.is(source, L"%")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression12(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"*", L"/", L"%"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression12(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2117,43 +2372,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"+") &&
-                   !token->location.is(source, L"-")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression11(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"+", L"-"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression11(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2175,44 +2421,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"<<") &&
-                   !token->location.is(source, L">>") &&
-                   !token->location.is(source, L">>>")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression10(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"<<", L">>", L">>>"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression10(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2234,50 +2470,35 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (!token) {
-        token = readIdentifyLiteral(source, current);
-      }
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"<") &&
-                   !token->location.is(source, L"<=") &&
-                   !token->location.is(source, L">") &&
-                   !token->location.is(source, L">=") &&
-                   !token->location.is(source, L"in") &&
-                   !token->location.is(source, L"instanceof")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression9(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"<", L"<=", L">", L">="}, source, current, &token) ||
+          checkIdentifier({L"in", L"instanceof"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression9(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2299,45 +2520,35 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"==") &&
-                   !token->location.is(source, L"!=") &&
-                   !token->location.is(source, L"===") &&
-                   !token->location.is(source, L"!==")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression8(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"==", L"!=", L"===", L"!=="}, source, current,
+                      &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression8(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2359,42 +2570,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"&")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression7(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"&"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression7(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2416,42 +2619,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"^")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression6(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"^"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression6(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2473,42 +2668,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"|")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression5(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"|"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression5(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2530,42 +2717,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"&&")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression4(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"&&"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression4(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2587,43 +2766,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L"||") &&
-                   !token->location.is(source, L"??")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression3(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L"||", L"??"}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression3(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -2633,17 +2803,10 @@ private:
 
   JSNode *readYieldExpression(const std::wstring &source,
                               JSPosition &position) {
-
     auto current = position;
-    auto token = readIdentifyLiteral(source, current);
-    if (!token || token->type == JS_NODE_TYPE::ERROR) {
-      return token;
-    }
-    if (!token->location.is(source, L"yield")) {
-      delete token;
+    if (!checkIdentifier({L"yield"}, source, current)) {
       return nullptr;
     }
-    delete token;
     auto node = new JSYieldExpressionNode{};
     while (skipInvisible(source, current)) {
     };
@@ -2652,22 +2815,12 @@ private:
       delete node;
       return err;
     }
-    token = readSymbolToken(source, current);
-    if (token) {
-      if (token->type == JS_NODE_TYPE::ERROR) {
-        delete node;
-        return token;
-      }
-      if (!token->location.is(source, L"*")) {
-        current = token->location.start;
-      } else {
-        auto n = new JSYieldDelegateExpressionNode;
-        n->comments = node->comments;
-        node->comments.clear();
-        delete node;
-        node = n;
-      }
-      delete token;
+    if (checkSymbol({L"*"}, source, current)) {
+      auto n = new JSYieldDelegateExpressionNode;
+      n->comments = node->comments;
+      node->comments.clear();
+      delete node;
+      node = n;
     }
     auto value = readExpression2(source, current);
     if (!value) {
@@ -2685,6 +2838,151 @@ private:
     return node;
   }
 
+  JSNode *readObjectPattern(const std::wstring &source, JSPosition &position) {
+    // TODO: not implement
+    return nullptr;
+  }
+
+  JSNode *readArrayPattern(const std::wstring &source, JSPosition &position) {
+    // TODO: not implement
+    return nullptr;
+  }
+
+  JSNode *readConditionExpression(const std::wstring &source,
+                                  JSPosition &position) {
+    auto current = position;
+    auto condition = readExpression3(source, current);
+    if (!condition || condition->type == JS_NODE_TYPE::ERROR) {
+      return condition;
+    }
+    auto node = new JSConditionExpressionNode{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      delete condition;
+      return err;
+    }
+    if (!checkSymbol({L"?"}, source, current)) {
+      delete node;
+      position = current;
+      return condition;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto consequent = readExpression2(source, current);
+    if (!consequent) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (consequent->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return consequent;
+    }
+    node->consequent = consequent;
+    consequent->addParent(node);
+
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L":"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto alternate = readExpression2(source, current);
+    if (!alternate) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (alternate->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return alternate;
+    }
+    node->alternate = alternate;
+    alternate->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  JSNode *readAssigmentExpression(const std::wstring &source,
+                                  JSPosition &position) {
+    auto current = position;
+    auto left = readArrayPattern(source, current);
+    if (!left) {
+      left = readObjectPattern(source, current);
+    }
+    if (!left) {
+      left = readExpression17(source, current);
+    }
+    if (!left || left->type == JS_NODE_TYPE::ERROR) {
+      return left;
+    }
+    auto node = new JSAssigmentExpressionNode{};
+    node->left = left;
+    left->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    JSNode *token = nullptr;
+    if (!checkSymbol({L"=", L"+=", L"-=", L"**=", L"*=", L"/=", L"%=", L"<<=",
+                      L">>=", L">>>=", L"&=", L"|=", L"^=", L"&&=", L"||=",
+                      LR"(??=)"},
+                     source, current, &token)) {
+      delete node;
+      return nullptr;
+    }
+    node->opt = token;
+    token->addParent(node);
+    err = checkAssigment(left, source);
+    if (err) {
+      delete node;
+      return err;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto right = readExpression2(source, current);
+    if (!right) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (right->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return right;
+    }
+    node->right = right;
+    right->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
   JSNode *readExpression2(const std::wstring &source, JSPosition &position) {
     auto base = position;
     auto node = readYieldExpression(source, position);
@@ -2692,144 +2990,10 @@ private:
       node = readArrowFunctionDeclaration(source, position);
     }
     if (!node) {
-      node = readExpression3(source, position);
-      if (node && node->type != JS_NODE_TYPE::ERROR) {
-        auto current = position;
-        auto n = new JSBinaryExpressionNode{};
-        while (skipInvisible(source, current)) {
-        }
-        auto err = readComments(source, current, n->comments);
-        if (err) {
-          delete n;
-          delete node;
-          return err;
-        }
-        auto token = readSymbolToken(source, current);
-        if (token) {
-          if (token->type == JS_NODE_TYPE::ERROR) {
-            delete node;
-            delete n;
-            return token;
-          } else if (token->location.is(source, L"?")) {
-            delete token;
-            auto n = new JSConditionExpressionNode;
-            n->condition = node;
-            node->addParent(n);
-            while (skipInvisible(source, current)) {
-            }
-            auto err = readComments(source, current, n->comments);
-            if (err) {
-              delete n;
-              return err;
-            }
-            auto consequent = readExpression2(source, current);
-            if (!consequent) {
-              delete n;
-              return createError(L"Invalid or unexpected token", source,
-                                 current);
-            }
-            if (consequent->type == JS_NODE_TYPE::ERROR) {
-              delete n;
-              return consequent;
-            }
-            n->consequent = consequent;
-            consequent->addParent(n);
-            while (skipInvisible(source, current)) {
-            }
-            err = readComments(source, current, n->comments);
-            if (err) {
-              delete n;
-              return err;
-            }
-            token = readSymbolToken(source, current);
-            if (!token) {
-              delete n;
-              return createError(L"Invalid or unexpected token", source,
-                                 current);
-            }
-            if (token->type == JS_NODE_TYPE::ERROR) {
-              delete n;
-              return consequent;
-            }
-            if (!token->location.is(source, L":")) {
-              delete token;
-              delete n;
-              return createError(L"Invalid or unexpected token", source,
-                                 current);
-            }
-
-            while (skipInvisible(source, current)) {
-            }
-            err = readComments(source, current, n->comments);
-            if (err) {
-              delete n;
-              return err;
-            }
-            auto alternate = readExpression2(source, current);
-            if (!alternate) {
-              delete n;
-              return createError(L"Invalid or unexpected token", source,
-                                 current);
-            }
-            if (alternate->type == JS_NODE_TYPE::ERROR) {
-              delete n;
-              return alternate;
-            }
-            n->alternate = alternate;
-            alternate->addParent(n);
-            n->location = getLocation(source, base, current);
-            position = current;
-            node = n;
-          } else if (!token->location.is(source, L"=") &&
-                     !token->location.is(source, L"+=") &&
-                     !token->location.is(source, L"-=") &&
-                     !token->location.is(source, L"**=") &&
-                     !token->location.is(source, L"*=") &&
-                     !token->location.is(source, L"/=") &&
-                     !token->location.is(source, L"%=") &&
-                     !token->location.is(source, L"<<=") &&
-                     !token->location.is(source, L">>=") &&
-                     !token->location.is(source, L">>>=") &&
-                     !token->location.is(source, L"&=") &&
-                     !token->location.is(source, L"|=") &&
-                     !token->location.is(source, L"^=") &&
-                     !token->location.is(source, L"&&=") &&
-                     !token->location.is(source, L"||=") &&
-                     !token->location.is(source, LR"(??=)")) {
-            delete n;
-          } else {
-            n->left = node;
-            node->addParent(n);
-            n->opt = token;
-            token->addParent(n);
-            while (skipInvisible(source, current)) {
-            }
-            auto err = readComments(source, current, n->comments);
-            if (err) {
-              delete n;
-              delete node;
-              return err;
-            }
-            auto right = readExpression2(source, current);
-            if (!right) {
-              delete n;
-              return createError(L"Invalid or unexpected token", source,
-                                 current);
-            }
-            if (right->type == JS_NODE_TYPE::ERROR) {
-              delete n;
-              return right;
-            }
-            n->right = right;
-            right->addParent(n);
-            n->location = getLocation(source, base, current);
-            position = current;
-            node = n;
-          }
-        } else {
-          delete n;
-        }
-      }
+      node = readAssigmentExpression(source, position);
+    }
+    if (!node) {
+      node = readConditionExpression(source, position);
     }
     return node;
   }
@@ -2848,42 +3012,34 @@ private:
         delete node;
         return err;
       }
-      auto token = readSymbolToken(source, current);
-      if (token) {
-        if (token->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          delete n;
-          return token;
-        } else if (!token->location.is(source, L",")) {
-          delete n;
-        } else {
-          n->left = node;
-          node->addParent(n);
-          n->opt = token;
-          token->addParent(n);
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, n->comments);
-          if (err) {
-            delete n;
-            delete node;
-            return err;
-          }
-          auto right = readExpression1(source, current);
-          if (!right) {
-            delete n;
-            return createError(L"Invalid or unexpected token", source, current);
-          }
-          if (right->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            return right;
-          }
-          n->right = right;
-          right->addParent(n);
-          n->location = getLocation(source, base, current);
-          position = current;
-          node = n;
+      JSNode *token = nullptr;
+      if (checkSymbol({L","}, source, current, &token)) {
+        n->left = node;
+        node->addParent(n);
+        n->opt = token;
+        token->addParent(n);
+        while (skipInvisible(source, current)) {
         }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto right = readExpression1(source, current);
+        if (!right) {
+          delete n;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+        if (right->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          return right;
+        }
+        n->right = right;
+        right->addParent(n);
+        n->location = getLocation(source, base, current);
+        position = current;
+        node = n;
       } else {
         delete n;
       }
@@ -3135,11 +3291,11 @@ private:
     case JS_NODE_TYPE::EXPRESSION_ASSIGMENT:
       type = L"EXPRESSION_ASSIGMENT";
       break;
-    case JS_NODE_TYPE::EXPRESSION_REST:
-      type = L"EXPRESSION_REST";
+    case JS_NODE_TYPE::EXPRESSION_SPREAD:
+      type = L"EXPRESSION_SPREAD";
       break;
-    case JS_NODE_TYPE::PATTERN_REST_ITEM:
-      type = L"PATTERN_REST_ITEM";
+    case JS_NODE_TYPE::PATTERN_SPREAD_ITEM:
+      type = L"PATTERN_SPREAD_ITEM";
       break;
     case JS_NODE_TYPE::PATTERN_OBJECT:
       type = L"PATTERN_OBJECT";
@@ -3191,6 +3347,9 @@ private:
       break;
     case JS_NODE_TYPE::EXPORT_ALL:
       type = L"EXPORT_ALL";
+      break;
+    case JS_NODE_TYPE::DECLARATION_FUNCTION_ARGUMENT:
+      type = L"DECLARATION_FUNCTION_ARGUMENT";
       break;
     case JS_NODE_TYPE::DECLARATION_ARROW_FUNCTION:
       type = L"DECLARATION_ARROW_FUNCTION";
