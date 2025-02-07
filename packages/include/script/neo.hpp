@@ -5,6 +5,7 @@
 #include <fmt/format.h>
 #include <fmt/xchar.h>
 #include <functional>
+#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -48,6 +49,13 @@ struct JSLocation {
       }
     }
     return true;
+  }
+  std::wstring get(const std::wstring &source) {
+    std::wstring result;
+    for (auto i = start.offset; i < end.offset; i++) {
+      result += source[i];
+    }
+    return result;
   }
 };
 
@@ -176,10 +184,20 @@ struct JSNode {
     for (auto child : children) {
       delete child;
     }
+    for (auto comment : comments) {
+      delete comment;
+    }
   }
   void addParent(JSNode *parent) {
     parent->children.push_back(this);
     this->parent = parent;
+  }
+  void removeParent(JSNode *parent) {
+    auto it = std::find(parent->children.begin(), parent->children.end(), this);
+    if (it != parent->children.end()) {
+      parent->children.erase(it);
+      this->parent = nullptr;
+    }
   }
 };
 
@@ -210,6 +228,26 @@ struct JSRegexpLiteralNode : public JSNode {
 
 struct JSIdentityLiteralNode : public JSNode {
   JSIdentityLiteralNode() { type = JS_NODE_TYPE::LITERAL_IDENTITY; }
+};
+
+struct JSNullLiteralNode : public JSNode {
+  JSNullLiteralNode() { type = JS_NODE_TYPE::LITERAL_NULL; }
+};
+
+struct JSUndefinedLiteralNode : public JSNode {
+  JSUndefinedLiteralNode() { type = JS_NODE_TYPE::LITERAL_UNDEFINED; }
+};
+
+struct JSBooleanLiteralNode : public JSNode {
+  JSBooleanLiteralNode() { type = JS_NODE_TYPE::LITERAL_BOOLEAN; }
+};
+
+struct JSThisNode : public JSNode {
+  JSThisNode() { type = JS_NODE_TYPE::THIS; }
+};
+
+struct JSSuperNode : public JSNode {
+  JSSuperNode() { type = JS_NODE_TYPE::SUPER; }
 };
 
 struct JSCommentLiteralNode : public JSNode {
@@ -248,7 +286,111 @@ struct JSExpressionStatementNode : public JSNode {
   JSExpressionStatementNode() { type = JS_NODE_TYPE::STATEMENT_EXPRESSION; }
 };
 
+struct JSBinaryExpressionNode : public JSNode {
+  JSNode *left;
+  JSNode *right;
+  JSNode *opt;
+  JSBinaryExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_BINARY; }
+};
+
+struct JSGroupExpressionNode : public JSNode {
+  JSNode *expression;
+  JSGroupExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_GROUP; }
+};
+
+struct JSMemberExpressionNode : public JSNode {
+  JSNode *host;
+  JSNode *field;
+  JSMemberExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_MEMBER; }
+};
+
+struct JSComputedMemberExpressionNode : public JSMemberExpressionNode {
+  JSComputedMemberExpressionNode() {
+    type = JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER;
+  }
+};
+
+struct JSOptionalMemberExpressionNode : public JSMemberExpressionNode {
+  JSOptionalMemberExpressionNode() {
+    type = JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER;
+  }
+};
+
+struct JSOptionalComputedMemberExpressionNode : public JSMemberExpressionNode {
+  JSOptionalComputedMemberExpressionNode() {
+    type = JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER;
+  }
+};
+
+struct JSCallExpressionNode : public JSNode {
+  JSNode *callee;
+  std::vector<JSNode *> arguments;
+  JSCallExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_CALL; }
+};
+
+struct JSOptionalCallExpressionNode : public JSCallExpressionNode {
+  JSOptionalCallExpressionNode() {
+    type = JS_NODE_TYPE::EXPRESSION_OPTIONAL_CALL;
+  }
+};
+
+struct JSNewExpressionNode : public JSCallExpressionNode {
+  JSNewExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_NEW; }
+};
+
+struct JSAwaitExpressionNode : public JSNode {
+  JSNode *value;
+  JSAwaitExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_AWAIT; }
+};
+
+struct JSYieldExpressionNode : public JSNode {
+  JSNode *value;
+  JSYieldExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_YIELD; }
+};
+
+struct JSYieldDelegateExpressionNode : public JSYieldExpressionNode {
+  JSYieldDelegateExpressionNode() {
+    type = JS_NODE_TYPE::EXPRESSION_YIELD_DELEGATE;
+  }
+};
+
+struct JSDeleteExpressionNode : public JSNode {
+  JSNode *value;
+  JSDeleteExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_DELETE; }
+};
+
+struct JSVoidExpressionNode : public JSNode {
+  JSNode *value;
+  JSVoidExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_VOID; }
+};
+
+struct JSUpdateExpresionNode : public JSBinaryExpressionNode {
+  JSUpdateExpresionNode() { type = JS_NODE_TYPE::EXPRESSION_UPDATE; }
+};
+
+struct JSConditionExpressionNode : public JSNode {
+  JSNode *condition;
+  JSNode *alternate;
+  JSNode *consequent;
+  JSConditionExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_CONDITION; }
+};
+
+struct JSRestExpressionNode : public JSNode {
+  JSNode *value;
+  JSRestExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_REST; }
+};
+
 class JSParser {
+private:
+  JSNode *createError(const std::wstring &message, const std::wstring &source,
+                      const JSPosition &end) {
+
+    auto *node = new JSErrorNode();
+    node->message = message;
+    node->location = getLocation(source, {}, end);
+    return node;
+  }
+
 private:
   bool isLineTerminatior(wchar_t c) {
     if (c == 0xa) {
@@ -267,16 +409,23 @@ private:
   }
 
   bool isWhiteSpace(wchar_t c) {
-    if (c == 0xa) {
+
+    if (c == 0x9) {
       return true;
     }
-    if (c == 0xd) {
+    if (c == 0xb) {
       return true;
     }
-    if (c == 0x2028) {
+    if (c == 0xc) {
       return true;
     }
-    if (c == 0x2029) {
+    if (c == 0x20) {
+      return true;
+    }
+    if (c == 0xa0) {
+      return true;
+    }
+    if (c == 0xfeff) {
       return true;
     }
     return false;
@@ -301,15 +450,11 @@ private:
   }
 
 private:
-  JSLocation getLocation(const std::wstring &filename,
-                         const std::wstring &source, const JSPosition &start,
+  JSLocation getLocation(const std::wstring &source, const JSPosition &start,
                          const JSPosition &end) {
     JSLocation loc;
-    loc.start = {.filename = filename,
-                 .funcname = L"neo.compile",
-                 .line = 1,
-                 .column = 1,
-                 .offset = 0};
+    loc.start = {
+        .funcname = L"neo.compile", .line = 1, .column = 1, .offset = 0};
     while (loc.start.offset < start.offset) {
       if (isLineTerminatior(source[loc.start.offset])) {
         loc.start.column = 1;
@@ -320,11 +465,7 @@ private:
       loc.start.offset++;
     }
 
-    loc.end = {.filename = filename,
-               .funcname = L"neo.compile",
-               .line = 1,
-               .column = 1,
-               .offset = 0};
+    loc.end = {.funcname = L"neo.compile", .line = 1, .column = 1, .offset = 0};
     while (loc.end.offset < end.offset) {
       if (isLineTerminatior(source[loc.end.offset])) {
         loc.end.column = 1;
@@ -359,8 +500,7 @@ private:
   }
 
 private:
-  JSNode *readSymbolToken(const std::wstring &filename,
-                          const std::wstring &source, JSPosition &position) {
+  JSNode *readSymbolToken(const std::wstring &source, JSPosition &position) {
     static const std::vector<std::wstring> operators = {
         L">>>=", L"...",    L"<<=", L">>>", L"===", L"!==", L"**=", L">>=",
         L"&&=",  LR"(??=)", L"**",  L"==",  L"!=",  L"<<",  L">>",  L"<=",
@@ -386,7 +526,7 @@ private:
       if (found) {
         current.offset = offset;
         auto token = new JSTokenNode{};
-        token->location = getLocation(filename, source, position, current);
+        token->location = getLocation(source, position, current);
         position = current;
         return token;
       }
@@ -394,25 +534,23 @@ private:
     return nullptr;
   }
 
-  JSNode *readComments(const std::wstring &filename, const std::wstring &source,
-                       JSPosition &position, JSNode *node) {
-    auto comment = readComment(filename, source, position);
+  JSNode *readComments(const std::wstring &source, JSPosition &position,
+                       std::vector<JSNode *> &comments) {
+    auto comment = readComment(source, position);
     while (comment != nullptr) {
       if (comment->type == JS_NODE_TYPE::ERROR) {
         return comment;
       }
-      node->comments.push_back(comment);
-      comment->addParent(node);
+      comments.push_back(comment);
       while (skipInvisible(source, position)) {
       }
-      comment = readComment(filename, source, position);
+      comment = readComment(source, position);
     }
     return nullptr;
   }
 
 private:
-  JSNode *readIdentifyLiteral(const std::wstring &filename,
-                              const std::wstring &source,
+  JSNode *readIdentifyLiteral(const std::wstring &source,
                               JSPosition &position) {
     auto current = position;
     if (source[current.offset] == '$' || source[current.offset] == '_' ||
@@ -426,15 +564,14 @@ private:
         current.offset++;
       }
       auto node = new JSIdentityLiteralNode();
-      node->location = getLocation(filename, source, position, current);
+      node->location = getLocation(source, position, current);
       position = current;
       return node;
     }
     return nullptr;
   }
 
-  JSNode *readStringLiteral(const std::wstring &filename,
-                            const std::wstring &source, JSPosition &position) {
+  JSNode *readStringLiteral(const std::wstring &source, JSPosition &position) {
 
     if (source[position.offset] == '\'' || source[position.offset] == '\"') {
       auto current = position;
@@ -444,10 +581,7 @@ private:
           break;
         }
         if (!source[current.offset]) {
-          auto *node = new JSErrorNode();
-          node->message = L"Invalid or unexpected token";
-          node->location = getLocation(filename, source, position, current);
-          return node;
+          return createError(L"Invalid or unexpected token", source, current);
         }
         if (source[current.offset] == '\\') {
           current.offset++;
@@ -456,15 +590,61 @@ private:
       }
       current.offset++;
       auto token = new JSStringLiteralNode();
-      token->location = getLocation(filename, source, position, current);
+      token->location = getLocation(source, position, current);
       position = current;
       return token;
     }
     return nullptr;
   }
 
-  JSNode *readNumberLiteral(const std::wstring &filename,
-                            const std::wstring &source, JSPosition &position) {
+  JSNode *readNullLiteral(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    auto identify = readIdentifyLiteral(source, current);
+    if (!identify || identify->type == JS_NODE_TYPE::ERROR) {
+      return identify;
+    }
+    if (identify->location.is(source, L"null")) {
+      auto node = new JSNullLiteralNode{};
+      node->location = getLocation(source, position, current);
+      position = current;
+      return node;
+    }
+    return nullptr;
+  }
+
+  JSNode *readUndefinedLiteral(const std::wstring &source,
+                               JSPosition &position) {
+    auto current = position;
+    auto identify = readIdentifyLiteral(source, current);
+    if (!identify || identify->type == JS_NODE_TYPE::ERROR) {
+      return identify;
+    }
+    if (identify->location.is(source, L"undefined")) {
+      auto node = new JSUndefinedLiteralNode{};
+      node->location = getLocation(source, position, current);
+      position = current;
+      return node;
+    }
+    return nullptr;
+  }
+
+  JSNode *readBooleanLiteral(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    auto identify = readIdentifyLiteral(source, current);
+    if (!identify || identify->type == JS_NODE_TYPE::ERROR) {
+      return identify;
+    }
+    if (identify && (identify->location.is(source, L"true") ||
+                     identify->location.is(source, L"false"))) {
+      auto node = new JSUndefinedLiteralNode{};
+      node->location = getLocation(source, position, current);
+      position = current;
+      return node;
+    }
+    return nullptr;
+  }
+
+  JSNode *readNumberLiteral(const std::wstring &source, JSPosition &position) {
     auto current = position;
     if (source[current.offset] >= '0' && source[current.offset] <= '9') {
       if (source[current.offset] == '0') {
@@ -480,7 +660,7 @@ private:
             current.offset++;
           }
           auto node = new JSNumberLiteralNode();
-          node->location = getLocation(filename, source, position, current);
+          node->location = getLocation(source, position, current);
           position = current;
           return node;
         }
@@ -492,7 +672,7 @@ private:
             current.offset++;
           }
           auto node = new JSNumberLiteralNode();
-          node->location = getLocation(filename, source, position, current);
+          node->location = getLocation(source, position, current);
           position = current;
           return node;
         }
@@ -504,37 +684,37 @@ private:
             current.offset++;
           }
           auto node = new JSNumberLiteralNode();
-          node->location = getLocation(filename, source, position, current);
+          node->location = getLocation(source, position, current);
           position = current;
           return node;
         }
-        while (source[current.offset] >= '0' && source[current.offset] <= '9') {
-          current.offset++;
-        }
-        if (source[current.offset] == 'n') {
-          current.offset++;
-          auto node = new JSBigIntLiteralNode();
-          node->location = getLocation(filename, source, position, current);
-          position = current;
-          return node;
-        }
-        if (source[current.offset] == '.') {
-          current.offset++;
-        }
-        while (source[current.offset] >= '0' && source[current.offset] <= '9') {
-          current.offset++;
-        }
-        if (source[current.offset] == 'e' || source[current.offset] == 'E') {
-          current.offset++;
-        }
-        while (source[current.offset] >= '0' && source[current.offset] <= '9') {
-          current.offset++;
-        }
-        auto node = new JSTokenNode();
-        node->location = getLocation(filename, source, position, current);
+      }
+      while (source[current.offset] >= '0' && source[current.offset] <= '9') {
+        current.offset++;
+      }
+      if (source[current.offset] == 'n') {
+        current.offset++;
+        auto node = new JSBigIntLiteralNode();
+        node->location = getLocation(source, position, current);
         position = current;
         return node;
       }
+      if (source[current.offset] == '.') {
+        current.offset++;
+      }
+      while (source[current.offset] >= '0' && source[current.offset] <= '9') {
+        current.offset++;
+      }
+      if (source[current.offset] == 'e' || source[current.offset] == 'E') {
+        current.offset++;
+      }
+      while (source[current.offset] >= '0' && source[current.offset] <= '9') {
+        current.offset++;
+      }
+      auto node = new JSNumberLiteralNode();
+      node->location = getLocation(source, position, current);
+      position = current;
+      return node;
     } else if (source[current.offset] == '.' &&
                source[current.offset + 1] >= '0' &&
                source[current.offset + 1] <= '9') {
@@ -547,24 +727,20 @@ private:
         current.offset++;
       }
       if (source[current.offset] < '0' || source[current.offset] > '9') {
-        auto err = new JSErrorNode();
-        err->message = L"Invalid or unexpected token";
-        err->location = getLocation(filename, source, position, current);
-        return err;
+        return createError(L"Invalid or unexpected token", source, current);
       }
       while (source[current.offset] >= '0' && source[current.offset] <= '9') {
         current.offset++;
       }
       auto node = new JSNumberLiteralNode();
-      node->location = getLocation(filename, source, position, current);
+      node->location = getLocation(source, position, current);
       position = current;
       return node;
     }
     return nullptr;
   }
 
-  JSNode *readRegexpLiteral(const std::wstring &filename,
-                            const std::wstring &source, JSPosition &position) {
+  JSNode *readRegexpLiteral(const std::wstring &source, JSPosition &position) {
     auto current = position;
     if (source[current.offset] == '/') {
       current.offset++;
@@ -573,10 +749,8 @@ private:
           break;
         }
         if (!source[current.offset]) {
-          auto err = new JSErrorNode{};
-          err->message = L"Invalid or unexpected token";
-          err->location = getLocation(filename, source, position, current);
-          return err;
+
+          return createError(L"Invalid or unexpected token", source, current);
         }
         if (source[current.offset] == '[') {
           for (;;) {
@@ -584,10 +758,9 @@ private:
               break;
             }
             if (!source[current.offset]) {
-              auto err = new JSErrorNode{};
-              err->message = L"Invalid or unexpected token";
-              err->location = getLocation(filename, source, position, current);
-              return err;
+
+              return createError(L"Invalid or unexpected token", source,
+                                 current);
             }
             if (source[current.offset] == '\\') {
               current.offset++;
@@ -605,18 +778,17 @@ private:
         current.offset++;
       }
       auto node = new JSRegexpLiteralNode{};
-      node->location = getLocation(filename, source, position, current);
+      node->location = getLocation(source, position, current);
       position = current;
       return node;
     }
     return nullptr;
   }
 
-  JSNode *readProgram(const std::wstring &filename, const std::wstring &source,
-                      JSPosition &position) {
+  JSNode *readProgram(const std::wstring &source, JSPosition &position) {
     auto current = position;
     auto *node = new JSProgramNode();
-    auto interpreter = readInterpreterDirective(filename, source, current);
+    auto interpreter = readInterpreterDirective(source, current);
     if (interpreter) {
       if (interpreter->type == JS_NODE_TYPE::ERROR) {
         delete node;
@@ -626,15 +798,15 @@ private:
         interpreter->addParent(node);
       }
     }
-    while (skipInvisible(source, current)) {
-    }
     for (;;) {
-      auto err = readComments(filename, source, current, node);
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
         delete node;
         return err;
       }
-      auto directive = readDirective(filename, source, current);
+      auto directive = readDirective(source, current);
       if (!directive) {
         break;
       }
@@ -644,16 +816,16 @@ private:
       }
       node->directives.push_back(directive);
       directive->addParent(node);
-      while (skipInvisible(source, current)) {
-      }
     }
     for (;;) {
-      auto err = readComments(filename, source, current, node);
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
         delete node;
         return err;
       }
-      auto statement = readStatement(filename, source, current);
+      auto statement = readStatement(source, current);
       if (!statement) {
         break;
       }
@@ -663,23 +835,24 @@ private:
       }
       node->body.push_back(statement);
       statement->addParent(node);
-      while (skipInvisible(source, current)) {
-      }
     }
-    auto err = readComments(filename, source, current, node);
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
       delete node;
       return err;
     }
-    node->location = getLocation(filename, source, position, current);
-    while (skipInvisible(source, current)) {
+    if (source[current.offset]) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
     }
+    node->location = getLocation(source, position, current);
     position = current;
     return node;
   }
 
-  JSNode *readInterpreterDirective(const std::wstring &filename,
-                                   const std::wstring &source,
+  JSNode *readInterpreterDirective(const std::wstring &source,
                                    JSPosition &position) {
     auto current = position;
     if (source[position.offset] == '#' && source[position.offset + 1] == '!') {
@@ -689,17 +862,16 @@ private:
              !isLineTerminatior(source[current.offset])) {
         current.offset++;
       }
-      node->location = getLocation(filename, source, position, current);
+      node->location = getLocation(source, position, current);
       position = current;
       return node;
     }
     return nullptr;
   }
 
-  JSNode *readDirective(const std::wstring &filename,
-                        const std::wstring &source, JSPosition &position) {
+  JSNode *readDirective(const std::wstring &source, JSPosition &position) {
     auto current = position;
-    auto node = readExpression(filename, source, current);
+    auto node = readExpression(source, current);
     if (!node || node->type == JS_NODE_TYPE::ERROR) {
       return node;
     }
@@ -709,29 +881,27 @@ private:
       return nullptr;
     }
     node = new JSDirectiveNode();
-    node->location = getLocation(filename, source, position, current);
+    node->location = getLocation(source, position, current);
     position = current;
     return node;
   }
 
-  JSNode *readEmptyStatement(const std::wstring &filename,
-                             const std::wstring &source, JSPosition &position) {
+  JSNode *readEmptyStatement(const std::wstring &source, JSPosition &position) {
     if (source[position.offset] == ';') {
       auto current = position;
       current.offset++;
       auto node = new JSEmptyStatementNode{};
-      node->location = getLocation(filename, source, position, current);
+      node->location = getLocation(source, position, current);
       return node;
     }
     return nullptr;
   }
 
-  JSNode *readStatement(const std::wstring &filename,
-                        const std::wstring &source, JSPosition &position) {
+  JSNode *readStatement(const std::wstring &source, JSPosition &position) {
     auto current = position;
-    JSNode *node = readEmptyStatement(filename, source, current);
+    JSNode *node = readEmptyStatement(source, current);
     if (!node) {
-      node = readExpressionStatement(filename, source, current);
+      node = readExpressionStatement(source, current);
     }
     if (node) {
       position = current;
@@ -740,29 +910,1826 @@ private:
     return nullptr;
   }
 
-  JSNode *readExpressionStatement(const std::wstring &filename,
-                                  const std::wstring &source,
+  JSNode *readExpressionStatement(const std::wstring &source,
                                   JSPosition &position) {
     auto current = position;
-    auto expression = readExpression(filename, source, current);
-    if (expression != nullptr) {
-      if (expression->type == JS_NODE_TYPE::ERROR) {
-        return expression;
+    auto expression = readExpression(source, current);
+    if (!expression || expression->type == JS_NODE_TYPE::ERROR) {
+      return expression;
+    }
+    auto node = new JSExpressionStatementNode{};
+    node->expression = expression;
+    expression->addParent(node);
+    node->location = expression->location;
+    position = current;
+    return node;
+  }
+
+  JSNode *readObjectPattern(const std::wstring &source, JSPosition &position) {
+    // TODO: not implement
+    return nullptr;
+  }
+
+  JSNode *readArrayPattern(const std::wstring &source, JSPosition &position) {
+    // TODO: not implement
+    return nullptr;
+  }
+
+  JSNode *readClassPattern(const std::wstring &source, JSPosition &position) {
+    // TODO: not implement
+    return nullptr;
+  }
+
+  JSNode *readFunctionDeclaration(const std::wstring &source,
+                                  JSPosition &position) {
+    // TODO: not implement
+    return nullptr;
+  }
+
+  JSNode *readArrowFunctionDeclaration(const std::wstring &source,
+                                       JSPosition &position) {
+    // TODO: not implement
+    return nullptr;
+  }
+
+  JSNode *readExpression19(const std::wstring &source, JSPosition &position) {
+    auto node = readStringLiteral(source, position);
+    if (!node) {
+      node = readNumberLiteral(source, position);
+    }
+    if (!node) {
+      node = readRegexpLiteral(source, position);
+    }
+    if (!node) {
+      node = readBooleanLiteral(source, position);
+    }
+    if (!node) {
+      node = readNullLiteral(source, position);
+    }
+    if (!node) {
+      node = readUndefinedLiteral(source, position);
+    }
+    if (!node) {
+      node = readObjectPattern(source, position);
+    }
+    if (!node) {
+      node = readClassPattern(source, position);
+    }
+    if (!node) {
+      node = readFunctionDeclaration(source, position);
+    }
+    if (!node) {
+      auto current = position;
+      node = readIdentifyLiteral(source, current);
+      if (node) {
+        if (node->type == JS_NODE_TYPE::ERROR) {
+          return node;
+        } else if (isKeyword(source, node->location)) {
+          delete node;
+          node = nullptr;
+        } else {
+          position = current;
+        }
       }
-      auto node = new JSExpressionStatementNode{};
-      node->expression = expression;
+    }
+    return node;
+  }
+
+  JSNode *readGroupExpression(const std::wstring &source,
+                              JSPosition &position) {
+    auto current = position;
+    auto token = readSymbolToken(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (token->location.is(source, L"(")) {
+      delete token;
+      auto node = new JSGroupExpressionNode{};
+      while (skipInvisible(source, current)) {
+      };
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto expr = readExpression(source, current);
+      if (!expr) {
+        expr = readArrowFunctionDeclaration(source, current);
+      }
+      if (!expr) {
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      if (expr->type == JS_NODE_TYPE::ERROR) {
+        return expr;
+      }
+      node->expression = expr;
+      expr->addParent(node);
+      while (skipInvisible(source, current)) {
+      };
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      token = readSymbolToken(source, current);
+      if (!token || token->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return token;
+      }
+      if (!token->location.is(source, L")")) {
+        delete token;
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      delete token;
+      node->location = getLocation(source, position, current);
+      position = current;
       return node;
     }
     return nullptr;
   }
 
-  JSNode *readExpression(const std::wstring &filename,
-                         const std::wstring &source, JSPosition &position) {
+  JSNode *readExpression18(const std::wstring &source, JSPosition &position) {
+    auto node = readGroupExpression(source, position);
+    if (!node) {
+      node = readExpression19(source, position);
+    }
+    return node;
+  }
+
+  JSNode *readNewCallExpression(const std::wstring &source,
+                                JSPosition &position) {
+
+    auto current = position;
+    auto token = readIdentifyLiteral(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"new")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSNewExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto callee = readIdentifyLiteral(source, current);
+    if (!callee) {
+      callee = readGroupExpression(source, current);
+    }
+    if (!callee) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (callee->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return callee;
+    }
+    for (;;) {
+      while (skipInvisible(source, current)) {
+      };
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        delete callee;
+        return err;
+      }
+      auto next = readCallExpression(source, current, callee);
+      if (next) {
+        auto call = dynamic_cast<JSCallExpressionNode *>(next);
+        node->callee = call->callee;
+        node->arguments = call->arguments;
+        node->comments = call->comments;
+        node->children = call->children;
+        call->children.clear();
+        call->comments.clear();
+        delete call;
+        node->location = getLocation(source, position, current);
+        position = current;
+        return node;
+      }
+      next = readOptionalMemberExpression(source, current, callee);
+      if (next) {
+        delete next;
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      next = readOptionalComputedMemberExpression(source, current, callee);
+      if (next) {
+        delete next;
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      next = readOptionalCallExpression(source, current, callee);
+      if (next) {
+        delete next;
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      next = readMemberExpression(source, current, callee);
+      if (!next) {
+        next = readComputedMemberExpression(source, current, callee);
+      }
+      if (next) {
+        callee = next;
+      }
+      if (!next) {
+        delete callee;
+        delete node;
+        return nullptr;
+      }
+    }
     return nullptr;
   }
 
-  JSNode *readComment(const std::wstring &filename, const std::wstring &source,
-                      JSPosition &position) {
+  JSNode *readMemberExpression(const std::wstring &source, JSPosition &position,
+                               JSNode *left) {
+    auto current = position;
+    auto token = readSymbolToken(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L".")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSMemberExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier || (isKeyword(source, identifier->location))) {
+      delete identifier;
+      delete node;
+      return createError(L"Invalid or unexpected token", source,
+                         identifier->location.start);
+    }
+    if (identifier->type == JS_NODE_TYPE::ERROR) {
+      return identifier;
+    }
+    node->host = left;
+    left->addParent(node);
+    node->field = identifier;
+    identifier->addParent(node);
+    node->location = getLocation(source, left->location.start, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readComputedMemberExpression(const std::wstring &source,
+                                       JSPosition &position, JSNode *left) {
+    auto current = position;
+    auto token = readSymbolToken(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"[")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSComputedMemberExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto field = readExpression(source, current);
+    if (!field || field->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return field;
+    }
+    node->field = field;
+    while (skipInvisible(source, current)) {
+    };
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    token = readSymbolToken(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    } else if (token->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return token;
+    } else if (!token->location.is(source, L"]")) {
+      delete token;
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    delete token;
+    node->host = left;
+    left->addParent(node);
+    field->addParent(node);
+    node->location = getLocation(source, left->location.start, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readCallExpression(const std::wstring &source, JSPosition &position,
+                             JSNode *left) {
+    auto current = position;
+    auto token = readSymbolToken(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"(")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSCallExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto arg = readExpression18(source, current);
+    if (arg && arg->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return arg;
+    }
+    while (arg) {
+      node->arguments.push_back(arg);
+      arg->addParent(node);
+      while (skipInvisible(source, current)) {
+      };
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (!token || token->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return token;
+      }
+      if (token->location.is(source, L",")) {
+        delete token;
+      } else if (token->location.is(source, L")")) {
+        current = token->location.start;
+        delete token;
+        break;
+      } else {
+        delete token;
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      while (skipInvisible(source, current)) {
+      };
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto arg = readExpression18(source, current);
+      if (arg && arg->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return arg;
+      }
+    }
+    while (skipInvisible(source, current)) {
+    };
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    token = readSymbolToken(source, current);
+    if (!token) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    } else if (token->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return token;
+    } else if (!token->location.is(source, L")")) {
+      delete token;
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+
+    delete token;
+    node->callee = left;
+    left->addParent(node);
+    node->location = getLocation(source, left->location.start, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readOptionalMemberExpression(const std::wstring &source,
+                                       JSPosition &position, JSNode *left) {
+    auto current = position;
+    auto token = readSymbolToken(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"?.")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSOptionalMemberExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier || identifier->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return identifier;
+    }
+    node->field = identifier;
+    identifier->addParent(node);
+    node->host = left;
+    left->addParent(node);
+    node->location = getLocation(source, left->location.start, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readOptionalComputedMemberExpression(const std::wstring &source,
+                                               JSPosition &position,
+                                               JSNode *left) {
+    auto current = position;
+    auto token = readSymbolToken(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"?.")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto computed = readComputedMemberExpression(source, current, left);
+    if (!computed || computed->type == JS_NODE_TYPE::ERROR) {
+      return computed;
+    }
+    auto node = new JSOptionalMemberExpressionNode;
+    auto computedNode =
+        dynamic_cast<JSComputedMemberExpressionNode *>(computed);
+    node->host = computedNode->host;
+    node->field = computedNode->field;
+    node->children = computedNode->children;
+    node->comments = computedNode->comments;
+    node->location = computedNode->location;
+    computedNode->children.clear();
+    computedNode->comments.clear();
+    delete computedNode;
+    position = current;
+    return node;
+  }
+
+  JSNode *readOptionalCallExpression(const std::wstring &source,
+                                     JSPosition &position, JSNode *left) {
+    auto current = position;
+    auto token = readSymbolToken(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"?.")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto call = readCallExpression(source, current, left);
+    if (!call || call->type == JS_NODE_TYPE::ERROR) {
+      return call;
+    }
+    auto node = new JSCallExpressionNode;
+    auto callNode = dynamic_cast<JSCallExpressionNode *>(call);
+    node->callee = callNode->callee;
+    node->arguments = callNode->arguments;
+    node->children = callNode->children;
+    node->comments = callNode->comments;
+    node->location = callNode->location;
+    callNode->children.clear();
+    callNode->comments.clear();
+    delete callNode;
+    position = current;
+    return node;
+  }
+
+  JSNode *readExpression17(const std::wstring &source, JSPosition &position) {
+    auto node = readNewCallExpression(source, position);
+    if (!node) {
+      node = readExpression18(source, position);
+    }
+    if (node) {
+      auto current = position;
+      for (;;) {
+        while (skipInvisible(source, current)) {
+        };
+        auto err = readComments(source, current, node->comments);
+        if (err) {
+          delete node;
+          return err;
+        }
+        JSNode *next = readCallExpression(source, current, node);
+        if (!next) {
+          next = readMemberExpression(source, current, node);
+        }
+        if (!next) {
+          next = readComputedMemberExpression(source, current, node);
+        }
+        if (!next) {
+          next = readOptionalMemberExpression(source, current, node);
+        }
+        if (!next) {
+          next = readOptionalComputedMemberExpression(source, current, node);
+        }
+        if (!next) {
+          next = readOptionalCallExpression(source, current, node);
+        }
+        if (!next) {
+          break;
+        }
+        if (next->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return next;
+        }
+        node = next;
+      }
+    }
+    return node;
+  }
+  JSNode *readNewExpression(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    auto token = readIdentifyLiteral(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"new")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSNewExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto callee = readIdentifyLiteral(source, current);
+    if (callee && isKeyword(source, callee->location)) {
+      current = callee->location.start;
+      delete callee;
+      callee = nullptr;
+    }
+    if (!callee) {
+      callee = readGroupExpression(source, current);
+    }
+    if (!callee) {
+      callee = readNewCallExpression(source, current);
+    }
+    if (!callee) {
+      callee = readNewExpression(source, current);
+    }
+    if (!callee) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (callee->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return callee;
+    }
+    for (;;) {
+      while (skipInvisible(source, current)) {
+      };
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        delete callee;
+        return err;
+      }
+      auto next = readCallExpression(source, current, callee);
+      if (next) {
+        delete next;
+        delete node;
+        return nullptr;
+      }
+      next = readOptionalMemberExpression(source, current, callee);
+      if (next) {
+        delete next;
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      next = readOptionalComputedMemberExpression(source, current, callee);
+      if (next) {
+        delete next;
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      next = readOptionalCallExpression(source, current, callee);
+      if (next) {
+        delete next;
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      next = readMemberExpression(source, current, callee);
+      if (!next) {
+        next = readComputedMemberExpression(source, current, callee);
+      }
+      if (next) {
+        callee = next;
+      }
+      if (!next) {
+        break;
+      }
+    }
+    node->callee = callee;
+    callee->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readExpression16(const std::wstring &source, JSPosition &position) {
+    auto node = readNewExpression(source, position);
+    if (!node) {
+      node = readExpression17(source, position);
+    }
+    return node;
+  }
+
+  JSNode *readExpression15(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression16(source, position);
+    if (node && node->type == JS_NODE_TYPE::ERROR) {
+      return node;
+    }
+    if (node) {
+      auto current = position;
+      auto newline = false;
+      auto n = new JSBinaryExpressionNode{};
+      for (;;) {
+        if (skipWhiteSpace(source, current)) {
+          continue;
+        }
+        if (skipLineTerminator(source, current)) {
+          newline = true;
+          break;
+        }
+        auto comment = readComment(source, current);
+        if (comment) {
+          if (comment->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            delete node;
+            return comment;
+          }
+          n->comments.push_back(comment);
+          continue;
+        }
+        break;
+      }
+      if (!newline) {
+        auto token = readSymbolToken(source, current);
+        if (token) {
+          if (token->type == JS_NODE_TYPE::ERROR) {
+            delete node;
+            delete n;
+            return token;
+          } else if (!token->location.is(source, L"++") &&
+                     !token->location.is(source, L"--")) {
+            delete token;
+            delete n;
+          } else {
+            n->opt = token;
+            token->addParent(n);
+            n->left = node;
+            node->addParent(n);
+            n->location = getLocation(source, position, current);
+            position = current;
+            node = n;
+          }
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readTypeofExpression(const std::wstring &source,
+                               JSPosition &position) {
+    auto current = position;
+    auto token = readIdentifyLiteral(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"typeof")) {
+      delete token;
+      return nullptr;
+    }
+    auto node = new JSBinaryExpressionNode{};
+    node->opt = token;
+    token->addParent(node);
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto value = readExpression14(source, current);
+    if (!value) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (value->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return value;
+    }
+    node->right = value;
+    value->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readVoidExpression(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    auto token = readIdentifyLiteral(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"void")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSVoidExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto value = readExpression14(source, current);
+    if (!value) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (value->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return value;
+    }
+    node->value = value;
+    value->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readDeleteExpression(const std::wstring &source,
+                               JSPosition &position) {
+    auto current = position;
+    auto token = readIdentifyLiteral(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"delete")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSDeleteExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto value = readExpression14(source, current);
+    if (!value) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (value->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return value;
+    }
+    node->value = value;
+    value->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readAwaitExpression(const std::wstring &source,
+                              JSPosition &position) {
+    auto current = position;
+    auto token = readIdentifyLiteral(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"await")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSAwaitExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto value = readExpression14(source, current);
+    if (!value) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (value->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return value;
+    }
+    node->value = value;
+    value->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readExpression14(const std::wstring &source, JSPosition &position) {
+    auto node = readTypeofExpression(source, position);
+    if (!node) {
+      node = readVoidExpression(source, position);
+    }
+    if (!node) {
+      node = readDeleteExpression(source, position);
+    }
+    if (!node) {
+      node = readAwaitExpression(source, position);
+    }
+    if (!node) {
+      auto current = position;
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return token;
+        }
+        if (token->location.is(source, L"~") ||
+            token->location.is(source, L"!") ||
+            token->location.is(source, L"+") ||
+            token->location.is(source, L"-") ||
+            token->location.is(source, L"++") ||
+            token->location.is(source, L"--")) {
+          auto n = new JSBinaryExpressionNode{};
+          n->opt = token;
+          token->addParent(n);
+          auto value = readExpression14(source, current);
+          if (!value) {
+            delete node;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (value->type == JS_NODE_TYPE::ERROR) {
+            delete node;
+            return value;
+          }
+          n->right = value;
+          value->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        } else {
+          delete token;
+          delete node;
+          node = nullptr;
+        }
+      }
+    }
+    if (!node) {
+      node = readExpression15(source, position);
+    }
+    return node;
+  }
+
+  JSNode *readExpression13(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression14(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"**")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression13(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression12(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression13(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"*") &&
+                   !token->location.is(source, L"/") &&
+                   !token->location.is(source, L"%")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression12(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression11(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression12(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"+") &&
+                   !token->location.is(source, L"-")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression11(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression10(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression11(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"<<") &&
+                   !token->location.is(source, L">>") &&
+                   !token->location.is(source, L">>>")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression10(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression9(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression10(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (!token) {
+        token = readIdentifyLiteral(source, current);
+      }
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"<") &&
+                   !token->location.is(source, L"<=") &&
+                   !token->location.is(source, L">") &&
+                   !token->location.is(source, L">=") &&
+                   !token->location.is(source, L"in") &&
+                   !token->location.is(source, L"instanceof")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression9(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression8(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression9(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"==") &&
+                   !token->location.is(source, L"!=") &&
+                   !token->location.is(source, L"===") &&
+                   !token->location.is(source, L"!==")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression8(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression7(const std::wstring &source, JSPosition &position) {
+
+    auto node = readExpression8(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"&")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression7(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression6(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression7(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"^")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression6(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression5(const std::wstring &source, JSPosition &position) {
+
+    auto node = readExpression6(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"|")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression5(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression4(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression5(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"&&")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression4(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression3(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression4(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L"||") &&
+                   !token->location.is(source, L"??")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression3(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readYieldExpression(const std::wstring &source,
+                              JSPosition &position) {
+
+    auto current = position;
+    auto token = readIdentifyLiteral(source, current);
+    if (!token || token->type == JS_NODE_TYPE::ERROR) {
+      return token;
+    }
+    if (!token->location.is(source, L"yield")) {
+      delete token;
+      return nullptr;
+    }
+    delete token;
+    auto node = new JSYieldExpressionNode{};
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    token = readSymbolToken(source, current);
+    if (token) {
+      if (token->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return token;
+      }
+      if (!token->location.is(source, L"*")) {
+        current = token->location.start;
+      } else {
+        auto n = new JSYieldDelegateExpressionNode;
+        n->comments = node->comments;
+        node->comments.clear();
+        delete node;
+        node = n;
+      }
+      delete token;
+    }
+    auto value = readExpression2(source, current);
+    if (!value) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (value->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return value;
+    }
+    node->value = value;
+    value->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readExpression2(const std::wstring &source, JSPosition &position) {
+    auto node = readYieldExpression(source, position);
+    if (!node) {
+      node = readArrowFunctionDeclaration(source, position);
+    }
+    if (!node) {
+      node = readExpression3(source, position);
+      if (node && node->type != JS_NODE_TYPE::ERROR) {
+        auto current = position;
+        auto n = new JSBinaryExpressionNode{};
+        while (skipInvisible(source, current)) {
+        }
+        auto err = readComments(source, current, n->comments);
+        if (err) {
+          delete n;
+          delete node;
+          return err;
+        }
+        auto token = readSymbolToken(source, current);
+        if (token) {
+          if (token->type == JS_NODE_TYPE::ERROR) {
+            delete node;
+            delete n;
+            return token;
+          } else if (token->location.is(source, L"?")) {
+            delete token;
+            auto n = new JSConditionExpressionNode;
+            n->condition = node;
+            node->addParent(n);
+            while (skipInvisible(source, current)) {
+            }
+            auto err = readComments(source, current, n->comments);
+            if (err) {
+              delete n;
+              return err;
+            }
+            auto consequent = readExpression2(source, current);
+            if (!consequent) {
+              delete n;
+              return createError(L"Invalid or unexpected token", source,
+                                 current);
+            }
+            if (consequent->type == JS_NODE_TYPE::ERROR) {
+              delete n;
+              return consequent;
+            }
+            n->consequent = consequent;
+            consequent->addParent(n);
+            while (skipInvisible(source, current)) {
+            }
+            err = readComments(source, current, n->comments);
+            if (err) {
+              delete n;
+              return err;
+            }
+            token = readSymbolToken(source, current);
+            if (!token) {
+              delete n;
+              return createError(L"Invalid or unexpected token", source,
+                                 current);
+            }
+            if (token->type == JS_NODE_TYPE::ERROR) {
+              delete n;
+              return consequent;
+            }
+            if (!token->location.is(source, L":")) {
+              delete token;
+              delete n;
+              return createError(L"Invalid or unexpected token", source,
+                                 current);
+            }
+
+            while (skipInvisible(source, current)) {
+            }
+            err = readComments(source, current, n->comments);
+            if (err) {
+              delete n;
+              return err;
+            }
+            auto alternate = readExpression2(source, current);
+            if (!alternate) {
+              delete n;
+              return createError(L"Invalid or unexpected token", source,
+                                 current);
+            }
+            if (alternate->type == JS_NODE_TYPE::ERROR) {
+              delete n;
+              return alternate;
+            }
+            n->alternate = alternate;
+            alternate->addParent(n);
+            n->location = getLocation(source, position, current);
+            position = current;
+            node = n;
+          } else if (!token->location.is(source, L"=") &&
+                     !token->location.is(source, L"+=") &&
+                     !token->location.is(source, L"-=") &&
+                     !token->location.is(source, L"**=") &&
+                     !token->location.is(source, L"*=") &&
+                     !token->location.is(source, L"/=") &&
+                     !token->location.is(source, L"%=") &&
+                     !token->location.is(source, L"<<=") &&
+                     !token->location.is(source, L">>=") &&
+                     !token->location.is(source, L">>>=") &&
+                     !token->location.is(source, L"&=") &&
+                     !token->location.is(source, L"|=") &&
+                     !token->location.is(source, L"^=") &&
+                     !token->location.is(source, L"&&=") &&
+                     !token->location.is(source, L"||=") &&
+                     !token->location.is(source, LR"(??=)")) {
+            delete n;
+          } else {
+            n->left = node;
+            node->addParent(n);
+            n->opt = token;
+            token->addParent(n);
+            while (skipInvisible(source, current)) {
+            }
+            auto err = readComments(source, current, n->comments);
+            if (err) {
+              delete n;
+              delete node;
+              return err;
+            }
+            auto right = readExpression2(source, current);
+            if (!right) {
+              delete n;
+              return createError(L"Invalid or unexpected token", source,
+                                 current);
+            }
+            if (right->type == JS_NODE_TYPE::ERROR) {
+              delete n;
+              return right;
+            }
+            n->right = right;
+            right->addParent(n);
+            n->location = getLocation(source, position, current);
+            position = current;
+            node = n;
+          }
+        } else {
+          delete n;
+        }
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression1(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression2(source, position);
+    if (node && node->type != JS_NODE_TYPE::ERROR) {
+      auto current = position;
+      auto n = new JSBinaryExpressionNode{};
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, n->comments);
+      if (err) {
+        delete n;
+        delete node;
+        return err;
+      }
+      auto token = readSymbolToken(source, current);
+      if (token) {
+        if (token->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          delete n;
+          return token;
+        } else if (!token->location.is(source, L",")) {
+          delete n;
+        } else {
+          n->left = node;
+          node->addParent(n);
+          n->opt = token;
+          token->addParent(n);
+          while (skipInvisible(source, current)) {
+          }
+          auto err = readComments(source, current, n->comments);
+          if (err) {
+            delete n;
+            delete node;
+            return err;
+          }
+          auto right = readExpression1(source, current);
+          if (!right) {
+            delete n;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+          if (right->type == JS_NODE_TYPE::ERROR) {
+            delete n;
+            return right;
+          }
+          n->right = right;
+          right->addParent(n);
+          n->location = getLocation(source, position, current);
+          position = current;
+          node = n;
+        }
+      } else {
+        delete n;
+      }
+    }
+    return node;
+  }
+
+  JSNode *readExpression(const std::wstring &source, JSPosition &position) {
+    auto node = readExpression1(source, position);
+    return node;
+  }
+
+  JSNode *readComment(const std::wstring &source, JSPosition &position) {
     if (source[position.offset] == '/') {
       if (source[position.offset + 1] == '/') {
         auto current = position;
@@ -770,7 +2737,7 @@ private:
           current.offset++;
         }
         auto node = new JSCommentLiteralNode();
-        node->location = getLocation(filename, source, position, current);
+        node->location = getLocation(source, position, current);
         position = current;
         return node;
       } else if (source[position.offset + 1] == '*') {
@@ -783,15 +2750,12 @@ private:
             break;
           }
           if (!source[current.offset]) {
-            auto node = new JSErrorNode();
-            node->message = L"Invalid or unexpected token";
-            node->location = getLocation(filename, source, position, current);
-            return node;
+            return createError(L"Invalid or unexpected token", source, current);
           }
           current.offset++;
         }
         auto node = new JSMultilineCommentLiteralNode();
-        node->location = getLocation(filename, source, position, current);
+        node->location = getLocation(source, position, current);
         position = current;
         return node;
       }
@@ -800,15 +2764,321 @@ private:
   }
 
 public:
-  JSNode *parse(const std::wstring &filename, const std::wstring &source) {
+  JSNode *parse(const std::wstring &source) {
     JSPosition pos = {};
-    return readProgram(filename, source, pos);
+    return readProgram(source, pos);
   }
 };
 
 class JSExecutor {
+private:
+  std::wstring print(const std::wstring &filename, const std::wstring &source,
+                     JSNode *node) {
+    std::wstring type;
+    switch (node->type) {
+    case JS_NODE_TYPE::ERROR:
+      type = L"ERROR";
+      break;
+    case JS_NODE_TYPE::TOKEN:
+      type = L"TOKEN";
+      break;
+    case JS_NODE_TYPE::PRIVATE_NAME:
+      type = L"PRIVATE_NAME";
+      break;
+    case JS_NODE_TYPE::LITERAL_REGEX:
+      type = L"LITERAL_REGEX";
+      break;
+    case JS_NODE_TYPE::LITERAL_NULL:
+      type = L"LITERAL_NULL";
+      break;
+    case JS_NODE_TYPE::LITERAL_STRING:
+      type = L"LITERAL_STRING";
+      break;
+    case JS_NODE_TYPE::LITERAL_BOOLEAN:
+      type = L"LITERAL_BOOLEAN";
+      break;
+    case JS_NODE_TYPE::LITERAL_NUMBER:
+      type = L"LITERAL_NUMBER";
+      break;
+    case JS_NODE_TYPE::LITERAL_COMMENT:
+      type = L"LITERAL_COMMENT";
+      break;
+    case JS_NODE_TYPE::LITERAL_MULTILINE_COMMENT:
+      type = L"LITERAL_MULTILINE_COMMENT";
+      break;
+    case JS_NODE_TYPE::LITERAL_UNDEFINED:
+      type = L"LITERAL_UNDEFINED";
+      break;
+    case JS_NODE_TYPE::LITERAL_IDENTITY:
+      type = L"LITERAL_IDENTITY";
+      break;
+    case JS_NODE_TYPE::LITERAL_TEMPLATE:
+      type = L"LITERAL_TEMPLATE";
+      break;
+    case JS_NODE_TYPE::LITERAL_BIGINT:
+      type = L"LITERAL_BIGINT";
+      break;
+    case JS_NODE_TYPE::THIS:
+      type = L"THIS";
+      break;
+    case JS_NODE_TYPE::SUPER:
+      type = L"SUPER";
+      break;
+    case JS_NODE_TYPE::PROGRAM:
+      type = L"PROGRAM";
+      break;
+    case JS_NODE_TYPE::STATEMENT_EMPTY:
+      type = L"STATEMENT_EMPTY";
+      break;
+    case JS_NODE_TYPE::STATEMENT_BLOCK:
+      type = L"STATEMENT_BLOCK";
+      break;
+    case JS_NODE_TYPE::STATEMENT_DEBUGGER:
+      type = L"STATEMENT_DEBUGGER";
+      break;
+    case JS_NODE_TYPE::STATEMENT_RETURN:
+      type = L"STATEMENT_RETURN";
+      break;
+    case JS_NODE_TYPE::STATEMENT_LABEL:
+      type = L"STATEMENT_LABEL";
+      break;
+    case JS_NODE_TYPE::STATEMENT_BREAK:
+      type = L"STATEMENT_BREAK";
+      break;
+    case JS_NODE_TYPE::STATEMENT_CONTINUE:
+      type = L"STATEMENT_CONTINUE";
+      break;
+    case JS_NODE_TYPE::STATEMENT_IF:
+      type = L"STATEMENT_IF";
+      break;
+    case JS_NODE_TYPE::STATEMENT_SWITCH:
+      type = L"STATEMENT_SWITCH";
+      break;
+    case JS_NODE_TYPE::STATEMENT_SWITCH_CASE:
+      type = L"STATEMENT_SWITCH_CASE";
+      break;
+    case JS_NODE_TYPE::STATEMENT_THROW:
+      type = L"STATEMENT_THROW";
+      break;
+    case JS_NODE_TYPE::STATEMENT_TRY:
+      type = L"STATEMENT_TRY";
+      break;
+    case JS_NODE_TYPE::STATEMENT_TRY_CATCH:
+      type = L"STATEMENT_TRY_CATCH";
+      break;
+    case JS_NODE_TYPE::STATEMENT_WHILE:
+      type = L"STATEMENT_WHILE";
+      break;
+    case JS_NODE_TYPE::STATEMENT_DO_WHILE:
+      type = L"STATEMENT_DO_WHILE";
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR:
+      type = L"STATEMENT_FOR";
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR_IN:
+      type = L"STATEMENT_FOR_IN";
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR_OF:
+      type = L"STATEMENT_FOR_OF";
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR_AWAIT_OF:
+      type = L"STATEMENT_FOR_AWAIT_OF";
+      break;
+    case JS_NODE_TYPE::STATEMENT_EXPRESSION:
+      type = L"STATEMENT_EXPRESSION";
+      break;
+    case JS_NODE_TYPE::VARIABLE_DECLARATION:
+      type = L"VARIABLE_DECLARATION";
+      break;
+    case JS_NODE_TYPE::VARIABLE_DECLARATOR:
+      type = L"VARIABLE_DECLARATOR";
+      break;
+    case JS_NODE_TYPE::DECORATOR:
+      type = L"DECORATOR";
+      break;
+    case JS_NODE_TYPE::DIRECTIVE:
+      type = L"DIRECTIVE";
+      break;
+    case JS_NODE_TYPE::INTERPRETER_DIRECTIVE:
+      type = L"INTERPRETER_DIRECTIVE";
+      break;
+    case JS_NODE_TYPE::OBJECT_PROPERTY:
+      type = L"OBJECT_PROPERTY";
+      break;
+    case JS_NODE_TYPE::OBJECT_METHOD:
+      type = L"OBJECT_METHOD";
+      break;
+    case JS_NODE_TYPE::OBJECT_ACCESSOR:
+      type = L"OBJECT_ACCESSOR";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_UNARY:
+      type = L"EXPRESSION_UNARY";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_UPDATE:
+      type = L"EXPRESSION_UPDATE";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_BINARY:
+      type = L"EXPRESSION_BINARY";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_MEMBER:
+      type = L"EXPRESSION_MEMBER";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER:
+      type = L"EXPRESSION_OPTIONAL_MEMBER";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER:
+      type = L"EXPRESSION_COMPUTED_MEMBER";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER:
+      type = L"EXPRESSION_OPTIONAL_COMPUTED_MEMBER";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_CONDITION:
+      type = L"EXPRESSION_CONDITION";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_CALL:
+      type = L"EXPRESSION_CALL";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_CALL:
+      type = L"EXPRESSION_OPTIONAL_CALL";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_NEW:
+      type = L"EXPRESSION_NEW";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_DELETE:
+      type = L"EXPRESSION_DELETE";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_AWAIT:
+      type = L"EXPRESSION_AWAIT";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_YIELD:
+      type = L"EXPRESSION_YIELD";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_YIELD_DELEGATE:
+      type = L"EXPRESSION_YIELD_DELEGATE";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_VOID:
+      type = L"EXPRESSION_VOID";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_TYPEOF:
+      type = L"EXPRESSION_TYPEOF";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_GROUP:
+      type = L"EXPRESSION_GROUP";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_ASSIGMENT:
+      type = L"EXPRESSION_ASSIGMENT";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_REST:
+      type = L"EXPRESSION_REST";
+      break;
+    case JS_NODE_TYPE::PATTERN_REST_ITEM:
+      type = L"PATTERN_REST_ITEM";
+      break;
+    case JS_NODE_TYPE::PATTERN_OBJECT:
+      type = L"PATTERN_OBJECT";
+      break;
+    case JS_NODE_TYPE::PATTERN_OBJECT_ITEM:
+      type = L"PATTERN_OBJECT_ITEM";
+      break;
+    case JS_NODE_TYPE::PATTERN_ARRAY:
+      type = L"PATTERN_ARRAY";
+      break;
+    case JS_NODE_TYPE::PATTERN_ARRAY_ITEM:
+      type = L"PATTERN_ARRAY_ITEM";
+      break;
+    case JS_NODE_TYPE::CLASS_METHOD:
+      type = L"CLASS_METHOD";
+      break;
+    case JS_NODE_TYPE::CLASS_PROPERTY:
+      type = L"CLASS_PROPERTY";
+      break;
+    case JS_NODE_TYPE::CLASS_ACCESSOR:
+      type = L"CLASS_ACCESSOR";
+      break;
+    case JS_NODE_TYPE::STATIC_BLOCK:
+      type = L"STATIC_BLOCK";
+      break;
+    case JS_NODE_TYPE::IMPORT_DECLARATION:
+      type = L"IMPORT_DECLARATION";
+      break;
+    case JS_NODE_TYPE::IMPORT_SPECIFIER:
+      type = L"IMPORT_SPECIFIER";
+      break;
+    case JS_NODE_TYPE::IMPORT_DEFAULT:
+      type = L"IMPORT_DEFAULT";
+      break;
+    case JS_NODE_TYPE::IMPORT_NAMESPACE:
+      type = L"IMPORT_NAMESPACE";
+      break;
+    case JS_NODE_TYPE::IMPORT_ATTARTUBE:
+      type = L"IMPORT_ATTARTUBE";
+      break;
+    case JS_NODE_TYPE::EXPORT_DECLARATION:
+      type = L"EXPORT_DECLARATION";
+      break;
+    case JS_NODE_TYPE::EXPORT_DEFAULT:
+      type = L"EXPORT_DEFAULT";
+      break;
+    case JS_NODE_TYPE::EXPORT_SPECIFIER:
+      type = L"EXPORT_SPECIFIER";
+      break;
+    case JS_NODE_TYPE::EXPORT_ALL:
+      type = L"EXPORT_ALL";
+      break;
+    case JS_NODE_TYPE::DECLARATION_ARROW_FUNCTION:
+      type = L"DECLARATION_ARROW_FUNCTION";
+      break;
+    case JS_NODE_TYPE::DECLARATION_FUNCTION:
+      type = L"DECLARATION_FUNCTION";
+      break;
+    case JS_NODE_TYPE::DECLARATION_FUNCTION_BODY:
+      type = L"DECLARATION_FUNCTION_BODY";
+      break;
+    case JS_NODE_TYPE::DECLARATION_PARAMETER:
+      type = L"DECLARATION_PARAMETER";
+      break;
+    case JS_NODE_TYPE::DECLARATION_OBJECT:
+      type = L"DECLARATION_OBJECT";
+      break;
+    case JS_NODE_TYPE::DECLARATION_ARRAY:
+      type = L"DECLARATION_ARRAY";
+      break;
+    case JS_NODE_TYPE::DECLARATION_CLASS:
+      type = L"DECLARATION_CLASS";
+      break;
+    }
+    std::wstring result = LR"({"type":")" + type + LR"(","children":[)";
+    for (size_t i = 0; i < node->children.size(); i++) {
+      if (i != 0) {
+        result += L",";
+      }
+      result += print(filename, source, node->children[i]);
+    }
+    result += LR"(],"source":")";
+    std::wstring src = node->location.get(source);
+    for (auto &ch : src) {
+      if (ch == '\n') {
+        result += L"\\n";
+      } else if (ch == '\t') {
+        result += L"\\t";
+      } else if (ch == '\r') {
+        result += L"\\r";
+      } else if (ch == '\"') {
+        result += L"\\\"";
+      } else {
+        result += ch;
+      }
+    }
+    result += LR"("})";
+    return result;
+  }
+
 public:
-  JSValue *exec(JSNode *node) { return nullptr; }
+  JSValue *exec(const std::wstring &filename, const std::wstring &source,
+                JSNode *node) {
+    std::wcout << print(filename, source, node) << std::endl;
+    return nullptr;
+  }
 };
 
 class JSScope;
@@ -1251,13 +3521,13 @@ public:
   }
 
   JSValue *eval(const std::wstring &filename, const std::wstring &source) {
-    auto root = _runtime->getParser()->parse(filename, source);
+    auto root = _runtime->getParser()->parse(source);
     if (root->type == JS_NODE_TYPE::ERROR) {
       auto err = dynamic_cast<JSErrorNode *>(root);
       auto message = err->message;
       auto msg =
           fmt::format(L"SyntaxError: {} \nat {}({}:{}:{})", message,
-                      root->location.end.funcname, root->location.end.filename,
+                      root->location.end.funcname, filename,
                       root->location.end.line, root->location.end.column);
 
       static std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
@@ -1265,7 +3535,7 @@ public:
       delete root;
       throw std::runtime_error(res);
     }
-    auto res = _runtime->getExecutor()->exec(root);
+    auto res = _runtime->getExecutor()->exec(filename, source, root);
     delete root;
     return res;
   }
