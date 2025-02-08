@@ -1,8 +1,11 @@
 
 #include "script/neo.hpp"
+#include <codecvt>
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <locale>
+#include <stdexcept>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -10,14 +13,23 @@
 
 using namespace neo;
 
+std::string filename = "../script/index.js";
+
 int main(int argc, char *argv[]) {
   setlocale(LC_ALL, NULL);
 #ifdef _WIN32
   SetConsoleOutputCP(CP_UTF8);
   setvbuf(stdout, nullptr, _IOFBF, 1000);
 #endif
+  std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+  if (argc > 1) {
+    filename = argv[1];
+  }
   try {
-    std::wifstream file("../script/index.js",std::ios::in|std::ios::binary);
+    std::wifstream file(filename.c_str(), std::ios::in | std::ios::binary);
+    if (!file.is_open()) {
+      throw std::runtime_error(fmt::format("Failed to open file:{}", argv[1]));
+    }
     file.seekg(0, std::ios::end);
     auto size = file.tellg();
     file.seekg(0, std::ios::beg);
@@ -27,7 +39,7 @@ int main(int argc, char *argv[]) {
     std::wstring js(buf, size);
     auto runtime = new JSRuntime();
     auto ctx = new JSContext(runtime);
-    ctx->eval(L"./script/index.js", js);
+    ctx->eval(converter.from_bytes(filename), js);
     delete ctx;
     delete runtime;
     return 0;
