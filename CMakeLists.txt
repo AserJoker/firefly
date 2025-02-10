@@ -44,6 +44,7 @@ include_directories(${LUA_INCLUDE_DIR})
 
 if(DEBUG_ENABLE MATCHES "on")
     enable_testing()
+    find_package(GTest CONFIG REQUIRED)
     add_subdirectory(tests)
 endif()
 

@@ -1,0 +1,8 @@
+include_directories(${FF_INCLUDE_DIR})
+include_directories(./include)
+file(GLOB_RECURSE SOURCES src/*.cc)
+add_executable(${FF_TEST_NAME} ${SOURCES})
+target_link_libraries(${FF_TEST_NAME} PRIVATE GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
+# target_link_libraries(${FF_TEST_NAME} PRIVATE firefly)
+add_test(${FF_TEST_NAME} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${FF_TEST_NAME})
+set_tests_properties(${FF_TEST_NAME} PROPERTIES TIMEOUT 120)

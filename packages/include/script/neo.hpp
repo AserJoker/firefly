@@ -1,6 +1,7 @@
 #ifndef _NEO_JS_HEADER_
 #define _NEO_JS_HEADER_
 #include <algorithm>
+#include <array>
 #include <codecvt>
 #include <fmt/format.h>
 #include <fmt/xchar.h>
@@ -60,7 +61,7 @@ struct JSLocation {
 };
 enum class ACCESSOR_TYPE { GET, SET };
 
-enum class DECLARATION_TYPE { VAR, CONST, LET };
+enum class JS_DECLARATION_TYPE { VAR, CONST, LET };
 
 enum class JS_NODE_TYPE {
 
@@ -125,8 +126,6 @@ enum class JS_NODE_TYPE {
   // EXPRESSION_RECORD,
   // EXPRESSION_TUPLE,
 
-  EXPRESSION_UNARY,
-  EXPRESSION_UPDATE,
   EXPRESSION_BINARY,
   EXPRESSION_MEMBER,
   EXPRESSION_OPTIONAL_MEMBER,
@@ -149,7 +148,6 @@ enum class JS_NODE_TYPE {
   PATTERN_SPREAD_ITEM,
   PATTERN_OBJECT,
   PATTERN_OBJECT_ITEM,
-  PATTERN_OBJECT_COMPUTED_ITEM,
   PATTERN_ARRAY,
   PATTERN_ARRAY_ITEM,
 
@@ -166,6 +164,7 @@ enum class JS_NODE_TYPE {
   EXPORT_DECLARATION,
   EXPORT_DEFAULT,
   EXPORT_SPECIFIER,
+  EXPORT_NAMED,
   EXPORT_ALL,
 
   DECLARATION_FUNCTION_ARGUMENT,
@@ -292,6 +291,100 @@ struct JSEmptyStatementNode : public JSNode {
   JSEmptyStatementNode() { type = JS_NODE_TYPE::STATEMENT_EMPTY; }
 };
 
+struct JSBlockStatement : public JSNode {
+  std::vector<JSNode *> statements;
+  JSBlockStatement() { type = JS_NODE_TYPE::STATEMENT_BLOCK; }
+};
+struct JSDebuggerStatement : public JSNode {
+  JSDebuggerStatement() { type = JS_NODE_TYPE::STATEMENT_DEBUGGER; }
+};
+struct JSReturnStatement : public JSNode {
+  JSNode *value{};
+  JSReturnStatement() { type = JS_NODE_TYPE::STATEMENT_RETURN; }
+};
+struct JSLabelStatement : public JSNode {
+  JSNode *label{};
+  JSNode *statement{};
+  JSLabelStatement() { type = JS_NODE_TYPE::STATEMENT_LABEL; }
+};
+struct JSBreakStatement : public JSNode {
+  JSNode *label{};
+  JSBreakStatement() { type = JS_NODE_TYPE::STATEMENT_BREAK; }
+};
+struct JSContinueStatement : public JSNode {
+  JSNode *label{};
+  JSContinueStatement() { type = JS_NODE_TYPE::STATEMENT_CONTINUE; }
+};
+struct JSIfStatement : public JSNode {
+  JSNode *condition{};
+  JSNode *alternate{};
+  JSNode *consequent{};
+  JSIfStatement() { type = JS_NODE_TYPE::STATEMENT_IF; }
+};
+struct JSSwitchStatement : public JSNode {
+  JSNode *condition{};
+  std::vector<JSNode *> cases;
+  JSSwitchStatement() { type = JS_NODE_TYPE::STATEMENT_SWITCH; }
+};
+struct JSSwitchCaseStatement : public JSNode {
+  JSNode *match{};
+  std::vector<JSNode *> statements;
+  JSSwitchCaseStatement() { type = JS_NODE_TYPE::STATEMENT_SWITCH_CASE; }
+};
+struct JSThrowStatement : public JSNode {
+  JSNode *value{};
+  JSThrowStatement() { type = JS_NODE_TYPE::STATEMENT_THROW; }
+};
+struct JSTryStatement : public JSNode {
+  JSNode *body{};
+  JSNode *onerror{};
+  JSNode *onfinish{};
+  JSTryStatement() { type = JS_NODE_TYPE::STATEMENT_TRY; }
+};
+struct JSTryCatchStatement : public JSNode {
+  JSNode *identifier{};
+  JSNode *body{};
+  JSTryCatchStatement() { type = JS_NODE_TYPE::STATEMENT_TRY_CATCH; }
+};
+struct JSWhileStatement : public JSNode {
+  JSNode *body{};
+  JSNode *condition{};
+  JSWhileStatement() { type = JS_NODE_TYPE::STATEMENT_WHILE; }
+};
+struct JSDoWhileStatement : public JSNode {
+  JSNode *body{};
+  JSNode *condition{};
+  JSDoWhileStatement() { type = JS_NODE_TYPE::STATEMENT_DO_WHILE; }
+};
+
+struct JSForStatement : public JSNode {
+  JSNode *init{};
+  JSNode *condition{};
+  JSNode *after{};
+  JSNode *body{};
+  JSForStatement() { type = JS_NODE_TYPE::STATEMENT_FOR; }
+};
+
+struct JSForInStatement : public JSNode {
+  JSNode *left{};
+  JSNode *right{};
+  JSNode *body{};
+  JSForInStatement() { type = JS_NODE_TYPE::STATEMENT_FOR_IN; }
+};
+struct JSForOfStatement : public JSNode {
+  JSNode *left{};
+  JSNode *right{};
+  JSNode *body{};
+  JSForOfStatement() { type = JS_NODE_TYPE::STATEMENT_FOR_OF; }
+};
+
+struct JSForAwaitOfStatement : public JSNode {
+  JSNode *left{};
+  JSNode *right{};
+  JSNode *body{};
+  JSForAwaitOfStatement() { type = JS_NODE_TYPE::STATEMENT_FOR_AWAIT_OF; }
+};
+
 struct JSExpressionStatementNode : public JSNode {
   JSNode *expression{};
   JSExpressionStatementNode() { type = JS_NODE_TYPE::STATEMENT_EXPRESSION; }
@@ -381,10 +474,6 @@ struct JSVoidExpressionNode : public JSNode {
   JSVoidExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_VOID; }
 };
 
-struct JSUpdateExpresionNode : public JSBinaryExpressionNode {
-  JSUpdateExpresionNode() { type = JS_NODE_TYPE::EXPRESSION_UPDATE; }
-};
-
 struct JSConditionExpressionNode : public JSNode {
   JSNode *condition{};
   JSNode *alternate{};
@@ -469,13 +558,8 @@ struct JSObjectPatternItemNode : public JSNode {
   JSNode *key{};
   JSNode *alias{};
   JSNode *value{};
+  bool computed{};
   JSObjectPatternItemNode() { type = JS_NODE_TYPE::PATTERN_OBJECT_ITEM; }
-};
-
-struct JSObjectPatternComputedItemNode : public JSObjectPatternItemNode {
-  JSObjectPatternComputedItemNode() {
-    type = JS_NODE_TYPE::PATTERN_OBJECT_COMPUTED_ITEM;
-  }
 };
 
 struct JSObjectPatternNode : public JSNode {
@@ -496,6 +580,67 @@ struct JSArrayPatternNode : public JSNode {
 struct JSSpreadPatternItemNode : public JSNode {
   JSNode *value{};
   JSSpreadPatternItemNode() { type = JS_NODE_TYPE::PATTERN_SPREAD_ITEM; }
+};
+
+struct JSVariableDeclaraion : public JSNode {
+  JS_DECLARATION_TYPE kind = JS_DECLARATION_TYPE::CONST;
+  std::vector<JSNode *> declarations{};
+  JSVariableDeclaraion() { type = JS_NODE_TYPE::VARIABLE_DECLARATION; }
+};
+
+struct JSVariableDeclarator : public JSNode {
+  JSNode *identifier{};
+  JSNode *initialize{};
+  JSVariableDeclarator() { type = JS_NODE_TYPE::VARIABLE_DECLARATOR; }
+};
+
+struct JSImportDeclaration : public JSNode {
+  std::vector<JSNode *> specifiers;
+  JSNode *source{};
+  std::vector<JSNode *> attributes;
+  JSImportDeclaration() { type = JS_NODE_TYPE::IMPORT_DECLARATION; }
+};
+struct JSImportSpecifier : public JSNode {
+  JSNode *identifier;
+  JSNode *alias;
+  JSImportSpecifier() { type = JS_NODE_TYPE::IMPORT_SPECIFIER; }
+};
+struct JSImportDefault : public JSNode {
+  JSNode *identifier;
+  JSImportDefault() { type = JS_NODE_TYPE::IMPORT_DEFAULT; }
+};
+struct JSImportNamespace : public JSNode {
+  JSNode *alias;
+  JSImportNamespace() { type = JS_NODE_TYPE::IMPORT_NAMESPACE; }
+};
+struct JSImportAttribute : public JSNode {
+  JSNode *key;
+  JSNode *value;
+  JSImportAttribute() { type = JS_NODE_TYPE::IMPORT_ATTARTUBE; }
+};
+struct JSExportDeclaration : public JSNode {
+  std::vector<JSNode *> specifiers;
+  JSNode *source;
+  std::vector<JSNode *> attributes;
+  JSExportDeclaration() { type = JS_NODE_TYPE::EXPORT_DECLARATION; }
+};
+struct JSExportDefault : public JSNode {
+  JSNode *expression;
+  JSExportDefault() { type = JS_NODE_TYPE::EXPORT_DEFAULT; }
+};
+struct JSExportSpecifier : public JSNode {
+  JSNode *identifier;
+  JSNode *alias;
+  JSExportSpecifier() { type = JS_NODE_TYPE::EXPORT_SPECIFIER; }
+};
+struct JSExportNamed : public JSNode {
+  JSNode *declaration;
+  JSExportNamed() { type = JS_NODE_TYPE::EXPORT_NAMED; }
+};
+struct JSExportAll : public JSNode {
+  JSNode *source;
+  std::vector<JSNode *> attributes;
+  JSExportAll() { type = JS_NODE_TYPE::EXPORT_ALL; }
 };
 
 class JSParser {
@@ -1175,14 +1320,34 @@ private:
     delete node;
     node = new JSDirectiveNode();
     node->location = getLocation(source, position, current);
-    while (skipInvisible(source, current)) {
+    auto newline = false;
+    auto n = new JSBinaryExpressionNode{};
+    for (;;) {
+      if (skipWhiteSpace(source, current)) {
+        continue;
+      }
+      if (skipLineTerminator(source, current)) {
+        newline = true;
+        break;
+      }
+      bool isCommentNewline = false;
+      auto comment = readComment(source, current, &isCommentNewline);
+      if (comment) {
+        if (comment->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          delete node;
+          return comment;
+        }
+        n->comments.push_back(comment);
+        newline |= isCommentNewline;
+        continue;
+      }
+      break;
     }
-    auto err = readComments(source, current, node->comments);
-    if (err != nullptr) {
+    if (!checkSymbol({L";"}, source, current) && !newline &&
+        source[current.offset]) {
       delete node;
-      return err;
-    }
-    if (checkSymbol({L";"}, source, current)) {
+      return nullptr;
     }
     position = current;
     return node;
@@ -1199,17 +1364,1517 @@ private:
     return nullptr;
   }
 
+  JSNode *readBlockStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    if (!checkSymbol({L"{"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSBlockStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto statement = readStatement(source, current);
+    while (statement) {
+      if (statement->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return statement;
+      }
+      node->statements.push_back(statement);
+      statement->addParent(node);
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      statement = readStatement(source, current);
+    }
+    if (!checkSymbol({L"}"}, source, current)) {
+      delete node;
+      return createError(L"Invalid o runexcepted token", source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  JSNode *readDebuggerStatement(const std::wstring &source,
+                                JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"debugger"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSDebuggerStatement{};
+    auto newline = false;
+    for (;;) {
+      if (skipWhiteSpace(source, current)) {
+        continue;
+      }
+      if (skipLineTerminator(source, current)) {
+        newline = true;
+        break;
+      }
+      bool isCommentNewline = false;
+      auto comment = readComment(source, current, &isCommentNewline);
+      if (comment) {
+        if (comment->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return comment;
+        }
+        node->comments.push_back(comment);
+        newline |= isCommentNewline;
+        continue;
+      }
+      break;
+    }
+    if (!newline && !checkSymbol({L";"}, source, current) &&
+        source[current.offset]) {
+      delete node;
+      return createError(L"Invalid or nexcepted token", source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  JSNode *readReturnStatement(const std::wstring &source,
+                              JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"return"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSReturnStatement{};
+
+    auto newline = false;
+    for (;;) {
+      if (skipWhiteSpace(source, current)) {
+        continue;
+      }
+      if (skipLineTerminator(source, current)) {
+        newline = true;
+        break;
+      }
+      bool isCommentNewline = false;
+      auto comment = readComment(source, current, &isCommentNewline);
+      if (comment) {
+        if (comment->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return comment;
+        }
+        node->comments.push_back(comment);
+        newline |= isCommentNewline;
+        continue;
+      }
+      break;
+    }
+    if (!newline && !checkSymbol({L";"}, source, current) &&
+        source[current.offset]) {
+      auto val = readExpression(source, current);
+      if (val) {
+        if (val->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return val;
+        }
+        node->value = val;
+        val->addParent(node);
+      } else {
+        delete node;
+        return createError(L"Invalid or nexcepted token", source, current);
+      }
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  JSNode *readLabelStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier || identifier->type == JS_NODE_TYPE::ERROR) {
+      return identifier;
+    }
+    auto node = new JSLabelStatement{};
+    node->label = identifier;
+    identifier->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L":"}, source, current)) {
+      delete node;
+      return nullptr;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto statement = readStatement(source, current);
+    if (!statement) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (statement->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return statement;
+    }
+    node->statement = statement;
+    statement->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  JSNode *readBreakStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"break"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSBreakStatement{};
+    auto newline = false;
+    for (;;) {
+      if (skipWhiteSpace(source, current)) {
+        continue;
+      }
+      if (skipLineTerminator(source, current)) {
+        newline = true;
+        break;
+      }
+      bool isCommentNewline = false;
+      auto comment = readComment(source, current, &isCommentNewline);
+      if (comment) {
+        if (comment->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return comment;
+        }
+        node->comments.push_back(comment);
+        newline |= isCommentNewline;
+        continue;
+      }
+      break;
+    }
+    if (!newline && !checkSymbol({L";"}, source, current) &&
+        source[current.offset]) {
+      auto val = readIdentifyLiteral(source, current);
+      if (val) {
+        if (val->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return val;
+        }
+        node->label = val;
+        val->addParent(node);
+      } else {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  JSNode *readContinueStatement(const std::wstring &source,
+                                JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"continue"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSContinueStatement{};
+    auto newline = false;
+    for (;;) {
+      if (skipWhiteSpace(source, current)) {
+        continue;
+      }
+      if (skipLineTerminator(source, current)) {
+        newline = true;
+        break;
+      }
+      bool isCommentNewline = false;
+      auto comment = readComment(source, current, &isCommentNewline);
+      if (comment) {
+        if (comment->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return comment;
+        }
+        node->comments.push_back(comment);
+        newline |= isCommentNewline;
+        continue;
+      }
+      break;
+    }
+    if (!newline && !checkSymbol({L";"}, source, current) &&
+        source[current.offset]) {
+      auto val = readIdentifyLiteral(source, current);
+      if (val) {
+        if (val->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return val;
+        }
+        node->label = val;
+        val->addParent(node);
+      } else {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+  JSNode *readIfStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"if"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSIfStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L"("}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto condition = readExpression(source, current);
+    if (!condition) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (condition->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return condition;
+    }
+    node->condition = condition;
+    condition->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L")"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto consequent = readStatement(source, current);
+    if (!consequent) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (consequent->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return consequent;
+    }
+    node->consequent = consequent;
+    consequent->addParent(node);
+    auto backup = current;
+    std::vector<JSNode *> comments;
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (checkIdentifier({L"else"}, source, current)) {
+      for (auto &comment : comments) {
+        node->comments.push_back(comment);
+      }
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto alternate = readStatement(source, current);
+      if (!alternate) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+      if (alternate->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return alternate;
+      }
+      node->alternate = alternate;
+      alternate->addParent(node);
+    } else {
+      current = backup;
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readSwitchStatement(const std::wstring &source,
+                              JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"switch"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSSwitchStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L"("}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto condition = readExpression(source, current);
+    if (!condition) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (condition->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return condition;
+    }
+    node->condition = condition;
+    condition->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L")"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L"{"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto cas = readSwitchCaseStatement(source, current);
+    while (cas) {
+      if (cas->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return cas;
+      }
+      node->cases.push_back(cas);
+      cas->addParent(node);
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      cas = readSwitchCaseStatement(source, current);
+    }
+    if (!checkSymbol({L"}"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readSwitchCaseStatement(const std::wstring &source,
+                                  JSPosition &position) {
+    auto current = position;
+    auto node = new JSSwitchCaseStatement{};
+    if (checkIdentifier({L"default"}, source, current)) {
+    } else if (checkIdentifier({L"case"}, source, current)) {
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto expr = readExpression(source, current);
+      if (!expr) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+      if (expr->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return expr;
+      }
+      node->match = expr;
+      expr->addParent(node);
+    } else {
+      delete node;
+      return nullptr;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L":"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto statement = readStatement(source, current);
+    while (statement) {
+      if (statement->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return statement;
+      }
+      node->statements.push_back(statement);
+      statement->addParent(node);
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      statement = readStatement(source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readThrowStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"throw"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSThrowStatement{};
+
+    auto newline = false;
+    for (;;) {
+      if (skipWhiteSpace(source, current)) {
+        continue;
+      }
+      if (skipLineTerminator(source, current)) {
+        newline = true;
+        break;
+      }
+      bool isCommentNewline = false;
+      auto comment = readComment(source, current, &isCommentNewline);
+      if (comment) {
+        if (comment->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return comment;
+        }
+        node->comments.push_back(comment);
+        newline |= isCommentNewline;
+        continue;
+      }
+      break;
+    }
+    if (!newline && !checkSymbol({L";"}, source, current) &&
+        source[current.offset]) {
+      auto val = readExpression(source, current);
+      if (val) {
+        if (val->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return val;
+        }
+        node->value = val;
+        val->addParent(node);
+      } else {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readTryStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"try"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSTryStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto body = readBlockStatement(source, current);
+    if (!body) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (body->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return body;
+    }
+    node->body = body;
+    body->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (checkIdentifier({L"catch"}, source, current)) {
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto onerror = readTryCatchStatement(source, current);
+      if (!onerror) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+      if (onerror->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return onerror;
+      }
+      node->onerror = onerror;
+      onerror->addParent(node);
+    }
+    if (checkIdentifier({L"finally"}, source, current)) {
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto onfinish = readBlockStatement(source, current);
+      if (!onfinish) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+      if (onfinish->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return onfinish;
+      }
+      node->onfinish = onfinish;
+      onfinish->addParent(node);
+    }
+    if (!node->onfinish && !node->onerror) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readTryCatchStatement(const std::wstring &source,
+                                JSPosition &position) {
+    auto current = position;
+    auto node = new JSTryCatchStatement{};
+    if (checkSymbol({L"("}, source, current)) {
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto identifier = readIdentifyLiteral(source, current);
+      if (!identifier) {
+        identifier = readObjectPattern(source, current);
+      }
+      if (!identifier) {
+        identifier = readArrayPattern(source, current);
+      }
+      if (!identifier) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+      node->identifier = identifier;
+      identifier->addParent(node);
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      if (!checkSymbol({L")"}, source, current)) {
+        delete node;
+        return err;
+      }
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+    }
+    auto body = readBlockStatement(source, current);
+    if (!body) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (body->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return body;
+    }
+    node->body = body;
+    body->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readWhileStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"while"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSWhileStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L"("}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    auto condition = readExpression(source, current);
+    if (!condition) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (condition->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return condition;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L")"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto body = readStatement(source, current);
+    if (!body) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (body->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return body;
+    }
+    node->body = body;
+    body->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readDoWhileStatement(const std::wstring &source,
+                               JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"do"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSDoWhileStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto body = readStatement(source, current);
+    if (!body) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (body->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return body;
+    }
+    node->body = body;
+    body->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkIdentifier({L"while"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L"("}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto condition = readExpression(source, current);
+    if (!condition) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (condition->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return condition;
+    }
+    node->condition = condition;
+    condition->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L")"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readForStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"for"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSForStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L"("}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto init = readExpression(source, current);
+    if (!init) {
+      init = readVariableDeclaration(source, current);
+    }
+    if (init) {
+      if (init->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return init;
+      }
+      node->init = init;
+      init->addParent(node);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L";"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto condition = readExpression(source, current);
+    if (condition) {
+      if (condition->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return condition;
+      }
+      node->condition = condition;
+      condition->addParent(node);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L";"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto after = readExpression(source, current);
+    if (after) {
+      if (after->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return after;
+      }
+      node->after = after;
+      after->addParent(node);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L")"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto body = readStatement(source, current);
+    if (!body) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (body->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return body;
+    }
+    node->body = body;
+    body->addParent(node);
+    node->location = getLocation(source, current, position);
+    position = current;
+    return node;
+  }
+
+  JSNode *readForInStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"for"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSForInStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L"("}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto init = readExpression17(source, current);
+    if (!init) {
+      init = readVariableDeclaration(source, current);
+    }
+    if (!init) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (init->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return init;
+    }
+    node->left = init;
+    init->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkIdentifier({L"in"}, source, current)) {
+      delete node;
+      return nullptr;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto expr = readExpression(source, current);
+    if (!expr) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (expr->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return expr;
+    }
+    node->right = expr;
+    expr->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L")"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto body = readStatement(source, current);
+    if (!body) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (body->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return body;
+    }
+    node->body = body;
+    body->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readForOfStatement(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"for"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSForOfStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L"("}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto init = readExpression17(source, current);
+    if (!init) {
+      init = readVariableDeclaration(source, current);
+    }
+    if (!init) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (init->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return init;
+    }
+    node->left = init;
+    init->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkIdentifier({L"of"}, source, current)) {
+      delete node;
+      return nullptr;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto expr = readExpression(source, current);
+    if (!expr) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (expr->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return expr;
+    }
+    node->right = expr;
+    expr->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L")"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto body = readStatement(source, current);
+    if (!body) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (body->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return body;
+    }
+    node->body = body;
+    body->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readForAwaitOfStatement(const std::wstring &source,
+                                  JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"for"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSForAwaitOfStatement{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkIdentifier({L"await"}, source, current)) {
+      delete node;
+      return nullptr;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L"("}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto init = readExpression17(source, current);
+    if (!init) {
+      init = readVariableDeclaration(source, current);
+    }
+    if (!init) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (init->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return init;
+    }
+    node->left = init;
+    init->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkIdentifier({L"of"}, source, current)) {
+      delete node;
+      return nullptr;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto expr = readExpression(source, current);
+    if (!expr) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (expr->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return expr;
+    }
+    node->right = expr;
+    expr->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L")"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto body = readStatement(source, current);
+    if (!body) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    if (body->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return body;
+    }
+    node->body = body;
+    body->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readVariableDeclarationStatement(const std::wstring &source,
+                                           JSPosition &position) {
+    auto current = position;
+    auto node = readVariableDeclaration(source, current);
+    if (!node || node->type == JS_NODE_TYPE::ERROR) {
+      return node;
+    }
+    auto newline = false;
+    auto n = new JSBinaryExpressionNode{};
+    for (;;) {
+      if (skipWhiteSpace(source, current)) {
+        continue;
+      }
+      if (skipLineTerminator(source, current)) {
+        newline = true;
+        break;
+      }
+      bool isCommentNewline = false;
+      auto comment = readComment(source, current, &isCommentNewline);
+      if (comment) {
+        if (comment->type == JS_NODE_TYPE::ERROR) {
+          delete n;
+          delete node;
+          return comment;
+        }
+        n->comments.push_back(comment);
+        newline |= isCommentNewline;
+        continue;
+      }
+      break;
+    }
+    if (!checkSymbol({L";"}, source, current) && !newline &&
+        source[current.offset]) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readVariableDeclaration(const std::wstring &source,
+                                  JSPosition &position) {
+    auto current = position;
+    auto node = new JSVariableDeclaraion{};
+    if (checkIdentifier({L"const"}, source, current)) {
+      node->kind = JS_DECLARATION_TYPE::CONST;
+    } else if (checkIdentifier({L"let"}, source, current)) {
+      node->kind = JS_DECLARATION_TYPE::LET;
+    } else if (checkIdentifier({L"var"}, source, current)) {
+      node->kind = JS_DECLARATION_TYPE::VAR;
+    } else {
+      delete node;
+      return nullptr;
+    }
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto declaration = readVariableDeclarator(source, current);
+    if (!declaration) {
+      delete node;
+      return createError(L"Invalid or unexcepted token", source, current);
+    }
+    for (;;) {
+      if (declaration->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return declaration;
+      }
+      node->declarations.push_back(declaration);
+      declaration->addParent(node);
+      auto backup = current;
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      if (!checkSymbol({L","}, source, current)) {
+        current = backup;
+        break;
+      }
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      declaration = readVariableDeclarator(source, current);
+      if (!declaration) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readVariableDeclarator(const std::wstring &source,
+                                 JSPosition &position) {
+    auto current = position;
+    auto node = new JSVariableDeclarator{};
+    auto identifier = readObjectPattern(source, current);
+    if (!identifier) {
+      identifier = readArrayPattern(source, position);
+    }
+    if (!identifier) {
+      identifier = readIdentifyLiteral(source, current);
+    }
+    if (!identifier) {
+      delete node;
+      return nullptr;
+    }
+    node->identifier = identifier;
+    identifier->addParent(node);
+    auto backup = current;
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (checkSymbol({L"="}, source, current)) {
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto value = readExpression2(source, current);
+      if (!value) {
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      if (value->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return value;
+      }
+      node->initialize = value;
+      value->addParent(node);
+    } else {
+      current = backup;
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
   JSNode *readStatement(const std::wstring &source, JSPosition &position) {
     auto current = position;
     JSNode *node = readEmptyStatement(source, current);
+    if (!node) {
+      node = readVariableDeclarationStatement(source, current);
+    }
+    if (!node) {
+      node = readBlockStatement(source, current);
+    }
+    if (!node) {
+      node = readDebuggerStatement(source, current);
+    }
+    if (!node) {
+      node = readReturnStatement(source, current);
+    }
+    if (!node) {
+      node = readLabelStatement(source, current);
+    }
+    if (!node) {
+      node = readBreakStatement(source, current);
+    }
+    if (!node) {
+      node = readContinueStatement(source, current);
+    }
+    if (!node) {
+      node = readIfStatement(source, current);
+    }
+    if (!node) {
+      node = readSwitchStatement(source, current);
+    }
+    if (!node) {
+      node = readThrowStatement(source, current);
+    }
+    if (!node) {
+      node = readTryStatement(source, current);
+    }
+    if (!node) {
+      node = readWhileStatement(source, current);
+    }
+    if (!node) {
+      node = readDoWhileStatement(source, current);
+    }
+    if (!node) {
+      node = readForAwaitOfStatement(source, current);
+    }
+    if (!node) {
+      node = readForInStatement(source, current);
+    }
+    if (!node) {
+      node = readForOfStatement(source, current);
+    }
+    if (!node) {
+      node = readForStatement(source, current);
+    }
     if (!node) {
       node = readExpressionStatement(source, current);
     }
     if (node) {
       position = current;
-      return node;
     }
-    return nullptr;
+    return node;
   }
 
   JSNode *readExpressionStatement(const std::wstring &source,
@@ -1232,7 +2897,8 @@ private:
         newline = true;
         break;
       }
-      auto comment = readComment(source, current);
+      bool isCommentNewline = false;
+      auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
           delete n;
@@ -1240,6 +2906,7 @@ private:
           return comment;
         }
         n->comments.push_back(comment);
+        newline |= isCommentNewline;
         continue;
       }
       break;
@@ -1831,9 +3498,8 @@ private:
   JSNode *readObjectPatternItem(const std::wstring &source,
                                 JSPosition &position) {
     auto current = position;
-    JSObjectPatternItemNode *node = nullptr;
+    auto node = new JSObjectPatternItemNode{};
     if (checkSymbol({L"["}, source, current)) {
-      node = new JSObjectPatternComputedItemNode{};
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
@@ -1856,9 +3522,12 @@ private:
       }
       node->key = field;
       field->addParent(node);
+      node->computed = true;
     } else {
-      node = new JSObjectPatternItemNode{};
       auto identifier = readIdentifyLiteral(source, current);
+      if (!identifier) {
+        identifier = readStringLiteral(source, current);
+      }
       if (identifier) {
         node->key = identifier;
         identifier->addParent(node);
@@ -4019,7 +5688,8 @@ private:
     return node;
   }
 
-  JSNode *readComment(const std::wstring &source, JSPosition &position) {
+  JSNode *readComment(const std::wstring &source, JSPosition &position,
+                      bool *newline = nullptr) {
     if (source[position.offset] == '/') {
       if (source[position.offset + 1] == '/') {
         auto current = position;
@@ -4038,6 +5708,11 @@ private:
               source[current.offset + 1] == '/') {
             current.offset += 2;
             break;
+          }
+          if (isLineTerminatior(source[current.offset])) {
+            if (newline) {
+              *newline = true;
+            }
           }
           if (!source[current.offset]) {
             return createError(L"Invalid or unexpected token", source, current);
@@ -4201,12 +5876,6 @@ private:
     case JS_NODE_TYPE::OBJECT_ACCESSOR:
       type = L"OBJECT_ACCESSOR";
       break;
-    case JS_NODE_TYPE::EXPRESSION_UNARY:
-      type = L"EXPRESSION_UNARY";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_UPDATE:
-      type = L"EXPRESSION_UPDATE";
-      break;
     case JS_NODE_TYPE::EXPRESSION_BINARY:
       type = L"EXPRESSION_BINARY";
       break;
@@ -4270,9 +5939,6 @@ private:
     case JS_NODE_TYPE::PATTERN_OBJECT_ITEM:
       type = L"PATTERN_OBJECT_ITEM";
       break;
-    case JS_NODE_TYPE::PATTERN_OBJECT_COMPUTED_ITEM:
-      type = L"PATTERN_OBJECT_COMPUTED_ITEM";
-      break;
     case JS_NODE_TYPE::PATTERN_ARRAY:
       type = L"PATTERN_ARRAY";
       break;
@@ -4308,6 +5974,9 @@ private:
       break;
     case JS_NODE_TYPE::EXPORT_DECLARATION:
       type = L"EXPORT_DECLARATION";
+      break;
+    case JS_NODE_TYPE::EXPORT_NAMED:
+      type = L"EXPORT_NAMED";
       break;
     case JS_NODE_TYPE::EXPORT_DEFAULT:
       type = L"EXPORT_DEFAULT";
