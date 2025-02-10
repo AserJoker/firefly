@@ -2814,6 +2814,384 @@ private:
     return node;
   }
 
+  JSNode *readImportNamespace(const std::wstring &source,
+                              JSPosition &position) {
+    auto current = position;
+    if (!checkSymbol({L"*"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSImportNamespace{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkIdentifier({L"as"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto alias = readIdentifyLiteral(source, current);
+    if (!alias) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    node->alias = alias;
+    alias->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readImportDefault(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier) {
+      return nullptr;
+    }
+    if (isKeyword(source, identifier->location)) {
+      delete identifier;
+      return nullptr;
+    }
+    auto node = new JSImportDefault{};
+    node->identifier = identifier;
+    identifier->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readImportSpecifier(const std::wstring &source,
+                              JSPosition &position) {
+    auto current = position;
+    auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier) {
+      identifier = readStringLiteral(source, current);
+    }
+    if (!identifier) {
+      return nullptr;
+    }
+    if (identifier->type == JS_NODE_TYPE::ERROR) {
+      return identifier;
+    }
+    if (isKeyword(source, identifier->location)) {
+      delete identifier;
+      return nullptr;
+    }
+    auto node = new JSImportSpecifier{};
+    node->identifier = identifier;
+    identifier->addParent(node);
+    auto backup = current;
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (checkIdentifier({L"as"}, source, current)) {
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto alias = readIdentifyLiteral(source, current);
+      if (!alias) {
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      node->alias = alias;
+      alias->addParent(node);
+    } else {
+      current = backup;
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readImportAttribute(const std::wstring &source,
+                              JSPosition &position) {
+    auto current = position;
+    auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier) {
+      return nullptr;
+    }
+    auto node = new JSImportAttribute{};
+    node->key = identifier;
+    identifier->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!checkSymbol({L":"}, source, current)) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto value = readStringLiteral(source, current);
+    if (!value) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (value->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return value;
+    }
+    node->value = value;
+    value->addParent(node);
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
+  JSNode *readImportDeclaration(const std::wstring &source,
+                                JSPosition &position) {
+    auto current = position;
+    if (!checkIdentifier({L"import"}, source, current)) {
+      return nullptr;
+    }
+    auto node = new JSImportDeclaration{};
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    auto specifier = readImportNamespace(source, current);
+    if (specifier) {
+      if (specifier->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return specifier;
+      }
+      node->specifiers.push_back(specifier);
+      specifier->addParent(node);
+    } else {
+      specifier = readImportDefault(source, current);
+      if (specifier) {
+        if (specifier->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return specifier;
+        }
+        node->specifiers.push_back(specifier);
+        specifier->addParent(node);
+        while (skipInvisible(source, current)) {
+        }
+        err = readComments(source, current, node->comments);
+        if (err) {
+          delete node;
+          return err;
+        }
+        if (checkSymbol({L","}, source, current)) {
+          auto backup = current;
+          while (skipInvisible(source, current)) {
+          }
+          err = readComments(source, current, node->comments);
+          if (err) {
+            delete node;
+            return err;
+          }
+          if (!checkSymbol({L"{"}, source, current)) {
+            delete node;
+            return createError(L"Invalid or unexpected token", source, current);
+          } else {
+            current = backup;
+          }
+        }
+      }
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      if (checkSymbol({L"{"}, source, current)) {
+        while (skipInvisible(source, current)) {
+        }
+        err = readComments(source, current, node->comments);
+        if (err) {
+          delete node;
+          return err;
+        }
+        specifier = readImportSpecifier(source, current);
+        if (specifier) {
+          for (;;) {
+            if (specifier->type == JS_NODE_TYPE::ERROR) {
+              delete node;
+              return specifier;
+            }
+            node->specifiers.push_back(specifier);
+            specifier->addParent(node);
+            while (skipInvisible(source, current)) {
+            }
+            err = readComments(source, current, node->comments);
+            if (err) {
+              delete node;
+              return err;
+            }
+            if (!checkSymbol({L","}, source, current)) {
+              break;
+            }
+            while (skipInvisible(source, current)) {
+            }
+            err = readComments(source, current, node->comments);
+            if (err) {
+              delete node;
+              return err;
+            }
+            specifier = readImportSpecifier(source, current);
+            if (!specifier) {
+              delete node;
+              return createError(L"Invalid or unexpected token", source,
+                                 current);
+            }
+          }
+        }
+        while (skipInvisible(source, current)) {
+        }
+        err = readComments(source, current, node->comments);
+        if (err) {
+          delete node;
+          return err;
+        }
+        if (!checkSymbol({L"}"}, source, current)) {
+          delete node;
+          return createError(L"Invalid or unexpected token", source, current);
+        }
+      }
+    }
+
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (!node->specifiers.empty()) {
+      if (!checkIdentifier({L"from"}, source, current)) {
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+    }
+    auto src = readStringLiteral(source, current);
+    if (!src) {
+      delete node;
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    if (src->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return src;
+    }
+    node->source = src;
+    src->addParent(node);
+    auto backup = current;
+    while (skipInvisible(source, current)) {
+    }
+    err = readComments(source, current, node->comments);
+    if (err) {
+      delete node;
+      return err;
+    }
+    if (checkIdentifier({L"assert"}, source, current)) {
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      if (!checkSymbol({L"{"}, source, current)) {
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      auto attribute = readImportAttribute(source, current);
+      if (attribute) {
+        for (;;) {
+          if (attribute->type == JS_NODE_TYPE::ERROR) {
+            delete node;
+            return attribute;
+          }
+          node->attributes.push_back(attribute);
+          attribute->addParent(node);
+          while (skipInvisible(source, current)) {
+          }
+          err = readComments(source, current, node->comments);
+          if (err) {
+            delete node;
+            return err;
+          }
+          if (!checkSymbol({L","}, source, current)) {
+            break;
+          }
+          while (skipInvisible(source, current)) {
+          }
+          err = readComments(source, current, node->comments);
+          if (err) {
+            delete node;
+            return err;
+          }
+          attribute = readImportAttribute(source, current);
+          if (!attribute) {
+            delete node;
+            return createError(L"Invalid or unexpected token", source, current);
+          }
+        }
+      }
+      while (skipInvisible(source, current)) {
+      }
+      err = readComments(source, current, node->comments);
+      if (err) {
+        delete node;
+        return err;
+      }
+      if (!checkSymbol({L"}"}, source, current)) {
+        delete node;
+        return createError(L"Invalid or unexpected token", source, current);
+      }
+    } else {
+      current = backup;
+    }
+    node->location = getLocation(source, position, current);
+    position = current;
+    return node;
+  }
+
   JSNode *readStatement(const std::wstring &source, JSPosition &position) {
     auto current = position;
     JSNode *node = readEmptyStatement(source, current);
@@ -2867,6 +3245,9 @@ private:
     }
     if (!node) {
       node = readForStatement(source, current);
+    }
+    if (!node) {
+      node = readImportDeclaration(source, current);
     }
     if (!node) {
       node = readExpressionStatement(source, current);
