@@ -582,65 +582,65 @@ struct JSSpreadPatternItemNode : public JSNode {
   JSSpreadPatternItemNode() { type = JS_NODE_TYPE::PATTERN_SPREAD_ITEM; }
 };
 
-struct JSVariableDeclaraion : public JSNode {
+struct JSVariableDeclaraionNode : public JSNode {
   JS_DECLARATION_TYPE kind = JS_DECLARATION_TYPE::CONST;
   std::vector<JSNode *> declarations{};
-  JSVariableDeclaraion() { type = JS_NODE_TYPE::VARIABLE_DECLARATION; }
+  JSVariableDeclaraionNode() { type = JS_NODE_TYPE::VARIABLE_DECLARATION; }
 };
 
-struct JSVariableDeclarator : public JSNode {
+struct JSVariableDeclaratorNode : public JSNode {
   JSNode *identifier{};
   JSNode *initialize{};
-  JSVariableDeclarator() { type = JS_NODE_TYPE::VARIABLE_DECLARATOR; }
+  JSVariableDeclaratorNode() { type = JS_NODE_TYPE::VARIABLE_DECLARATOR; }
 };
 
-struct JSImportDeclaration : public JSNode {
+struct JSImportDeclarationNode : public JSNode {
   std::vector<JSNode *> specifiers;
   JSNode *source{};
   std::vector<JSNode *> attributes;
-  JSImportDeclaration() { type = JS_NODE_TYPE::IMPORT_DECLARATION; }
+  JSImportDeclarationNode() { type = JS_NODE_TYPE::IMPORT_DECLARATION; }
 };
-struct JSImportSpecifier : public JSNode {
+struct JSImportSpecifierNode : public JSNode {
   JSNode *identifier;
   JSNode *alias;
-  JSImportSpecifier() { type = JS_NODE_TYPE::IMPORT_SPECIFIER; }
+  JSImportSpecifierNode() { type = JS_NODE_TYPE::IMPORT_SPECIFIER; }
 };
-struct JSImportDefault : public JSNode {
+struct JSImportDefaultNode : public JSNode {
   JSNode *identifier;
-  JSImportDefault() { type = JS_NODE_TYPE::IMPORT_DEFAULT; }
+  JSImportDefaultNode() { type = JS_NODE_TYPE::IMPORT_DEFAULT; }
 };
-struct JSImportNamespace : public JSNode {
+struct JSImportNamespaceNode : public JSNode {
   JSNode *alias;
-  JSImportNamespace() { type = JS_NODE_TYPE::IMPORT_NAMESPACE; }
+  JSImportNamespaceNode() { type = JS_NODE_TYPE::IMPORT_NAMESPACE; }
 };
-struct JSImportAttribute : public JSNode {
+struct JSImportAttributeNode : public JSNode {
   JSNode *key;
   JSNode *value;
-  JSImportAttribute() { type = JS_NODE_TYPE::IMPORT_ATTARTUBE; }
+  JSImportAttributeNode() { type = JS_NODE_TYPE::IMPORT_ATTARTUBE; }
 };
-struct JSExportDeclaration : public JSNode {
+struct JSExportDeclarationNode : public JSNode {
   std::vector<JSNode *> specifiers;
   JSNode *source;
   std::vector<JSNode *> attributes;
-  JSExportDeclaration() { type = JS_NODE_TYPE::EXPORT_DECLARATION; }
+  JSExportDeclarationNode() { type = JS_NODE_TYPE::EXPORT_DECLARATION; }
 };
-struct JSExportDefault : public JSNode {
+struct JSExportDefaultNode : public JSNode {
   JSNode *expression;
-  JSExportDefault() { type = JS_NODE_TYPE::EXPORT_DEFAULT; }
+  JSExportDefaultNode() { type = JS_NODE_TYPE::EXPORT_DEFAULT; }
 };
-struct JSExportSpecifier : public JSNode {
+struct JSExportSpecifierNode : public JSNode {
   JSNode *identifier;
   JSNode *alias;
-  JSExportSpecifier() { type = JS_NODE_TYPE::EXPORT_SPECIFIER; }
+  JSExportSpecifierNode() { type = JS_NODE_TYPE::EXPORT_SPECIFIER; }
 };
-struct JSExportNamed : public JSNode {
+struct JSExportNamedNode : public JSNode {
   JSNode *declaration;
-  JSExportNamed() { type = JS_NODE_TYPE::EXPORT_NAMED; }
+  JSExportNamedNode() { type = JS_NODE_TYPE::EXPORT_NAMED; }
 };
-struct JSExportAll : public JSNode {
+struct JSExportAllNode : public JSNode {
   JSNode *source;
   std::vector<JSNode *> attributes;
-  JSExportAll() { type = JS_NODE_TYPE::EXPORT_ALL; }
+  JSExportAllNode() { type = JS_NODE_TYPE::EXPORT_ALL; }
 };
 
 class JSParser {
@@ -2702,7 +2702,7 @@ private:
   JSNode *readVariableDeclaration(const std::wstring &source,
                                   JSPosition &position) {
     auto current = position;
-    auto node = new JSVariableDeclaraion{};
+    auto node = new JSVariableDeclaraionNode{};
     if (checkIdentifier({L"const"}, source, current)) {
       node->kind = JS_DECLARATION_TYPE::CONST;
     } else if (checkIdentifier({L"let"}, source, current)) {
@@ -2765,7 +2765,7 @@ private:
   JSNode *readVariableDeclarator(const std::wstring &source,
                                  JSPosition &position) {
     auto current = position;
-    auto node = new JSVariableDeclarator{};
+    auto node = new JSVariableDeclaratorNode{};
     auto identifier = readObjectPattern(source, current);
     if (!identifier) {
       identifier = readArrayPattern(source, position);
@@ -2820,7 +2820,7 @@ private:
     if (!checkSymbol({L"*"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSImportNamespace{};
+    auto node = new JSImportNamespaceNode{};
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
@@ -2861,7 +2861,7 @@ private:
       delete identifier;
       return nullptr;
     }
-    auto node = new JSImportDefault{};
+    auto node = new JSImportDefaultNode{};
     node->identifier = identifier;
     identifier->addParent(node);
     node->location = getLocation(source, position, current);
@@ -2886,7 +2886,7 @@ private:
       delete identifier;
       return nullptr;
     }
-    auto node = new JSImportSpecifier{};
+    auto node = new JSImportSpecifierNode{};
     node->identifier = identifier;
     identifier->addParent(node);
     auto backup = current;
@@ -2927,7 +2927,7 @@ private:
     if (!identifier) {
       return nullptr;
     }
-    auto node = new JSImportAttribute{};
+    auto node = new JSImportAttributeNode{};
     node->key = identifier;
     identifier->addParent(node);
     while (skipInvisible(source, current)) {
@@ -2970,7 +2970,7 @@ private:
     if (!checkIdentifier({L"import"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSImportDeclaration{};
+    auto node = new JSImportDeclarationNode{};
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
