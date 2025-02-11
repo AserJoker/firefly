@@ -269,6 +269,44 @@ TEST_F(TestParser, IfWithoutAlt) {
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::ERROR);
 }
+TEST_F(TestParser, Switch) {
+  neo::JSParser parser;
+  std::wstring source = LR"(switch(a+b){case a:})";
+  auto node = parser.parse(source);
+  ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
+  auto program = dynamic_cast<neo::JSProgramNode *>(node);
+  ASSERT_GT(program->body.size(), 0);
+  ASSERT_EQ(program->body[0]->type, neo::JS_NODE_TYPE::STATEMENT_SWITCH);
+  auto sw = dynamic_cast<neo::JSSwitchStatement *>(program->body[0]);
+  ASSERT_EQ(sw->cases.size(), 1);
+  auto cas = dynamic_cast<neo::JSSwitchCaseStatement *>(sw->cases[0]);
+  ASSERT_EQ(cas->match->location.get(source), L"a");
+  ASSERT_EQ(cas->statements.size(), 0);
+}
+TEST_F(TestParser, SwitchNoCase) {
+  neo::JSParser parser;
+  std::wstring source = LR"(switch(a+b){})";
+  auto node = parser.parse(source);
+  ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
+  auto program = dynamic_cast<neo::JSProgramNode *>(node);
+  ASSERT_GT(program->body.size(), 0);
+  ASSERT_EQ(program->body[0]->type, neo::JS_NODE_TYPE::STATEMENT_SWITCH);
+  auto sw = dynamic_cast<neo::JSSwitchStatement *>(program->body[0]);
+  ASSERT_EQ(sw->cases.size(), 0);
+}
+TEST_F(TestParser, SwitchDefault) {
+  neo::JSParser parser;
+  std::wstring source = LR"(switch(a+b){case 1:default:})";
+  auto node = parser.parse(source);
+  ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
+  auto program = dynamic_cast<neo::JSProgramNode *>(node);
+  ASSERT_GT(program->body.size(), 0);
+  ASSERT_EQ(program->body[0]->type, neo::JS_NODE_TYPE::STATEMENT_SWITCH);
+  auto sw = dynamic_cast<neo::JSSwitchStatement *>(program->body[0]);
+  ASSERT_EQ(sw->cases.size(), 2);
+  auto cas = dynamic_cast<neo::JSSwitchCaseStatement *>(sw->cases[1]);
+  ASSERT_EQ(cas->match, nullptr);
+}
 TEST_F(TestParser, Class) {
   neo::JSParser parser;
   std::wstring source = LR"(class Test extends A().B {;;;;;})";

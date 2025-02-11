@@ -181,24 +181,27 @@ enum class JS_NODE_TYPE {
   DECLARATION_ARRAY,
   DECLARATION_CLASS,
 };
-enum class JS_LEX_SCOPE_TYPE { BLOCK, FUNCTION };
+enum class JS_COMPILE_SCOPE_TYPE { BLOCK, LEX };
+
 struct JSNode;
-struct JSLexBinding {
+
+struct JSLexDeclaration {
   JS_DECLARATION_TYPE type;
   JSNode *declaration;
   std::wstring name;
 };
-struct JSLexScope {
-  JS_LEX_SCOPE_TYPE type;
-  JSLexScope *parent;
-  std::vector<JSLexBinding> variables;
+
+struct JSCompileScope {
+  JS_COMPILE_SCOPE_TYPE type;
+  JSCompileScope *parent;
+  std::vector<JSLexDeclaration> declarations;
 };
 
 struct JSNode {
   JSLocation location;
   JS_NODE_TYPE type = JS_NODE_TYPE::ERROR;
   JSNode *parent = nullptr;
-  JSLexScope *scope = nullptr;
+  JSCompileScope *scope = nullptr;
   std::vector<JSNode *> children;
   std::vector<JSNode *> comments;
   virtual ~JSNode() {
@@ -522,6 +525,7 @@ struct JSObjectMethodNode : public JSNode {
   bool async{};
   bool generator{};
   bool computed{};
+  std::vector<std::wstring> closure;
   JSObjectMethodNode() { type = JS_NODE_TYPE::OBJECT_METHOD; }
 };
 
@@ -531,6 +535,7 @@ struct JSObjectAccessorNode : public JSNode {
   JSNode *body{};
   bool computed{};
   JS_ACCESSOR_TYPE accessor;
+  std::vector<std::wstring> closure;
   JSObjectAccessorNode() { type = JS_NODE_TYPE::OBJECT_ACCESSOR; }
 };
 
@@ -566,13 +571,15 @@ struct JSFunctionDeclarationNode : public JSNode {
   std::vector<JSNode *> arguments;
   bool async{};
   bool generator{};
-  std::vector<std::string> closure;
+  std::vector<std::wstring> closure;
   JSFunctionDeclarationNode() { type = JS_NODE_TYPE::DECLARATION_FUNCTION; }
 };
+
 struct JSArrowDeclarationNode : public JSNode {
   JSNode *name{};
   JSNode *body{};
   std::vector<JSNode *> arguments;
+  std::vector<std::wstring> closure;
   bool async{};
   JSArrowDeclarationNode() { type = JS_NODE_TYPE::DECLARATION_ARROW_FUNCTION; }
 };
@@ -673,6 +680,7 @@ struct JSClassMethodNode : public JSNode {
   JSNode *identifier{};
   std::vector<JSNode *> arguments;
   JSNode *body{};
+  std::vector<std::wstring> closure;
   JSClassMethodNode() { type = JS_NODE_TYPE::CLASS_METHOD; }
 };
 struct JSClassPropertyNode : public JSNode {
@@ -689,6 +697,7 @@ struct JSClassAccessorNode : public JSNode {
   JSNode *identifier{};
   std::vector<JSNode *> arguments;
   JSNode *body{};
+  std::vector<std::wstring> closure;
   JSClassAccessorNode() { type = JS_NODE_TYPE::CLASS_ACCESSOR; }
 };
 struct JSStaticBlockNode : public JSNode {
@@ -704,11 +713,11 @@ struct JSClassDeclaration : public JSNode {
 
 class JSParser {
 private:
-  JSLexScope *_scope = nullptr;
+  JSCompileScope *_scope = nullptr;
 
 private:
-  JSLexScope *pushScope(const JS_LEX_SCOPE_TYPE &type) {
-    auto scope = new JSLexScope{type, _scope};
+  JSCompileScope *pushScope(const JS_COMPILE_SCOPE_TYPE &type) {
+    auto scope = new JSCompileScope{type, _scope};
     _scope = scope;
     return scope;
   }
@@ -722,12 +731,12 @@ private:
       auto name = identifier->location.get(source);
       if (type == JS_DECLARATION_TYPE::VAR) {
         auto scope = _scope;
-        while (scope->type == JS_LEX_SCOPE_TYPE::BLOCK) {
+        while (scope->type == JS_COMPILE_SCOPE_TYPE::BLOCK) {
           scope = scope->parent;
         }
-        scope->variables.push_back({type, declaration, name});
+        scope->declarations.push_back({type, declaration, name});
       } else {
-        _scope->variables.push_back({type, declaration, name});
+        _scope->declarations.push_back({type, declaration, name});
       }
     } else if (identifier->type == JS_NODE_TYPE::PATTERN_SPREAD_ITEM) {
       auto node = dynamic_cast<JSSpreadPatternItemNode *>(identifier);
@@ -1423,7 +1432,7 @@ private:
   JSNode *readProgram(const std::wstring &source, JSPosition &position) {
     auto current = position;
     auto *node = new JSProgramNode();
-    node->scope = pushScope(JS_LEX_SCOPE_TYPE::FUNCTION);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
     auto interpreter = readInterpreterDirective(source, current);
     if (interpreter) {
       if (interpreter->type == JS_NODE_TYPE::ERROR) {
@@ -1563,7 +1572,7 @@ private:
       return nullptr;
     }
     auto node = new JSBlockStatement{};
-    node->scope = pushScope(JS_LEX_SCOPE_TYPE::BLOCK);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK);
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
@@ -1697,6 +1706,10 @@ private:
   JSNode *readLabelStatement(const std::wstring &source, JSPosition &position) {
     auto current = position;
     auto identifier = readIdentifyLiteral(source, current);
+    if (identifier && isKeyword(source, identifier->location)) {
+      delete identifier;
+      identifier = nullptr;
+    }
     if (!identifier || identifier->type == JS_NODE_TYPE::ERROR) {
       return identifier;
     }
@@ -1998,7 +2011,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_LEX_SCOPE_TYPE::BLOCK);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK);
     if (!checkSymbol({L"{"}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -2454,7 +2467,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_LEX_SCOPE_TYPE::FUNCTION);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
     if (!checkSymbol({L"("}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -2580,7 +2593,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_LEX_SCOPE_TYPE::FUNCTION);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
     if (!checkSymbol({L"("}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -2684,7 +2697,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_LEX_SCOPE_TYPE::FUNCTION);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
     if (!checkSymbol({L"("}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -2800,7 +2813,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_LEX_SCOPE_TYPE::FUNCTION);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
     if (!checkSymbol({L"("}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -4173,6 +4186,7 @@ private:
       delete node;
       return err;
     }
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
     auto argument = readFunctionArgument(source, current);
     while (argument) {
       if (argument->type == JS_NODE_TYPE::ERROR) {
@@ -4181,6 +4195,7 @@ private:
       }
       node->arguments.push_back(argument);
       argument->addParent(node);
+      declarVariable(JS_DECLARATION_TYPE::LET, source, argument);
       while (skipInvisible(source, current)) {
       };
       err = readComments(source, current, node->comments);
@@ -4235,6 +4250,7 @@ private:
     }
     node->body = body;
     body->addParent(node);
+    popScope();
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -4316,10 +4332,12 @@ private:
       delete node;
       return err;
     }
+
     if (!checkSymbol({L"("}, source, current)) {
       delete node;
       return nullptr;
     }
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
@@ -4335,6 +4353,7 @@ private:
       }
       node->arguments.push_back(argument);
       argument->addParent(node);
+      declarVariable(JS_DECLARATION_TYPE::LET, source, argument);
       while (skipInvisible(source, current)) {
       };
       err = readComments(source, current, node->comments);
@@ -4389,6 +4408,7 @@ private:
     }
     node->body = body;
     body->addParent(node);
+    popScope();
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -4973,15 +4993,18 @@ private:
       delete node;
       return err;
     }
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
     auto block = readBlockStatement(source, current);
     if (!block) {
       delete node;
+      popScope();
       return nullptr;
     }
     if (block->type == JS_NODE_TYPE::ERROR) {
       delete node;
       return block;
     }
+    popScope();
     node->statement = block;
     block->addParent(node);
     node->location = getLocation(source, position, current);
@@ -5534,7 +5557,7 @@ private:
       delete node;
       return nullptr;
     }
-    node->scope = pushScope(JS_LEX_SCOPE_TYPE::BLOCK);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK);
     for (;;) {
       while (skipInvisible(source, current)) {
       }
@@ -5646,7 +5669,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_LEX_SCOPE_TYPE::FUNCTION);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
     auto argument = readFunctionArgument(source, current);
     while (argument) {
       if (argument->type == JS_NODE_TYPE::ERROR) {
@@ -7788,7 +7811,7 @@ private:
     result += LR"(","declarations":[)";
     if (node->scope) {
       size_t index = 0;
-      for (auto &variable : node->scope->variables) {
+      for (auto &variable : node->scope->declarations) {
         result += LR"({"type":")";
         switch (variable.type) {
         case JS_DECLARATION_TYPE::VAR:
@@ -7805,7 +7828,7 @@ private:
           break;
         }
         result += LR"(","name":")" + variable.name + LR"("})";
-        if (index != node->scope->variables.size() - 1) {
+        if (index != node->scope->declarations.size() - 1) {
           result += L",";
         }
         index++;
