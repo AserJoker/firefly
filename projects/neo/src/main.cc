@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <locale>
+#include <fmt/format.h>
 #include <stdexcept>
 
 #ifdef _WIN32
