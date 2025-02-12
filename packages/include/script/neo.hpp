@@ -1,15 +1,18 @@
 #ifndef _NEO_JS_HEADER_
 #define _NEO_JS_HEADER_
 #include <algorithm>
+#include <any>
 #include <array>
 #include <codecvt>
+#include <cstddef>
 #include <fmt/format.h>
 #include <fmt/xchar.h>
 #include <functional>
 #include <iostream>
+#include <map>
+#include <set>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace neo {
@@ -51,7 +54,7 @@ struct JSLocation {
     }
     return true;
   }
-  std::wstring get(const std::wstring &source) {
+  std::wstring get(const std::wstring &source) const {
     std::wstring result;
     for (auto i = start.offset; i < end.offset; i++) {
       result += source[i];
@@ -59,6 +62,232 @@ struct JSLocation {
     return result;
   }
 };
+
+enum class JSON_NODE_TYPE { OBJECT, ARRAY, STRING, NUMBER, NIL, BOOLEAN };
+class JSON {
+private:
+  JSON_NODE_TYPE _type;
+  std::any _value;
+  friend class JSONCheckedNumber;
+
+private:
+  using JSONNumberValue = double;
+  using JSONStringValue = std::wstring;
+  using JSONBooleanValue = bool;
+  using JSONNullValue = std::nullptr_t;
+  using JSONArrayValue = std::vector<JSON>;
+  using JSONObjectValue = std::map<std::wstring, JSON>;
+
+public:
+  JSON() : _type(JSON_NODE_TYPE::NIL), _value(nullptr) {}
+
+  JSON(const JSON &another) {
+    switch (another._type) {
+    case JSON_NODE_TYPE::OBJECT:
+      _value = std::any_cast<const JSONObjectValue &>(another._value);
+      break;
+    case JSON_NODE_TYPE::ARRAY:
+      _value = std::any_cast<const JSONArrayValue &>(another._value);
+      break;
+    case JSON_NODE_TYPE::STRING:
+      _value = std::any_cast<const JSONStringValue &>(another._value);
+      break;
+    case JSON_NODE_TYPE::NUMBER:
+      _value = std::any_cast<const JSONNumberValue &>(another._value);
+      break;
+    case JSON_NODE_TYPE::NIL:
+      _value = nullptr;
+      break;
+    case JSON_NODE_TYPE::BOOLEAN:
+      _value = std::any_cast<JSONBooleanValue>(another._value);
+      break;
+    }
+    _type = another._type;
+  }
+
+  JSON &setNull() {
+    _type = JSON_NODE_TYPE::NIL;
+    _value = nullptr;
+    return *this;
+  }
+
+  JSON &setNumber(double value) {
+    _type = JSON_NODE_TYPE::NUMBER;
+    _value = value;
+    return *this;
+  }
+
+  JSON &setBoolean(bool value) {
+    _type = JSON_NODE_TYPE::BOOLEAN;
+    _value = value;
+    return *this;
+  }
+
+  JSON &setString(const std::wstring &value) {
+    _type = JSON_NODE_TYPE::STRING;
+    std::wstring str;
+    _value = std::wstring{value};
+    return *this;
+  }
+
+  JSON &setObject() {
+    _type = JSON_NODE_TYPE::OBJECT;
+    _value = JSONObjectValue{};
+    return *this;
+  }
+
+  JSON &setArray() {
+    _type = JSON_NODE_TYPE::ARRAY;
+    _value = JSONArrayValue{};
+    return *this;
+  }
+
+  JSONNumberValue &getNumber() {
+    return std::any_cast<JSONNumberValue &>(_value);
+  }
+
+  JSONStringValue &getString() {
+    return std::any_cast<JSONStringValue &>(_value);
+  }
+
+  JSONBooleanValue &getBoolean() {
+    return std::any_cast<JSONBooleanValue &>(_value);
+  }
+
+  const JSONNumberValue &getNumber() const {
+    return std::any_cast<const JSONNumberValue &>(_value);
+  }
+
+  const JSONStringValue &getString() const {
+    return std::any_cast<const JSONStringValue &>(_value);
+  }
+
+  const JSONBooleanValue &getBoolean() const {
+    return std::any_cast<const JSONBooleanValue &>(_value);
+  }
+
+  JSON &setIndex(size_t index, const JSON &item) {
+    auto &items = std::any_cast<JSONArrayValue &>(_value);
+    while (items.size() <= index) {
+      items.push_back(JSON{});
+    }
+    items[index] = item;
+    return *this;
+  }
+
+  JSON &getIndex(size_t index) {
+    static JSON nil;
+    auto &items = std::any_cast<JSONArrayValue &>(_value);
+    if (index < items.size()) {
+      return items[index];
+    }
+    return nil;
+  }
+  size_t getLength() const {
+    auto &items = std::any_cast<const JSONArrayValue &>(_value);
+    return items.size();
+  }
+  const JSON &getIndex(size_t index) const {
+    static JSON nil;
+    auto &items = std::any_cast<const JSONArrayValue &>(_value);
+    if (index < items.size()) {
+      return items[index];
+    }
+    return nil;
+  }
+  JSON &setField(const std::wstring &name, const JSON &field) {
+    auto &properties = std::any_cast<JSONObjectValue &>(_value);
+    properties[name] = field;
+    return *this;
+  }
+  JSON &getField(const std::wstring &name) {
+    static JSON nil;
+    auto &properties = std::any_cast<JSONObjectValue &>(_value);
+    if (properties.contains(name)) {
+      return properties.at(name);
+    }
+    return nil;
+  }
+  const JSON &getField(const std::wstring &name) const {
+    static JSON nil;
+    auto &properties = std::any_cast<const JSONObjectValue &>(_value);
+    if (properties.contains(name)) {
+      return properties.at(name);
+    }
+    return nil;
+  }
+  std::vector<std::wstring> keys() const {
+    auto &properties = std::any_cast<const JSONObjectValue &>(_value);
+    std::vector<std::wstring> keys;
+    for (auto &[k, _] : properties) {
+      keys.push_back(k);
+    }
+    return keys;
+  }
+
+  const JSON_NODE_TYPE &getType() const { return _type; }
+
+public:
+  static std::wstring stringify(const JSON &node) {
+    switch (node._type) {
+    case JSON_NODE_TYPE::OBJECT: {
+      std::wstring str = L"{";
+      auto keys = node.keys();
+      for (size_t i = 0; i < keys.size(); i++) {
+        if (i != 0) {
+          str += L",";
+        }
+        str += L"\"" + keys[i] + L"\":";
+        str += stringify(node.getField(keys[i]));
+      }
+      str += L"}";
+      return str;
+    }
+    case JSON_NODE_TYPE::ARRAY: {
+      std::wstring str = L"[";
+      for (size_t i = 0; i < node.getLength(); i++) {
+        if (i != 0) {
+          str += L",";
+        }
+        str += stringify(node.getIndex(i));
+      }
+      str += L"]";
+      return str;
+    }
+    case JSON_NODE_TYPE::STRING: {
+      std::wstring str = L"\"";
+      for (auto &ch : node.getString()) {
+        if (ch == '\n') {
+          str += L"\\n";
+        } else if (ch == '\r') {
+          str += L"\\r";
+        } else if (ch == '\"') {
+          str += L"\\\"";
+        } else {
+          str += ch;
+        }
+      }
+      str += L"\"";
+      return str;
+    }
+    case JSON_NODE_TYPE::NUMBER: {
+      wchar_t str[1024];
+      swprintf(str, L"%lf", node.getNumber());
+      return str;
+    }
+    case JSON_NODE_TYPE::NIL:
+      return L"null";
+    case JSON_NODE_TYPE::BOOLEAN:
+      if (node.getBoolean()) {
+        return L"true";
+      } else {
+        return L"false";
+      }
+    }
+    return L"";
+  }
+};
+
 enum class JS_ACCESSOR_TYPE { GET, SET };
 
 enum class JS_DECLARATION_TYPE {
@@ -89,9 +318,9 @@ enum class JS_NODE_TYPE {
   LITERAL_BIGINT,
   // LITERAL_DECIMAL,
 
-  THIS,
+  LITERAL_THIS,
 
-  SUPER,
+  LITERAL_SUPER,
 
   PROGRAM,
 
@@ -181,6 +410,7 @@ enum class JS_NODE_TYPE {
   DECLARATION_ARRAY,
   DECLARATION_CLASS,
 };
+
 enum class JS_COMPILE_SCOPE_TYPE { BLOCK, LEX };
 
 struct JSNode;
@@ -194,7 +424,9 @@ struct JSLexDeclaration {
 struct JSCompileScope {
   JS_COMPILE_SCOPE_TYPE type;
   JSCompileScope *parent;
+  JSNode *node;
   std::vector<JSLexDeclaration> declarations;
+  std::set<std::wstring> refs;
 };
 
 struct JSNode {
@@ -226,6 +458,286 @@ struct JSNode {
       parent->children.erase(it);
       this->parent = nullptr;
     }
+  }
+  virtual JSON toJSON(const std::wstring &filename,
+                      const std::wstring &source) const {
+    std::wstring type;
+    switch (this->type) {
+    case JS_NODE_TYPE::ERROR:
+      type = L"ERROR";
+      break;
+    case JS_NODE_TYPE::TOKEN:
+      type = L"TOKEN";
+      break;
+    case JS_NODE_TYPE::PRIVATE_NAME:
+      type = L"PRIVATE_NAME";
+      break;
+    case JS_NODE_TYPE::LITERAL_REGEX:
+      type = L"LITERAL_REGEX";
+      break;
+    case JS_NODE_TYPE::LITERAL_NULL:
+      type = L"LITERAL_NULL";
+      break;
+    case JS_NODE_TYPE::LITERAL_STRING:
+      type = L"LITERAL_STRING";
+      break;
+    case JS_NODE_TYPE::LITERAL_BOOLEAN:
+      type = L"LITERAL_BOOLEAN";
+      break;
+    case JS_NODE_TYPE::LITERAL_NUMBER:
+      type = L"LITERAL_NUMBER";
+      break;
+    case JS_NODE_TYPE::LITERAL_COMMENT:
+      type = L"LITERAL_COMMENT";
+      break;
+    case JS_NODE_TYPE::LITERAL_MULTILINE_COMMENT:
+      type = L"LITERAL_MULTILINE_COMMENT";
+      break;
+    case JS_NODE_TYPE::LITERAL_UNDEFINED:
+      type = L"LITERAL_UNDEFINED";
+      break;
+    case JS_NODE_TYPE::LITERAL_IDENTITY:
+      type = L"LITERAL_IDENTITY";
+      break;
+    case JS_NODE_TYPE::LITERAL_TEMPLATE:
+      type = L"LITERAL_TEMPLATE";
+      break;
+    case JS_NODE_TYPE::LITERAL_BIGINT:
+      type = L"LITERAL_BIGINT";
+      break;
+    case JS_NODE_TYPE::LITERAL_THIS:
+      type = L"LITERAL_THIS";
+      break;
+    case JS_NODE_TYPE::LITERAL_SUPER:
+      type = L"LITERAL_SUPER";
+      break;
+    case JS_NODE_TYPE::PROGRAM:
+      type = L"PROGRAM";
+      break;
+    case JS_NODE_TYPE::STATEMENT_EMPTY:
+      type = L"STATEMENT_EMPTY";
+      break;
+    case JS_NODE_TYPE::STATEMENT_BLOCK:
+      type = L"STATEMENT_BLOCK";
+      break;
+    case JS_NODE_TYPE::STATEMENT_DEBUGGER:
+      type = L"STATEMENT_DEBUGGER";
+      break;
+    case JS_NODE_TYPE::STATEMENT_RETURN:
+      type = L"STATEMENT_RETURN";
+      break;
+    case JS_NODE_TYPE::STATEMENT_LABEL:
+      type = L"STATEMENT_LABEL";
+      break;
+    case JS_NODE_TYPE::STATEMENT_BREAK:
+      type = L"STATEMENT_BREAK";
+      break;
+    case JS_NODE_TYPE::STATEMENT_CONTINUE:
+      type = L"STATEMENT_CONTINUE";
+      break;
+    case JS_NODE_TYPE::STATEMENT_IF:
+      type = L"STATEMENT_IF";
+      break;
+    case JS_NODE_TYPE::STATEMENT_SWITCH:
+      type = L"STATEMENT_SWITCH";
+      break;
+    case JS_NODE_TYPE::STATEMENT_SWITCH_CASE:
+      type = L"STATEMENT_SWITCH_CASE";
+      break;
+    case JS_NODE_TYPE::STATEMENT_THROW:
+      type = L"STATEMENT_THROW";
+      break;
+    case JS_NODE_TYPE::STATEMENT_TRY:
+      type = L"STATEMENT_TRY";
+      break;
+    case JS_NODE_TYPE::STATEMENT_TRY_CATCH:
+      type = L"STATEMENT_TRY_CATCH";
+      break;
+    case JS_NODE_TYPE::STATEMENT_WHILE:
+      type = L"STATEMENT_WHILE";
+      break;
+    case JS_NODE_TYPE::STATEMENT_DO_WHILE:
+      type = L"STATEMENT_DO_WHILE";
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR:
+      type = L"STATEMENT_FOR";
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR_IN:
+      type = L"STATEMENT_FOR_IN";
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR_OF:
+      type = L"STATEMENT_FOR_OF";
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR_AWAIT_OF:
+      type = L"STATEMENT_FOR_AWAIT_OF";
+      break;
+    case JS_NODE_TYPE::STATEMENT_EXPRESSION:
+      type = L"STATEMENT_EXPRESSION";
+      break;
+    case JS_NODE_TYPE::VARIABLE_DECLARATION:
+      type = L"VARIABLE_DECLARATION";
+      break;
+    case JS_NODE_TYPE::VARIABLE_DECLARATOR:
+      type = L"VARIABLE_DECLARATOR";
+      break;
+    case JS_NODE_TYPE::DECORATOR:
+      type = L"DECORATOR";
+      break;
+    case JS_NODE_TYPE::DIRECTIVE:
+      type = L"DIRECTIVE";
+      break;
+    case JS_NODE_TYPE::INTERPRETER_DIRECTIVE:
+      type = L"INTERPRETER_DIRECTIVE";
+      break;
+    case JS_NODE_TYPE::OBJECT_PROPERTY:
+      type = L"OBJECT_PROPERTY";
+      break;
+    case JS_NODE_TYPE::OBJECT_METHOD:
+      type = L"OBJECT_METHOD";
+      break;
+    case JS_NODE_TYPE::OBJECT_ACCESSOR:
+      type = L"OBJECT_ACCESSOR";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_BINARY:
+      type = L"EXPRESSION_BINARY";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_MEMBER:
+      type = L"EXPRESSION_MEMBER";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER:
+      type = L"EXPRESSION_OPTIONAL_MEMBER";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER:
+      type = L"EXPRESSION_COMPUTED_MEMBER";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER:
+      type = L"EXPRESSION_OPTIONAL_COMPUTED_MEMBER";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_CONDITION:
+      type = L"EXPRESSION_CONDITION";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_CALL:
+      type = L"EXPRESSION_CALL";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_CALL:
+      type = L"EXPRESSION_OPTIONAL_CALL";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_NEW:
+      type = L"EXPRESSION_NEW";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_DELETE:
+      type = L"EXPRESSION_DELETE";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_AWAIT:
+      type = L"EXPRESSION_AWAIT";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_YIELD:
+      type = L"EXPRESSION_YIELD";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_YIELD_DELEGATE:
+      type = L"EXPRESSION_YIELD_DELEGATE";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_VOID:
+      type = L"EXPRESSION_VOID";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_TYPEOF:
+      type = L"EXPRESSION_TYPEOF";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_GROUP:
+      type = L"EXPRESSION_GROUP";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_ASSIGMENT:
+      type = L"EXPRESSION_ASSIGMENT";
+      break;
+    case JS_NODE_TYPE::EXPRESSION_SPREAD:
+      type = L"EXPRESSION_SPREAD";
+      break;
+    case JS_NODE_TYPE::PATTERN_SPREAD_ITEM:
+      type = L"PATTERN_SPREAD_ITEM";
+      break;
+    case JS_NODE_TYPE::PATTERN_OBJECT:
+      type = L"PATTERN_OBJECT";
+      break;
+    case JS_NODE_TYPE::PATTERN_OBJECT_ITEM:
+      type = L"PATTERN_OBJECT_ITEM";
+      break;
+    case JS_NODE_TYPE::PATTERN_ARRAY:
+      type = L"PATTERN_ARRAY";
+      break;
+    case JS_NODE_TYPE::PATTERN_ARRAY_ITEM:
+      type = L"PATTERN_ARRAY_ITEM";
+      break;
+    case JS_NODE_TYPE::CLASS_METHOD:
+      type = L"CLASS_METHOD";
+      break;
+    case JS_NODE_TYPE::CLASS_PROPERTY:
+      type = L"CLASS_PROPERTY";
+      break;
+    case JS_NODE_TYPE::CLASS_ACCESSOR:
+      type = L"CLASS_ACCESSOR";
+      break;
+    case JS_NODE_TYPE::STATIC_BLOCK:
+      type = L"STATIC_BLOCK";
+      break;
+    case JS_NODE_TYPE::IMPORT_DECLARATION:
+      type = L"IMPORT_DECLARATION";
+      break;
+    case JS_NODE_TYPE::IMPORT_SPECIFIER:
+      type = L"IMPORT_SPECIFIER";
+      break;
+    case JS_NODE_TYPE::IMPORT_DEFAULT:
+      type = L"IMPORT_DEFAULT";
+      break;
+    case JS_NODE_TYPE::IMPORT_NAMESPACE:
+      type = L"IMPORT_NAMESPACE";
+      break;
+    case JS_NODE_TYPE::IMPORT_ATTARTUBE:
+      type = L"IMPORT_ATTARTUBE";
+      break;
+    case JS_NODE_TYPE::EXPORT_DECLARATION:
+      type = L"EXPORT_DECLARATION";
+      break;
+    case JS_NODE_TYPE::EXPORT_NAMED:
+      type = L"EXPORT_NAMED";
+      break;
+    case JS_NODE_TYPE::EXPORT_DEFAULT:
+      type = L"EXPORT_DEFAULT";
+      break;
+    case JS_NODE_TYPE::EXPORT_SPECIFIER:
+      type = L"EXPORT_SPECIFIER";
+      break;
+    case JS_NODE_TYPE::EXPORT_NAMESPACE:
+      type = L"EXPORT_NAMESPACE";
+      break;
+    case JS_NODE_TYPE::DECLARATION_FUNCTION_ARGUMENT:
+      type = L"DECLARATION_FUNCTION_ARGUMENT";
+      break;
+    case JS_NODE_TYPE::DECLARATION_ARROW_FUNCTION:
+      type = L"DECLARATION_ARROW_FUNCTION";
+      break;
+    case JS_NODE_TYPE::DECLARATION_FUNCTION:
+      type = L"DECLARATION_FUNCTION";
+      break;
+    case JS_NODE_TYPE::DECLARATION_FUNCTION_BODY:
+      type = L"DECLARATION_FUNCTION_BODY";
+      break;
+    case JS_NODE_TYPE::DECLARATION_PARAMETER:
+      type = L"DECLARATION_PARAMETER";
+      break;
+    case JS_NODE_TYPE::DECLARATION_OBJECT:
+      type = L"DECLARATION_OBJECT";
+      break;
+    case JS_NODE_TYPE::DECLARATION_ARRAY:
+      type = L"DECLARATION_ARRAY";
+      break;
+    case JS_NODE_TYPE::DECLARATION_CLASS:
+      type = L"DECLARATION_CLASS";
+      break;
+    }
+    return JSON{}
+        .setObject()
+        .setField(L"type", JSON{}.setString(type))
+        .setField(L"source", JSON{}.setString(location.get(source)));
   }
 };
 
@@ -275,14 +787,33 @@ struct JSTemplateLiteralNode : public JSNode {
   std::vector<JSNode *> quasis;
   std::vector<JSNode *> expressions;
   JSTemplateLiteralNode() { type = JS_NODE_TYPE::LITERAL_TEMPLATE; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (tag) {
+      json.setField(L"tag", tag->toJSON(filename, source));
+    }
+    auto &jsonQuasis =
+        json.setField(L"quasis", JSON{}.setArray()).getField(L"quasis");
+    for (size_t index = 0; index < quasis.size(); index++) {
+      jsonQuasis.setIndex(index, quasis[index]->toJSON(filename, source));
+    }
+    auto &jsonExpressions = json.setField(L"expressions", JSON{}.setArray())
+                                .getField(L"expressions");
+    for (size_t index = 0; index < expressions.size(); index++) {
+      jsonExpressions.setIndex(index,
+                               expressions[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
-struct JSThisNode : public JSNode {
-  JSThisNode() { type = JS_NODE_TYPE::THIS; }
+struct JSThisLiteralNode : public JSNode {
+  JSThisLiteralNode() { type = JS_NODE_TYPE::LITERAL_THIS; }
 };
 
-struct JSSuperNode : public JSNode {
-  JSSuperNode() { type = JS_NODE_TYPE::SUPER; }
+struct JSSuperLiteralNode : public JSNode {
+  JSSuperLiteralNode() { type = JS_NODE_TYPE::LITERAL_SUPER; }
 };
 
 struct JSCommentLiteralNode : public JSNode {
@@ -295,11 +826,54 @@ struct JSMultilineCommentLiteralNode : public JSNode {
   }
 };
 
+struct JSFunctionBaseNode : public JSNode {
+  JSNode *body{};
+  std::vector<JSNode *> arguments;
+  std::set<std::wstring> closure;
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"body", body->toJSON(filename, source));
+    auto &jsonArguments =
+        json.setField(L"arguments", JSON{}.setArray()).getField(L"arguments");
+    for (size_t index = 0; index < arguments.size(); index++) {
+      jsonArguments.setIndex(index, arguments[index]->toJSON(filename, source));
+    }
+    auto &jsonClosure =
+        json.setField(L"closure", JSON{}.setArray()).getField(L"closure");
+    std::vector arr(closure.begin(), closure.end());
+    for (size_t index = 0; index < arr.size(); index++) {
+      jsonClosure.setIndex(index, JSON{}.setString(arr[index]));
+    }
+    return json;
+  }
+};
+
 struct JSProgramNode : public JSNode {
   JSNode *interpreter{};
   std::vector<JSNode *> directives;
-  std::vector<JSNode *> body;
+  std::vector<JSNode *> statements;
   JSProgramNode() { type = JS_NODE_TYPE::PROGRAM; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (interpreter) {
+      json.setField(L"interpreter", interpreter->toJSON(filename, source));
+    }
+    auto &jsonDirectives =
+        json.setField(L"directives", JSON{}.setArray()).getField(L"directives");
+    for (size_t index = 0; index < directives.size(); index++) {
+      jsonDirectives.setIndex(index,
+                              directives[index]->toJSON(filename, source));
+    }
+    auto &jsonStatements =
+        json.setField(L"statements", JSON{}.setArray()).getField(L"statements");
+    for (size_t index = 0; index < statements.size(); index++) {
+      jsonStatements.setIndex(index,
+                              statements[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSInterpreterDirectiveNode : public JSNode {
@@ -319,6 +893,17 @@ struct JSEmptyStatementNode : public JSNode {
 struct JSBlockStatement : public JSNode {
   std::vector<JSNode *> statements;
   JSBlockStatement() { type = JS_NODE_TYPE::STATEMENT_BLOCK; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    auto &jsonStatements =
+        json.setField(L"statements", JSON{}.setArray()).getField(L"statements");
+    for (size_t index = 0; index < statements.size(); index++) {
+      jsonStatements.setIndex(index,
+                              statements[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSDebuggerStatement : public JSNode {
   JSDebuggerStatement() { type = JS_NODE_TYPE::STATEMENT_DEBUGGER; }
@@ -326,60 +911,187 @@ struct JSDebuggerStatement : public JSNode {
 struct JSReturnStatement : public JSNode {
   JSNode *value{};
   JSReturnStatement() { type = JS_NODE_TYPE::STATEMENT_RETURN; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (value) {
+      json.setField(L"value", value->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSLabelStatement : public JSNode {
   JSNode *label{};
   JSNode *statement{};
   JSLabelStatement() { type = JS_NODE_TYPE::STATEMENT_LABEL; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"label", label->toJSON(filename, source));
+    json.setField(L"statement", statement->toJSON(filename, source));
+    return json;
+  }
 };
 struct JSBreakStatement : public JSNode {
   JSNode *label{};
   JSBreakStatement() { type = JS_NODE_TYPE::STATEMENT_BREAK; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (label) {
+      json.setField(L"label", label->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSContinueStatement : public JSNode {
   JSNode *label{};
   JSContinueStatement() { type = JS_NODE_TYPE::STATEMENT_CONTINUE; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (label) {
+      json.setField(L"label", label->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSIfStatement : public JSNode {
   JSNode *condition{};
   JSNode *alternate{};
   JSNode *consequent{};
   JSIfStatement() { type = JS_NODE_TYPE::STATEMENT_IF; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (condition) {
+      json.setField(L"condition", condition->toJSON(filename, source));
+    }
+    if (alternate) {
+      json.setField(L"alternate", alternate->toJSON(filename, source));
+    }
+    if (consequent) {
+      json.setField(L"consequent", consequent->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSSwitchStatement : public JSNode {
   JSNode *condition{};
   std::vector<JSNode *> cases;
   JSSwitchStatement() { type = JS_NODE_TYPE::STATEMENT_SWITCH; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (condition) {
+      json.setField(L"condition", condition->toJSON(filename, source));
+    }
+    auto &jsonCases =
+        json.setField(L"cases", JSON{}.setArray()).getField(L"cases");
+    for (size_t index = 0; index < cases.size(); index++) {
+      jsonCases.setIndex(index, cases[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSSwitchCaseStatement : public JSNode {
   JSNode *match{};
   std::vector<JSNode *> statements;
   JSSwitchCaseStatement() { type = JS_NODE_TYPE::STATEMENT_SWITCH_CASE; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (match) {
+      json.setField(L"match", match->toJSON(filename, source));
+    }
+    auto &jsonStatements =
+        json.setField(L"statements", JSON{}.setArray()).getField(L"statements");
+    for (size_t index = 0; index < statements.size(); index++) {
+      jsonStatements.setIndex(index,
+                              statements[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSThrowStatement : public JSNode {
   JSNode *value{};
   JSThrowStatement() { type = JS_NODE_TYPE::STATEMENT_THROW; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (value) {
+      json.setField(L"value", value->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSTryStatement : public JSNode {
   JSNode *body{};
   JSNode *onerror{};
   JSNode *onfinish{};
   JSTryStatement() { type = JS_NODE_TYPE::STATEMENT_TRY; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (body) {
+      json.setField(L"body", body->toJSON(filename, source));
+    }
+    if (onerror) {
+      json.setField(L"onerror", onerror->toJSON(filename, source));
+    }
+    if (onfinish) {
+      json.setField(L"onfinish", onfinish->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSTryCatchStatement : public JSNode {
   JSNode *identifier{};
   JSNode *body{};
   JSTryCatchStatement() { type = JS_NODE_TYPE::STATEMENT_TRY_CATCH; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (identifier) {
+      json.setField(L"identifier", identifier->toJSON(filename, source));
+    }
+    if (body) {
+      json.setField(L"body", body->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSWhileStatement : public JSNode {
   JSNode *body{};
   JSNode *condition{};
   JSWhileStatement() { type = JS_NODE_TYPE::STATEMENT_WHILE; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (condition) {
+      json.setField(L"condition", condition->toJSON(filename, source));
+    }
+    if (body) {
+      json.setField(L"body", body->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSDoWhileStatement : public JSNode {
   JSNode *body{};
   JSNode *condition{};
   JSDoWhileStatement() { type = JS_NODE_TYPE::STATEMENT_DO_WHILE; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (condition) {
+      json.setField(L"condition", condition->toJSON(filename, source));
+    }
+    if (body) {
+      json.setField(L"body", body->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSForStatement : public JSNode {
@@ -388,6 +1100,23 @@ struct JSForStatement : public JSNode {
   JSNode *after{};
   JSNode *body{};
   JSForStatement() { type = JS_NODE_TYPE::STATEMENT_FOR; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (init) {
+      json.setField(L"init", init->toJSON(filename, source));
+    }
+    if (condition) {
+      json.setField(L"condition", condition->toJSON(filename, source));
+    }
+    if (after) {
+      json.setField(L"after", after->toJSON(filename, source));
+    }
+    if (body) {
+      json.setField(L"body", body->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSForInStatement : public JSNode {
@@ -395,12 +1124,40 @@ struct JSForInStatement : public JSNode {
   JSNode *right{};
   JSNode *body{};
   JSForInStatement() { type = JS_NODE_TYPE::STATEMENT_FOR_IN; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (left) {
+      json.setField(L"left", left->toJSON(filename, source));
+    }
+    if (right) {
+      json.setField(L"right", right->toJSON(filename, source));
+    }
+    if (body) {
+      json.setField(L"body", body->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSForOfStatement : public JSNode {
   JSNode *left{};
   JSNode *right{};
   JSNode *body{};
   JSForOfStatement() { type = JS_NODE_TYPE::STATEMENT_FOR_OF; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (left) {
+      json.setField(L"left", left->toJSON(filename, source));
+    }
+    if (right) {
+      json.setField(L"right", right->toJSON(filename, source));
+    }
+    if (body) {
+      json.setField(L"body", body->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSForAwaitOfStatement : public JSNode {
@@ -408,11 +1165,33 @@ struct JSForAwaitOfStatement : public JSNode {
   JSNode *right{};
   JSNode *body{};
   JSForAwaitOfStatement() { type = JS_NODE_TYPE::STATEMENT_FOR_AWAIT_OF; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (left) {
+      json.setField(L"left", left->toJSON(filename, source));
+    }
+    if (right) {
+      json.setField(L"right", right->toJSON(filename, source));
+    }
+    if (body) {
+      json.setField(L"body", body->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSExpressionStatementNode : public JSNode {
   JSNode *expression{};
   JSExpressionStatementNode() { type = JS_NODE_TYPE::STATEMENT_EXPRESSION; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (expression) {
+      json.setField(L"expression", expression->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSBinaryExpressionNode : public JSNode {
@@ -420,23 +1199,70 @@ struct JSBinaryExpressionNode : public JSNode {
   JSNode *right{};
   JSNode *opt{};
   JSBinaryExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_BINARY; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (left) {
+      json.setField(L"left", left->toJSON(filename, source));
+    }
+    if (opt) {
+      json.setField(L"opt", opt->toJSON(filename, source));
+    }
+    if (right) {
+      json.setField(L"right", right->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSAssigmentExpressionNode : public JSNode {
   JSNode *left{};
   JSNode *right{};
   JSNode *opt{};
   JSAssigmentExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_ASSIGMENT; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (left) {
+      json.setField(L"left", left->toJSON(filename, source));
+    }
+    if (opt) {
+      json.setField(L"opt", opt->toJSON(filename, source));
+    }
+    if (right) {
+      json.setField(L"right", right->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSGroupExpressionNode : public JSNode {
   JSNode *expression{};
   JSGroupExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_GROUP; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (expression) {
+      json.setField(L"expression", expression->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSMemberExpressionNode : public JSNode {
   JSNode *host{};
   JSNode *field{};
   JSMemberExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_MEMBER; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (host) {
+      json.setField(L"host", host->toJSON(filename, source));
+    }
+    if (field) {
+      json.setField(L"field", field->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSComputedMemberExpressionNode : public JSMemberExpressionNode {
@@ -461,6 +1287,19 @@ struct JSCallExpressionNode : public JSNode {
   JSNode *callee{};
   std::vector<JSNode *> arguments;
   JSCallExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_CALL; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (callee) {
+      json.setField(L"callee", callee->toJSON(filename, source));
+    }
+    auto &jsonArgument =
+        json.setField(L"arguments", JSON{}.setArray()).getField(L"arguments");
+    for (size_t index = 0; index < arguments.size(); index++) {
+      jsonArgument.setIndex(index, arguments[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSOptionalCallExpressionNode : public JSCallExpressionNode {
@@ -476,11 +1315,23 @@ struct JSNewExpressionNode : public JSCallExpressionNode {
 struct JSAwaitExpressionNode : public JSNode {
   JSNode *value{};
   JSAwaitExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_AWAIT; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"value", value->toJSON(filename, source));
+    return json;
+  }
 };
 
 struct JSYieldExpressionNode : public JSNode {
   JSNode *value{};
   JSYieldExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_YIELD; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"value", value->toJSON(filename, source));
+    return json;
+  }
 };
 
 struct JSYieldDelegateExpressionNode : public JSYieldExpressionNode {
@@ -492,11 +1343,23 @@ struct JSYieldDelegateExpressionNode : public JSYieldExpressionNode {
 struct JSDeleteExpressionNode : public JSNode {
   JSNode *value{};
   JSDeleteExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_DELETE; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"value", value->toJSON(filename, source));
+    return json;
+  }
 };
 
 struct JSVoidExpressionNode : public JSNode {
   JSNode *value{};
   JSVoidExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_VOID; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"value", value->toJSON(filename, source));
+    return json;
+  }
 };
 
 struct JSConditionExpressionNode : public JSNode {
@@ -504,11 +1367,31 @@ struct JSConditionExpressionNode : public JSNode {
   JSNode *alternate{};
   JSNode *consequent{};
   JSConditionExpressionNode() { type = JS_NODE_TYPE::EXPRESSION_CONDITION; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (condition) {
+      json.setField(L"condition", condition->toJSON(filename, source));
+    }
+    if (alternate) {
+      json.setField(L"alternate", alternate->toJSON(filename, source));
+    }
+    if (consequent) {
+      json.setField(L"consequent", consequent->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSSpreadExpression : public JSNode {
   JSNode *value{};
   JSSpreadExpression() { type = JS_NODE_TYPE::EXPRESSION_SPREAD; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"value", value->toJSON(filename, source));
+    return json;
+  }
 };
 
 struct JSObjectPropertyNode : public JSNode {
@@ -516,37 +1399,78 @@ struct JSObjectPropertyNode : public JSNode {
   JSNode *value{};
   bool computed{};
   JSObjectPropertyNode() { type = JS_NODE_TYPE::OBJECT_PROPERTY; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"key", key->toJSON(filename, source));
+    json.setField(L"value", value->toJSON(filename, source));
+    json.setField(L"computed", JSON{}.setBoolean(computed));
+    return json;
+  }
 };
 
-struct JSObjectMethodNode : public JSNode {
+struct JSObjectMethodNode : public JSFunctionBaseNode {
   JSNode *key{};
-  std::vector<JSNode *> arguments;
-  JSNode *body{};
   bool async{};
   bool generator{};
   bool computed{};
-  std::vector<std::wstring> closure;
   JSObjectMethodNode() { type = JS_NODE_TYPE::OBJECT_METHOD; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSFunctionBaseNode::toJSON(filename, source);
+    json.setField(L"key", key->toJSON(filename, source));
+    json.setField(L"async", JSON{}.setBoolean(async));
+    json.setField(L"generator", JSON{}.setBoolean(generator));
+    json.setField(L"computed", JSON{}.setBoolean(computed));
+    return json;
+  }
 };
 
-struct JSObjectAccessorNode : public JSNode {
+struct JSObjectAccessorNode : public JSFunctionBaseNode {
   JSNode *key{};
-  std::vector<JSNode *> arguments;
-  JSNode *body{};
   bool computed{};
-  JS_ACCESSOR_TYPE accessor;
-  std::vector<std::wstring> closure;
+  JS_ACCESSOR_TYPE kind;
   JSObjectAccessorNode() { type = JS_NODE_TYPE::OBJECT_ACCESSOR; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSFunctionBaseNode::toJSON(filename, source);
+    json.setField(L"key", key->toJSON(filename, source));
+    json.setField(L"computed", JSON{}.setBoolean(computed));
+    json.setField(
+        L"kind",
+        JSON{}.setString(kind == JS_ACCESSOR_TYPE::GET ? L"get" : L"set"));
+    return json;
+  }
 };
 
 struct JSObjectDeclarationNode : public JSNode {
   std::vector<JSNode *> properties;
   JSObjectDeclarationNode() { type = JS_NODE_TYPE::DECLARATION_OBJECT; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    auto &jsonProps =
+        json.setField(L"properties", JSON{}.setArray()).getField(L"properties");
+    for (size_t index = 0; index < properties.size(); index++) {
+      jsonProps.setIndex(index, properties[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSArrayDeclarationNode : public JSNode {
   std::vector<JSNode *> items;
   JSArrayDeclarationNode() { type = JS_NODE_TYPE::DECLARATION_ARRAY; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    auto &jsonItems =
+        json.setField(L"items", JSON{}.setArray()).getField(L"items");
+    for (size_t index = 0; index < items.size(); index++) {
+      jsonItems.setIndex(index, items[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSFunctionArgumentDeclarationNode : public JSNode {
@@ -554,6 +1478,15 @@ struct JSFunctionArgumentDeclarationNode : public JSNode {
   JSNode *value{};
   JSFunctionArgumentDeclarationNode() {
     type = JS_NODE_TYPE::DECLARATION_FUNCTION_ARGUMENT;
+  }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    if (value) {
+      json.setField(L"value", value->toJSON(filename, source));
+    }
+    return json;
   }
 };
 
@@ -563,25 +1496,49 @@ struct JSFunctionBodyDeclarationNode : public JSNode {
   JSFunctionBodyDeclarationNode() {
     type = JS_NODE_TYPE::DECLARATION_FUNCTION_BODY;
   }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    auto &jsonDirectives =
+        json.setField(L"directives", JSON{}.setArray()).getField(L"directives");
+    for (size_t index = 0; index < directives.size(); index++) {
+      jsonDirectives.setIndex(index,
+                              directives[index]->toJSON(filename, source));
+    }
+    auto &jsonStatements =
+        json.setField(L"statements", JSON{}.setArray()).getField(L"statements");
+    for (size_t index = 0; index < statements.size(); index++) {
+      jsonStatements.setIndex(index,
+                              statements[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
-struct JSFunctionDeclarationNode : public JSNode {
-  JSNode *name{};
-  JSNode *body{};
-  std::vector<JSNode *> arguments;
+struct JSFunctionDeclarationNode : public JSFunctionBaseNode {
+  JSNode *identifier{};
   bool async{};
   bool generator{};
-  std::vector<std::wstring> closure;
   JSFunctionDeclarationNode() { type = JS_NODE_TYPE::DECLARATION_FUNCTION; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSFunctionBaseNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    json.setField(L"async", JSON{}.setBoolean(async));
+    json.setField(L"generator", JSON{}.setBoolean(generator));
+    return json;
+  }
 };
 
-struct JSArrowDeclarationNode : public JSNode {
-  JSNode *name{};
-  JSNode *body{};
-  std::vector<JSNode *> arguments;
-  std::vector<std::wstring> closure;
+struct JSArrowDeclarationNode : public JSFunctionBaseNode {
   bool async{};
   JSArrowDeclarationNode() { type = JS_NODE_TYPE::DECLARATION_ARROW_FUNCTION; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSFunctionBaseNode::toJSON(filename, source);
+    json.setField(L"async", JSON{}.setBoolean(async));
+    return json;
+  }
 };
 
 struct JSObjectPatternItemNode : public JSNode {
@@ -590,39 +1547,125 @@ struct JSObjectPatternItemNode : public JSNode {
   JSNode *value{};
   bool computed{};
   JSObjectPatternItemNode() { type = JS_NODE_TYPE::PATTERN_OBJECT_ITEM; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (key) {
+      json.setField(L"key", key->toJSON(filename, source));
+    }
+    if (alias) {
+      json.setField(L"alias", alias->toJSON(filename, source));
+    }
+    if (value) {
+      json.setField(L"value", value->toJSON(filename, source));
+    }
+    json.setField(L"computed", JSON{}.setBoolean(computed));
+    return json;
+  }
 };
 
 struct JSObjectPatternNode : public JSNode {
   std::vector<JSNode *> items;
   JSObjectPatternNode() { type = JS_NODE_TYPE::PATTERN_OBJECT; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    auto &jsonItems =
+        json.setField(L"items", JSON{}.setArray()).getField(L"items");
+    for (size_t index = 0; index < items.size(); index++) {
+      jsonItems.setIndex(index, items[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSArrayPatternItemNode : public JSNode {
   JSNode *alias{};
   JSNode *value{};
   JSArrayPatternItemNode() { type = JS_NODE_TYPE::PATTERN_ARRAY_ITEM; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    if (alias) {
+      json.setField(L"alias", alias->toJSON(filename, source));
+    }
+    if (value) {
+      json.setField(L"value", value->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSArrayPatternNode : public JSNode {
   std::vector<JSNode *> items;
   JSArrayPatternNode() { type = JS_NODE_TYPE::PATTERN_ARRAY; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    auto &jsonItems =
+        json.setField(L"items", JSON{}.setArray()).getField(L"items");
+    for (size_t index = 0; index < items.size(); index++) {
+      jsonItems.setIndex(index, items[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSSpreadPatternItemNode : public JSNode {
   JSNode *value{};
   JSSpreadPatternItemNode() { type = JS_NODE_TYPE::PATTERN_SPREAD_ITEM; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"value", value->toJSON(filename, source));
+    return json;
+  }
 };
 
 struct JSVariableDeclaraionNode : public JSNode {
   JS_DECLARATION_TYPE kind = JS_DECLARATION_TYPE::CONST;
   std::vector<JSNode *> declarations{};
   JSVariableDeclaraionNode() { type = JS_NODE_TYPE::VARIABLE_DECLARATION; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    switch (kind) {
+    case JS_DECLARATION_TYPE::VAR:
+      json.setField(L"kind", JSON{}.setString(L"var"));
+      break;
+    case JS_DECLARATION_TYPE::CONST:
+      json.setField(L"kind", JSON{}.setString(L"const"));
+      break;
+    case JS_DECLARATION_TYPE::LET:
+      json.setField(L"kind", JSON{}.setString(L"let"));
+      break;
+    case JS_DECLARATION_TYPE::FUNCTION:
+      json.setField(L"kind", JSON{}.setString(L"function"));
+      break;
+    }
+    auto &jsonDeclarations = json.setField(L"declarations", JSON{}.setArray())
+                                 .getField(L"declarations");
+    for (size_t index = 0; index < declarations.size(); index++) {
+      jsonDeclarations.setIndex(index,
+                                declarations[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSVariableDeclaratorNode : public JSNode {
   JSNode *identifier{};
   JSNode *initialize{};
   JSVariableDeclaratorNode() { type = JS_NODE_TYPE::VARIABLE_DECLARATOR; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    if (initialize) {
+      json.setField(L"initialize", initialize->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 struct JSImportDeclarationNode : public JSNode {
@@ -630,58 +1673,154 @@ struct JSImportDeclarationNode : public JSNode {
   JSNode *source{};
   std::vector<JSNode *> attributes;
   JSImportDeclarationNode() { type = JS_NODE_TYPE::IMPORT_DECLARATION; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"source", this->source->toJSON(filename, source));
+    auto &jsonSpecifiers =
+        json.setField(L"specifiers", JSON{}.setArray()).getField(L"specifiers");
+    for (size_t index = 0; index < specifiers.size(); index++) {
+      jsonSpecifiers.setIndex(index,
+                              specifiers[index]->toJSON(filename, source));
+    }
+    auto &jsonAttributes =
+        json.setField(L"attributes", JSON{}.setArray()).getField(L"attributes");
+    for (size_t index = 0; index < attributes.size(); index++) {
+      jsonAttributes.setIndex(index,
+                              attributes[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSImportSpecifierNode : public JSNode {
   JSNode *identifier{};
   JSNode *alias{};
   JSImportSpecifierNode() { type = JS_NODE_TYPE::IMPORT_SPECIFIER; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    if (alias) {
+      json.setField(L"alias", alias->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSImportDefaultNode : public JSNode {
   JSNode *identifier{};
   JSImportDefaultNode() { type = JS_NODE_TYPE::IMPORT_DEFAULT; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    return json;
+  }
 };
 struct JSImportNamespaceNode : public JSNode {
   JSNode *alias{};
   JSImportNamespaceNode() { type = JS_NODE_TYPE::IMPORT_NAMESPACE; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"alias", alias->toJSON(filename, source));
+    return json;
+  }
 };
 struct JSImportAttributeNode : public JSNode {
   JSNode *key{};
   JSNode *value{};
   JSImportAttributeNode() { type = JS_NODE_TYPE::IMPORT_ATTARTUBE; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"key", key->toJSON(filename, source));
+    json.setField(L"value", value->toJSON(filename, source));
+    return json;
+  }
 };
 struct JSExportDeclarationNode : public JSNode {
   std::vector<JSNode *> specifiers;
   JSNode *source{};
   std::vector<JSNode *> attributes;
   JSExportDeclarationNode() { type = JS_NODE_TYPE::EXPORT_DECLARATION; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"source", this->source->toJSON(filename, source));
+    auto &jsonSpecifiers =
+        json.setField(L"specifiers", JSON{}.setArray()).getField(L"specifiers");
+    for (size_t index = 0; index < specifiers.size(); index++) {
+      jsonSpecifiers.setIndex(index,
+                              specifiers[index]->toJSON(filename, source));
+    }
+    auto &jsonAttributes =
+        json.setField(L"attributes", JSON{}.setArray()).getField(L"attributes");
+    for (size_t index = 0; index < attributes.size(); index++) {
+      jsonAttributes.setIndex(index,
+                              attributes[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 struct JSExportDefaultNode : public JSNode {
   JSNode *expression{};
   JSExportDefaultNode() { type = JS_NODE_TYPE::EXPORT_DEFAULT; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"expression", expression->toJSON(filename, source));
+    return json;
+  }
 };
 struct JSExportSpecifierNode : public JSNode {
   JSNode *identifier{};
   JSNode *alias{};
   JSExportSpecifierNode() { type = JS_NODE_TYPE::EXPORT_SPECIFIER; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    json.setField(L"alias", alias->toJSON(filename, source));
+    return json;
+  }
 };
 struct JSExportNamedNode : public JSNode {
   JSNode *declaration{};
   JSExportNamedNode() { type = JS_NODE_TYPE::EXPORT_NAMED; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"declaration", declaration->toJSON(filename, source));
+    return json;
+  }
 };
 struct JSExportNamespaceNode : public JSNode {
   JSNode *alias{};
   JSExportNamespaceNode() { type = JS_NODE_TYPE::EXPORT_NAMED; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"alias", alias->toJSON(filename, source));
+    return json;
+  }
 };
-struct JSClassMethodNode : public JSNode {
+struct JSClassMethodNode : public JSFunctionBaseNode {
   bool async{};
   bool generator{};
   bool static_{};
   bool computed{};
   JSNode *identifier{};
-  std::vector<JSNode *> arguments;
-  JSNode *body{};
-  std::vector<std::wstring> closure;
   JSClassMethodNode() { type = JS_NODE_TYPE::CLASS_METHOD; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSFunctionBaseNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    json.setField(L"async", JSON{}.setBoolean(async));
+    json.setField(L"generator", JSON{}.setBoolean(generator));
+    json.setField(L"computed", JSON{}.setBoolean(computed));
+    json.setField(L"static", JSON{}.setBoolean(static_));
+    return json;
+  }
 };
 struct JSClassPropertyNode : public JSNode {
   bool static_{};
@@ -689,26 +1828,61 @@ struct JSClassPropertyNode : public JSNode {
   JSNode *identifier{};
   JSNode *value{};
   JSClassPropertyNode() { type = JS_NODE_TYPE::CLASS_PROPERTY; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    json.setField(L"value", value->toJSON(filename, source));
+    json.setField(L"computed", JSON{}.setBoolean(computed));
+    json.setField(L"static", JSON{}.setBoolean(static_));
+    return json;
+  }
 };
-struct JSClassAccessorNode : public JSNode {
+struct JSClassAccessorNode : public JSFunctionBaseNode {
   JS_ACCESSOR_TYPE kind = JS_ACCESSOR_TYPE::GET;
   bool computed{};
   bool static_{};
   JSNode *identifier{};
-  std::vector<JSNode *> arguments;
-  JSNode *body{};
-  std::vector<std::wstring> closure;
   JSClassAccessorNode() { type = JS_NODE_TYPE::CLASS_ACCESSOR; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSFunctionBaseNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    json.setField(L"computed", JSON{}.setBoolean(computed));
+    json.setField(L"static", JSON{}.setBoolean(static_));
+    json.setField(
+        L"kind",
+        JSON{}.setString(kind == JS_ACCESSOR_TYPE::GET ? L"get" : L"set"));
+    return json;
+  }
 };
 struct JSStaticBlockNode : public JSNode {
   JSNode *statement{};
   JSStaticBlockNode() { type = JS_NODE_TYPE::STATIC_BLOCK; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"statement", statement->toJSON(filename, source));
+    return json;
+  }
 };
 struct JSClassDeclaration : public JSNode {
   JSNode *extends{};
   JSNode *identifier{};
   std::vector<JSNode *> properties;
   JSClassDeclaration() { type = JS_NODE_TYPE::DECLARATION_CLASS; }
+  JSON toJSON(const std::wstring &filename,
+              const std::wstring &source) const override {
+    auto json = JSNode::toJSON(filename, source);
+    json.setField(L"identifier", identifier->toJSON(filename, source));
+    json.setField(L"extends", extends->toJSON(filename, source));
+    auto &jsonProp =
+        json.setField(L"properties", JSON{}.setArray()).getField(L"properties");
+    for (size_t index = 0; index < properties.size(); index++) {
+      jsonProp.setIndex(index, properties[index]->toJSON(filename, source));
+    }
+    return json;
+  }
 };
 
 class JSParser {
@@ -716,13 +1890,18 @@ private:
   JSCompileScope *_scope = nullptr;
 
 private:
-  JSCompileScope *pushScope(const JS_COMPILE_SCOPE_TYPE &type) {
-    auto scope = new JSCompileScope{type, _scope};
+  JSCompileScope *pushScope(const JS_COMPILE_SCOPE_TYPE &type, JSNode *node) {
+    auto scope = new JSCompileScope{type, _scope, node};
     _scope = scope;
     return scope;
   }
 
-  void popScope() { _scope = _scope->parent; }
+  void popScope() {
+    if (!_scope) {
+      ;
+    }
+    _scope = _scope->parent;
+  }
 
   JSNode *resolveDeclarator(const JS_DECLARATION_TYPE &type,
                             const std::wstring &source, JSNode *identifier,
@@ -797,9 +1976,9 @@ private:
       }
     } else if (declaration->type == JS_NODE_TYPE::DECLARATION_FUNCTION) {
       auto declarator = dynamic_cast<JSFunctionDeclarationNode *>(declaration);
-      if (declarator->name) {
-        auto err =
-            resolveDeclarator(type, source, declarator->name, declaration);
+      if (declarator->identifier) {
+        auto err = resolveDeclarator(type, source, declarator->identifier,
+                                     declaration);
         if (err) {
           return err;
         }
@@ -844,6 +2023,45 @@ private:
       }
     }
     return nullptr;
+  }
+
+  void resolveBinding(const std::wstring &source, JSNode *node) {
+    for (auto child : node->children) {
+      resolveBinding(source, child);
+    }
+    if (node->scope) {
+      auto &refs = node->scope->refs;
+      for (auto &name : refs) {
+        auto scope = node->scope;
+        std::vector<JSCompileScope *> scopes;
+        JSNode *declaration = nullptr;
+        while (scope) {
+          auto it = scope->declarations.begin();
+          while (it != scope->declarations.end()) {
+            if (it->name == name) {
+              break;
+            }
+            it++;
+          }
+          if (it != scope->declarations.end()) {
+            declaration = it->declaration;
+            break;
+          } else if (scope->type == JS_COMPILE_SCOPE_TYPE::LEX) {
+            scopes.push_back(scope);
+          }
+          scope = scope->parent;
+        }
+        if (declaration) {
+          for (auto scope : scopes) {
+            auto func = dynamic_cast<JSFunctionBaseNode *>(scope->node);
+            if (func) {
+              func->closure.insert(name);
+              func->scope->refs.insert(name);
+            }
+          }
+        }
+      }
+    }
   }
 
 private:
@@ -1272,6 +2490,36 @@ private:
     return nullptr;
   }
 
+  JSNode *readThisLiteral(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    auto identify = readIdentifyLiteral(source, current);
+    if (!identify) {
+      return identify;
+    }
+    if (identify->location.is(source, L"this")) {
+      auto node = new JSThisLiteralNode{};
+      node->location = getLocation(source, position, current);
+      position = current;
+      return node;
+    }
+    return nullptr;
+  }
+
+  JSNode *readSuperLiteral(const std::wstring &source, JSPosition &position) {
+    auto current = position;
+    auto identify = readIdentifyLiteral(source, current);
+    if (!identify) {
+      return identify;
+    }
+    if (identify->location.is(source, L"super")) {
+      auto node = new JSSuperLiteralNode{};
+      node->location = getLocation(source, position, current);
+      position = current;
+      return node;
+    }
+    return nullptr;
+  }
+
   JSNode *readBooleanLiteral(const std::wstring &source, JSPosition &position) {
     auto current = position;
     auto identify = readIdentifyLiteral(source, current);
@@ -1432,7 +2680,7 @@ private:
   JSNode *readProgram(const std::wstring &source, JSPosition &position) {
     auto current = position;
     auto *node = new JSProgramNode();
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto interpreter = readInterpreterDirective(source, current);
     if (interpreter) {
       if (interpreter->type == JS_NODE_TYPE::ERROR) {
@@ -1478,7 +2726,7 @@ private:
         delete node;
         return statement;
       }
-      node->body.push_back(statement);
+      node->statements.push_back(statement);
       statement->addParent(node);
     }
     while (skipInvisible(source, current)) {
@@ -1572,7 +2820,7 @@ private:
       return nullptr;
     }
     auto node = new JSBlockStatement{};
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
@@ -2011,7 +3259,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"{"}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -2467,7 +3715,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"("}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -2593,7 +3841,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"("}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -2627,8 +3875,8 @@ private:
       return err;
     }
     if (!checkIdentifier({L"in"}, source, current)) {
-      delete node;
       popScope();
+      delete node;
       return nullptr;
     }
     while (skipInvisible(source, current)) {
@@ -2697,7 +3945,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"("}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -2731,8 +3979,8 @@ private:
       return err;
     }
     if (!checkIdentifier({L"of"}, source, current)) {
-      delete node;
       popScope();
+      delete node;
       return nullptr;
     }
     while (skipInvisible(source, current)) {
@@ -2813,7 +4061,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"("}, source, current)) {
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
@@ -4186,7 +5434,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto argument = readFunctionArgument(source, current);
     while (argument) {
       if (argument->type == JS_NODE_TYPE::ERROR) {
@@ -4260,9 +5508,9 @@ private:
     auto current = position;
     auto node = new JSObjectAccessorNode{};
     if (checkIdentifier({L"get"}, source, current)) {
-      node->accessor = JS_ACCESSOR_TYPE::GET;
+      node->kind = JS_ACCESSOR_TYPE::GET;
     } else if (checkIdentifier({L"set"}, source, current)) {
-      node->accessor = JS_ACCESSOR_TYPE::SET;
+      node->kind = JS_ACCESSOR_TYPE::SET;
     } else {
       delete node;
       return nullptr;
@@ -4337,7 +5585,7 @@ private:
       delete node;
       return nullptr;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
@@ -4993,11 +6241,11 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     auto block = readBlockStatement(source, current);
     if (!block) {
-      delete node;
       popScope();
+      delete node;
       return nullptr;
     }
     if (block->type == JS_NODE_TYPE::ERROR) {
@@ -5557,7 +6805,7 @@ private:
       delete node;
       return nullptr;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     for (;;) {
       while (skipInvisible(source, current)) {
       }
@@ -5643,7 +6891,7 @@ private:
     }
     auto identifier = readIdentifyLiteral(source, current);
     if (identifier) {
-      node->name = identifier;
+      node->identifier = identifier;
       identifier->addParent(node);
       if (isKeyword(source, identifier->location)) {
         delete node;
@@ -5669,7 +6917,7 @@ private:
       delete node;
       return err;
     }
-    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX);
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto argument = readFunctionArgument(source, current);
     while (argument) {
       if (argument->type == JS_NODE_TYPE::ERROR) {
@@ -5751,6 +6999,7 @@ private:
                                        JSPosition &position) {
     auto current = position;
     auto node = new JSArrowDeclarationNode;
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto backup = current;
     if (checkIdentifier({L"async"}, source, current)) {
       node->async = true;
@@ -5796,6 +7045,7 @@ private:
             break;
           }
           if (!checkSymbol({L","}, source, current)) {
+            popScope();
             delete node;
             return nullptr;
           }
@@ -5808,6 +7058,7 @@ private:
           }
           arg = readFunctionArgument(source, current);
           if (!arg) {
+            popScope();
             delete node;
             return nullptr;
           }
@@ -5822,6 +7073,7 @@ private:
         return err;
       }
       if (!checkSymbol({L")"}, source, current)) {
+        popScope();
         delete node;
         return nullptr;
       }
@@ -5833,12 +7085,14 @@ private:
         return err;
       }
       if (!checkSymbol({L"=>"}, source, current)) {
+        popScope();
         delete node;
         return nullptr;
       }
     } else {
       auto identifier = readIdentifyLiteral(source, current);
       if (identifier == nullptr) {
+        popScope();
         delete node;
         return nullptr;
       }
@@ -5852,6 +7106,7 @@ private:
         return err;
       }
       if (!checkSymbol({L"=>"}, source, current)) {
+        popScope();
         delete node;
         return nullptr;
       }
@@ -5875,6 +7130,7 @@ private:
     body->addParent(node);
     node->location = getLocation(source, position, current);
     position = current;
+    popScope();
     return node;
   }
 
@@ -5894,6 +7150,12 @@ private:
     }
     if (!node) {
       node = readUndefinedLiteral(source, position);
+    }
+    if (!node) {
+      node = readThisLiteral(source, position);
+    }
+    if (!node) {
+      node = readSuperLiteral(source, position);
     }
     if (!node) {
       node = readObjectDeclaration(source, position);
@@ -6320,6 +7582,10 @@ private:
       node = readExpression18(source, position);
     }
     if (node) {
+      if (node->type == JS_NODE_TYPE::LITERAL_IDENTITY) {
+        auto name = node->location.get(source);
+        _scope->refs.insert(name);
+      }
       auto current = position;
       bool optional = false;
       for (;;) {
@@ -7505,7 +8771,9 @@ private:
 public:
   JSNode *parse(const std::wstring &source) {
     JSPosition pos = {};
-    return readProgram(source, pos);
+    auto node = readProgram(source, pos);
+    resolveBinding(source, node);
+    return node;
   }
 };
 
@@ -7513,330 +8781,7 @@ class JSExecutor {
 private:
   std::wstring print(const std::wstring &filename, const std::wstring &source,
                      JSNode *node) {
-    std::wstring type;
-    switch (node->type) {
-    case JS_NODE_TYPE::ERROR:
-      type = L"ERROR";
-      break;
-    case JS_NODE_TYPE::TOKEN:
-      type = L"TOKEN";
-      break;
-    case JS_NODE_TYPE::PRIVATE_NAME:
-      type = L"PRIVATE_NAME";
-      break;
-    case JS_NODE_TYPE::LITERAL_REGEX:
-      type = L"LITERAL_REGEX";
-      break;
-    case JS_NODE_TYPE::LITERAL_NULL:
-      type = L"LITERAL_NULL";
-      break;
-    case JS_NODE_TYPE::LITERAL_STRING:
-      type = L"LITERAL_STRING";
-      break;
-    case JS_NODE_TYPE::LITERAL_BOOLEAN:
-      type = L"LITERAL_BOOLEAN";
-      break;
-    case JS_NODE_TYPE::LITERAL_NUMBER:
-      type = L"LITERAL_NUMBER";
-      break;
-    case JS_NODE_TYPE::LITERAL_COMMENT:
-      type = L"LITERAL_COMMENT";
-      break;
-    case JS_NODE_TYPE::LITERAL_MULTILINE_COMMENT:
-      type = L"LITERAL_MULTILINE_COMMENT";
-      break;
-    case JS_NODE_TYPE::LITERAL_UNDEFINED:
-      type = L"LITERAL_UNDEFINED";
-      break;
-    case JS_NODE_TYPE::LITERAL_IDENTITY:
-      type = L"LITERAL_IDENTITY";
-      break;
-    case JS_NODE_TYPE::LITERAL_TEMPLATE:
-      type = L"LITERAL_TEMPLATE";
-      break;
-    case JS_NODE_TYPE::LITERAL_BIGINT:
-      type = L"LITERAL_BIGINT";
-      break;
-    case JS_NODE_TYPE::THIS:
-      type = L"THIS";
-      break;
-    case JS_NODE_TYPE::SUPER:
-      type = L"SUPER";
-      break;
-    case JS_NODE_TYPE::PROGRAM:
-      type = L"PROGRAM";
-      break;
-    case JS_NODE_TYPE::STATEMENT_EMPTY:
-      type = L"STATEMENT_EMPTY";
-      break;
-    case JS_NODE_TYPE::STATEMENT_BLOCK:
-      type = L"STATEMENT_BLOCK";
-      break;
-    case JS_NODE_TYPE::STATEMENT_DEBUGGER:
-      type = L"STATEMENT_DEBUGGER";
-      break;
-    case JS_NODE_TYPE::STATEMENT_RETURN:
-      type = L"STATEMENT_RETURN";
-      break;
-    case JS_NODE_TYPE::STATEMENT_LABEL:
-      type = L"STATEMENT_LABEL";
-      break;
-    case JS_NODE_TYPE::STATEMENT_BREAK:
-      type = L"STATEMENT_BREAK";
-      break;
-    case JS_NODE_TYPE::STATEMENT_CONTINUE:
-      type = L"STATEMENT_CONTINUE";
-      break;
-    case JS_NODE_TYPE::STATEMENT_IF:
-      type = L"STATEMENT_IF";
-      break;
-    case JS_NODE_TYPE::STATEMENT_SWITCH:
-      type = L"STATEMENT_SWITCH";
-      break;
-    case JS_NODE_TYPE::STATEMENT_SWITCH_CASE:
-      type = L"STATEMENT_SWITCH_CASE";
-      break;
-    case JS_NODE_TYPE::STATEMENT_THROW:
-      type = L"STATEMENT_THROW";
-      break;
-    case JS_NODE_TYPE::STATEMENT_TRY:
-      type = L"STATEMENT_TRY";
-      break;
-    case JS_NODE_TYPE::STATEMENT_TRY_CATCH:
-      type = L"STATEMENT_TRY_CATCH";
-      break;
-    case JS_NODE_TYPE::STATEMENT_WHILE:
-      type = L"STATEMENT_WHILE";
-      break;
-    case JS_NODE_TYPE::STATEMENT_DO_WHILE:
-      type = L"STATEMENT_DO_WHILE";
-      break;
-    case JS_NODE_TYPE::STATEMENT_FOR:
-      type = L"STATEMENT_FOR";
-      break;
-    case JS_NODE_TYPE::STATEMENT_FOR_IN:
-      type = L"STATEMENT_FOR_IN";
-      break;
-    case JS_NODE_TYPE::STATEMENT_FOR_OF:
-      type = L"STATEMENT_FOR_OF";
-      break;
-    case JS_NODE_TYPE::STATEMENT_FOR_AWAIT_OF:
-      type = L"STATEMENT_FOR_AWAIT_OF";
-      break;
-    case JS_NODE_TYPE::STATEMENT_EXPRESSION:
-      type = L"STATEMENT_EXPRESSION";
-      break;
-    case JS_NODE_TYPE::VARIABLE_DECLARATION:
-      type = L"VARIABLE_DECLARATION";
-      break;
-    case JS_NODE_TYPE::VARIABLE_DECLARATOR:
-      type = L"VARIABLE_DECLARATOR";
-      break;
-    case JS_NODE_TYPE::DECORATOR:
-      type = L"DECORATOR";
-      break;
-    case JS_NODE_TYPE::DIRECTIVE:
-      type = L"DIRECTIVE";
-      break;
-    case JS_NODE_TYPE::INTERPRETER_DIRECTIVE:
-      type = L"INTERPRETER_DIRECTIVE";
-      break;
-    case JS_NODE_TYPE::OBJECT_PROPERTY:
-      type = L"OBJECT_PROPERTY";
-      break;
-    case JS_NODE_TYPE::OBJECT_METHOD:
-      type = L"OBJECT_METHOD";
-      break;
-    case JS_NODE_TYPE::OBJECT_ACCESSOR:
-      type = L"OBJECT_ACCESSOR";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_BINARY:
-      type = L"EXPRESSION_BINARY";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_MEMBER:
-      type = L"EXPRESSION_MEMBER";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER:
-      type = L"EXPRESSION_OPTIONAL_MEMBER";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER:
-      type = L"EXPRESSION_COMPUTED_MEMBER";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER:
-      type = L"EXPRESSION_OPTIONAL_COMPUTED_MEMBER";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_CONDITION:
-      type = L"EXPRESSION_CONDITION";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_CALL:
-      type = L"EXPRESSION_CALL";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_CALL:
-      type = L"EXPRESSION_OPTIONAL_CALL";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_NEW:
-      type = L"EXPRESSION_NEW";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_DELETE:
-      type = L"EXPRESSION_DELETE";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_AWAIT:
-      type = L"EXPRESSION_AWAIT";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_YIELD:
-      type = L"EXPRESSION_YIELD";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_YIELD_DELEGATE:
-      type = L"EXPRESSION_YIELD_DELEGATE";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_VOID:
-      type = L"EXPRESSION_VOID";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_TYPEOF:
-      type = L"EXPRESSION_TYPEOF";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_GROUP:
-      type = L"EXPRESSION_GROUP";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_ASSIGMENT:
-      type = L"EXPRESSION_ASSIGMENT";
-      break;
-    case JS_NODE_TYPE::EXPRESSION_SPREAD:
-      type = L"EXPRESSION_SPREAD";
-      break;
-    case JS_NODE_TYPE::PATTERN_SPREAD_ITEM:
-      type = L"PATTERN_SPREAD_ITEM";
-      break;
-    case JS_NODE_TYPE::PATTERN_OBJECT:
-      type = L"PATTERN_OBJECT";
-      break;
-    case JS_NODE_TYPE::PATTERN_OBJECT_ITEM:
-      type = L"PATTERN_OBJECT_ITEM";
-      break;
-    case JS_NODE_TYPE::PATTERN_ARRAY:
-      type = L"PATTERN_ARRAY";
-      break;
-    case JS_NODE_TYPE::PATTERN_ARRAY_ITEM:
-      type = L"PATTERN_ARRAY_ITEM";
-      break;
-    case JS_NODE_TYPE::CLASS_METHOD:
-      type = L"CLASS_METHOD";
-      break;
-    case JS_NODE_TYPE::CLASS_PROPERTY:
-      type = L"CLASS_PROPERTY";
-      break;
-    case JS_NODE_TYPE::CLASS_ACCESSOR:
-      type = L"CLASS_ACCESSOR";
-      break;
-    case JS_NODE_TYPE::STATIC_BLOCK:
-      type = L"STATIC_BLOCK";
-      break;
-    case JS_NODE_TYPE::IMPORT_DECLARATION:
-      type = L"IMPORT_DECLARATION";
-      break;
-    case JS_NODE_TYPE::IMPORT_SPECIFIER:
-      type = L"IMPORT_SPECIFIER";
-      break;
-    case JS_NODE_TYPE::IMPORT_DEFAULT:
-      type = L"IMPORT_DEFAULT";
-      break;
-    case JS_NODE_TYPE::IMPORT_NAMESPACE:
-      type = L"IMPORT_NAMESPACE";
-      break;
-    case JS_NODE_TYPE::IMPORT_ATTARTUBE:
-      type = L"IMPORT_ATTARTUBE";
-      break;
-    case JS_NODE_TYPE::EXPORT_DECLARATION:
-      type = L"EXPORT_DECLARATION";
-      break;
-    case JS_NODE_TYPE::EXPORT_NAMED:
-      type = L"EXPORT_NAMED";
-      break;
-    case JS_NODE_TYPE::EXPORT_DEFAULT:
-      type = L"EXPORT_DEFAULT";
-      break;
-    case JS_NODE_TYPE::EXPORT_SPECIFIER:
-      type = L"EXPORT_SPECIFIER";
-      break;
-    case JS_NODE_TYPE::EXPORT_NAMESPACE:
-      type = L"EXPORT_NAMESPACE";
-      break;
-    case JS_NODE_TYPE::DECLARATION_FUNCTION_ARGUMENT:
-      type = L"DECLARATION_FUNCTION_ARGUMENT";
-      break;
-    case JS_NODE_TYPE::DECLARATION_ARROW_FUNCTION:
-      type = L"DECLARATION_ARROW_FUNCTION";
-      break;
-    case JS_NODE_TYPE::DECLARATION_FUNCTION:
-      type = L"DECLARATION_FUNCTION";
-      break;
-    case JS_NODE_TYPE::DECLARATION_FUNCTION_BODY:
-      type = L"DECLARATION_FUNCTION_BODY";
-      break;
-    case JS_NODE_TYPE::DECLARATION_PARAMETER:
-      type = L"DECLARATION_PARAMETER";
-      break;
-    case JS_NODE_TYPE::DECLARATION_OBJECT:
-      type = L"DECLARATION_OBJECT";
-      break;
-    case JS_NODE_TYPE::DECLARATION_ARRAY:
-      type = L"DECLARATION_ARRAY";
-      break;
-    case JS_NODE_TYPE::DECLARATION_CLASS:
-      type = L"DECLARATION_CLASS";
-      break;
-    }
-    std::wstring result = LR"({"type":")" + type + LR"(","children":[)";
-    for (size_t i = 0; i < node->children.size(); i++) {
-      if (i != 0) {
-        result += L",";
-      }
-      result += print(filename, source, node->children[i]);
-    }
-    result += LR"(],"source":")";
-    std::wstring src = node->location.get(source);
-    for (auto &ch : src) {
-      if (ch == '\n') {
-        result += L"\\n";
-      } else if (ch == '\t') {
-        result += L"\\t";
-      } else if (ch == '\r') {
-        result += L"\\r";
-      } else if (ch == '\"') {
-        result += L"\\\"";
-      } else {
-        result += ch;
-      }
-    }
-    result += LR"(","declarations":[)";
-    if (node->scope) {
-      size_t index = 0;
-      for (auto &variable : node->scope->declarations) {
-        result += LR"({"type":")";
-        switch (variable.type) {
-        case JS_DECLARATION_TYPE::VAR:
-          result += LR"(var)";
-          break;
-        case JS_DECLARATION_TYPE::CONST:
-          result += LR"(const)";
-          break;
-        case JS_DECLARATION_TYPE::LET:
-          result += LR"(let)";
-          break;
-        case JS_DECLARATION_TYPE::FUNCTION:
-          result += LR"(function)";
-          break;
-        }
-        result += LR"(","name":")" + variable.name + LR"("})";
-        if (index != node->scope->declarations.size() - 1) {
-          result += L",";
-        }
-        index++;
-      }
-    }
-    result += LR"(])";
-    result += LR"(})";
-    return result;
+    return JSON::stringify(node->toJSON(filename, source));
   }
 
 public:
