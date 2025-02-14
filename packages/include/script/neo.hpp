@@ -9,8 +9,7 @@
 #include <map>
 #include <set>
 #include <sstream>
-#include <stdexcept>
-#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace neo {
@@ -19,6 +18,7 @@ class JSContext;
 class JSValue;
 
 enum class JS_TYPE {
+  DISPOSED,
   UNDEFINED,
   NUMBER,
   STRING,
@@ -27,7 +27,10 @@ enum class JS_TYPE {
   OBJECT,
   FUNCTION,
   SYMBOL,
-  EXCEPTION
+  CLASS,
+  EXCEPTION,
+  INTERRUPT,
+  INTERNAL,
 };
 
 struct JSPosition {
@@ -269,9 +272,7 @@ public:
       return str;
     }
     case JSON_NODE_TYPE::NUMBER: {
-      wchar_t str[1024];
-      swprintf(str, L"%lf", node.getNumber());
-      return str;
+      return std::to_wstring(node.getNumber());
     }
     case JSON_NODE_TYPE::NIL:
       return L"null";
@@ -2446,8 +2447,10 @@ private:
       auto node = new JSNullLiteralNode{};
       node->location = getLocation(source, position, current);
       position = current;
+      delete identify;
       return node;
     }
+    delete identify;
     return nullptr;
   }
 
@@ -2462,8 +2465,10 @@ private:
       auto node = new JSUndefinedLiteralNode{};
       node->location = getLocation(source, position, current);
       position = current;
+      delete identify;
       return node;
     }
+    delete identify;
     return nullptr;
   }
 
@@ -2477,8 +2482,10 @@ private:
       auto node = new JSThisLiteralNode{};
       node->location = getLocation(source, position, current);
       position = current;
+      delete identify;
       return node;
     }
+    delete identify;
     return nullptr;
   }
 
@@ -2491,9 +2498,11 @@ private:
     if (identify->location.is(source, L"super")) {
       auto node = new JSSuperLiteralNode{};
       node->location = getLocation(source, position, current);
+      delete identify;
       position = current;
       return node;
     }
+    delete identify;
     return nullptr;
   }
 
@@ -2508,8 +2517,10 @@ private:
       auto node = new JSUndefinedLiteralNode{};
       node->location = getLocation(source, position, current);
       position = current;
+      delete identify;
       return node;
     }
+    delete identify;
     return nullptr;
   }
 
@@ -8752,6 +8763,7 @@ public:
     resolveBinding(source, node);
     return node;
   }
+  virtual ~JSParser() {}
 };
 
 class JSScope;
@@ -8782,17 +8794,21 @@ public:
     if (parent) {
       parent->addChild(this);
     }
+    std::wcout << L"Atom():" << L"0x" << std::hex << (ptrdiff_t)this
+               << L" type:" << getTypeName() << std::endl;
   }
 
-  JSAtom() : _data(nullptr) {}
+  JSAtom() : _type(JS_TYPE::INTERNAL), _data(nullptr) {}
 
   ~JSAtom() {
     if (_data != nullptr) {
+      std::wcout << L"~Atom():" << L"0x" << std::hex << (ptrdiff_t)this
+                 << L" type:" << getTypeName() << std::endl;
       delete _data;
       _data = nullptr;
     }
-    for (auto child : _children) {
-      removeChild(child);
+    while (!_children.empty()) {
+      removeChild(*_children.begin());
     }
   }
 
@@ -8844,50 +8860,66 @@ public:
       return L"function";
     case JS_TYPE::SYMBOL:
       return L"symbol";
-    case JS_TYPE::EXCEPTION:
-      return L"exception";
+    case JS_TYPE::CLASS:
+      return L"function";
+    default:
+      break;
     }
     return L"unknown";
   }
 
 public:
   static void gc() {
-    std::vector<JSAtom *> cache = {};
+    std::vector<JSAtom *> alived = {};
     std::vector<JSAtom *> disposed = {};
     while (!_destroyed.empty()) {
-      auto item = *_destroyed.begin();
-      _destroyed.erase(_destroyed.begin());
-      if (std::find(cache.begin(), cache.end(), item) == cache.end()) {
-        cache.push_back(item);
-        std::vector<JSAtom *> workflow = {item};
-        for (;;) {
-          if (workflow.empty()) {
-            disposed.push_back(item);
-            while (!item->_children.empty()) {
-              auto child = *item->_children.begin();
-              item->removeChild(child);
-            }
+      auto item = *_destroyed.rbegin();
+      _destroyed.pop_back();
+      if (std::find(alived.begin(), alived.end(), item) != alived.end()) {
+        continue;
+      }
+      if (std::find(disposed.begin(), disposed.end(), item) != disposed.end()) {
+        continue;
+      }
+      std::vector<JSAtom *> workflow = {item};
+      std::vector<JSAtom *> cache = {};
+      for (;;) {
+        if (workflow.empty()) {
+          disposed.push_back(item);
+          while (!item->_children.empty()) {
+            auto child = *item->_children.begin();
+            item->removeChild(child);
+          }
+          while (!item->_parents.empty()) {
+            auto parent = *item->_parents.begin();
+            std::erase(parent->_children, item);
+            item->_parents.erase(item->_parents.begin());
+          }
+          break;
+        }
+        auto it = *workflow.begin();
+        workflow.erase(workflow.begin());
+        if (std::find(cache.begin(), cache.end(), it) != cache.end()) {
+          continue;
+        }
+        cache.push_back(it);
+        if (std::find(disposed.begin(), disposed.end(), it) != disposed.end()) {
+          continue;
+        }
+        if (std::find(alived.begin(), alived.end(), it) != alived.end()) {
+          continue;
+        }
+        auto alive = false;
+        for (auto parent : it->_parents) {
+          if (parent->_data == nullptr) {
+            alive = true;
             break;
           }
-          auto item = *workflow.begin();
-          workflow.erase(workflow.begin());
-          if (std::find(disposed.begin(), disposed.end(), item) !=
-              disposed.end()) {
-            continue;
-          }
-          if (std::find(cache.begin(), cache.end(), item) == cache.end()) {
-            auto alive = false;
-            for (auto parent : item->_parents) {
-              if (parent->_data != nullptr) {
-                alive = true;
-                break;
-              }
-              workflow.push_back(parent);
-            }
-            if (alive) {
-              break;
-            }
-          }
+          workflow.push_back(parent);
+        }
+        if (alive) {
+          alived.push_back(it);
+          break;
         }
       }
     }
@@ -8900,11 +8932,9 @@ public:
 class JSValue {
 private:
   JSAtom *_atom;
-  std::wstring _name;
 
 public:
-  JSValue(JSAtom *atom, const std::wstring &name = L"")
-      : _atom(atom), _name(name) {}
+  JSValue(JSAtom *atom) : _atom(atom) {}
 
   ~JSValue() {}
 
@@ -8914,7 +8944,9 @@ public:
 
   void setAtom(JSAtom *atom) { _atom = atom; }
 
-  const std::wstring &getName() const { return _name; }
+  JSBase *getData() { return _atom->getData(); }
+
+  const JSBase *getData() const { return _atom->getData(); }
 
   const JS_TYPE &getType() const { return _atom->getType(); }
 };
@@ -8924,8 +8956,8 @@ private:
   JSScope *_parent;
   JSAtom *_root;
   std::vector<JSScope *> _children;
-  std::unordered_map<std::wstring, JSValue *> _namedVariables;
   std::vector<JSValue *> _variables;
+  std::unordered_map<std::wstring, JSValue *> _namedVariables;
 
 public:
   JSScope(JSScope *parent = nullptr) : _parent(parent) {
@@ -8945,7 +8977,6 @@ public:
       delete variable;
     }
     _variables.clear();
-    _namedVariables.clear();
     delete _root;
     _root = nullptr;
     JSAtom::gc();
@@ -8958,42 +8989,26 @@ public:
     if (it != _children.end()) {
       _children.erase(it);
     }
+    scope->_parent = nullptr;
   }
 
   JSAtom *createAtom(const JS_TYPE &type, JSBase *data) {
     return new JSAtom(_root, type, data);
   }
 
-  JSValue *createValue(const std::wstring &name, JSAtom *atom) {
+  JSValue *createValue(JSAtom *atom) {
     _root->addChild(atom);
     JSValue *value = nullptr;
-    if (!name.empty() && _namedVariables.contains(name)) {
-      value = _namedVariables.at(name);
-      value->setAtom(atom);
-    } else {
-      value = new JSValue(atom, name);
-      _variables.push_back(value);
-      if (!name.empty()) {
-        _namedVariables[name] = value;
-      }
-    }
+    value = new JSValue(atom);
+    _variables.push_back(value);
     return value;
   }
 
-  JSValue *createValue(const std::wstring &name, const JS_TYPE &type,
-                       JSBase *val) {
+  JSValue *createValue(const JS_TYPE &type, JSBase *val) {
     auto atom = createAtom(type, val);
     JSValue *value = nullptr;
-    if (!name.empty() && _namedVariables.contains(name)) {
-      value = _namedVariables.at(name);
-      value->setAtom(atom);
-    } else {
-      value = new JSValue(atom, name);
-      _variables.push_back(value);
-      if (!name.empty()) {
-        _namedVariables[name] = value;
-      }
-    }
+    value = new JSValue(atom);
+    _variables.push_back(value);
     return value;
   }
 
@@ -9002,6 +9017,10 @@ public:
       return _namedVariables.at(name);
     }
     return nullptr;
+  }
+
+  void storeValue(const std::wstring &name, JSValue *value) {
+    _namedVariables[name] = value;
   }
 };
 
@@ -9053,14 +9072,14 @@ public:
 };
 
 struct JSField {
-  bool configurable;
-  bool enumable;
+  bool configurable{};
+  bool enumable{};
 
-  JSAtom *value;
-  bool writable;
+  JSAtom *value{};
+  bool writable{};
 
-  JSAtom *getter;
-  JSAtom *setter;
+  JSAtom *getter{};
+  JSAtom *setter{};
 };
 
 class JSObject : public JSBase {
@@ -9075,6 +9094,12 @@ public:
   JSAtom *getPrototype() { return _prototype; }
 
   const JSAtom *getPrototype() const { return _prototype; }
+
+  const std::unordered_map<std::wstring, JSField> &getFields() const {
+    return _fields;
+  }
+
+  std::unordered_map<std::wstring, JSField> &getFields() { return _fields; }
 
 public:
   inline JSValue *toString(JSContext *ctx) override;
@@ -9097,19 +9122,22 @@ public:
 };
 
 class JSCallable : public JSObject {
-public:
+private:
   std::unordered_map<std::wstring, JSAtom *> _closure;
+  std::wstring _name;
 
 public:
-  JSCallable(JSAtom *prototype,
+  JSCallable(JSAtom *prototype, const std::wstring &name,
              const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSObject(prototype), _closure(closure){};
+      : JSObject(prototype), _closure(closure), _name(name){};
   const std::unordered_map<std::wstring, JSAtom *> &getClosure() const {
     return _closure;
   }
 
   virtual JSValue *call(JSContext *ctx, JSValue *self,
                         const std::vector<JSValue *> args) = 0;
+
+  const std::wstring &getName() const { return _name; }
 
 public:
   inline JSValue *toString(JSContext *ctx) override;
@@ -9120,9 +9148,10 @@ private:
   JS_NATIVE _native;
 
 public:
-  JSNativeFunction(JSAtom *prototype, const JS_NATIVE &native,
+  JSNativeFunction(JSAtom *prototype, const std::wstring &name,
+                   const JS_NATIVE &native,
                    const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSCallable(prototype, closure), _native(native) {}
+      : JSCallable(prototype, name, closure), _native(native) {}
   JSValue *call(JSContext *ctx, JSValue *self,
                 const std::vector<JSValue *> args) {
     return _native(ctx, self, args);
@@ -9154,13 +9183,24 @@ public:
 
 class JSExecutor {
 private:
-  std::wstring print(const std::wstring &filename, const std::wstring &source,
-                     JSNode *node) {
-    return JSON::stringify(node->toJSON(filename, source));
-  }
+  struct JSCallFrame {
+    std::wstring filename;
+    std::wstring funcname;
+    size_t line;
+    size_t column;
+    size_t offset;
+    JSNode *node{};
+    JSScope *scope{};
+  };
 
 private:
-  std::vector<JSValue *> _stack;
+  std::vector<JSCallFrame> _callStack;
+
+private:
+  bool isInterrupt(JSValue *value) {
+    return value && (value->getType() == JS_TYPE::EXCEPTION ||
+                     value->getType() == JS_TYPE::INTERRUPT);
+  }
 
 private:
   EXEC(execRegexLiteral);
@@ -9227,10 +9267,39 @@ private:
 
   EXEC(execProgram);
 
+  EXEC(execNode);
+
 public:
   inline virtual JSValue *exec(const std::wstring &filename,
                                const std::wstring &source, JSContext *ctx,
                                JSNode *node);
+  JSExecutor() {
+    _callStack.push_back(JSCallFrame{.filename = L"",
+                                     .funcname = L"neo.eval",
+                                     .line = 0,
+                                     .column = 0,
+                                     .offset = 0});
+  }
+  virtual ~JSExecutor() {}
+
+  const std::vector<JSCallFrame> &getCallStack() const { return _callStack; }
+
+  void pushCallStack(JSContext *ctx, const JSPosition &pos);
+
+  void popCallStack(JSContext *ctx);
+
+  std::vector<JSPosition> trace(const std::wstring &filename, size_t column,
+                                size_t line) const {
+    std::vector<JSPosition> stack;
+    for (auto frame : _callStack) {
+      stack.push_back({frame.filename, frame.funcname, frame.line, frame.column,
+                       frame.offset});
+    }
+    stack.rbegin()->filename = filename;
+    stack.rbegin()->column = column;
+    stack.rbegin()->line = line;
+    return stack;
+  }
 };
 
 class JSRuntime {
@@ -9243,9 +9312,18 @@ public:
     _parser = new JSParser;
     _executor = new JSExecutor;
   }
-  ~JSRuntime() {}
+  ~JSRuntime() {
+    if (_executor) {
+      delete _executor;
+    }
+    if (_parser) {
+      delete _parser;
+    }
+  }
   JSParser *getParser() { return _parser; }
   JSExecutor *getExecutor() { return _executor; }
+
+  void setDirective(const std::wstring &directive) {}
 };
 
 class JSContext {
@@ -9253,23 +9331,22 @@ private:
   JSRuntime *_runtime;
   JSScope *_root;
   JSScope *_current;
-  std::vector<JSPosition> _callStack;
 
 private:
   JSValue *_null;
   JSValue *_undefined;
+  JSValue *_global;
 
 public:
   JSContext(JSRuntime *runtime) : _runtime(runtime) {
     _root = new JSScope();
     _current = _root;
-    _callStack.push_back({.filename = L"",
-                          .funcname = L"neo.eval",
-                          .line = 0,
-                          .column = 0,
-                          .offset = 0});
-    _null = _current->createValue(L"", JS_TYPE::OBJECT, new JSNull{});
-    _undefined = _current->createValue(L"", JS_TYPE::OBJECT, new JSUndefined{});
+    _null = _current->createValue(JS_TYPE::OBJECT, new JSNull{});
+    _global =
+        _current->createValue(JS_TYPE::OBJECT, new JSObject{_null->getAtom()});
+    _null->getAtom()->addChild(_global->getAtom());
+
+    _undefined = _current->createValue(JS_TYPE::UNDEFINED, new JSUndefined{});
   }
 
   ~JSContext() {
@@ -9279,47 +9356,20 @@ public:
     _runtime = nullptr;
   }
 
+  JSRuntime *getRuntime() { return _runtime; }
+
   JSValue *eval(const std::wstring &filename, const std::wstring &source) {
     auto root = _runtime->getParser()->parse(source);
     if (root->type == JS_NODE_TYPE::ERROR) {
       auto err = dynamic_cast<JSErrorNode *>(root);
       auto message = err->message;
-      char msg[4096];
-      sprintf(msg, "SyntaxError: %ls \nat %ls(%ls:%lld:%lld)", message.c_str(),
-              root->location.end.funcname.c_str(), filename.c_str(),
-              root->location.end.line, root->location.end.column);
-      throw std::runtime_error(msg);
+      return createException(L"SyntaxError: " + message, filename,
+                             root->location.end.column,
+                             root->location.end.line);
     }
     auto res = _runtime->getExecutor()->exec(filename, source, this, root);
     delete root;
     return res;
-  }
-
-  const std::vector<JSPosition> &getCallStack() const { return _callStack; }
-
-  void pushCallStack(const JSPosition &pos) {
-    _callStack.rbegin()->filename = pos.filename;
-    _callStack.rbegin()->line = pos.line;
-    _callStack.rbegin()->column = pos.column;
-    _callStack.push_back({.filename = L"",
-                          .funcname = pos.funcname,
-                          .line = 0,
-                          .column = 0,
-                          .offset = 0});
-  }
-  void popCallStack() {
-    _callStack.pop_back();
-    _callStack.rbegin()->filename = L"";
-    _callStack.rbegin()->column = 0;
-    _callStack.rbegin()->line = 0;
-  }
-  std::vector<JSPosition> trace(const std::wstring &filename, size_t column,
-                                size_t line) const {
-    std::vector<JSPosition> stack = _callStack;
-    stack.rbegin()->filename = filename;
-    stack.rbegin()->column = column;
-    stack.rbegin()->line = line;
-    return stack;
   }
 
   void pushScope() { _current = new JSScope(_current); }
@@ -9331,102 +9381,146 @@ public:
     _current = parent;
   }
 
-  JSValue *createUndefined(const std::wstring &name) {
-    return _current->createValue(name, _undefined->getAtom());
+  JSScope *getScope() { return _current; }
+
+  void setScope(JSScope *scope) { _current = scope; }
+
+  JSValue *createUndefined() { return _undefined; }
+
+  JSValue *createNull() { return _null; }
+
+  JSValue *createNumber(double value) {
+    return _current->createValue(JS_TYPE::NUMBER, new JSNumber{value});
   }
 
-  JSValue *createNull(const std::wstring &name) {
-    return _current->createValue(name, _null->getAtom());
+  JSValue *createString(const std::wstring &value) {
+    return _current->createValue(JS_TYPE::STRING, new JSString{value});
   }
 
-  JSValue *createNumber(const std::wstring &name, double value) {
-    return _current->createValue(name, JS_TYPE::NUMBER, new JSNumber{value});
+  JSValue *createBoolean(bool value) {
+    return _current->createValue(JS_TYPE::BOOLEAN, new JSBoolean{value});
   }
 
-  JSValue *createString(const std::wstring &name, const std::wstring &value) {
-    return _current->createValue(name, JS_TYPE::STRING, new JSString{value});
+  JSValue *createObject() {
+    return _current->createValue(JS_TYPE::OBJECT, new JSObject{nullptr});
   }
 
-  JSValue *createBoolean(const std::wstring &name, bool value) {
-    return _current->createValue(name, JS_TYPE::BOOLEAN, new JSBoolean{value});
-  }
-
-  JSValue *createObject(const std::wstring &name) {
-    return _current->createValue(name, JS_TYPE::OBJECT, new JSObject{nullptr});
-  }
-
-  JSValue *createArray(const std::wstring &name) {
-    return _current->createValue(name, JS_TYPE::OBJECT, new JSArray{nullptr});
+  JSValue *createArray() {
+    return _current->createValue(JS_TYPE::OBJECT, new JSArray{nullptr});
   }
 
   JSValue *createNativeFunction(
-      const std::wstring &name, const JS_NATIVE &func,
+      const JS_NATIVE &func, const std::wstring &name,
       const std::unordered_map<std::wstring, JSValue *> &closure = {}) {
     std::unordered_map<std::wstring, JSAtom *> clo;
     for (auto &[n, val] : closure) {
       clo[n] = val->getAtom();
     }
-    auto val = _current->createValue(name, JS_TYPE::FUNCTION,
-                                     new JSNativeFunction{nullptr, func, clo});
+    auto val = _current->createValue(
+        JS_TYPE::FUNCTION, new JSNativeFunction{nullptr, name, func, clo});
     for (auto &[n, atom] : clo) {
       val->getAtom()->addChild(atom);
     }
     return val;
   }
 
-  JSValue *createException(const std::wstring &name,
-                           const std::wstring &message,
-                           const std::wstring &filename, size_t column,
-                           size_t line) {
-    return _current->createValue(
-        name, JS_TYPE::EXCEPTION,
-        new JSException{message, trace(filename, column, line)});
-  }
-
-  JSValue *createUndefined() { return _undefined; }
-
-  JSValue *createNull() { return _null; }
-
-  JSValue *createNumber(double value) { return createNumber(L"", value); }
-
-  JSValue *createString(const std::wstring &value) {
-    return createString(L"", value);
-  }
-
-  JSValue *createBoolean(bool value) { return createBoolean(L"", value); }
-
-  JSValue *createObject() { return createObject(L""); }
-
-  JSValue *createArray() { return createArray(L""); }
-
-  JSValue *createNativeFunction(
-      const JS_NATIVE &func,
-      const std::unordered_map<std::wstring, JSValue *> &closure = {}) {
-    return createNativeFunction(L"", func, closure);
-  }
-
   JSValue *createException(const std::wstring &message,
-                           const std::wstring &filename, size_t column,
-                           size_t line) {
-    return createException(L"", message, filename, column, line);
+                           const std::wstring &filename = L"",
+                           size_t column = 0, size_t line = 0) {
+    return _current->createValue(
+        JS_TYPE::EXCEPTION,
+        new JSException{
+            message, _runtime->getExecutor()->trace(filename, column, line)});
+  }
+
+  JSValue *getGlobal() { return _global; }
+
+  JSValue *queryValue(const std::wstring &name) {
+    auto scope = _current;
+    while (scope) {
+      auto val = scope->queryValue(name);
+      if (val) {
+        return val;
+      }
+      scope = scope->getParent();
+    }
+    return getField(_global, name);
   }
 
   JSValue *call(JSValue *func, JSValue *self,
                 const std::vector<JSValue *> args) {
-    auto current = _current;
-    pushScope();
     auto fn = const_cast<JSCallable *>(
         dynamic_cast<const JSCallable *>(func->getAtom()->getData()));
     for (auto &[key, val] : fn->getClosure()) {
-      _current->createValue(key, val);
+      auto value = _current->createValue(val);
+      _current->storeValue(key, value);
     }
     for (auto &arg : args) {
-      _current->createValue(arg->getName(), arg->getAtom());
+      _current->createValue(arg->getAtom());
     }
-    auto res = fn->call(this, self, args);
-    auto result = current->createValue(res->getName(), res->getAtom());
-    popScope();
-    return result;
+    return fn->call(this, self, args);
+  }
+
+  JSValue *setField(JSValue *obj, const std::wstring &name, JSValue *value) {
+    auto object = dynamic_cast<JSObject *>(obj->getAtom()->getData());
+    auto &fields = object->getFields();
+    if (!fields.contains(name)) {
+      fields[name] = {
+          .configurable = true,
+          .enumable = true,
+          .value = value->getAtom(),
+          .writable = true,
+      };
+      obj->getAtom()->addChild(value->getAtom());
+    } else {
+      auto &current = fields.at(name);
+      if (current.value != nullptr) {
+        if (!current.writable) {
+          return createException(
+              L"TypeError: Cannot assign to read only property '" + name +
+              L"' of object");
+        }
+        obj->getAtom()->addChild(value->getAtom());
+        obj->getAtom()->removeChild(value->getAtom());
+        current.value = value->getAtom();
+      } else {
+        if (!current.setter) {
+          return createException(
+              L"TypeError: Cannot assign to read only property '" + name +
+              L"' of object");
+        }
+        auto fn = _current->createValue(current.setter);
+        return call(fn, obj, {value});
+      }
+    }
+    return value;
+  }
+
+  JSValue *getField(JSValue *obj, const std::wstring &name) {
+    auto cur = obj->getAtom();
+    auto object = dynamic_cast<JSObject *>(cur->getData());
+    while (object) {
+      auto &fields = object->getFields();
+      if (fields.contains(name)) {
+        auto &current = fields.at(name);
+        if (current.value != nullptr) {
+          return _current->createValue(current.value);
+        } else {
+          auto fn = _current->createValue(current.getter);
+          return call(fn, obj, {});
+        }
+      } else {
+        cur = object->getPrototype();
+        object = dynamic_cast<JSObject *>(cur->getData());
+      }
+    }
+    return createUndefined();
+  }
+
+  std::wstring toString(JSValue *value) {
+    auto str = value->getAtom()->getData()->toString(this);
+    auto string = (JSString *)str->getAtom()->getData();
+    return string->getValue();
   }
 };
 
@@ -9434,9 +9528,212 @@ public:
 /* JSExecutor Implement                  */
 /*****************************************/
 
+inline void JSExecutor::pushCallStack(JSContext *ctx, const JSPosition &pos) {
+  _callStack.rbegin()->filename = pos.filename;
+  _callStack.rbegin()->line = pos.line;
+  _callStack.rbegin()->column = pos.column;
+  _callStack.rbegin()->scope = ctx->getScope();
+  _callStack.push_back({.filename = L"",
+                        .funcname = pos.funcname,
+                        .line = 0,
+                        .column = 0,
+                        .offset = 0});
+  ctx->pushScope();
+}
+
+inline void JSExecutor::popCallStack(JSContext *ctx) {
+  ctx->popScope();
+  _callStack.pop_back();
+  _callStack.rbegin()->filename = L"";
+  _callStack.rbegin()->column = 0;
+  _callStack.rbegin()->line = 0;
+}
+
 inline JSValue *JSExecutor::exec(const std::wstring &filename,
                                  const std::wstring &source, JSContext *ctx,
                                  JSNode *node) {
+  return execNode(filename, source, ctx, node);
+}
+
+inline EXEC(JSExecutor::execRegexLiteral) { return nullptr; }
+
+inline EXEC(JSExecutor::execNullLiteral) { return ctx->createNull(); }
+inline EXEC(JSExecutor::execStringLiteral) {
+  auto str = node->location.get(source);
+  auto src = str.substr(1, str.size() - 2);
+  return ctx->createString(src);
+}
+inline EXEC(JSExecutor::execBooleanLiteral) {
+  auto str = node->location.get(source);
+  return ctx->createBoolean(str == L"true");
+}
+inline EXEC(JSExecutor::execNumberLiteral) {
+  auto str = node->location.get(source);
+  return ctx->createNumber(std::stold(str));
+}
+inline EXEC(JSExecutor::execCommentLiteral) { return nullptr; }
+inline EXEC(JSExecutor::execMultilineLiteral) { return nullptr; }
+inline EXEC(JSExecutor::execUndefinedLiteral) { return ctx->createUndefined(); }
+inline EXEC(JSExecutor::execIdentityLiteral) {
+  auto name = node->location.get(source);
+  auto val = ctx->queryValue(name);
+  if (!val) {
+    return ctx->createException(name + L" is not defined", filename,
+                                node->location.start.column,
+                                node->location.start.line);
+  }
+  return val;
+}
+
+inline EXEC(JSExecutor::execTemplateLiteral) { return nullptr; }
+inline EXEC(JSExecutor::execBigintLiteral) { return nullptr; }
+
+inline EXEC(JSExecutor::execEmptyStatement) { return nullptr; }
+
+inline EXEC(JSExecutor::execBlockStatement) {
+  auto block = dynamic_cast<JSBlockStatement *>(node);
+  ctx->pushScope();
+  for (auto statement : block->statements) {
+    auto result = execNode(filename, source, ctx, statement);
+    if (isInterrupt(result)) {
+      return result;
+    }
+  }
+  ctx->popScope();
+  return nullptr;
+}
+
+inline EXEC(JSExecutor::execDebuggerStatement) { return nullptr; }
+
+inline EXEC(JSExecutor::execReturnStatement) { return nullptr; }
+
+inline EXEC(JSExecutor::execLabelStatement) { return nullptr; }
+inline EXEC(JSExecutor::execBreakStatement) { return nullptr; }
+inline EXEC(JSExecutor::execContinueStatement) { return nullptr; }
+inline EXEC(JSExecutor::execIfStatement) { return nullptr; }
+inline EXEC(JSExecutor::execSwitchStatement) { return nullptr; }
+inline EXEC(JSExecutor::execThrowStatement) { return nullptr; }
+inline EXEC(JSExecutor::execTryStatement) { return nullptr; }
+inline EXEC(JSExecutor::execWhileStatement) { return nullptr; }
+inline EXEC(JSExecutor::execDoWhileStatement) { return nullptr; }
+inline EXEC(JSExecutor::execForStatement) { return nullptr; }
+inline EXEC(JSExecutor::execForInStatement) { return nullptr; }
+inline EXEC(JSExecutor::execForOfStatement) { return nullptr; }
+inline EXEC(JSExecutor::execForAwaitOfStatement) { return nullptr; }
+inline EXEC(JSExecutor::execExpressionStatement) {
+  auto statement = dynamic_cast<JSExpressionStatementNode *>(node);
+  return execNode(filename, source, ctx, statement->expression);
+}
+
+inline EXEC(JSExecutor::execBinaryExpression) { return nullptr; }
+inline EXEC(JSExecutor::execMemberExpression) { return nullptr; }
+inline EXEC(JSExecutor::execOptionalMemberExpression) { return nullptr; }
+inline EXEC(JSExecutor::execComputedMemberExpression) { return nullptr; }
+inline EXEC(JSExecutor::execOptionalComputedMemberExpression) {
+  return nullptr;
+}
+inline EXEC(JSExecutor::execConditionExpression) {
+  auto expr = dynamic_cast<JSConditionExpressionNode *>(node);
+  auto condition = execNode(filename, source, ctx, expr->condition);
+  if (isInterrupt(condition)) {
+    return condition;
+  }
+  auto val = (JSBoolean *)condition->getAtom()->getData();
+  if (val->getValue()) {
+    return execNode(filename, source, ctx, expr->consequent);
+  } else {
+    return execNode(filename, source, ctx, expr->alternate);
+  }
+}
+inline EXEC(JSExecutor::execCallExpression) {
+  auto call = dynamic_cast<JSCallExpressionNode *>(node);
+  auto callee = execNode(filename, source, ctx, call->callee);
+  if (isInterrupt(callee)) {
+    return callee;
+  }
+  std::vector<JSValue *> args;
+  for (auto argument : call->arguments) {
+    auto arg = execNode(filename, source, ctx, argument);
+    if (isInterrupt(arg)) {
+      return arg;
+    }
+    args.push_back(arg);
+  }
+  auto current = ctx->getScope();
+  pushCallStack(ctx, {});
+  auto res = ctx->call(callee, ctx->createUndefined(), args);
+  if (isInterrupt(res)) {
+    return res;
+  }
+  auto result = current->createValue(res->getAtom());
+  popCallStack(ctx);
+  return result;
+}
+inline EXEC(JSExecutor::execOptionalCallExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execNewExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execDeleteExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execAwaitExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execYieldExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execYieldDelegateExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execVoidExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execTypeofExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execGroupExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execAssigmentExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execSpreadExpression) { return nullptr; }
+
+inline EXEC(JSExecutor::execArrowFunctionDeclaration) { return nullptr; }
+
+inline EXEC(JSExecutor::execFunctionDeclaration) { return nullptr; }
+
+inline EXEC(JSExecutor::execObjectDeclaration) { return nullptr; }
+
+inline EXEC(JSExecutor::execArrayDeclaration) { return nullptr; }
+
+inline EXEC(JSExecutor::execClassDeclaration) { return nullptr; }
+
+inline EXEC(JSExecutor::execVariableDeclaration) { return nullptr; }
+
+inline EXEC(JSExecutor::execExportDeclaration) { return nullptr; }
+
+inline EXEC(JSExecutor::execImportDeclaration) { return nullptr; }
+
+inline EXEC(JSExecutor::execProgram) {
+  auto program = dynamic_cast<JSProgramNode *>(node);
+  for (auto directive : program->directives) {
+    auto command = directive->location.get(source);
+    command = command.substr(1, command.size() - 2);
+    ctx->getRuntime()->setDirective(command);
+  }
+  auto current = ctx->getScope();
+  ctx->pushScope();
+  JSValue *result = nullptr;
+  for (auto statement : program->statements) {
+    result = execNode(filename, source, ctx, statement);
+    if (isInterrupt(result)) {
+      return result;
+    }
+  }
+  if (result != nullptr) {
+    result = current->createValue(result->getAtom());
+  }
+  ctx->popScope();
+  if (result) {
+    return result;
+  }
+  return ctx->createUndefined();
+}
+
+inline EXEC(JSExecutor::execNode) {
   switch (node->type) {
   case JS_NODE_TYPE::LITERAL_REGEX:
     return execRegexLiteral(filename, source, ctx, node);
@@ -9554,72 +9851,12 @@ inline JSValue *JSExecutor::exec(const std::wstring &filename,
     break;
   }
   return ctx->createException(
-      L"SyntaxError",
-      L"Unknown node:" + JSON::stringify(node->toJSON(filename, source)),
+      L"SyntaxError: Unknown node:" +
+          JSON::stringify(node->toJSON(filename, source)),
       filename, node->location.start.column, node->location.start.line);
 }
 
-inline EXEC(JSExecutor::execRegexLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execNullLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execStringLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execBooleanLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execNumberLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execCommentLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execMultilineLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execUndefinedLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execIdentityLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execTemplateLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execBigintLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execEmptyStatement) { return nullptr; }
-inline EXEC(JSExecutor::execBlockStatement) { return nullptr; }
-inline EXEC(JSExecutor::execDebuggerStatement) { return nullptr; }
-inline EXEC(JSExecutor::execReturnStatement) { return nullptr; }
-inline EXEC(JSExecutor::execLabelStatement) { return nullptr; }
-inline EXEC(JSExecutor::execBreakStatement) { return nullptr; }
-inline EXEC(JSExecutor::execContinueStatement) { return nullptr; }
-inline EXEC(JSExecutor::execIfStatement) { return nullptr; }
-inline EXEC(JSExecutor::execSwitchStatement) { return nullptr; }
-inline EXEC(JSExecutor::execThrowStatement) { return nullptr; }
-inline EXEC(JSExecutor::execTryStatement) { return nullptr; }
-inline EXEC(JSExecutor::execWhileStatement) { return nullptr; }
-inline EXEC(JSExecutor::execDoWhileStatement) { return nullptr; }
-inline EXEC(JSExecutor::execForStatement) { return nullptr; }
-inline EXEC(JSExecutor::execForInStatement) { return nullptr; }
-inline EXEC(JSExecutor::execForOfStatement) { return nullptr; }
-inline EXEC(JSExecutor::execForAwaitOfStatement) { return nullptr; }
-inline EXEC(JSExecutor::execExpressionStatement) { return nullptr; }
-inline EXEC(JSExecutor::execBinaryExpression) { return nullptr; }
-inline EXEC(JSExecutor::execMemberExpression) { return nullptr; }
-inline EXEC(JSExecutor::execOptionalMemberExpression) { return nullptr; }
-inline EXEC(JSExecutor::execComputedMemberExpression) { return nullptr; }
-inline EXEC(JSExecutor::execOptionalComputedMemberExpression) {
-  return nullptr;
-}
-inline EXEC(JSExecutor::execConditionExpression) { return nullptr; }
-inline EXEC(JSExecutor::execCallExpression) { return nullptr; }
-inline EXEC(JSExecutor::execOptionalCallExpression) { return nullptr; }
-inline EXEC(JSExecutor::execNewExpression) { return nullptr; }
-inline EXEC(JSExecutor::execDeleteExpression) { return nullptr; }
-inline EXEC(JSExecutor::execAwaitExpression) { return nullptr; }
-inline EXEC(JSExecutor::execYieldExpression) { return nullptr; }
-inline EXEC(JSExecutor::execYieldDelegateExpression) { return nullptr; }
-inline EXEC(JSExecutor::execVoidExpression) { return nullptr; }
-inline EXEC(JSExecutor::execTypeofExpression) { return nullptr; }
-inline EXEC(JSExecutor::execGroupExpression) { return nullptr; }
-inline EXEC(JSExecutor::execAssigmentExpression) { return nullptr; }
-inline EXEC(JSExecutor::execSpreadExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execArrowFunctionDeclaration) { return nullptr; }
-inline EXEC(JSExecutor::execFunctionDeclaration) { return nullptr; }
-inline EXEC(JSExecutor::execObjectDeclaration) { return nullptr; }
-inline EXEC(JSExecutor::execArrayDeclaration) { return nullptr; }
-inline EXEC(JSExecutor::execClassDeclaration) { return nullptr; }
-inline EXEC(JSExecutor::execVariableDeclaration) { return nullptr; }
-
-inline EXEC(JSExecutor::execExportDeclaration) { return nullptr; }
-inline EXEC(JSExecutor::execImportDeclaration) { return nullptr; }
-
-inline EXEC(JSExecutor::execProgram) { return nullptr; }
+#undef EXEC
 
 /*****************************************/
 /* JSString Implement                    */

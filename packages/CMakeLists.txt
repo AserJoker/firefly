@@ -7,15 +7,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC fmt::fmt)
 target_link_libraries(${PROJECT_NAME} PUBLIC $<IF:$<TARGET_EXISTS:SDL2_image::SDL2_image>,SDL2_image::SDL2_image,SDL2_image::SDL2_image-static>)
 target_link_libraries(${PROJECT_NAME} PUBLIC $<IF:$<TARGET_EXISTS:SDL2_mixer::SDL2_mixer>,SDL2_mixer::SDL2_mixer,SDL2_mixer::SDL2_mixer-static>)
 target_link_libraries(${PROJECT_NAME} PUBLIC glm::glm)
-target_link_libraries(${PROJECT_NAME} PUBLIC yaml-cpp::yaml-cpp)
-target_link_libraries(${PROJECT_NAME} PUBLIC LibXml2::LibXml2)
-target_link_libraries(${PROJECT_NAME} PUBLIC cjson)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${LUA_LIBRARIES})
-target_link_libraries(${PROJECT_NAME} PUBLIC imgui::imgui)
 target_link_libraries(${PROJECT_NAME} PUBLIC Freetype::Freetype)
-target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
-target_link_libraries(${PROJECT_NAME}
-PUBLIC
-$<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+target_link_libraries(${PROJECT_NAME} PUBLIC $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
 $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
 )

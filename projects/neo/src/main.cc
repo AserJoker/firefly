@@ -2,17 +2,25 @@
 #include "script/neo.hpp"
 #include <codecvt>
 #include <exception>
+#include <fmt/format.h>
 #include <fstream>
 #include <iostream>
 #include <locale>
-#include <fmt/format.h>
 #include <stdexcept>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
 using namespace neo;
+
+JSValue *print(JSContext *ctx, JSValue *self, std::vector<JSValue *> args) {
+  for (auto &arg : args) {
+    std::wcout << ctx->toString(arg) << std::endl;
+  }
+  return ctx->createNumber(args.size());
+}
 
 std::string filename = "../script/index.js";
 
@@ -29,7 +37,7 @@ int main(int argc, char *argv[]) {
   try {
     std::wifstream file(filename.c_str(), std::ios::in | std::ios::binary);
     if (!file.is_open()) {
-      throw std::runtime_error(fmt::format("Failed to open file:{}", argv[1]));
+      throw std::runtime_error(fmt::format("Failed to open file:{}", filename));
     }
     file.seekg(0, std::ios::end);
     auto size = file.tellg();
@@ -38,9 +46,15 @@ int main(int argc, char *argv[]) {
     file.read(buf, size);
     file.close();
     std::wstring js(buf, size);
+    delete[] buf;
     auto runtime = new JSRuntime();
     auto ctx = new JSContext(runtime);
-    ctx->eval(converter.from_bytes(filename), js);
+    auto func = ctx->createNativeFunction(print, L"print");
+    auto global = ctx->getGlobal();
+    ctx->setField(global, L"print", func);
+    auto result = ctx->eval(L"../script/index.js", js);
+    auto str = ctx->toString(result);
+    std::wcout << str << std::endl;
     delete ctx;
     delete runtime;
     return 0;
