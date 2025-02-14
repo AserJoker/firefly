@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -8794,16 +8795,12 @@ public:
     if (parent) {
       parent->addChild(this);
     }
-    std::wcout << L"Atom():" << L"0x" << std::hex << (ptrdiff_t)this
-               << L" type:" << getTypeName() << std::endl;
   }
 
   JSAtom() : _type(JS_TYPE::INTERNAL), _data(nullptr) {}
 
   ~JSAtom() {
     if (_data != nullptr) {
-      std::wcout << L"~Atom():" << L"0x" << std::hex << (ptrdiff_t)this
-                 << L" type:" << getTypeName() << std::endl;
       delete _data;
       _data = nullptr;
     }
@@ -9085,11 +9082,15 @@ struct JSField {
 class JSObject : public JSBase {
 private:
   std::unordered_map<std::wstring, JSField> _fields;
-
+  bool _sealed;
+  bool _frozen;
+  bool _extensible;
   JSAtom *_prototype;
 
 public:
-  JSObject(JSAtom *prototype) : _prototype(prototype) {}
+  JSObject(JSAtom *prototype)
+      : _sealed(false), _frozen(false), _extensible(true),
+        _prototype(prototype) {}
 
   JSAtom *getPrototype() { return _prototype; }
 
@@ -9101,8 +9102,41 @@ public:
 
   std::unordered_map<std::wstring, JSField> &getFields() { return _fields; }
 
+  bool isSealed() const { return _sealed; }
+
+  bool isFrozen() const { return _frozen; }
+
+  bool isExtensible() const { return _extensible; }
+
+  void setSealed(bool value) { _sealed = value; }
+
+  void setFrozen(bool value) { _frozen = value; }
+
+  void setExtensible(bool value) { _extensible = value; }
+
 public:
   inline JSValue *toString(JSContext *ctx) override;
+
+  virtual std::vector<std::wstring> getKeys(JSContext *ctx) {
+    std::vector<std::wstring> keys;
+    for (auto &[key, field] : _fields) {
+      if (field.enumable) {
+        keys.push_back(key);
+      }
+    }
+    return keys;
+  };
+
+  virtual JSValue *getField(JSContext *ctx, JSValue *self,
+                            const std::wstring &name);
+
+  virtual JSValue *setField(JSContext *ctx, JSValue *self,
+                            const std::wstring &name, JSValue *value);
+
+  virtual JSValue *getIndex(JSContext *ctx, JSValue *self, size_t index);
+
+  virtual JSValue *setIndex(JSContext *ctx, JSValue *self, size_t index,
+                            JSValue *value);
 };
 
 class JSArray : public JSObject {
@@ -9112,7 +9146,27 @@ private:
 public:
   JSArray(JSAtom *prototype) : JSObject(prototype) {}
 
+  std::unordered_map<size_t, JSAtom *> &getItems() { return _items; }
+
+  const std::unordered_map<size_t, JSAtom *> &getItems() const {
+    return _items;
+  }
+
+public:
   inline JSValue *toString(JSContext *ctx) override;
+
+  std::vector<std::wstring> getKeys(JSContext *ctx) override {
+    std::vector<std::wstring> keys;
+    for (auto &[key, _] : _items) {
+      keys.push_back(std::to_wstring(key));
+    }
+    return keys;
+  }
+
+  JSValue *getIndex(JSContext *ctx, JSValue *self, size_t index) override;
+
+  JSValue *setIndex(JSContext *ctx, JSValue *self, size_t index,
+                    JSValue *value) override;
 };
 
 class JSNull : public JSObject {
@@ -9158,7 +9212,19 @@ public:
   }
 };
 
-class JSFunction : public JSCallable {};
+class JSFunction : public JSCallable {
+private:
+  JSNode *_node;
+  const std::wstring *_source;
+
+public:
+  JSFunction(JSAtom *prototype, const std::wstring &name,
+             const std::wstring *source, JSNode *node,
+             const std::unordered_map<std::wstring, JSAtom *> &closure)
+      : JSCallable(prototype, name, closure), _node(node), _source(source) {}
+  JSValue *call(JSContext *ctx, JSValue *self,
+                const std::vector<JSValue *> args) override;
+};
 
 class JSException : public JSBase {
 private:
@@ -9175,6 +9241,33 @@ public:
 
 public:
   inline JSValue *toString(JSContext *ctx) override;
+};
+
+enum class JS_INTERRUPT_KIND {
+  RETURN,
+  BREAK,
+  CONTINUE,
+  YIELD,
+  YIELD_DELEGATE,
+  AWAIT
+};
+template <JS_INTERRUPT_KIND kind> class JSInterrupt : public JSBase {
+
+public:
+  JSInterrupt() {}
+
+  constexpr JS_INTERRUPT_KIND getKind() const { return kind; }
+
+  JSValue *toString(JSContext *ctx) override { return nullptr; }
+};
+
+class JSReturnInterrupt : public JSInterrupt<JS_INTERRUPT_KIND::RETURN> {
+private:
+  JSValue *_value;
+
+public:
+  JSReturnInterrupt(JSValue *value = nullptr) : _value(value) {}
+  JSValue *getValue() { return _value; }
 };
 
 #define EXEC(name)                                                             \
@@ -9197,11 +9290,6 @@ private:
   std::vector<JSCallFrame> _callStack;
 
 private:
-  bool isInterrupt(JSValue *value) {
-    return value && (value->getType() == JS_TYPE::EXCEPTION ||
-                     value->getType() == JS_TYPE::INTERRUPT);
-  }
-
 private:
   EXEC(execRegexLiteral);
   EXEC(execNullLiteral);
@@ -9257,6 +9345,7 @@ private:
 
   EXEC(execArrowFunctionDeclaration);
   EXEC(execFunctionDeclaration);
+  EXEC(execFunctionBodyDeclaration);
   EXEC(execObjectDeclaration);
   EXEC(execArrayDeclaration);
   EXEC(execClassDeclaration);
@@ -9273,6 +9362,15 @@ public:
   inline virtual JSValue *exec(const std::wstring &filename,
                                const std::wstring &source, JSContext *ctx,
                                JSNode *node);
+
+  bool isInterrupt(JSValue *value) {
+    return value && (value->getType() == JS_TYPE::EXCEPTION ||
+                     value->getType() == JS_TYPE::INTERRUPT);
+  }
+
+  virtual void assigmentVariable(const std::wstring &filename,
+                                 const std::wstring &source, JSContext *ctx,
+                                 JSNode *node, JSValue *value);
   JSExecutor() {
     _callStack.push_back(JSCallFrame{.filename = L"",
                                      .funcname = L"neo.eval",
@@ -9462,59 +9560,28 @@ public:
   }
 
   JSValue *setField(JSValue *obj, const std::wstring &name, JSValue *value) {
-    auto object = dynamic_cast<JSObject *>(obj->getAtom()->getData());
-    auto &fields = object->getFields();
-    if (!fields.contains(name)) {
-      fields[name] = {
-          .configurable = true,
-          .enumable = true,
-          .value = value->getAtom(),
-          .writable = true,
-      };
-      obj->getAtom()->addChild(value->getAtom());
-    } else {
-      auto &current = fields.at(name);
-      if (current.value != nullptr) {
-        if (!current.writable) {
-          return createException(
-              L"TypeError: Cannot assign to read only property '" + name +
-              L"' of object");
-        }
-        obj->getAtom()->addChild(value->getAtom());
-        obj->getAtom()->removeChild(value->getAtom());
-        current.value = value->getAtom();
-      } else {
-        if (!current.setter) {
-          return createException(
-              L"TypeError: Cannot assign to read only property '" + name +
-              L"' of object");
-        }
-        auto fn = _current->createValue(current.setter);
-        return call(fn, obj, {value});
-      }
-    }
-    return value;
+    auto object = dynamic_cast<JSObject *>(obj->getData());
+    return object->setField(this, obj, name, value);
   }
 
   JSValue *getField(JSValue *obj, const std::wstring &name) {
-    auto cur = obj->getAtom();
-    auto object = dynamic_cast<JSObject *>(cur->getData());
-    while (object) {
-      auto &fields = object->getFields();
-      if (fields.contains(name)) {
-        auto &current = fields.at(name);
-        if (current.value != nullptr) {
-          return _current->createValue(current.value);
-        } else {
-          auto fn = _current->createValue(current.getter);
-          return call(fn, obj, {});
-        }
-      } else {
-        cur = object->getPrototype();
-        object = dynamic_cast<JSObject *>(cur->getData());
-      }
-    }
-    return createUndefined();
+    auto object = dynamic_cast<JSObject *>(obj->getData());
+    return object->getField(this, obj, name);
+  }
+
+  JSValue *setIndex(JSValue *obj, size_t index, JSValue *value) {
+    auto object = dynamic_cast<JSObject *>(obj->getData());
+    return object->setIndex(this, obj, index, value);
+  }
+
+  JSValue *getIndex(JSValue *obj, size_t index) {
+    auto object = dynamic_cast<JSObject *>(obj->getData());
+    return object->getIndex(this, obj, index);
+  }
+
+  std::vector<std::wstring> getKeys(JSValue *obj) {
+    auto object = dynamic_cast<JSObject *>(obj->getData());
+    return object->getKeys(this);
   }
 
   std::wstring toString(JSValue *value) {
@@ -9553,6 +9620,50 @@ inline JSValue *JSExecutor::exec(const std::wstring &filename,
                                  const std::wstring &source, JSContext *ctx,
                                  JSNode *node) {
   return execNode(filename, source, ctx, node);
+}
+
+inline void JSExecutor::assigmentVariable(const std::wstring &filename,
+                                          const std::wstring &source,
+                                          JSContext *ctx, JSNode *node,
+                                          JSValue *value) {
+  if (node->type == JS_NODE_TYPE::LITERAL_IDENTITY) {
+    auto val = ctx->getScope()->createValue(value->getAtom());
+    ctx->getScope()->storeValue(node->location.get(source), val);
+  } else if (node->type == JS_NODE_TYPE::PATTERN_OBJECT) {
+    auto keys = ctx->getKeys(value);
+    auto pattern = dynamic_cast<JSObjectPatternNode *>(node);
+    for (auto item : pattern->items) {
+      if (item->type == JS_NODE_TYPE::PATTERN_OBJECT_ITEM) {
+        auto objectItem = dynamic_cast<JSObjectPatternItemNode *>(item);
+        auto key = objectItem->key->location.get(source);
+        auto val = ctx->getField(value, key);
+        if (val->getType() == JS_TYPE::UNDEFINED) {
+          if (objectItem->value) {
+            val = execNode(filename, source, ctx, objectItem->value);
+          }
+        }
+        val = ctx->getScope()->createValue(val->getAtom());
+        if (objectItem->alias) {
+          assigmentVariable(filename, source, ctx, objectItem->alias, val);
+        } else {
+          ctx->getScope()->storeValue(key, val);
+        }
+        auto it = std::find(keys.begin(), keys.end(), key);
+        if (it != keys.end()) {
+          keys.erase(it);
+        }
+      } else if (item->type == JS_NODE_TYPE::PATTERN_SPREAD_ITEM) {
+        auto spread = dynamic_cast<JSSpreadPatternItemNode *>(item);
+        auto obj = ctx->createObject();
+        for (auto &key : keys) {
+          ctx->setField(obj, key, ctx->getField(value, key));
+        }
+        assigmentVariable(filename, source, ctx, spread->value, obj);
+      }
+    }
+  } else if (node->type == JS_NODE_TYPE::PATTERN_ARRAY) {
+    // TODO:
+  }
 }
 
 inline EXEC(JSExecutor::execRegexLiteral) { return nullptr; }
@@ -9605,7 +9716,15 @@ inline EXEC(JSExecutor::execBlockStatement) {
 
 inline EXEC(JSExecutor::execDebuggerStatement) { return nullptr; }
 
-inline EXEC(JSExecutor::execReturnStatement) { return nullptr; }
+inline EXEC(JSExecutor::execReturnStatement) {
+  auto ret = dynamic_cast<JSReturnStatement *>(node);
+  JSValue *val = nullptr;
+  if (ret->value) {
+    val = execNode(filename, source, ctx, ret->value);
+  }
+  return ctx->getScope()->createValue(JS_TYPE::INTERRUPT,
+                                      new JSReturnInterrupt{val});
+}
 
 inline EXEC(JSExecutor::execLabelStatement) { return nullptr; }
 inline EXEC(JSExecutor::execBreakStatement) { return nullptr; }
@@ -9669,6 +9788,7 @@ inline EXEC(JSExecutor::execCallExpression) {
   popCallStack(ctx);
   return result;
 }
+
 inline EXEC(JSExecutor::execOptionalCallExpression) { return nullptr; }
 
 inline EXEC(JSExecutor::execNewExpression) { return nullptr; }
@@ -9685,7 +9805,10 @@ inline EXEC(JSExecutor::execVoidExpression) { return nullptr; }
 
 inline EXEC(JSExecutor::execTypeofExpression) { return nullptr; }
 
-inline EXEC(JSExecutor::execGroupExpression) { return nullptr; }
+inline EXEC(JSExecutor::execGroupExpression) {
+  auto group = dynamic_cast<JSGroupExpressionNode *>(node);
+  return execNode(filename, source, ctx, group->expression);
+}
 
 inline EXEC(JSExecutor::execAssigmentExpression) { return nullptr; }
 
@@ -9693,7 +9816,62 @@ inline EXEC(JSExecutor::execSpreadExpression) { return nullptr; }
 
 inline EXEC(JSExecutor::execArrowFunctionDeclaration) { return nullptr; }
 
-inline EXEC(JSExecutor::execFunctionDeclaration) { return nullptr; }
+inline EXEC(JSExecutor::execFunctionDeclaration) {
+  auto func = dynamic_cast<JSFunctionDeclarationNode *>(node);
+  if (func->async) {
+  }
+  if (func->generator) {
+  }
+  std::wstring identifier;
+  if (func->identifier) {
+    identifier = func->identifier->location.get(source);
+  }
+  std::unordered_map<std::wstring, JSAtom *> closure;
+  for (auto name : func->closure) {
+    closure[name] = ctx->queryValue(name)->getAtom();
+  }
+  auto fn = ctx->getScope()->createValue(
+      JS_TYPE::FUNCTION,
+      new JSFunction(nullptr, identifier, &source, node, closure));
+  for (auto &[_, value] : closure) {
+    fn->getAtom()->addChild(value);
+  }
+  if (!identifier.empty()) {
+    ctx->getScope()->storeValue(identifier, fn);
+  }
+  return fn;
+}
+inline EXEC(JSExecutor::execFunctionBodyDeclaration) {
+  auto body = dynamic_cast<JSFunctionBodyDeclarationNode *>(node);
+  auto current = ctx->getScope();
+  ctx->pushScope();
+  JSValue *result = nullptr;
+  for (auto statement : body->statements) {
+    auto res = execNode(filename, source, ctx, statement);
+    if (res->getType() == JS_TYPE::EXCEPTION) {
+      return res;
+    } else if (res->getType() == JS_TYPE::INTERRUPT) {
+      auto interrupt = dynamic_cast<JSReturnInterrupt *>(res->getData());
+      if (interrupt) {
+        auto value = interrupt->getValue();
+        if (value) {
+          result = value;
+        }
+        break;
+      } else {
+        return ctx->createException(L"Unexcepted interrupt");
+      }
+    }
+  }
+  if (result != nullptr) {
+    result = current->createValue(result->getAtom());
+  }
+  ctx->popScope();
+  if (result) {
+    return result;
+  }
+  return ctx->createUndefined();
+}
 
 inline EXEC(JSExecutor::execObjectDeclaration) { return nullptr; }
 
@@ -9734,6 +9912,11 @@ inline EXEC(JSExecutor::execProgram) {
 }
 
 inline EXEC(JSExecutor::execNode) {
+  if (node->scope) {
+    for (auto declaration : node->scope->declarations) {
+      // TODO: 
+    }
+  }
   switch (node->type) {
   case JS_NODE_TYPE::LITERAL_REGEX:
     return execRegexLiteral(filename, source, ctx, node);
@@ -9839,6 +10022,8 @@ inline EXEC(JSExecutor::execNode) {
     return execArrowFunctionDeclaration(filename, source, ctx, node);
   case JS_NODE_TYPE::DECLARATION_FUNCTION:
     return execFunctionDeclaration(filename, source, ctx, node);
+  case JS_NODE_TYPE::DECLARATION_FUNCTION_BODY:
+    return execFunctionBodyDeclaration(filename, source, ctx, node);
   case JS_NODE_TYPE::DECLARATION_OBJECT:
     return execObjectDeclaration(filename, source, ctx, node);
   case JS_NODE_TYPE::DECLARATION_ARRAY:
@@ -9900,6 +10085,66 @@ inline JSValue *JSObject ::toString(JSContext *ctx) {
   return ctx->createString(L"[Object object]");
 }
 
+inline JSValue *JSObject ::getField(JSContext *ctx, JSValue *self,
+                                    const std::wstring &name) {
+  if (_fields.contains(name)) {
+    auto &field = _fields.at(name);
+    if (field.value) {
+      return ctx->getScope()->createValue(field.value);
+    } else {
+      auto fn = ctx->getScope()->createValue(field.getter);
+      return ctx->call(fn, self, {});
+    }
+  }
+  return ctx->createUndefined();
+}
+
+inline JSValue *JSObject ::setField(JSContext *ctx, JSValue *self,
+                                    const std::wstring &name, JSValue *value) {
+  if (_fields.contains(name)) {
+    auto &field = _fields.at(name);
+    if (field.value != nullptr) {
+      if (!field.writable || isFrozen()) {
+        return ctx->createException(
+            L"TypeError: Cannot assign to read only property '" + name +
+            L"' of object");
+      }
+      self->getAtom()->addChild(value->getAtom());
+      self->getAtom()->removeChild(field.value);
+      field.value = value->getAtom();
+    } else {
+      if (!field.setter) {
+        return ctx->createException(
+            L"TypeError: Cannot assign to read only property '" + name +
+            L"' of object");
+      }
+      auto fn = ctx->getScope()->createValue(field.setter);
+      return ctx->call(fn, self, {value});
+    }
+  } else {
+    if (!isExtensible() || isFrozen() || isSealed()) {
+      return ctx->createException(L"Cannot add property " + name +
+                                  L", object is not extensible");
+    }
+    self->getAtom()->addChild(value->getAtom());
+    _fields[name] = {.configurable = true,
+                     .enumable = true,
+                     .value = value->getAtom(),
+                     .writable = true};
+  }
+  return value;
+}
+
+inline JSValue *JSObject::getIndex(JSContext *ctx, JSValue *self,
+                                   size_t index) {
+  return getField(ctx, self, std::to_wstring(index));
+}
+
+inline JSValue *JSObject::setIndex(JSContext *ctx, JSValue *self, size_t index,
+                                   JSValue *value) {
+  return setField(ctx, self, std::to_wstring(index), value);
+}
+
 /*****************************************/
 /* JSArray Implement                   */
 /*****************************************/
@@ -9908,6 +10153,35 @@ inline JSValue *JSArray ::toString(JSContext *ctx) {
   return ctx->createString(L"[Array array]");
 }
 
+inline JSValue *JSArray ::getIndex(JSContext *ctx, JSValue *self,
+                                   size_t index) {
+  if (_items.contains(index)) {
+    return ctx->getScope()->createValue(_items.at(index));
+  }
+  return ctx->createUndefined();
+}
+
+inline JSValue *JSArray ::setIndex(JSContext *ctx, JSValue *self, size_t index,
+                                   JSValue *value) {
+  if (_items.contains(index)) {
+    if (isFrozen()) {
+      return ctx->createException(
+          L"TypeError: Cannot assign to read only property '" +
+          std::to_wstring(index) + L"' of object");
+    }
+    self->getAtom()->removeChild(_items.at(index));
+    self->getAtom()->addChild(value->getAtom());
+  } else {
+    if (!isExtensible() || isFrozen() || isSealed()) {
+      return ctx->createException(L"Cannot add property " +
+                                  std::to_wstring(index) +
+                                  L", object is not extensible");
+    }
+    self->getAtom()->addChild(value->getAtom());
+  }
+  _items[index] = value->getAtom();
+  return value;
+}
 /*****************************************/
 /* JSNull Implement                   */
 /*****************************************/
@@ -9921,7 +10195,61 @@ inline JSValue *JSNull ::toString(JSContext *ctx) {
 /*****************************************/
 
 inline JSValue *JSCallable ::toString(JSContext *ctx) {
-  return ctx->createString(L"[Function function]");
+  auto name = _name;
+  if (name.empty()) {
+    name = L"anonymous";
+  }
+  return ctx->createString(L"[Function " + name + L"]");
+}
+
+/*****************************************/
+/* JSFunction Implement                   */
+/*****************************************/
+inline JSValue *JSFunction::call(JSContext *ctx, JSValue *self,
+                                 std::vector<JSValue *> args) {
+  auto func = dynamic_cast<JSFunctionBaseNode *>(_node);
+  auto executor = ctx->getRuntime()->getExecutor();
+  auto filename = func->location.start.filename;
+  auto current = ctx->getScope();
+  ctx->pushScope();
+  auto arguments = ctx->createObject();
+  for (size_t index = 0; index < args.size(); index++) {
+    ctx->setField(arguments, std::to_wstring(index), args[index]);
+  }
+  ctx->setField(arguments, L"length", ctx->createNumber(args.size()));
+  for (size_t index = 0; index < func->arguments.size(); index++) {
+    auto argument = dynamic_cast<JSFunctionArgumentDeclarationNode *>(
+        func->arguments[index]);
+    JSValue *val = ctx->createUndefined();
+    if (index < args.size()) {
+      val = args[index];
+    }
+    if (val->getType() == JS_TYPE::UNDEFINED) {
+      if (argument->value) {
+        val = executor->exec(filename, *_source, ctx, argument->value);
+      }
+    }
+    if (argument->identifier->type == JS_NODE_TYPE::PATTERN_SPREAD_ITEM) {
+      auto item = ctx->createArray();
+      while (index < args.size()) {
+        ctx->setIndex(item, index, args[index]);
+        index++;
+      }
+      auto spread =
+          dynamic_cast<JSSpreadPatternItemNode *>(argument->identifier);
+      executor->assigmentVariable(filename, *_source, ctx, spread->value, item);
+    } else {
+      executor->assigmentVariable(filename, *_source, ctx, argument->identifier,
+                                  val);
+    }
+  }
+  auto result = executor->exec(filename, *_source, ctx, func->body);
+  if (executor->isInterrupt(result)) {
+    return result;
+  }
+  result = current->createValue(result->getAtom());
+  ctx->popScope();
+  return result;
 }
 
 /*****************************************/
