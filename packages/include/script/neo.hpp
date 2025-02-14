@@ -19,19 +19,19 @@ class JSContext;
 class JSValue;
 
 enum class JS_TYPE {
-  DISPOSED,
+  EXCEPTION,
+  INTERRUPT,
+  INTERNAL,
+  UNINITIALIZED,
   UNDEFINED,
   NUMBER,
   STRING,
   BOOLEAN,
   BIGINT,
+  SYMBOL,
   OBJECT,
   FUNCTION,
-  SYMBOL,
   CLASS,
-  EXCEPTION,
-  INTERRUPT,
-  INTERNAL,
 };
 
 struct JSPosition {
@@ -8779,6 +8779,11 @@ public:
   virtual inline JSValue *toString(JSContext *ctx) = 0;
 };
 
+class JSUninitialize : public JSBase {
+public:
+  JSValue *toString(JSContext *ctx) { return nullptr; }
+};
+
 class JSAtom {
 private:
   static inline std::vector<JSAtom *> _destroyed = {};
@@ -8929,9 +8934,10 @@ public:
 class JSValue {
 private:
   JSAtom *_atom;
+  bool _const;
 
 public:
-  JSValue(JSAtom *atom) : _atom(atom) {}
+  JSValue(JSAtom *atom) : _atom(atom), _const(false) {}
 
   ~JSValue() {}
 
@@ -8946,6 +8952,10 @@ public:
   const JSBase *getData() const { return _atom->getData(); }
 
   const JS_TYPE &getType() const { return _atom->getType(); }
+
+  bool isConst() const { return _const; }
+
+  void setConst(bool value) { _const = value; }
 };
 
 class JSScope {
@@ -9368,9 +9378,9 @@ public:
                      value->getType() == JS_TYPE::INTERRUPT);
   }
 
-  virtual void assigmentVariable(const std::wstring &filename,
-                                 const std::wstring &source, JSContext *ctx,
-                                 JSNode *node, JSValue *value);
+  virtual JSValue *assigmentVariable(const std::wstring &filename,
+                                     const std::wstring &source, JSContext *ctx,
+                                     JSNode *node, JSValue *value);
   JSExecutor() {
     _callStack.push_back(JSCallFrame{.filename = L"",
                                      .funcname = L"neo.eval",
@@ -9545,6 +9555,22 @@ public:
     return getField(_global, name);
   }
 
+  JSValue *assigmentValue(JSValue *source, JSValue *target) {
+    if (source->isConst() && source->getType() != JS_TYPE::UNINITIALIZED) {
+      return createException(L"TypeError: Assignment to constant variable.");
+    }
+    if (target->getType() >= JS_TYPE::OBJECT) {
+      source->setAtom(target->getAtom());
+    } else {
+      if (target->getType() == JS_TYPE::UNDEFINED) {
+        source->setAtom(
+            _current->createAtom(JS_TYPE::UNDEFINED, new JSUndefined{}));
+      }
+      // TODO:
+    }
+    return nullptr;
+  }
+
   JSValue *call(JSValue *func, JSValue *self,
                 const std::vector<JSValue *> args) {
     auto fn = const_cast<JSCallable *>(
@@ -9622,13 +9648,14 @@ inline JSValue *JSExecutor::exec(const std::wstring &filename,
   return execNode(filename, source, ctx, node);
 }
 
-inline void JSExecutor::assigmentVariable(const std::wstring &filename,
-                                          const std::wstring &source,
-                                          JSContext *ctx, JSNode *node,
-                                          JSValue *value) {
+inline JSValue *JSExecutor::assigmentVariable(const std::wstring &filename,
+                                              const std::wstring &source,
+                                              JSContext *ctx, JSNode *node,
+                                              JSValue *value) {
   if (node->type == JS_NODE_TYPE::LITERAL_IDENTITY) {
-    auto val = ctx->getScope()->createValue(value->getAtom());
-    ctx->getScope()->storeValue(node->location.get(source), val);
+    auto name = node->location.get(source);
+    auto val = ctx->queryValue(name);
+    return ctx->assigmentValue(val, value);
   } else if (node->type == JS_NODE_TYPE::PATTERN_OBJECT) {
     auto keys = ctx->getKeys(value);
     auto pattern = dynamic_cast<JSObjectPatternNode *>(node);
@@ -9644,9 +9671,17 @@ inline void JSExecutor::assigmentVariable(const std::wstring &filename,
         }
         val = ctx->getScope()->createValue(val->getAtom());
         if (objectItem->alias) {
-          assigmentVariable(filename, source, ctx, objectItem->alias, val);
+          auto err =
+              assigmentVariable(filename, source, ctx, objectItem->alias, val);
+          if (err) {
+            return err;
+          }
         } else {
-          ctx->getScope()->storeValue(key, val);
+          auto current = ctx->queryValue(key);
+          auto err = ctx->assigmentValue(current, val);
+          if (err) {
+            return err;
+          }
         }
         auto it = std::find(keys.begin(), keys.end(), key);
         if (it != keys.end()) {
@@ -9658,12 +9693,16 @@ inline void JSExecutor::assigmentVariable(const std::wstring &filename,
         for (auto &key : keys) {
           ctx->setField(obj, key, ctx->getField(value, key));
         }
-        assigmentVariable(filename, source, ctx, spread->value, obj);
+        auto err = assigmentVariable(filename, source, ctx, spread->value, obj);
+        if (err) {
+          return err;
+        }
       }
     }
   } else if (node->type == JS_NODE_TYPE::PATTERN_ARRAY) {
     // TODO:
   }
+  return nullptr;
 }
 
 inline EXEC(JSExecutor::execRegexLiteral) { return nullptr; }
@@ -9822,22 +9861,26 @@ inline EXEC(JSExecutor::execFunctionDeclaration) {
   }
   if (func->generator) {
   }
+  JSValue *fn = nullptr;
   std::wstring identifier;
   if (func->identifier) {
     identifier = func->identifier->location.get(source);
+    fn = ctx->getScope()->queryValue(identifier);
   }
-  std::unordered_map<std::wstring, JSAtom *> closure;
-  for (auto name : func->closure) {
-    closure[name] = ctx->queryValue(name)->getAtom();
-  }
-  auto fn = ctx->getScope()->createValue(
-      JS_TYPE::FUNCTION,
-      new JSFunction(nullptr, identifier, &source, node, closure));
-  for (auto &[_, value] : closure) {
-    fn->getAtom()->addChild(value);
-  }
-  if (!identifier.empty()) {
-    ctx->getScope()->storeValue(identifier, fn);
+  if (!fn) {
+    std::unordered_map<std::wstring, JSAtom *> closure;
+    for (auto name : func->closure) {
+      closure[name] = ctx->queryValue(name)->getAtom();
+    }
+    fn = ctx->getScope()->createValue(
+        JS_TYPE::FUNCTION,
+        new JSFunction(nullptr, identifier, &source, node, closure));
+    for (auto &[_, value] : closure) {
+      fn->getAtom()->addChild(value);
+    }
+    if (!identifier.empty()) {
+      ctx->getScope()->storeValue(identifier, fn);
+    }
   }
   return fn;
 }
@@ -9913,8 +9956,24 @@ inline EXEC(JSExecutor::execProgram) {
 
 inline EXEC(JSExecutor::execNode) {
   if (node->scope) {
-    for (auto declaration : node->scope->declarations) {
-      // TODO: 
+    ctx->pushScope();
+    for (auto decl : node->scope->declarations) {
+      if (decl.type == JS_DECLARATION_TYPE::FUNCTION) {
+        execNode(filename, source, ctx, decl.declaration);
+      } else if (decl.type == JS_DECLARATION_TYPE::VAR) {
+        auto val =
+            ctx->getScope()->createValue(ctx->createUndefined()->getAtom());
+        ctx->getScope()->storeValue(decl.name, val);
+      } else if (decl.type == JS_DECLARATION_TYPE::LET) {
+        auto val = ctx->getScope()->createValue(JS_TYPE::UNINITIALIZED,
+                                                new JSUninitialize{});
+        ctx->getScope()->storeValue(decl.name, val);
+      } else if (decl.type == JS_DECLARATION_TYPE::CONST) {
+        auto val = ctx->getScope()->createValue(JS_TYPE::UNINITIALIZED,
+                                                new JSUninitialize{});
+        ctx->getScope()->storeValue(decl.name, val);
+        val->setConst(true);
+      }
     }
   }
   switch (node->type) {
@@ -10034,6 +10093,9 @@ inline EXEC(JSExecutor::execNode) {
     return execVariableDeclaration(filename, source, ctx, node);
   default:
     break;
+  }
+  if (node->scope) {
+    ctx->popScope();
   }
   return ctx->createException(
       L"SyntaxError: Unknown node:" +
@@ -10237,10 +10299,17 @@ inline JSValue *JSFunction::call(JSContext *ctx, JSValue *self,
       }
       auto spread =
           dynamic_cast<JSSpreadPatternItemNode *>(argument->identifier);
-      executor->assigmentVariable(filename, *_source, ctx, spread->value, item);
+      auto err = executor->assigmentVariable(filename, *_source, ctx,
+                                             spread->value, item);
+      if (err) {
+        return err;
+      }
     } else {
-      executor->assigmentVariable(filename, *_source, ctx, argument->identifier,
-                                  val);
+      auto err = executor->assigmentVariable(filename, *_source, ctx,
+                                             argument->identifier, val);
+      if (err) {
+        return err;
+      }
     }
   }
   auto result = executor->exec(filename, *_source, ctx, func->body);
