@@ -4,6 +4,7 @@
 #include <any>
 #include <array>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <iostream>
 #include <map>
@@ -35,14 +36,19 @@ enum class JS_TYPE {
 };
 
 struct JSPosition {
-  std::wstring filename;
   std::wstring funcname;
   size_t line;
   size_t column;
   size_t offset;
 };
 
+struct JSStackFrame {
+  JSPosition position;
+  std::wstring filename;
+};
+
 struct JSLocation {
+  std::wstring filename;
   JSPosition start;
   JSPosition end;
   bool is(const std::wstring &source, const std::wstring &pair) const {
@@ -441,6 +447,9 @@ struct JSNode {
       this->parent = nullptr;
     }
   }
+  template <class T> T *cast() { return dynamic_cast<T *>(this); }
+
+public:
   virtual JSON toJSON(const std::wstring &filename,
                       const std::wstring &source) const {
     std::wstring type;
@@ -1864,6 +1873,14 @@ struct JSClassDeclaration : public JSNode {
   }
 };
 
+struct JSProgram {
+  std::wstring filename;
+  std::vector<std::wstring> constants;
+  std::vector<uint16_t> codes;
+  std::vector<JSPosition> stacks;
+  JSNode *error{};
+};
+
 class JSParser {
 private:
   JSCompileScope *_scope = nullptr;
@@ -2515,7 +2532,7 @@ private:
     }
     if (identify && (identify->location.is(source, L"true") ||
                      identify->location.is(source, L"false"))) {
-      auto node = new JSUndefinedLiteralNode{};
+      auto node = new JSBooleanLiteralNode{};
       node->location = getLocation(source, position, current);
       position = current;
       delete identify;
@@ -9193,7 +9210,7 @@ private:
 public:
   JSCallable(JSAtom *prototype, const std::wstring &name,
              const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSObject(prototype), _closure(closure), _name(name){};
+      : JSObject(prototype), _closure(closure), _name(name) {};
   const std::unordered_map<std::wstring, JSAtom *> &getClosure() const {
     return _closure;
   }
@@ -9222,32 +9239,19 @@ public:
   }
 };
 
-class JSFunction : public JSCallable {
-private:
-  JSNode *_node;
-  const std::wstring *_source;
-
-public:
-  JSFunction(JSAtom *prototype, const std::wstring &name,
-             const std::wstring *source, JSNode *node,
-             const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSCallable(prototype, name, closure), _node(node), _source(source) {}
-  JSValue *call(JSContext *ctx, JSValue *self,
-                const std::vector<JSValue *> args) override;
-};
-
 class JSException : public JSBase {
 private:
   std::wstring _message;
-  std::vector<JSPosition> _stack;
+  std::vector<JSStackFrame> _stack;
 
 public:
-  JSException(const std::wstring &message, const std::vector<JSPosition> &stack)
-      : _message(message), _stack(stack){};
+  JSException(const std::wstring &message,
+              const std::vector<JSStackFrame> &stack)
+      : _message(message), _stack(stack) {};
 
   const std::wstring &getMessage() const { return _message; };
 
-  const std::vector<JSPosition> &getStack() const { return _stack; }
+  const std::vector<JSStackFrame> &getStack() const { return _stack; }
 
 public:
   inline JSValue *toString(JSContext *ctx) override;
@@ -9280,156 +9284,36 @@ public:
   JSValue *getValue() { return _value; }
 };
 
-#define EXEC(name)                                                             \
-  JSValue *name(const std::wstring &filename, const std::wstring &source,      \
-                JSContext *ctx, JSNode *node)
-
-class JSExecutor {
+class JSFunction : public JSCallable {
 private:
-  struct JSCallFrame {
-    std::wstring filename;
-    std::wstring funcname;
-    size_t line;
-    size_t column;
-    size_t offset;
-    JSNode *node{};
-    JSScope *scope{};
-  };
-
-private:
-  std::vector<JSCallFrame> _callStack;
-
-private:
-private:
-  EXEC(execRegexLiteral);
-  EXEC(execNullLiteral);
-  EXEC(execStringLiteral);
-  EXEC(execBooleanLiteral);
-  EXEC(execNumberLiteral);
-  EXEC(execCommentLiteral);
-  EXEC(execMultilineLiteral);
-  EXEC(execUndefinedLiteral);
-  EXEC(execIdentityLiteral);
-  EXEC(execTemplateLiteral);
-  EXEC(execBigintLiteral);
-  EXEC(execThisLiteral);
-  EXEC(execSuperLiteral);
-
-  EXEC(execEmptyStatement);
-  EXEC(execBlockStatement);
-  EXEC(execDebuggerStatement);
-  EXEC(execReturnStatement);
-  EXEC(execLabelStatement);
-  EXEC(execBreakStatement);
-  EXEC(execContinueStatement);
-  EXEC(execIfStatement);
-  EXEC(execSwitchStatement);
-  EXEC(execThrowStatement);
-  EXEC(execTryStatement);
-  EXEC(execWhileStatement);
-  EXEC(execDoWhileStatement);
-  EXEC(execForStatement);
-  EXEC(execForInStatement);
-  EXEC(execForOfStatement);
-  EXEC(execForAwaitOfStatement);
-  EXEC(execExpressionStatement);
-
-  EXEC(execBinaryExpression);
-  EXEC(execMemberExpression);
-  EXEC(execOptionalMemberExpression);
-  EXEC(execComputedMemberExpression);
-  EXEC(execOptionalComputedMemberExpression);
-  EXEC(execConditionExpression);
-  EXEC(execCallExpression);
-  EXEC(execOptionalCallExpression);
-  EXEC(execNewExpression);
-  EXEC(execDeleteExpression);
-  EXEC(execAwaitExpression);
-  EXEC(execYieldExpression);
-  EXEC(execYieldDelegateExpression);
-  EXEC(execVoidExpression);
-  EXEC(execTypeofExpression);
-  EXEC(execGroupExpression);
-  EXEC(execAssigmentExpression);
-  EXEC(execSpreadExpression);
-
-  EXEC(execArrowFunctionDeclaration);
-  EXEC(execFunctionDeclaration);
-  EXEC(execFunctionBodyDeclaration);
-  EXEC(execObjectDeclaration);
-  EXEC(execArrayDeclaration);
-  EXEC(execClassDeclaration);
-  EXEC(execVariableDeclaration);
-
-  EXEC(execExportDeclaration);
-  EXEC(execImportDeclaration);
-
-  EXEC(execProgram);
-
-  EXEC(execNode);
+  JSProgram *_program;
+  size_t _address;
 
 public:
-  inline virtual JSValue *exec(const std::wstring &filename,
-                               const std::wstring &source, JSContext *ctx,
-                               JSNode *node);
-
-  bool isInterrupt(JSValue *value) {
-    return value && (value->getType() == JS_TYPE::EXCEPTION ||
-                     value->getType() == JS_TYPE::INTERRUPT);
-  }
-
-  virtual JSValue *assigmentVariable(const std::wstring &filename,
-                                     const std::wstring &source, JSContext *ctx,
-                                     JSNode *node, JSValue *value);
-  JSExecutor() {
-    _callStack.push_back(JSCallFrame{.filename = L"",
-                                     .funcname = L"neo.eval",
-                                     .line = 0,
-                                     .column = 0,
-                                     .offset = 0});
-  }
-  virtual ~JSExecutor() {}
-
-  const std::vector<JSCallFrame> &getCallStack() const { return _callStack; }
-
-  void pushCallStack(JSContext *ctx, const JSPosition &pos);
-
-  void popCallStack(JSContext *ctx);
-
-  std::vector<JSPosition> trace(const std::wstring &filename, size_t column,
-                                size_t line) const {
-    std::vector<JSPosition> stack;
-    for (auto frame : _callStack) {
-      stack.push_back({frame.filename, frame.funcname, frame.line, frame.column,
-                       frame.offset});
-    }
-    stack.rbegin()->filename = filename;
-    stack.rbegin()->column = column;
-    stack.rbegin()->line = line;
-    return stack;
-  }
+  JSFunction(JSAtom *prototype, const std::wstring &name, JSProgram *program,
+             size_t address,
+             const std::unordered_map<std::wstring, JSAtom *> &closure)
+      : JSCallable(prototype, name, closure), _program(program),
+        _address(address) {}
+  JSValue *call(JSContext *ctx, JSValue *self,
+                const std::vector<JSValue *> args) override;
 };
+
+class JSCodeGenerator;
+class JSVirtualMachine;
 
 class JSRuntime {
 private:
   JSParser *_parser;
-  JSExecutor *_executor;
+  JSCodeGenerator *_generator;
+  JSVirtualMachine *_vm;
 
 public:
-  JSRuntime() {
-    _parser = new JSParser;
-    _executor = new JSExecutor;
-  }
-  ~JSRuntime() {
-    if (_executor) {
-      delete _executor;
-    }
-    if (_parser) {
-      delete _parser;
-    }
-  }
+  JSRuntime();
+  ~JSRuntime();
   JSParser *getParser() { return _parser; }
-  JSExecutor *getExecutor() { return _executor; }
+  JSCodeGenerator *getGenerator() { return _generator; }
+  JSVirtualMachine *getVirtualMachine() { return _vm; }
 
   void setDirective(const std::wstring &directive) {}
 };
@@ -9475,9 +9359,8 @@ public:
                              root->location.end.column,
                              root->location.end.line);
     }
-    auto res = _runtime->getExecutor()->exec(filename, source, this, root);
     delete root;
-    return res;
+    return _undefined;
   }
 
   void pushScope() { _current = new JSScope(_current); }
@@ -9535,10 +9418,8 @@ public:
   JSValue *createException(const std::wstring &message,
                            const std::wstring &filename = L"",
                            size_t column = 0, size_t line = 0) {
-    return _current->createValue(
-        JS_TYPE::EXCEPTION,
-        new JSException{
-            message, _runtime->getExecutor()->trace(filename, column, line)});
+    return _current->createValue(JS_TYPE::EXCEPTION,
+                                 new JSException{message, {}});
   }
 
   JSValue *getGlobal() { return _global; }
@@ -9617,493 +9498,429 @@ public:
   }
 };
 
+enum class JS_OPERATOR {
+  BEGIN = 0,
+  END,
+  PUSH,
+  NIL,
+  UNDEFINED,
+  TRUE,
+  FALSE,
+  REGEX,
+  LOAD,
+  STORE,
+  CONST,
+  DIRECTIVE,
+  GET_FIELD,
+  SET_FIELD,
+  GET_INDEX,
+  SET_INDEX,
+  CALL,
+  RET,
+  YIELD,
+  AWAIT,
+  YIELD_DELEGATE,
+  JMP,
+  JTRUE,
+  JFALSE,
+  JNULL,
+  JZERO,
+  ADD,
+  SUB,
+  DIV,
+  MUL,
+  MOD,
+  POW,
+  AND,
+  OR,
+  NOT,
+  XOR,
+  SHR,
+  SHL,
+  USHR,
+  EQ,
+  SEQ,
+  NE,
+  SNE,
+  GT,
+  LT,
+  GE,
+  LE,
+};
+
+class JSCodeGenerator {
+public:
+private:
+  uint32_t resolveConstant(JSProgram &program, const std::wstring &constant) {
+    for (size_t index = 0; index < program.constants.size(); index++) {
+      if (program.constants[index] == constant) {
+        return (uint32_t)index;
+      }
+    }
+    program.constants.push_back(constant);
+    return program.constants.size() - 1;
+  }
+
+  void pushUint32(JSProgram &program, uint32_t value) {
+    uint16_t *data = (uint16_t *)&value;
+    program.codes.push_back(data[0]);
+    program.codes.push_back(data[1]);
+  }
+
+  void pushString(JSProgram &program, const std::wstring &value) {
+    program.codes.push_back(resolveConstant(program, value));
+  }
+
+  void pushUint16(JSProgram &program, uint16_t value) {
+    program.codes.push_back(value);
+  }
+
+  void pushNumber(JSProgram &program, double value) {
+    uint16_t *data = (uint16_t *)&value;
+    program.codes.push_back(data[0]);
+    program.codes.push_back(data[1]);
+    program.codes.push_back(data[3]);
+    program.codes.push_back(data[4]);
+  }
+
+  void pushOperator(JSProgram &program, const JS_OPERATOR &opt) {
+    pushUint16(program, (uint16_t)opt);
+  }
+
+  JSNode *createError(const std::wstring &message, const JSLocation &loc) {
+    auto err = new JSErrorNode{};
+    err->message = message;
+    err->location = loc;
+    return err;
+  }
+
+public:
+  JSCodeGenerator() {}
+
+  ~JSCodeGenerator() {}
+
+  JSNode *resolveNode(const std::wstring &source, JSNode *node,
+                      JSProgram &program) {
+    switch (node->type) {
+    case JS_NODE_TYPE::PRIVATE_NAME:
+      break;
+    case JS_NODE_TYPE::LITERAL_REGEX:
+      break;
+    case JS_NODE_TYPE::LITERAL_NULL:
+      return resolveNullLiteral(source, node, program);
+    case JS_NODE_TYPE::LITERAL_STRING:
+      return resolveStringLiteral(source, node, program);
+    case JS_NODE_TYPE::LITERAL_BOOLEAN:
+      return resolveBooleanLiteral(source, node, program);
+    case JS_NODE_TYPE::LITERAL_NUMBER:
+      return resolveNumberLiteral(source, node, program);
+    case JS_NODE_TYPE::LITERAL_COMMENT:
+      break;
+    case JS_NODE_TYPE::LITERAL_MULTILINE_COMMENT:
+      break;
+    case JS_NODE_TYPE::LITERAL_UNDEFINED:
+      return resolveUndefinedLiteral(source, node, program);
+    case JS_NODE_TYPE::LITERAL_IDENTITY:
+      return resolveIdentityLiteral(source, node, program);
+    case JS_NODE_TYPE::LITERAL_TEMPLATE:
+      break;
+    case JS_NODE_TYPE::LITERAL_BIGINT:
+      break;
+    case JS_NODE_TYPE::LITERAL_THIS:
+      break;
+    case JS_NODE_TYPE::LITERAL_SUPER:
+      break;
+    case JS_NODE_TYPE::PROGRAM:
+      return resolveProgram(source, node, program);
+    case JS_NODE_TYPE::STATEMENT_EMPTY:
+      break;
+    case JS_NODE_TYPE::STATEMENT_BLOCK:
+      return resolveBlockStatement(source, node, program);
+    case JS_NODE_TYPE::STATEMENT_DEBUGGER:
+      break;
+    case JS_NODE_TYPE::STATEMENT_RETURN:
+      return resolveReturnStatement(source, node, program);
+    case JS_NODE_TYPE::STATEMENT_LABEL:
+      break;
+    case JS_NODE_TYPE::STATEMENT_BREAK:
+      break;
+    case JS_NODE_TYPE::STATEMENT_CONTINUE:
+      break;
+    case JS_NODE_TYPE::STATEMENT_IF:
+      break;
+    case JS_NODE_TYPE::STATEMENT_SWITCH:
+      break;
+    case JS_NODE_TYPE::STATEMENT_SWITCH_CASE:
+      break;
+    case JS_NODE_TYPE::STATEMENT_THROW:
+      break;
+    case JS_NODE_TYPE::STATEMENT_TRY:
+      break;
+    case JS_NODE_TYPE::STATEMENT_TRY_CATCH:
+      break;
+    case JS_NODE_TYPE::STATEMENT_WHILE:
+      break;
+    case JS_NODE_TYPE::STATEMENT_DO_WHILE:
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR:
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR_IN:
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR_OF:
+      break;
+    case JS_NODE_TYPE::STATEMENT_FOR_AWAIT_OF:
+      break;
+    case JS_NODE_TYPE::STATEMENT_EXPRESSION:
+      return resolveExpressionStatement(source, node, program);
+    case JS_NODE_TYPE::VARIABLE_DECLARATOR:
+      break;
+    case JS_NODE_TYPE::DECORATOR:
+      break;
+    case JS_NODE_TYPE::DIRECTIVE:
+      break;
+    case JS_NODE_TYPE::INTERPRETER_DIRECTIVE:
+      break;
+    case JS_NODE_TYPE::OBJECT_PROPERTY:
+      break;
+    case JS_NODE_TYPE::OBJECT_METHOD:
+      break;
+    case JS_NODE_TYPE::OBJECT_ACCESSOR:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_BINARY:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_MEMBER:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_CONDITION:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_CALL:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_OPTIONAL_CALL:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_NEW:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_DELETE:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_AWAIT:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_YIELD:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_YIELD_DELEGATE:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_VOID:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_TYPEOF:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_GROUP:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_ASSIGMENT:
+      break;
+    case JS_NODE_TYPE::EXPRESSION_SPREAD:
+      break;
+    case JS_NODE_TYPE::PATTERN_SPREAD_ITEM:
+      break;
+    case JS_NODE_TYPE::PATTERN_OBJECT:
+      break;
+    case JS_NODE_TYPE::PATTERN_OBJECT_ITEM:
+      break;
+    case JS_NODE_TYPE::PATTERN_ARRAY:
+      break;
+    case JS_NODE_TYPE::PATTERN_ARRAY_ITEM:
+      break;
+    case JS_NODE_TYPE::CLASS_METHOD:
+      break;
+    case JS_NODE_TYPE::CLASS_PROPERTY:
+      break;
+    case JS_NODE_TYPE::CLASS_ACCESSOR:
+      break;
+    case JS_NODE_TYPE::CLASS_STATIC_BLOCK:
+      break;
+    case JS_NODE_TYPE::IMPORT_DECLARATION:
+      break;
+    case JS_NODE_TYPE::IMPORT_SPECIFIER:
+      break;
+    case JS_NODE_TYPE::IMPORT_DEFAULT:
+      break;
+    case JS_NODE_TYPE::IMPORT_NAMESPACE:
+      break;
+    case JS_NODE_TYPE::IMPORT_ATTARTUBE:
+      break;
+    case JS_NODE_TYPE::EXPORT_DECLARATION:
+      break;
+    case JS_NODE_TYPE::EXPORT_DEFAULT:
+      break;
+    case JS_NODE_TYPE::EXPORT_SPECIFIER:
+      break;
+    case JS_NODE_TYPE::EXPORT_NAMED:
+      break;
+    case JS_NODE_TYPE::EXPORT_NAMESPACE:
+      break;
+    case JS_NODE_TYPE::DECLARATION_FUNCTION_ARGUMENT:
+      break;
+    case JS_NODE_TYPE::DECLARATION_ARROW_FUNCTION:
+      break;
+    case JS_NODE_TYPE::DECLARATION_FUNCTION:
+      break;
+    case JS_NODE_TYPE::DECLARATION_FUNCTION_BODY:
+      break;
+    case JS_NODE_TYPE::DECLARATION_OBJECT:
+      break;
+    case JS_NODE_TYPE::DECLARATION_ARRAY:
+      break;
+    case JS_NODE_TYPE::DECLARATION_CLASS:
+      break;
+    case JS_NODE_TYPE::DECLARATION_VARIABLE:
+      break;
+    default:
+      break;
+    }
+    return createError(L"Invalid node:" + JSON::stringify(node->toJSON(
+                                              program.filename, source)),
+                       node->location);
+  }
+
+  JSNode *resolveNullLiteral(const std::wstring &source, JSNode *node,
+                             JSProgram &program) {
+    pushOperator(program, JS_OPERATOR::NIL);
+    return nullptr;
+  }
+
+  JSNode *resolveUndefinedLiteral(const std::wstring &source, JSNode *node,
+                                  JSProgram &program) {
+    pushOperator(program, JS_OPERATOR::UNDEFINED);
+    return nullptr;
+  }
+  JSNode *resolveIdentityLiteral(const std::wstring &source, JSNode *node,
+                                 JSProgram &program) {
+    pushOperator(program, JS_OPERATOR::LOAD);
+    pushString(program, node->location.get(source));
+    return nullptr;
+  }
+
+  JSNode *resolveStringLiteral(const std::wstring &source, JSNode *node,
+                               JSProgram &program) {
+    auto string = node->cast<JSStringLiteralNode>();
+    pushOperator(program, JS_OPERATOR::CONST);
+    auto str = string->location.get(source);
+    str = str.substr(1, str.length() - 2);
+    pushString(program, str);
+    return nullptr;
+  }
+  JSNode *resolveBooleanLiteral(const std::wstring &source, JSNode *node,
+                                JSProgram &program) {
+    auto boolean = node->cast<JSBooleanLiteralNode>();
+    auto str = boolean->location.get(source);
+    if (str == L"true") {
+      pushOperator(program, JS_OPERATOR::TRUE);
+    } else {
+      pushOperator(program, JS_OPERATOR::FALSE);
+    }
+    return nullptr;
+  }
+  JSNode *resolveNumberLiteral(const std::wstring &source, JSNode *node,
+                               JSProgram &program) {
+    auto number = node->cast<JSNumberLiteralNode>();
+    auto str = number->location.get(source);
+    double val = std::stold(str);
+    pushOperator(program, JS_OPERATOR::PUSH);
+    pushNumber(program, val);
+    return nullptr;
+  }
+
+  JSNode *resolveExpressionStatement(const std::wstring &source, JSNode *node,
+                                     JSProgram &program) {
+    auto statement = node->cast<JSExpressionStatementNode>();
+    return resolveNode(source, statement->expression, program);
+  }
+  JSNode *resolveBlockStatement(const std::wstring &source, JSNode *node,
+                                JSProgram &program) {
+    auto statement = node->cast<JSBlockStatement>();
+    pushOperator(program, JS_OPERATOR::BEGIN);
+    for (auto statement : statement->statements) {
+      auto err = resolveNode(source, statement, program);
+      if (err) {
+        return err;
+      }
+    }
+    pushOperator(program, JS_OPERATOR::END);
+    return nullptr;
+  }
+  JSNode *resolveReturnStatement(const std::wstring &source, JSNode *node,
+                                 JSProgram &program) {
+    auto statement = node->cast<JSReturnStatement>();
+    if (statement->value) {
+      resolveNode(source, statement->value, program);
+    } else {
+      pushOperator(program, JS_OPERATOR::UNDEFINED);
+    }
+    pushOperator(program, JS_OPERATOR::RET);
+    return nullptr;
+  }
+  JSNode *resolveProgram(const std::wstring &source, JSNode *node,
+                         JSProgram &program) {
+    auto prog = node->cast<JSProgramNode>();
+    pushOperator(program, JS_OPERATOR::BEGIN);
+    for (auto &directive : prog->directives) {
+      auto str = directive->location.get(source);
+      str = str.substr(1, str.size() - 2);
+      pushOperator(program, JS_OPERATOR::DIRECTIVE);
+      pushString(program, str);
+    }
+    for (auto statement : prog->statements) {
+      auto err = resolveNode(source, statement, program);
+      if (err) {
+        return err;
+      }
+    }
+    pushOperator(program, JS_OPERATOR::END);
+    return nullptr;
+  }
+
+  JSProgram resolve(const std::wstring &filename, const std::wstring &source,
+                    JSNode *node) {
+    JSProgram program = {filename};
+    auto err = resolveProgram(source, node, program);
+    if (err) {
+      program.error = err;
+    }
+    return program;
+  }
+};
+
+class JSVirtualMachine {
+public:
+  JSVirtualMachine() {}
+  ~JSVirtualMachine() {}
+};
+
 /*****************************************/
-/* JSExecutor Implement                  */
+/* JSRuntime Implement                    */
 /*****************************************/
-
-inline void JSExecutor::pushCallStack(JSContext *ctx, const JSPosition &pos) {
-  _callStack.rbegin()->filename = pos.filename;
-  _callStack.rbegin()->line = pos.line;
-  _callStack.rbegin()->column = pos.column;
-  _callStack.rbegin()->scope = ctx->getScope();
-  _callStack.push_back({.filename = L"",
-                        .funcname = pos.funcname,
-                        .line = 0,
-                        .column = 0,
-                        .offset = 0});
-  ctx->pushScope();
+inline JSRuntime::JSRuntime() {
+  _parser = new JSParser();
+  _generator = new JSCodeGenerator();
+  _vm = new JSVirtualMachine();
 }
 
-inline void JSExecutor::popCallStack(JSContext *ctx) {
-  ctx->popScope();
-  _callStack.pop_back();
-  _callStack.rbegin()->filename = L"";
-  _callStack.rbegin()->column = 0;
-  _callStack.rbegin()->line = 0;
-}
-
-inline JSValue *JSExecutor::exec(const std::wstring &filename,
-                                 const std::wstring &source, JSContext *ctx,
-                                 JSNode *node) {
-  return execNode(filename, source, ctx, node);
-}
-
-inline JSValue *JSExecutor::assigmentVariable(const std::wstring &filename,
-                                              const std::wstring &source,
-                                              JSContext *ctx, JSNode *node,
-                                              JSValue *value) {
-  if (node->type == JS_NODE_TYPE::LITERAL_IDENTITY) {
-    auto name = node->location.get(source);
-    auto val = ctx->queryValue(name);
-    return ctx->assigmentValue(val, value);
-  } else if (node->type == JS_NODE_TYPE::PATTERN_OBJECT) {
-    auto keys = ctx->getKeys(value);
-    auto pattern = dynamic_cast<JSObjectPatternNode *>(node);
-    for (auto item : pattern->items) {
-      if (item->type == JS_NODE_TYPE::PATTERN_OBJECT_ITEM) {
-        auto objectItem = dynamic_cast<JSObjectPatternItemNode *>(item);
-        auto key = objectItem->key->location.get(source);
-        auto val = ctx->getField(value, key);
-        if (val->getType() == JS_TYPE::UNDEFINED) {
-          if (objectItem->value) {
-            val = execNode(filename, source, ctx, objectItem->value);
-          }
-        }
-        val = ctx->getScope()->createValue(val->getAtom());
-        if (objectItem->alias) {
-          auto err =
-              assigmentVariable(filename, source, ctx, objectItem->alias, val);
-          if (err) {
-            return err;
-          }
-        } else {
-          auto current = ctx->queryValue(key);
-          auto err = ctx->assigmentValue(current, val);
-          if (err) {
-            return err;
-          }
-        }
-        auto it = std::find(keys.begin(), keys.end(), key);
-        if (it != keys.end()) {
-          keys.erase(it);
-        }
-      } else if (item->type == JS_NODE_TYPE::PATTERN_SPREAD_ITEM) {
-        auto spread = dynamic_cast<JSSpreadPatternItemNode *>(item);
-        auto obj = ctx->createObject();
-        for (auto &key : keys) {
-          ctx->setField(obj, key, ctx->getField(value, key));
-        }
-        auto err = assigmentVariable(filename, source, ctx, spread->value, obj);
-        if (err) {
-          return err;
-        }
-      }
-    }
-  } else if (node->type == JS_NODE_TYPE::PATTERN_ARRAY) {
-    // TODO:
+inline JSRuntime::~JSRuntime() {
+  if (_vm) {
+    delete _vm;
+    _vm = nullptr;
   }
-  return nullptr;
-}
-
-inline EXEC(JSExecutor::execRegexLiteral) { return nullptr; }
-
-inline EXEC(JSExecutor::execNullLiteral) { return ctx->createNull(); }
-inline EXEC(JSExecutor::execStringLiteral) {
-  auto str = node->location.get(source);
-  auto src = str.substr(1, str.size() - 2);
-  return ctx->createString(src);
-}
-inline EXEC(JSExecutor::execBooleanLiteral) {
-  auto str = node->location.get(source);
-  return ctx->createBoolean(str == L"true");
-}
-inline EXEC(JSExecutor::execNumberLiteral) {
-  auto str = node->location.get(source);
-  return ctx->createNumber(std::stold(str));
-}
-inline EXEC(JSExecutor::execCommentLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execMultilineLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execUndefinedLiteral) { return ctx->createUndefined(); }
-inline EXEC(JSExecutor::execIdentityLiteral) {
-  auto name = node->location.get(source);
-  auto val = ctx->queryValue(name);
-  if (!val) {
-    return ctx->createException(name + L" is not defined", filename,
-                                node->location.start.column,
-                                node->location.start.line);
+  if (_generator) {
+    delete _generator;
+    _generator = nullptr;
   }
-  return val;
-}
-
-inline EXEC(JSExecutor::execTemplateLiteral) { return nullptr; }
-inline EXEC(JSExecutor::execBigintLiteral) { return nullptr; }
-
-inline EXEC(JSExecutor::execEmptyStatement) { return nullptr; }
-
-inline EXEC(JSExecutor::execBlockStatement) {
-  auto block = dynamic_cast<JSBlockStatement *>(node);
-  ctx->pushScope();
-  for (auto statement : block->statements) {
-    auto result = execNode(filename, source, ctx, statement);
-    if (isInterrupt(result)) {
-      return result;
-    }
-  }
-  ctx->popScope();
-  return nullptr;
-}
-
-inline EXEC(JSExecutor::execDebuggerStatement) { return nullptr; }
-
-inline EXEC(JSExecutor::execReturnStatement) {
-  auto ret = dynamic_cast<JSReturnStatement *>(node);
-  JSValue *val = nullptr;
-  if (ret->value) {
-    val = execNode(filename, source, ctx, ret->value);
-  }
-  return ctx->getScope()->createValue(JS_TYPE::INTERRUPT,
-                                      new JSReturnInterrupt{val});
-}
-
-inline EXEC(JSExecutor::execLabelStatement) { return nullptr; }
-inline EXEC(JSExecutor::execBreakStatement) { return nullptr; }
-inline EXEC(JSExecutor::execContinueStatement) { return nullptr; }
-inline EXEC(JSExecutor::execIfStatement) { return nullptr; }
-inline EXEC(JSExecutor::execSwitchStatement) { return nullptr; }
-inline EXEC(JSExecutor::execThrowStatement) { return nullptr; }
-inline EXEC(JSExecutor::execTryStatement) { return nullptr; }
-inline EXEC(JSExecutor::execWhileStatement) { return nullptr; }
-inline EXEC(JSExecutor::execDoWhileStatement) { return nullptr; }
-inline EXEC(JSExecutor::execForStatement) { return nullptr; }
-inline EXEC(JSExecutor::execForInStatement) { return nullptr; }
-inline EXEC(JSExecutor::execForOfStatement) { return nullptr; }
-inline EXEC(JSExecutor::execForAwaitOfStatement) { return nullptr; }
-inline EXEC(JSExecutor::execExpressionStatement) {
-  auto statement = dynamic_cast<JSExpressionStatementNode *>(node);
-  return execNode(filename, source, ctx, statement->expression);
-}
-
-inline EXEC(JSExecutor::execBinaryExpression) { return nullptr; }
-inline EXEC(JSExecutor::execMemberExpression) { return nullptr; }
-inline EXEC(JSExecutor::execOptionalMemberExpression) { return nullptr; }
-inline EXEC(JSExecutor::execComputedMemberExpression) { return nullptr; }
-inline EXEC(JSExecutor::execOptionalComputedMemberExpression) {
-  return nullptr;
-}
-inline EXEC(JSExecutor::execConditionExpression) {
-  auto expr = dynamic_cast<JSConditionExpressionNode *>(node);
-  auto condition = execNode(filename, source, ctx, expr->condition);
-  if (isInterrupt(condition)) {
-    return condition;
-  }
-  auto val = (JSBoolean *)condition->getAtom()->getData();
-  if (val->getValue()) {
-    return execNode(filename, source, ctx, expr->consequent);
-  } else {
-    return execNode(filename, source, ctx, expr->alternate);
+  if (_parser) {
+    delete _parser;
+    _parser = nullptr;
   }
 }
-inline EXEC(JSExecutor::execCallExpression) {
-  auto call = dynamic_cast<JSCallExpressionNode *>(node);
-  auto callee = execNode(filename, source, ctx, call->callee);
-  if (isInterrupt(callee)) {
-    return callee;
-  }
-  std::vector<JSValue *> args;
-  for (auto argument : call->arguments) {
-    auto arg = execNode(filename, source, ctx, argument);
-    if (isInterrupt(arg)) {
-      return arg;
-    }
-    args.push_back(arg);
-  }
-  auto current = ctx->getScope();
-  pushCallStack(ctx, {});
-  auto res = ctx->call(callee, ctx->createUndefined(), args);
-  if (isInterrupt(res)) {
-    return res;
-  }
-  auto result = current->createValue(res->getAtom());
-  popCallStack(ctx);
-  return result;
-}
-
-inline EXEC(JSExecutor::execOptionalCallExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execNewExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execDeleteExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execAwaitExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execYieldExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execYieldDelegateExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execVoidExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execTypeofExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execGroupExpression) {
-  auto group = dynamic_cast<JSGroupExpressionNode *>(node);
-  return execNode(filename, source, ctx, group->expression);
-}
-
-inline EXEC(JSExecutor::execAssigmentExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execSpreadExpression) { return nullptr; }
-
-inline EXEC(JSExecutor::execArrowFunctionDeclaration) { return nullptr; }
-
-inline EXEC(JSExecutor::execFunctionDeclaration) {
-  auto func = dynamic_cast<JSFunctionDeclarationNode *>(node);
-  if (func->async) {
-  }
-  if (func->generator) {
-  }
-  JSValue *fn = nullptr;
-  std::wstring identifier;
-  if (func->identifier) {
-    identifier = func->identifier->location.get(source);
-    fn = ctx->getScope()->queryValue(identifier);
-  }
-  if (!fn) {
-    std::unordered_map<std::wstring, JSAtom *> closure;
-    for (auto name : func->closure) {
-      closure[name] = ctx->queryValue(name)->getAtom();
-    }
-    fn = ctx->getScope()->createValue(
-        JS_TYPE::FUNCTION,
-        new JSFunction(nullptr, identifier, &source, node, closure));
-    for (auto &[_, value] : closure) {
-      fn->getAtom()->addChild(value);
-    }
-    if (!identifier.empty()) {
-      ctx->getScope()->storeValue(identifier, fn);
-    }
-  }
-  return fn;
-}
-inline EXEC(JSExecutor::execFunctionBodyDeclaration) {
-  auto body = dynamic_cast<JSFunctionBodyDeclarationNode *>(node);
-  auto current = ctx->getScope();
-  ctx->pushScope();
-  JSValue *result = nullptr;
-  for (auto statement : body->statements) {
-    auto res = execNode(filename, source, ctx, statement);
-    if (res->getType() == JS_TYPE::EXCEPTION) {
-      return res;
-    } else if (res->getType() == JS_TYPE::INTERRUPT) {
-      auto interrupt = dynamic_cast<JSReturnInterrupt *>(res->getData());
-      if (interrupt) {
-        auto value = interrupt->getValue();
-        if (value) {
-          result = value;
-        }
-        break;
-      } else {
-        return ctx->createException(L"Unexcepted interrupt");
-      }
-    }
-  }
-  if (result != nullptr) {
-    result = current->createValue(result->getAtom());
-  }
-  ctx->popScope();
-  if (result) {
-    return result;
-  }
-  return ctx->createUndefined();
-}
-
-inline EXEC(JSExecutor::execObjectDeclaration) { return nullptr; }
-
-inline EXEC(JSExecutor::execArrayDeclaration) { return nullptr; }
-
-inline EXEC(JSExecutor::execClassDeclaration) { return nullptr; }
-
-inline EXEC(JSExecutor::execVariableDeclaration) { return nullptr; }
-
-inline EXEC(JSExecutor::execExportDeclaration) { return nullptr; }
-
-inline EXEC(JSExecutor::execImportDeclaration) { return nullptr; }
-
-inline EXEC(JSExecutor::execProgram) {
-  auto program = dynamic_cast<JSProgramNode *>(node);
-  for (auto directive : program->directives) {
-    auto command = directive->location.get(source);
-    command = command.substr(1, command.size() - 2);
-    ctx->getRuntime()->setDirective(command);
-  }
-  auto current = ctx->getScope();
-  ctx->pushScope();
-  JSValue *result = nullptr;
-  for (auto statement : program->statements) {
-    result = execNode(filename, source, ctx, statement);
-    if (isInterrupt(result)) {
-      return result;
-    }
-  }
-  if (result != nullptr) {
-    result = current->createValue(result->getAtom());
-  }
-  ctx->popScope();
-  if (result) {
-    return result;
-  }
-  return ctx->createUndefined();
-}
-
-inline EXEC(JSExecutor::execNode) {
-  if (node->scope) {
-    ctx->pushScope();
-    for (auto decl : node->scope->declarations) {
-      if (decl.type == JS_DECLARATION_TYPE::FUNCTION) {
-        execNode(filename, source, ctx, decl.declaration);
-      } else if (decl.type == JS_DECLARATION_TYPE::VAR) {
-        auto val =
-            ctx->getScope()->createValue(ctx->createUndefined()->getAtom());
-        ctx->getScope()->storeValue(decl.name, val);
-      } else if (decl.type == JS_DECLARATION_TYPE::LET) {
-        auto val = ctx->getScope()->createValue(JS_TYPE::UNINITIALIZED,
-                                                new JSUninitialize{});
-        ctx->getScope()->storeValue(decl.name, val);
-      } else if (decl.type == JS_DECLARATION_TYPE::CONST) {
-        auto val = ctx->getScope()->createValue(JS_TYPE::UNINITIALIZED,
-                                                new JSUninitialize{});
-        ctx->getScope()->storeValue(decl.name, val);
-        val->setConst(true);
-      }
-    }
-  }
-  switch (node->type) {
-  case JS_NODE_TYPE::LITERAL_REGEX:
-    return execRegexLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_NULL:
-    return execNullLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_STRING:
-    return execStringLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_BOOLEAN:
-    return execBooleanLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_NUMBER:
-    return execNumberLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_COMMENT:
-    return execCommentLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_MULTILINE_COMMENT:
-    return execMultilineLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_UNDEFINED:
-    return execUndefinedLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_IDENTITY:
-    return execIdentityLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_TEMPLATE:
-    return execTemplateLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::LITERAL_BIGINT:
-    return execBigintLiteral(filename, source, ctx, node);
-  case JS_NODE_TYPE::PROGRAM:
-    return execProgram(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_EMPTY:
-    return execEmptyStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_BLOCK:
-    return execBlockStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_DEBUGGER:
-    return execDebuggerStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_RETURN:
-    return execReturnStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_LABEL:
-    return execLabelStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_BREAK:
-    return execBreakStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_CONTINUE:
-    return execContinueStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_IF:
-    return execIfStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_SWITCH:
-    return execSwitchStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_THROW:
-    return execThrowStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_TRY:
-    return execTryStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_WHILE:
-    return execWhileStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_DO_WHILE:
-    return execDoWhileStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_FOR:
-    return execForStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_FOR_IN:
-    return execForInStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_FOR_OF:
-    return execForOfStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_FOR_AWAIT_OF:
-    return execForAwaitOfStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::STATEMENT_EXPRESSION:
-    return execExpressionStatement(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_BINARY:
-    return execBinaryExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_MEMBER:
-    return execMemberExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER:
-    return execOptionalMemberExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER:
-    return execComputedMemberExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER:
-    return execOptionalComputedMemberExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_CONDITION:
-    return execConditionExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_CALL:
-    return execCallExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_OPTIONAL_CALL:
-    return execOptionalCallExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_NEW:
-    return execNewExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_DELETE:
-    return execDeleteExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_AWAIT:
-    return execAwaitExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_YIELD:
-    return execYieldExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_YIELD_DELEGATE:
-    return execYieldDelegateExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_VOID:
-    return execVoidExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_TYPEOF:
-    return execTypeofExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_GROUP:
-    return execGroupExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_ASSIGMENT:
-    return execAssigmentExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPRESSION_SPREAD:
-    return execSpreadExpression(filename, source, ctx, node);
-  case JS_NODE_TYPE::IMPORT_DECLARATION:
-    return execImportDeclaration(filename, source, ctx, node);
-  case JS_NODE_TYPE::EXPORT_DECLARATION:
-    return execExportDeclaration(filename, source, ctx, node);
-  case JS_NODE_TYPE::DECLARATION_ARROW_FUNCTION:
-    return execArrowFunctionDeclaration(filename, source, ctx, node);
-  case JS_NODE_TYPE::DECLARATION_FUNCTION:
-    return execFunctionDeclaration(filename, source, ctx, node);
-  case JS_NODE_TYPE::DECLARATION_FUNCTION_BODY:
-    return execFunctionBodyDeclaration(filename, source, ctx, node);
-  case JS_NODE_TYPE::DECLARATION_OBJECT:
-    return execObjectDeclaration(filename, source, ctx, node);
-  case JS_NODE_TYPE::DECLARATION_ARRAY:
-    return execArrayDeclaration(filename, source, ctx, node);
-  case JS_NODE_TYPE::DECLARATION_CLASS:
-    return execClassDeclaration(filename, source, ctx, node);
-  case JS_NODE_TYPE::DECLARATION_VARIABLE:
-    return execVariableDeclaration(filename, source, ctx, node);
-  default:
-    break;
-  }
-  if (node->scope) {
-    ctx->popScope();
-  }
-  return ctx->createException(
-      L"SyntaxError: Unknown node:" +
-          JSON::stringify(node->toJSON(filename, source)),
-      filename, node->location.start.column, node->location.start.line);
-}
-
-#undef EXEC
 
 /*****************************************/
 /* JSString Implement                    */
@@ -10269,56 +10086,9 @@ inline JSValue *JSCallable ::toString(JSContext *ctx) {
 /*****************************************/
 inline JSValue *JSFunction::call(JSContext *ctx, JSValue *self,
                                  std::vector<JSValue *> args) {
-  auto func = dynamic_cast<JSFunctionBaseNode *>(_node);
-  auto executor = ctx->getRuntime()->getExecutor();
-  auto filename = func->location.start.filename;
-  auto current = ctx->getScope();
-  ctx->pushScope();
-  auto arguments = ctx->createObject();
-  for (size_t index = 0; index < args.size(); index++) {
-    ctx->setField(arguments, std::to_wstring(index), args[index]);
-  }
-  ctx->setField(arguments, L"length", ctx->createNumber(args.size()));
-  for (size_t index = 0; index < func->arguments.size(); index++) {
-    auto argument = dynamic_cast<JSFunctionArgumentDeclarationNode *>(
-        func->arguments[index]);
-    JSValue *val = ctx->createUndefined();
-    if (index < args.size()) {
-      val = args[index];
-    }
-    if (val->getType() == JS_TYPE::UNDEFINED) {
-      if (argument->value) {
-        val = executor->exec(filename, *_source, ctx, argument->value);
-      }
-    }
-    if (argument->identifier->type == JS_NODE_TYPE::PATTERN_SPREAD_ITEM) {
-      auto item = ctx->createArray();
-      while (index < args.size()) {
-        ctx->setIndex(item, index, args[index]);
-        index++;
-      }
-      auto spread =
-          dynamic_cast<JSSpreadPatternItemNode *>(argument->identifier);
-      auto err = executor->assigmentVariable(filename, *_source, ctx,
-                                             spread->value, item);
-      if (err) {
-        return err;
-      }
-    } else {
-      auto err = executor->assigmentVariable(filename, *_source, ctx,
-                                             argument->identifier, val);
-      if (err) {
-        return err;
-      }
-    }
-  }
-  auto result = executor->exec(filename, *_source, ctx, func->body);
-  if (executor->isInterrupt(result)) {
-    return result;
-  }
-  result = current->createValue(result->getAtom());
-  ctx->popScope();
-  return result;
+  (void)_program;
+  (void)_address;
+  return ctx->createUndefined();
 }
 
 /*****************************************/
@@ -10329,15 +10099,15 @@ inline JSValue *JSException ::toString(JSContext *ctx) {
   std::wstringstream ss;
   ss << _message << std::endl;
   for (auto it = _stack.rbegin(); it != _stack.rend(); it++) {
-    auto funcname = it->funcname;
+    auto funcname = it->position.funcname;
     if (funcname.empty()) {
       funcname = L"anonymous";
     }
     if (it->filename.empty()) {
       ss << L"  at " << funcname << L"(<internal>)";
     } else {
-      ss << L"  at " << funcname << L"(" << it->filename << L":" << it->line
-         << L":" << it->column << L")\n";
+      ss << L"  at " << funcname << L"(" << it->filename << L":"
+         << it->position.line << L":" << it->position.column << L")\n";
     }
   }
   return ctx->createString(ss.str());
