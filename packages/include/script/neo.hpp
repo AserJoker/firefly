@@ -9779,33 +9779,6 @@ public:
   inline JSValue *toString(JSContext *ctx) override;
 };
 
-enum class JS_INTERRUPT_KIND {
-  RETURN,
-  BREAK,
-  CONTINUE,
-  YIELD,
-  YIELD_DELEGATE,
-  AWAIT
-};
-template <JS_INTERRUPT_KIND kind> class JSInterrupt : public JSBase {
-
-public:
-  JSInterrupt() {}
-
-  constexpr JS_INTERRUPT_KIND getKind() const { return kind; }
-
-  JSValue *toString(JSContext *ctx) override { return nullptr; }
-};
-
-class JSReturnInterrupt : public JSInterrupt<JS_INTERRUPT_KIND::RETURN> {
-private:
-  JSValue *_value;
-
-public:
-  JSReturnInterrupt(JSValue *value = nullptr) : _value(value) {}
-  JSValue *getValue() { return _value; }
-};
-
 class JSFunction : public JSCallable {
 private:
   JSProgram *_program;
