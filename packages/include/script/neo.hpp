@@ -9831,7 +9831,7 @@ private:
 public:
   JSCallable(JSAtom *prototype, const std::wstring &name,
              const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSObject(prototype), _closure(closure), _name(name){};
+      : JSObject(prototype), _closure(closure), _name(name) {};
   const std::unordered_map<std::wstring, JSAtom *> &getClosure() const {
     return _closure;
   }
@@ -9868,7 +9868,7 @@ private:
 public:
   JSException(const std::wstring &message,
               const std::vector<JSStackFrame> &stack)
-      : _message(message), _stack(stack){};
+      : _message(message), _stack(stack) {};
 
   const std::wstring &getMessage() const { return _message; };
 
@@ -11429,6 +11429,13 @@ public:
         if (err) {
           return err;
         }
+      } else if (prop->type == JS_NODE_TYPE::EXPRESSION_SPREAD) {
+        auto p = prop->cast<JSSpreadExpressionNode>();
+        auto err = resolve(source, p->value, program);
+        if (err) {
+          return err;
+        }
+        pushOperator(program, JS_OPERATOR::MERGE);
       }
     }
     auto err = endScope(source, node, program, ctx);
