@@ -21,7 +21,12 @@ JSValue *print(JSContext *ctx, JSValue *self, std::vector<JSValue *> args) {
   }
   return ctx->createNumber(args.size());
 }
-
+JSValue *test(JSContext *ctx, JSValue *self, std::vector<JSValue *> args) {
+  for (auto &arg : args) {
+    std::wcout << ctx->toString(arg) << std::endl;
+  }
+  return ctx->createString(L"");
+}
 std::string filename = "../script/index.js";
 
 int main(int argc, char *argv[]) {
@@ -52,6 +57,10 @@ int main(int argc, char *argv[]) {
     auto func = ctx->createNativeFunction(print, L"print");
     auto global = ctx->getGlobal();
     ctx->setField(global, L"print", func);
+    auto a = ctx->createObject();
+    auto b = ctx->createNativeFunction(test, L"test");
+    ctx->setField(a, L"b", b);
+    ctx->setField(global, L"a", a);
     auto result = ctx->eval(L"../script/index.js", js);
     auto str = ctx->toString(result);
     std::wcout << str << std::endl;

@@ -559,7 +559,7 @@ TEST_F(TestParser, ClassSpread) {
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
   auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 2);
-  auto prop = dynamic_cast<neo::JSSpreadExpression *>(clazz->properties[0]);
+  auto prop = dynamic_cast<neo::JSSpreadExpressionNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->value->location.get(source), L"data");
 }
 TEST_F(TestParser, ClassSpreadError) {
