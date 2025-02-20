@@ -1792,7 +1792,7 @@ struct JSExportNamedNode : public JSNode {
 };
 struct JSExportNamespaceNode : public JSNode {
   JSNode *alias{};
-  JSExportNamespaceNode() { type = JS_NODE_TYPE::EXPORT_NAMED; }
+  JSExportNamespaceNode() { type = JS_NODE_TYPE::EXPORT_NAMESPACE; }
   JSON toJSON(const std::wstring &filename,
               const std::wstring &source) const override {
     auto json = JSNode::toJSON(filename, source);
@@ -1976,6 +1976,7 @@ enum class JS_OPERATOR {
   WITH,
   IMPORT,
   EXPORT,
+  EXPORT_ALL,
   ASSERT,
 };
 
@@ -2450,7 +2451,9 @@ struct JSProgram {
         break;
       }
       case JS_OPERATOR::EXPORT: {
-        ss << L"EXPORT";
+        auto idx = *(uint32_t *)(codes.data() + offset);
+        ss << L"EXPORT \"" << constants[idx] << L"\"";
+        offset += 2;
         break;
       }
       case JS_OPERATOR::ASSERT: {
@@ -2459,6 +2462,9 @@ struct JSProgram {
         offset += 2;
         break;
       }
+      case JS_OPERATOR::EXPORT_ALL:
+        ss << L"EXPORT_ALL";
+        break;
       }
       ss << std::endl;
     }
@@ -5145,38 +5151,33 @@ private:
             return err;
           }
           specifier = readImportSpecifier(source, current);
-          if (specifier) {
-            for (;;) {
+          for (;;) {
+            if (specifier) {
               if (specifier->type == JS_NODE_TYPE::ERROR) {
                 delete node;
                 return specifier;
               }
               node->specifiers.push_back(specifier);
               specifier->addParent(node);
-              while (skipInvisible(source, current)) {
-              }
-              err = readComments(source, current, node->comments);
-              if (err) {
-                delete node;
-                return err;
-              }
-              if (!checkSymbol({L","}, source, current)) {
-                break;
-              }
-              while (skipInvisible(source, current)) {
-              }
-              err = readComments(source, current, node->comments);
-              if (err) {
-                delete node;
-                return err;
-              }
-              specifier = readImportSpecifier(source, current);
-              if (!specifier) {
-                delete node;
-                return createError(L"Invalid or unexpected token", source,
-                                   current);
-              }
             }
+            while (skipInvisible(source, current)) {
+            }
+            err = readComments(source, current, node->comments);
+            if (err) {
+              delete node;
+              return err;
+            }
+            if (!checkSymbol({L","}, source, current)) {
+              break;
+            }
+            while (skipInvisible(source, current)) {
+            }
+            err = readComments(source, current, node->comments);
+            if (err) {
+              delete node;
+              return err;
+            }
+            specifier = readImportSpecifier(source, current);
           }
           while (skipInvisible(source, current)) {
           }
@@ -5376,7 +5377,9 @@ private:
         return err;
       }
       auto identifier = readIdentifyLiteral(source, current);
-      identifier = readStringLiteral(source, current);
+      if (!identifier) {
+        identifier = readStringLiteral(source, current);
+      }
       if (!identifier) {
         delete node;
         return createError(L"Invalid or unexpected token", source, current);
@@ -5427,29 +5430,6 @@ private:
       node->alias = alias;
       alias->addParent(node);
     }
-    node->location = getLocation(source, position, current);
-    position = current;
-    return node;
-  }
-
-  JSNode *readExportNamedSpecifier(const std::wstring &source,
-                                   JSPosition &position) {
-    auto current = position;
-    auto node = new JSExportNamedNode{};
-    while (skipInvisible(source, current)) {
-    }
-    auto err = readComments(source, current, node->comments);
-    if (err) {
-      delete node;
-      return err;
-    }
-    auto identifier = readIdentifyLiteral(source, current);
-    if (!identifier) {
-      delete node;
-      return nullptr;
-    }
-    node->declaration = identifier;
-    identifier->addParent(node);
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -5509,8 +5489,12 @@ private:
       item = readExportDefaultSpecifier(source, current);
     }
     if (item) {
-      node->specifiers.push_back(item);
-      item->addParent(node);
+      auto specifier = new JSExportNamedNode{};
+      specifier->declaration = item;
+      item->addParent(specifier);
+      specifier->location = item->location;
+      node->specifiers.push_back(specifier);
+      specifier->addParent(node);
     } else {
       auto specifier = readExportNamespaceSpecifier(source, current);
       if (specifier) {
@@ -5521,14 +5505,7 @@ private:
         node->specifiers.push_back(specifier);
         specifier->addParent(node);
       } else {
-        specifier = readExportNamedSpecifier(source, current);
-        if (specifier) {
-          if (specifier->type == JS_NODE_TYPE::ERROR) {
-            delete node;
-            return specifier;
-          }
-          node->specifiers.push_back(specifier);
-          specifier->addParent(node);
+        if (checkSymbol({L"{"}, source, current)) {
           while (skipInvisible(source, current)) {
           }
           auto err = readComments(source, current, node->comments);
@@ -5536,7 +5513,16 @@ private:
             delete node;
             return err;
           }
-          if (checkSymbol({L","}, source, current)) {
+          auto specifier = readExportSpecifier(source, current);
+          for (;;) {
+            if (specifier) {
+              if (specifier->type == JS_NODE_TYPE::ERROR) {
+                delete node;
+                return specifier;
+              }
+              node->specifiers.push_back(specifier);
+              specifier->addParent(node);
+            }
             while (skipInvisible(source, current)) {
             }
             auto err = readComments(source, current, node->comments);
@@ -5544,45 +5530,14 @@ private:
               delete node;
               return err;
             }
-            auto backup = current;
-            if (!checkSymbol({L"{"}, source, current)) {
-              delete node;
-              return createError(L"Invalid or unexcepted token", source,
-                                 current);
-            } else {
-              current = backup;
+            if (!checkSymbol({L","}, source, current)) {
+              break;
             }
-          }
-        }
-        if (checkSymbol({L"{"}, source, current)) {
-          auto specifier = readExportSpecifier(source, current);
-          if (specifier) {
-            for (;;) {
-              if (specifier->type == JS_NODE_TYPE::ERROR) {
-                delete node;
-                return specifier;
-              }
-              while (skipInvisible(source, current)) {
-              }
-              auto err = readComments(source, current, node->comments);
-              if (err) {
-                delete node;
-                return err;
-              }
-              if (!checkSymbol({L","}, source, current)) {
-                break;
-              }
-              specifier = readExportSpecifier(source, current);
-              if (!specifier) {
-                delete node;
-                return createError(L"Invalid or unexcepted token", source,
-                                   current);
-              }
-            }
+            specifier = readExportSpecifier(source, current);
           }
           while (skipInvisible(source, current)) {
           }
-          auto err = readComments(source, current, node->comments);
+          err = readComments(source, current, node->comments);
           if (err) {
             delete node;
             return err;
@@ -5792,6 +5747,9 @@ private:
     }
     if (!node) {
       node = readImportDeclaration(source, current);
+    }
+    if (!node) {
+      node = readExportDeclaration(source, current);
     }
     if (!node) {
       node = readFunctionDeclaration(source, current);
@@ -7154,6 +7112,9 @@ private:
         node->alias = pattern;
         pattern->addParent(node);
       }
+    } else {
+      delete node;
+      return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
@@ -7178,7 +7139,6 @@ private:
       node->value = value;
       value->addParent(node);
     }
-
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -7204,22 +7164,20 @@ private:
     auto item = readObjectPatternItem(source, current);
 
     for (;;) {
-      if (!item) {
-        delete node;
-        return nullptr;
-      }
-      if (item->type == JS_NODE_TYPE::ERROR) {
-        delete node;
-        return item;
-      }
-      node->items.push_back(item);
-      item->addParent(node);
-      while (skipInvisible(source, current)) {
-      }
-      err = readComments(source, current, node->comments);
-      if (err != nullptr) {
-        delete node;
-        return err;
+      if (item) {
+        if (item->type == JS_NODE_TYPE::ERROR) {
+          delete node;
+          return item;
+        }
+        node->items.push_back(item);
+        item->addParent(node);
+        while (skipInvisible(source, current)) {
+        }
+        err = readComments(source, current, node->comments);
+        if (err != nullptr) {
+          delete node;
+          return err;
+        }
       }
       auto backup = current;
       if (checkSymbol({L"}"}, source, current)) {
@@ -9423,7 +9381,7 @@ public:
 
 class JSUninitialize : public JSBase {
 public:
-  JSValue *toString(JSContext *ctx) { return nullptr; }
+  JSValue *toString(JSContext *ctx);
 };
 
 class JSAtom {
@@ -10331,6 +10289,47 @@ private:
     return nullptr;
   }
 
+  void resolveExport(const std::wstring &source, JSNode *node,
+                     JSProgram &program) {
+    if (is(node, JS_NODE_TYPE::LITERAL_IDENTITY)) {
+      pushOperator(program, JS_OPERATOR::LOAD);
+      pushString(program, node->location.get(source));
+      pushOperator(program, JS_OPERATOR::EXPORT);
+      pushString(program, node->location.get(source));
+      pushOperator(program, JS_OPERATOR::POP);
+    } else if (is(node, JS_NODE_TYPE::PATTERN_OBJECT)) {
+      auto expression = node->cast<JSObjectPatternNode>();
+      for (auto item : expression->items) {
+        auto field = item->cast<JSObjectPatternItemNode>();
+        if (is(field->key, JS_NODE_TYPE::PATTERN_SPREAD_ITEM)) {
+          auto spread = field->key->cast<JSSpreadPatternItemNode>();
+          resolveExport(source, spread->value, program);
+
+        } else {
+          if (field->alias) {
+            resolveExport(source, field->alias, program);
+          } else {
+            resolveExport(source, field->key, program);
+          }
+        }
+      }
+    } else if (is(node, JS_NODE_TYPE::PATTERN_ARRAY)) {
+      auto expression = node->cast<JSArrayPatternNode>();
+      for (auto &item : expression->items) {
+        if (item && is(item, JS_NODE_TYPE::PATTERN_SPREAD_ITEM)) {
+          auto field = item->cast<JSSpreadPatternItemNode>();
+          resolveExport(source, field->value, program);
+
+        } else {
+          if (item) {
+            auto field = item->cast<JSArrayPatternItemNode>();
+            resolveExport(source, field->alias, program);
+          }
+        }
+      }
+    }
+  }
+
   JSNode *resolveMemberChain(const std::wstring &source, JSNode *node,
                              JSProgram &program,
                              std::vector<size_t> &addresses) {
@@ -10778,6 +10777,95 @@ public:
   }
   JSNode *resolveExportDeclaration(const std::wstring &source, JSNode *node,
                                    JSProgram &program) {
+    auto declaration = node->cast<JSExportDeclarationNode>();
+    if (declaration->source) {
+      auto str = declaration->source->location.get(source);
+      str = str.substr(1, str.length() - 2);
+      pushOperator(program, JS_OPERATOR::IMPORT);
+      pushString(program, str);
+      for (auto attr : declaration->attributes) {
+        auto attribute = attr->cast<JSImportAttributeNode>();
+        auto err = resolve(source, attribute->value, program);
+        if (err) {
+          return err;
+        }
+        pushOperator(program, JS_OPERATOR::ASSERT);
+        pushString(program, attribute->key->location.get(source));
+      }
+      for (auto specifier : declaration->specifiers) {
+        if (specifier->type == JS_NODE_TYPE::EXPORT_NAMESPACE) {
+          auto s = specifier->cast<JSExportNamespaceNode>();
+          if (s->alias) {
+            pushOperator(program, JS_OPERATOR::EXPORT);
+            pushString(program, s->alias->location.get(source));
+          } else {
+            pushOperator(program, JS_OPERATOR::EXPORT_ALL);
+          }
+        } else if (specifier->type == JS_NODE_TYPE::EXPORT_SPECIFIER) {
+          auto s = specifier->cast<JSExportSpecifierNode>();
+          pushOperator(program, JS_OPERATOR::STR);
+          pushString(program, s->identifier->location.get(source));
+          pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+          pushUint32(program, 1);
+          pushOperator(program, JS_OPERATOR::GET_FIELD);
+          pushOperator(program, JS_OPERATOR::EXPORT);
+          if (s->alias) {
+            pushString(program, s->alias->location.get(source));
+          } else {
+            pushString(program, s->identifier->location.get(source));
+          }
+        }
+      }
+      pushOperator(program, JS_OPERATOR::POP);
+    } else {
+      for (auto s : declaration->specifiers) {
+        if (s->type == JS_NODE_TYPE::EXPORT_DEFAULT) {
+          auto specifier = s->cast<JSExportDefaultNode>();
+          auto err = resolve(source, specifier->expression, program);
+          if (err) {
+            return err;
+          }
+          pushOperator(program, JS_OPERATOR::EXPORT);
+          pushString(program, L"default");
+        } else if (s->type == JS_NODE_TYPE::EXPORT_SPECIFIER) {
+          auto specifier = s->cast<JSExportSpecifierNode>();
+          pushOperator(program, JS_OPERATOR::LOAD);
+          pushString(program, specifier->identifier->location.get(source));
+          pushOperator(program, JS_OPERATOR::EXPORT);
+          if (specifier->alias) {
+            pushString(program, specifier->alias->location.get(source));
+          } else {
+            pushString(program, specifier->identifier->location.get(source));
+          }
+        } else if (s->type == JS_NODE_TYPE::EXPORT_NAMED) {
+          auto specifier = s->cast<JSExportNamedNode>();
+          auto err = resolve(source, specifier->declaration, program);
+          if (err) {
+            return err;
+          }
+          auto declaration = specifier->declaration;
+          if (declaration->type == JS_NODE_TYPE::DECLARATION_CLASS) {
+            auto clazz = declaration->cast<JSClassDeclaration>();
+            pushOperator(program, JS_OPERATOR::LOAD);
+            pushString(program, clazz->identifier->location.get(source));
+            pushOperator(program, JS_OPERATOR::EXPORT);
+            pushString(program, clazz->identifier->location.get(source));
+          } else if (declaration->type == JS_NODE_TYPE::DECLARATION_FUNCTION) {
+            auto clazz = declaration->cast<JSFunctionDeclarationNode>();
+            pushOperator(program, JS_OPERATOR::LOAD);
+            pushString(program, clazz->identifier->location.get(source));
+            pushOperator(program, JS_OPERATOR::EXPORT);
+            pushString(program, clazz->identifier->location.get(source));
+          } else if (declaration->type == JS_NODE_TYPE::DECLARATION_VARIABLE) {
+            for (auto &declarator :
+                 declaration->cast<JSVariableDeclaraionNode>()->declarations) {
+              auto declar = declarator->cast<JSVariableDeclaratorNode>();
+              resolveExport(source, declar->identifier, program);
+            }
+          }
+        }
+      }
+    }
     return nullptr;
   }
   JSNode *resolveArrowFunctionDeclaration(const std::wstring &source,
@@ -12665,6 +12753,11 @@ private:
     // not implement
     ectx.pc = program.codes.size();
   }
+  void runExportAll(JSContext *ctx, const JSProgram &program,
+                    JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
   void runAssert(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
     // not implement
@@ -12966,6 +13059,9 @@ private:
       case JS_OPERATOR::ASSERT:
         runAssert(ctx, program, ectx);
         break;
+      case JS_OPERATOR::EXPORT_ALL:
+        runExportAll(ctx, program, ectx);
+        break;
       }
     }
     if (ectx.stack.empty()) {
@@ -13187,7 +13283,7 @@ inline JSValue *JSObject::setIndex(JSContext *ctx, JSValue *self, size_t index,
 }
 
 /*****************************************/
-/* JSArray Implement                   */
+/* JSArray Implement                     */
 /*****************************************/
 
 inline JSValue *JSArray ::toString(JSContext *ctx) {
@@ -13237,7 +13333,7 @@ inline JSValue *JSArray ::setIndex(JSContext *ctx, JSValue *self, size_t index,
   return value;
 }
 /*****************************************/
-/* JSNull Implement                   */
+/* JSNull Implement                      */
 /*****************************************/
 
 inline JSValue *JSNull ::toString(JSContext *ctx) {
@@ -13245,7 +13341,7 @@ inline JSValue *JSNull ::toString(JSContext *ctx) {
 }
 
 /*****************************************/
-/* JSCallable Implement                   */
+/* JSCallable Implement                  */
 /*****************************************/
 
 inline JSValue *JSCallable ::toString(JSContext *ctx) {
@@ -13257,13 +13353,20 @@ inline JSValue *JSCallable ::toString(JSContext *ctx) {
 }
 
 /*****************************************/
-/* JSFunction Implement                   */
+/* JSFunction Implement                  */
 /*****************************************/
 inline JSValue *JSFunction::call(JSContext *ctx, JSValue *self,
                                  std::vector<JSValue *> args) {
   (void)_program;
   (void)_address;
   return ctx->createUndefined();
+}
+
+/*****************************************/
+/* JSUninitialize Implement              */
+/*****************************************/
+inline JSValue *JSUninitialize::toString(JSContext *ctx) {
+  return ctx->createString(L"Initialized");
 }
 
 /*****************************************/
