@@ -4195,6 +4195,8 @@ private:
       delete node;
       return condition;
     }
+    node->condition = condition;
+    condition->addParent(node);
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
@@ -4206,7 +4208,6 @@ private:
       delete node;
       return createError(L"Invalid or unexcepted token", source, current);
     }
-
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
@@ -10082,7 +10083,15 @@ public:
 };
 
 class JSCodeGenerator {
-public:
+private:
+  struct LabelFrame {
+    std::vector<size_t> addresses;
+    std::wstring label;
+  };
+  std::vector<LabelFrame> _breaks;
+  std::vector<LabelFrame> _continues;
+  std::wstring _label;
+
 private:
   JSNode *unwrap(JSNode *node) {
     JSNode *result = node;
@@ -10466,6 +10475,32 @@ private:
     return nullptr;
   }
 
+  std::wstring pushBreakFrame() {
+    _breaks.push_back({.label = _label});
+    auto label = _label;
+    _label = L"";
+    return label;
+  }
+  void pushContinueFrame(const std::wstring &label) {
+    _continues.push_back({.label = label});
+  }
+
+  void popContinueFrame(JSProgram &program, size_t addr) {
+    for (auto &address : _continues.rbegin()->addresses) {
+      *(size_t *)(program.codes.data() + address) = addr;
+    }
+    _continues.pop_back();
+  }
+
+  void popBreakFrame(JSProgram &program, const std::wstring &label,
+                     size_t addr) {
+    for (auto &address : _breaks.rbegin()->addresses) {
+      *(size_t *)(program.codes.data() + address) = addr;
+    }
+    _breaks.pop_back();
+    _label = label;
+  }
+
 public:
   JSCodeGenerator() {}
 
@@ -10474,8 +10509,6 @@ public:
   JSNode *resolveNode(const std::wstring &source, JSNode *node,
                       JSProgram &program) {
     switch (node->type) {
-    case JS_NODE_TYPE::PRIVATE_NAME:
-      break;
     case JS_NODE_TYPE::LITERAL_REGEX:
       return resolveRegexLiteral(source, node, program);
     case JS_NODE_TYPE::LITERAL_NULL:
@@ -10505,11 +10538,11 @@ public:
     case JS_NODE_TYPE::STATEMENT_RETURN:
       return resolveReturnStatement(source, node, program);
     case JS_NODE_TYPE::STATEMENT_LABEL:
-      break;
+      return resolveLabelStatement(source, node, program);
     case JS_NODE_TYPE::STATEMENT_BREAK:
-      break;
+      return resolveBreakStatement(source, node, program);
     case JS_NODE_TYPE::STATEMENT_CONTINUE:
-      break;
+      return resolveContinueStatement(source, node, program);
     case JS_NODE_TYPE::STATEMENT_IF:
       return resolveIfStatement(source, node, program);
     case JS_NODE_TYPE::STATEMENT_SWITCH:
@@ -11104,6 +11137,8 @@ public:
   JSNode *resolveWhileStatement(const std::wstring &source, JSNode *node,
                                 JSProgram &program) {
     auto statement = unwrap(node)->cast<JSWhileStatement>();
+    auto label = pushBreakFrame();
+    pushContinueFrame(label);
     auto start = program.codes.size();
     auto err = resolve(source, statement->condition, program);
     if (err) {
@@ -11118,12 +11153,17 @@ public:
     }
     pushOperator(program, JS_OPERATOR::JMP);
     pushAddress(program, start);
-    *(size_t *)(program.codes.data() + end_address) = program.codes.size();
+    auto end = program.codes.size();
+    *(size_t *)(program.codes.data() + end_address) = end;
+    popContinueFrame(program, start);
+    popBreakFrame(program, label, end);
     return nullptr;
   }
   JSNode *resolveDoWhileStatement(const std::wstring &source, JSNode *node,
                                   JSProgram &program) {
     auto statement = unwrap(node)->cast<JSDoWhileStatement>();
+    auto label = pushBreakFrame();
+    pushContinueFrame(label);
     auto start = program.codes.size();
     auto err = resolve(source, statement->body, program);
     if (err) {
@@ -11135,11 +11175,16 @@ public:
     }
     pushOperator(program, JS_OPERATOR::JTRUE);
     pushAddress(program, start);
+    auto end = program.codes.size();
+    popContinueFrame(program, start);
+    popBreakFrame(program, label, end);
     return nullptr;
   }
   JSNode *resolveForStatement(const std::wstring &source, JSNode *node,
                               JSProgram &program) {
     auto statement = unwrap(node)->cast<JSForStatement>();
+    auto label = pushBreakFrame();
+    pushContinueFrame(label);
     if (statement->init) {
       auto err = resolve(source, statement->init, program);
       if (err) {
@@ -11163,12 +11208,17 @@ public:
     }
     pushOperator(program, JS_OPERATOR::JMP);
     pushAddress(program, start);
-    *(size_t *)(program.codes.data() + end_address) = program.codes.size();
+    auto end = program.codes.size();
+    *(size_t *)(program.codes.data() + end_address) = end;
+    popContinueFrame(program, start);
+    popBreakFrame(program, label, end);
     return nullptr;
   }
   JSNode *resolveForOfStatement(const std::wstring &source, JSNode *node,
                                 JSProgram &program) {
     auto statement = node->cast<JSForOfStatement>();
+    auto label = pushBreakFrame();
+    pushContinueFrame(label);
     auto err = resolve(source, statement->right, program);
     if (err) {
       return err;
@@ -11188,13 +11238,18 @@ public:
     }
     pushOperator(program, JS_OPERATOR::JMP);
     pushAddress(program, start);
-    *(size_t *)(program.codes.data() + end_address) = program.codes.size();
+    auto end = program.codes.size();
+    *(size_t *)(program.codes.data() + end_address) = end;
     pushOperator(program, JS_OPERATOR::POP);
+    popContinueFrame(program, start);
+    popBreakFrame(program, label, end);
     return nullptr;
   }
   JSNode *resolveForInStatement(const std::wstring &source, JSNode *node,
                                 JSProgram &program) {
     auto statement = node->cast<JSForInStatement>();
+    auto label = pushBreakFrame();
+    pushContinueFrame(label);
     auto err = resolve(source, statement->right, program);
     if (err) {
       return err;
@@ -11215,14 +11270,19 @@ public:
     }
     pushOperator(program, JS_OPERATOR::JMP);
     pushAddress(program, start);
-    *(size_t *)(program.codes.data() + end_address) = program.codes.size();
+    auto end = program.codes.size();
+    *(size_t *)(program.codes.data() + end_address) = end;
     pushOperator(program, JS_OPERATOR::POP);
     pushOperator(program, JS_OPERATOR::POP);
+    popContinueFrame(program, start);
+    popBreakFrame(program, label, end);
     return nullptr;
   }
   JSNode *resolveForAwaitOfStatement(const std::wstring &source, JSNode *node,
                                      JSProgram &program) {
     auto statement = node->cast<JSForAwaitOfStatement>();
+    auto label = pushBreakFrame();
+    pushContinueFrame(label);
     auto err = resolve(source, statement->right, program);
     if (err) {
       return err;
@@ -11242,8 +11302,11 @@ public:
     }
     pushOperator(program, JS_OPERATOR::JMP);
     pushAddress(program, start);
-    *(size_t *)(program.codes.data() + end_address) = program.codes.size();
+    auto end = program.codes.size();
+    *(size_t *)(program.codes.data() + end_address) = end;
     pushOperator(program, JS_OPERATOR::POP);
+    popContinueFrame(program, start);
+    popBreakFrame(program, label, end);
     return nullptr;
   }
   JSNode *resolveObjectDeclaration(const std::wstring &source, JSNode *node,
@@ -11603,12 +11666,14 @@ public:
   JSNode *resolveBlockStatement(const std::wstring &source, JSNode *node,
                                 JSProgram &program) {
     auto statement = unwrap(node)->cast<JSBlockStatement>();
+    auto label = pushBreakFrame();
     for (auto statement : statement->statements) {
       auto err = resolve(source, statement, program);
       if (err) {
         return err;
       }
     }
+    popBreakFrame(program, label, program.codes.size());
     return nullptr;
   }
   JSNode *resolveDebuggerStatement(const std::wstring &source, JSNode *node,
@@ -11629,6 +11694,54 @@ public:
     }
     pushOperator(program, JS_OPERATOR::RET);
     return nullptr;
+  }
+  JSNode *resolveLabelStatement(const std::wstring &source, JSNode *node,
+                                JSProgram &program) {
+    auto statement = node->cast<JSLabelStatement>();
+    auto label = _label;
+    _label = statement->label->location.get(source);
+    auto err = resolve(source, statement->statement, program);
+    if (err) {
+      return err;
+    }
+    _label = label;
+    return nullptr;
+  }
+  JSNode *resolveBreakStatement(const std::wstring &source, JSNode *node,
+                                JSProgram &program) {
+    auto statement = node->cast<JSBreakStatement>();
+    std::wstring label = L"";
+    if (statement->label) {
+      label = statement->label->location.get(source);
+    }
+    pushOperator(program, JS_OPERATOR::JMP);
+    auto address = program.codes.size();
+    pushAddress(program, 0);
+    for (auto it = _breaks.rbegin(); it != _breaks.rend(); it++) {
+      if (it->label == label) {
+        it->addresses.push_back(address);
+        return nullptr;
+      }
+    }
+    return createError(L"Undefined label '" + label + L"'", node->location);
+  }
+  JSNode *resolveContinueStatement(const std::wstring &source, JSNode *node,
+                                   JSProgram &program) {
+    auto statement = node->cast<JSBreakStatement>();
+    std::wstring label = L"";
+    if (statement->label) {
+      label = statement->label->location.get(source);
+    }
+    pushOperator(program, JS_OPERATOR::JMP);
+    auto address = program.codes.size();
+    pushAddress(program, 0);
+    for (auto it = _continues.rbegin(); it != _continues.rend(); it++) {
+      if (it->label == label) {
+        it->addresses.push_back(address);
+        return nullptr;
+      }
+    }
+    return createError(L"Undefined label '" + label + L"'", node->location);
   }
   JSNode *resolveThrowStatement(const std::wstring &source, JSNode *node,
                                 JSProgram &program) {
@@ -11660,6 +11773,7 @@ public:
   JSNode *resolveTryStatement(const std::wstring &source, JSNode *node,
                               JSProgram &program) {
     auto statement = unwrap(node)->cast<JSTryStatement>();
+    auto label = pushBreakFrame();
     pushOperator(program, JS_OPERATOR::TRY_BEGIN);
     size_t onerror = program.codes.size();
     pushAddress(program, 0);
@@ -11689,6 +11803,8 @@ public:
       pushOperator(program, JS_OPERATOR::JMP);
       auto onfinish_end = program.codes.size();
       pushAddress(program, 0);
+      popBreakFrame(program, label, program.codes.size());
+      label = pushBreakFrame();
       *(size_t *)(program.codes.data() + onfinish) = program.codes.size();
       auto err = resolve(source, statement->onfinish, program);
       if (err) {
@@ -11696,11 +11812,13 @@ public:
       }
       *(size_t *)(program.codes.data() + onfinish_end) = program.codes.size();
     }
+    popBreakFrame(program, label, program.codes.size());
     return nullptr;
   }
   JSNode *resolveIfStatement(const std::wstring &source, JSNode *node,
                              JSProgram &program) {
     auto statement = unwrap(node)->cast<JSIfStatement>();
+    auto label = pushBreakFrame();
     auto err = resolve(source, statement->condition, program);
     if (err) {
       return err;
@@ -11724,11 +11842,13 @@ public:
       }
     }
     *(uint64_t *)(program.codes.data() + end) = program.codes.size();
+    popBreakFrame(program, label, program.codes.size());
     return nullptr;
   }
   JSNode *resolveSwitchStatement(const std::wstring &source, JSNode *node,
                                  JSProgram &program) {
     auto statement = unwrap(node)->cast<JSSwitchStatement>();
+    auto label = pushBreakFrame();
     auto err = resolve(source, statement->condition, program);
     if (err) {
       return err;
@@ -11770,6 +11890,7 @@ public:
       pushOperator(program, JS_OPERATOR::JMP);
       pushAddress(program, default_address);
     }
+    popBreakFrame(program, label, program.codes.size());
     return nullptr;
   }
   JSNode *resolveBinaryExpression(const std::wstring &source, JSNode *node,
@@ -11818,6 +11939,12 @@ public:
         return err;
       }
       *(uint64_t *)(program.codes.data() + address) = program.codes.size();
+    } else if (opt == L"!") {
+      auto err = resolve(source, expression->right, program);
+      if (err) {
+        return err;
+      }
+      pushOperator(program, JS_OPERATOR::NOT);
     } else {
       auto err = resolve(source, expression->left, program);
       if (err) {
@@ -11862,6 +11989,30 @@ public:
       }
       if (opt == L"^") {
         pushOperator(program, JS_OPERATOR::XOR);
+      }
+      if (opt == L">") {
+        pushOperator(program, JS_OPERATOR::GT);
+      }
+      if (opt == L"<") {
+        pushOperator(program, JS_OPERATOR::LT);
+      }
+      if (opt == L">=") {
+        pushOperator(program, JS_OPERATOR::GE);
+      }
+      if (opt == L"<=") {
+        pushOperator(program, JS_OPERATOR::LE);
+      }
+      if (opt == L"==") {
+        pushOperator(program, JS_OPERATOR::EQ);
+      }
+      if (opt == L"===") {
+        pushOperator(program, JS_OPERATOR::SEQ);
+      }
+      if (opt == L"!=") {
+        pushOperator(program, JS_OPERATOR::NE);
+      }
+      if (opt == L"!==") {
+        pushOperator(program, JS_OPERATOR::SNE);
       }
     }
     return nullptr;
