@@ -1973,7 +1973,10 @@ enum class JS_OPERATOR {
   ARGUMENT_SPREAD,
   HLT,
   DEBUGGER,
-  WITH
+  WITH,
+  IMPORT,
+  EXPORT,
+  ASSERT,
 };
 
 struct JSEvalContext {
@@ -2438,6 +2441,22 @@ struct JSProgram {
       case JS_OPERATOR::SET_INITIALIZER: {
         ss << L"SET_INITIALIZER " << *(uint64_t *)(codes.data() + offset);
         offset += 4;
+        break;
+      }
+      case JS_OPERATOR::IMPORT: {
+        auto idx = *(uint32_t *)(codes.data() + offset);
+        ss << L"IMPORT \"" << constants[idx] << L"\"";
+        offset += 2;
+        break;
+      }
+      case JS_OPERATOR::EXPORT: {
+        ss << L"EXPORT";
+        break;
+      }
+      case JS_OPERATOR::ASSERT: {
+        auto idx = *(uint32_t *)(codes.data() + offset);
+        ss << L"ASSERT \"" << constants[idx] << L"\"";
+        offset += 2;
         break;
       }
       }
@@ -10553,25 +10572,9 @@ public:
     case JS_NODE_TYPE::EXPRESSION_ASSIGMENT:
       return resolveAssigmentExpression(source, node, program);
     case JS_NODE_TYPE::IMPORT_DECLARATION:
-      break;
-    case JS_NODE_TYPE::IMPORT_SPECIFIER:
-      break;
-    case JS_NODE_TYPE::IMPORT_DEFAULT:
-      break;
-    case JS_NODE_TYPE::IMPORT_NAMESPACE:
-      break;
-    case JS_NODE_TYPE::IMPORT_ATTARTUBE:
-      break;
+      return resolveImportDeclaration(source, node, program);
     case JS_NODE_TYPE::EXPORT_DECLARATION:
-      break;
-    case JS_NODE_TYPE::EXPORT_DEFAULT:
-      break;
-    case JS_NODE_TYPE::EXPORT_SPECIFIER:
-      break;
-    case JS_NODE_TYPE::EXPORT_NAMED:
-      break;
-    case JS_NODE_TYPE::EXPORT_NAMESPACE:
-      break;
+      return resolveExportDeclaration(source, node, program);
     case JS_NODE_TYPE::DECLARATION_ARROW_FUNCTION:
       return resolveArrowFunctionDeclaration(source, node, program);
     case JS_NODE_TYPE::DECLARATION_FUNCTION:
@@ -10721,6 +10724,60 @@ public:
     pushOperator(program, JS_OPERATOR::UNDEFINED);
     pushOperator(program, JS_OPERATOR::RET);
 
+    return nullptr;
+  }
+  JSNode *resolveImportDeclaration(const std::wstring &source, JSNode *node,
+                                   JSProgram &program) {
+    auto declaration = node->cast<JSImportDeclarationNode>();
+    auto str = declaration->source->location.get(source);
+    str = str.substr(1, str.length() - 2);
+    pushOperator(program, JS_OPERATOR::IMPORT);
+    pushString(program, str);
+    for (auto attr : declaration->attributes) {
+      auto attribute = attr->cast<JSImportAttributeNode>();
+      auto err = resolve(source, attribute->value, program);
+      if (err) {
+        return err;
+      }
+      pushOperator(program, JS_OPERATOR::ASSERT);
+      pushString(program, attribute->key->location.get(source));
+    }
+    for (auto specifier : declaration->specifiers) {
+      if (specifier->type == JS_NODE_TYPE::IMPORT_DEFAULT) {
+        auto s = specifier->cast<JSImportDefaultNode>();
+        pushOperator(program, JS_OPERATOR::STR);
+        pushString(program, L"default");
+        pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+        pushUint32(program, 1);
+        pushOperator(program, JS_OPERATOR::GET_FIELD);
+        pushOperator(program, JS_OPERATOR::STORE);
+        pushString(program, s->identifier->location.get(source));
+      } else if (specifier->type == JS_NODE_TYPE::IMPORT_NAMESPACE) {
+        auto s = specifier->cast<JSImportNamespaceNode>();
+        pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+        pushUint32(program, 0);
+        pushOperator(program, JS_OPERATOR::STORE);
+        pushString(program, s->alias->location.get(source));
+      } else if (specifier->type == JS_NODE_TYPE::IMPORT_SPECIFIER) {
+        auto s = specifier->cast<JSImportSpecifierNode>();
+        pushOperator(program, JS_OPERATOR::STR);
+        pushString(program, s->identifier->location.get(source));
+        pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+        pushUint32(program, 1);
+        pushOperator(program, JS_OPERATOR::GET_FIELD);
+        pushOperator(program, JS_OPERATOR::STORE);
+        if (s->alias) {
+          pushString(program, s->alias->location.get(source));
+        } else {
+          pushString(program, s->identifier->location.get(source));
+        }
+      }
+    }
+    pushOperator(program, JS_OPERATOR::POP);
+    return nullptr;
+  }
+  JSNode *resolveExportDeclaration(const std::wstring &source, JSNode *node,
+                                   JSProgram &program) {
     return nullptr;
   }
   JSNode *resolveArrowFunctionDeclaration(const std::wstring &source,
@@ -12598,6 +12655,21 @@ private:
     // not implement
     ectx.pc = program.codes.size();
   }
+  void runImport(JSContext *ctx, const JSProgram &program,
+                 JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runExport(JSContext *ctx, const JSProgram &program,
+                 JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runAssert(JSContext *ctx, const JSProgram &program,
+                 JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
   JSValue *run(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     for (;;) {
       if (ectx.pc >= program.codes.size()) {
@@ -12884,6 +12956,15 @@ private:
         break;
       case neo::JS_OPERATOR::WITH:
         runWith(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::IMPORT:
+        runImport(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::EXPORT:
+        runExport(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::ASSERT:
+        runAssert(ctx, program, ectx);
         break;
       }
     }
