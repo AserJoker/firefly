@@ -6342,73 +6342,9 @@ private:
       }
     }
     auto current = position;
-    JSNode *res = readSpreadExpression(source, current);
-    if (!res) {
-      auto backup = current;
-      auto node = new JSClassPropertyNode{};
-      if (checkIdentifier({L"static"}, source, current)) {
-        while (skipInvisible(source, current)) {
-        }
-        auto err = readComments(source, current, node->comments);
-        if (err != nullptr) {
-          delete node;
-          return err;
-        }
-        auto backup2 = current;
-        auto identifier = readIdentifyLiteral(source, current);
-        if (!identifier) {
-          current = backup;
-        } else {
-          delete identifier;
-          node->static_ = true;
-          current = backup2;
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, node->comments);
-          if (err != nullptr) {
-            delete node;
-            return err;
-          }
-        }
-      }
-      auto identifier = readIdentifyLiteral(source, current);
-      if (!identifier) {
-        identifier = readStringLiteral(source, current);
-      }
-      if (!identifier) {
-        if (checkSymbol({L"["}, source, current)) {
-          while (skipInvisible(source, current)) {
-          }
-          auto err = readComments(source, current, node->comments);
-          if (err != nullptr) {
-            delete node;
-            return err;
-          }
-          identifier = readExpression(source, current);
-          while (skipInvisible(source, current)) {
-          }
-          err = readComments(source, current, node->comments);
-          if (err != nullptr) {
-            delete node;
-            return err;
-          }
-          if (!checkSymbol({L"]"}, source, current)) {
-            delete node;
-            return createError(L"Invalid or unexcepted token", source, current);
-          }
-          node->computed = true;
-        }
-      }
-      if (!identifier) {
-        delete node;
-        return nullptr;
-      }
-      if (identifier->type == JS_NODE_TYPE::ERROR) {
-        delete node;
-        return identifier;
-      }
-      node->identifier = identifier;
-      identifier->addParent(node);
+    auto backup = current;
+    auto node = new JSClassPropertyNode{};
+    if (checkIdentifier({L"static"}, source, current)) {
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
@@ -6416,7 +6352,14 @@ private:
         delete node;
         return err;
       }
-      if (checkSymbol({L"="}, source, current)) {
+      auto backup2 = current;
+      auto identifier = readIdentifyLiteral(source, current);
+      if (!identifier) {
+        current = backup;
+      } else {
+        delete identifier;
+        node->static_ = true;
+        current = backup2;
         while (skipInvisible(source, current)) {
         }
         auto err = readComments(source, current, node->comments);
@@ -6424,20 +6367,74 @@ private:
           delete node;
           return err;
         }
-        auto value = readExpression(source, current);
-        if (!value) {
+      }
+    }
+    auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier) {
+      identifier = readStringLiteral(source, current);
+    }
+    if (!identifier) {
+      if (checkSymbol({L"["}, source, current)) {
+        while (skipInvisible(source, current)) {
+        }
+        auto err = readComments(source, current, node->comments);
+        if (err != nullptr) {
+          delete node;
+          return err;
+        }
+        identifier = readExpression(source, current);
+        while (skipInvisible(source, current)) {
+        }
+        err = readComments(source, current, node->comments);
+        if (err != nullptr) {
+          delete node;
+          return err;
+        }
+        if (!checkSymbol({L"]"}, source, current)) {
           delete node;
           return createError(L"Invalid or unexcepted token", source, current);
         }
-        if (value->type == JS_NODE_TYPE::ERROR) {
-          delete node;
-          return value;
-        }
-        node->value = value;
-        value->addParent(node);
+        node->computed = true;
       }
-      res = node;
     }
+    if (!identifier) {
+      delete node;
+      return nullptr;
+    }
+    if (identifier->type == JS_NODE_TYPE::ERROR) {
+      delete node;
+      return identifier;
+    }
+    node->identifier = identifier;
+    identifier->addParent(node);
+    while (skipInvisible(source, current)) {
+    }
+    auto err = readComments(source, current, node->comments);
+    if (err != nullptr) {
+      delete node;
+      return err;
+    }
+    if (checkSymbol({L"="}, source, current)) {
+      while (skipInvisible(source, current)) {
+      }
+      auto err = readComments(source, current, node->comments);
+      if (err != nullptr) {
+        delete node;
+        return err;
+      }
+      auto value = readExpression(source, current);
+      if (!value) {
+        delete node;
+        return createError(L"Invalid or unexcepted token", source, current);
+      }
+      if (value->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return value;
+      }
+      node->value = value;
+      value->addParent(node);
+    }
+    auto res = node;
     auto newline = false;
     for (;;) {
       if (skipWhiteSpace(source, current)) {
@@ -6460,7 +6457,7 @@ private:
       }
       break;
     }
-    auto backup = current;
+    backup = current;
     if (!checkSymbol({L";"}, source, current) && !newline) {
       if (checkSymbol({L"}"}, source, current)) {
         current = backup;
@@ -9831,7 +9828,7 @@ private:
 public:
   JSCallable(JSAtom *prototype, const std::wstring &name,
              const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSObject(prototype), _closure(closure), _name(name) {};
+      : JSObject(prototype), _closure(closure), _name(name){};
   const std::unordered_map<std::wstring, JSAtom *> &getClosure() const {
     return _closure;
   }
@@ -9868,7 +9865,7 @@ private:
 public:
   JSException(const std::wstring &message,
               const std::vector<JSStackFrame> &stack)
-      : _message(message), _stack(stack) {};
+      : _message(message), _stack(stack){};
 
   const std::wstring &getMessage() const { return _message; };
 
@@ -11429,13 +11426,6 @@ public:
         if (err) {
           return err;
         }
-      } else if (prop->type == JS_NODE_TYPE::EXPRESSION_SPREAD) {
-        auto p = prop->cast<JSSpreadExpressionNode>();
-        auto err = resolve(source, p->value, program);
-        if (err) {
-          return err;
-        }
-        pushOperator(program, JS_OPERATOR::MERGE);
       }
     }
     auto err = endScope(source, node, program, ctx);
