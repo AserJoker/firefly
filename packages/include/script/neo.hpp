@@ -759,6 +759,10 @@ struct JSIdentityLiteralNode : public JSNode {
   JSIdentityLiteralNode() { type = JS_NODE_TYPE::LITERAL_IDENTITY; }
 };
 
+struct JSPrivateNameNode : public JSNode {
+  JSPrivateNameNode() { type = JS_NODE_TYPE::PRIVATE_NAME; }
+};
+
 struct JSNullLiteralNode : public JSNode {
   JSNullLiteralNode() { type = JS_NODE_TYPE::LITERAL_NULL; }
 };
@@ -1901,12 +1905,13 @@ enum class JS_OPERATOR {
   CONST,
   LET,
   THIS,
-  SUPER,
   OBJECT,
   ARRAY,
   SUPER_CALL,
   FUNCTION,
   ASYNCFUNCTION,
+  ARROW,
+  ASYNCARROW,
   GENERATOR,
   ASYNCGENERATOR,
   ENABLE,
@@ -1915,6 +1920,10 @@ enum class JS_OPERATOR {
   SET_FIELD,
   SET_GETTER,
   SET_SETTER,
+  GET_PRIVATE_FIELD,
+  SET_PRIVATE_FIELD,
+  SET_PRIVATE_GETTER,
+  SET_PRIVATE_SETTER,
   GET_KEYS,
   SET_SUPER_FIELD,
   GET_SUPER_FIELD,
@@ -1967,6 +1976,7 @@ enum class JS_OPERATOR {
   AWAIT_NEXT,
   SPREAD,
   MERGE,
+  ITERATOR,
   OBJECT_SPREAD,
   ARRAY_SPREAD,
   EMPTY_CHECK,
@@ -2109,10 +2119,6 @@ struct JSProgram {
         offset += 2;
         break;
       }
-      case neo::JS_OPERATOR::SUPER: {
-        ss << L"SUPER";
-        break;
-      }
       case neo::JS_OPERATOR::THIS: {
         ss << L"THIS";
         break;
@@ -2183,6 +2189,16 @@ struct JSProgram {
       }
       case JS_OPERATOR::AWAIT: {
         ss << L"AWAIT";
+        break;
+      }
+      case JS_OPERATOR::ARROW: {
+        ss << L"ARROW " << *(uint64_t *)(codes.data() + offset);
+        offset += 4;
+        break;
+      }
+      case JS_OPERATOR::ASYNCARROW: {
+        ss << L"ASYNCARROW " << *(uint64_t *)(codes.data() + offset);
+        offset += 4;
         break;
       }
       case JS_OPERATOR::YIELD_DELEGATE: {
@@ -2465,6 +2481,25 @@ struct JSProgram {
       case JS_OPERATOR::EXPORT_ALL:
         ss << L"EXPORT_ALL";
         break;
+      case JS_OPERATOR::ITERATOR:
+        ss << L"ITERATOR";
+        break;
+      case JS_OPERATOR::GET_PRIVATE_FIELD: {
+        ss << L"GET_PRIVATE_FIELD";
+        break;
+      }
+      case JS_OPERATOR::SET_PRIVATE_FIELD: {
+        ss << L"SET_PRIVATE_FIELD";
+        break;
+      }
+      case JS_OPERATOR::SET_PRIVATE_GETTER: {
+        ss << L"SET_PRIVATE_GETTER";
+        break;
+      }
+      case JS_OPERATOR::SET_PRIVATE_SETTER: {
+        ss << L"SET_PRIVATE_SETTER";
+        break;
+      }
       }
       ss << std::endl;
     }
@@ -4879,7 +4914,7 @@ private:
     auto node = new JSVariableDeclaratorNode{};
     auto identifier = readObjectPattern(source, current);
     if (!identifier) {
-      identifier = readArrayPattern(source, position);
+      identifier = readArrayPattern(source, current);
     }
     if (!identifier) {
       identifier = readIdentifyLiteral(source, current);
@@ -6565,6 +6600,7 @@ private:
       delete node;
       return nullptr;
     }
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto argument = readFunctionArgument(source, current);
     if (argument) {
       for (;;) {
@@ -6631,6 +6667,7 @@ private:
     }
     node->body = body;
     body->addParent(node);
+    popScope();
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -6728,6 +6765,7 @@ private:
       delete node;
       return nullptr;
     }
+    node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto argument = readFunctionArgument(source, current);
     if (argument) {
       for (;;) {
@@ -6794,6 +6832,7 @@ private:
     }
     node->body = body;
     body->addParent(node);
+    popScope();
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -9103,16 +9142,14 @@ private:
       node = n;
     }
     auto value = readExpression2(source, current);
-    if (!value) {
-      delete node;
-      return createError(L"Invalid or unexpected token", source, current);
+    if (value) {
+      if (value->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return value;
+      }
+      node->value = value;
+      value->addParent(node);
     }
-    if (value->type == JS_NODE_TYPE::ERROR) {
-      delete node;
-      return value;
-    }
-    node->value = value;
-    value->addParent(node);
     node->location = getLocation(source, position, current);
     position = current;
     return node;
@@ -10087,10 +10124,15 @@ private:
   struct LabelFrame {
     std::vector<size_t> addresses;
     std::wstring label;
+    size_t scope;
   };
+
+private:
   std::vector<LabelFrame> _breaks;
   std::vector<LabelFrame> _continues;
   std::wstring _label;
+  size_t _scope{};
+  JSNode *_lexContext{};
 
 private:
   JSNode *unwrap(JSNode *node) {
@@ -10162,10 +10204,10 @@ private:
     if (is(node, JS_NODE_TYPE::LITERAL_IDENTITY)) {
       pushOperator(program, JS_OPERATOR::STORE);
       pushString(program, node->location.get(source));
-    } else if (is(node, JS_NODE_TYPE::LITERAL_THIS)) {
-      pushOperator(program, JS_OPERATOR::THIS);
     } else if (is(node, JS_NODE_TYPE::EXPRESSION_MEMBER)) {
-      auto expression = node->cast<JSMemberExpressionNode>();
+      auto expression = unwrap(node)->cast<JSMemberExpressionNode>();
+      pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+      pushUint32(program, 0);
       pushOperator(program, JS_OPERATOR::STR);
       pushString(program, expression->field->location.get(source));
       if (!is(expression->host, JS_NODE_TYPE::LITERAL_SUPER)) {
@@ -10180,7 +10222,9 @@ private:
         pushOperator(program, JS_OPERATOR::SET_SUPER_FIELD);
       }
     } else if (is(node, JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER)) {
-      auto expression = node->cast<JSComputedMemberExpressionNode>();
+      auto expression = unwrap(node)->cast<JSComputedMemberExpressionNode>();
+      pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+      pushUint32(program, 0);
       auto err = resolve(source, expression->field, program);
       if (err) {
         return err;
@@ -10200,12 +10244,28 @@ private:
       auto expression = node->cast<JSGroupExpressionNode>();
       return resolveStore(source, expression->expression, program);
     } else if (is(node, JS_NODE_TYPE::PATTERN_OBJECT)) {
+      pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+      pushUint32(program, 0);
       auto expression = node->cast<JSObjectPatternNode>();
-      size_t index = 0;
-      for (auto item : expression->items) {
+      bool spread = false;
+      if (!expression->items.empty()) {
+        auto last = expression->items[expression->items.size() - 1];
+        if (last->cast<JSObjectPatternItemNode>()->key->type ==
+            JS_NODE_TYPE::PATTERN_SPREAD_ITEM) {
+          spread = true;
+        }
+      }
+      for (size_t index = 0; index < expression->items.size(); index++) {
+        auto item = expression->items[index];
         auto field = item->cast<JSObjectPatternItemNode>();
         if (is(field->key, JS_NODE_TYPE::PATTERN_SPREAD_ITEM)) {
+          if (index != expression->items.size() - 1) {
+            return createError(L"Rest element must be last element",
+                               item->location);
+          }
           auto spread = field->key->cast<JSSpreadPatternItemNode>();
+          pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+          pushUint32(program, index);
           pushOperator(program, JS_OPERATOR::OBJECT_SPREAD);
           pushUint32(program, index);
           auto err = resolveStore(source, spread->value, program);
@@ -10213,59 +10273,81 @@ private:
             return err;
           }
           pushOperator(program, JS_OPERATOR::POP);
-        } else {
-          if (field->computed) {
-            auto err = resolve(source, field->key, program);
-            if (err) {
-              return err;
-            }
-          } else {
-            pushOperator(program, JS_OPERATOR::STR);
-            pushString(program, field->key->location.get(source));
-          }
-          pushOperator(program, JS_OPERATOR::PUSH_VALUE);
-          pushUint32(program, index + 1);
-          pushOperator(program, JS_OPERATOR::GET_FIELD);
-          if (field->value) {
-            pushOperator(program, JS_OPERATOR::JNOT_NULL);
-            auto address = program.codes.size();
-            pushAddress(program, 0);
-            auto err = resolve(source, field->value, program);
-            if (err) {
-              return err;
-            }
-            *(size_t *)(program.codes.data() + address) = program.codes.size();
-          }
-          if (field->alias) {
-            auto err = resolveStore(source, field->alias, program);
-            if (err) {
-              return err;
-            }
-          } else {
-            auto err = resolveStore(source, field->key, program);
-            if (err) {
-              return err;
-            }
-          }
-          pushOperator(program, JS_OPERATOR::POP);
-          index++;
+          break;
         }
-      }
-    } else if (is(node, JS_NODE_TYPE::PATTERN_ARRAY)) {
-      auto expression = node->cast<JSArrayPatternNode>();
-      for (auto &item : expression->items) {
-        if (item && is(item, JS_NODE_TYPE::PATTERN_SPREAD_ITEM)) {
-          auto field = item->cast<JSSpreadPatternItemNode>();
-          pushOperator(program, JS_OPERATOR::ARRAY_SPREAD);
-          auto err = resolveStore(source, field->value, program);
+        if (field->computed) {
+          auto err = resolve(source, field->key, program);
           if (err) {
             return err;
           }
-          pushOperator(program, JS_OPERATOR::POP);
         } else {
-          pushOperator(program, JS_OPERATOR::POP);
-          if (item) {
-            auto field = item->cast<JSArrayPatternItemNode>();
+          pushOperator(program, JS_OPERATOR::STR);
+          pushString(program, field->key->location.get(source));
+        }
+        if (spread) {
+          pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+          pushUint32(program, 0);
+          pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+          pushUint32(program, index + 2);
+        } else {
+          pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+          pushUint32(program, index + 1);
+        }
+        pushOperator(program, JS_OPERATOR::GET_FIELD);
+        if (field->value) {
+          pushOperator(program, JS_OPERATOR::JNOT_NULL);
+          auto address = program.codes.size();
+          pushAddress(program, 0);
+          auto err = resolve(source, field->value, program);
+          if (err) {
+            return err;
+          }
+          *(size_t *)(program.codes.data() + address) = program.codes.size();
+        }
+        if (field->alias) {
+          auto err = resolveStore(source, field->alias, program);
+          if (err) {
+            return err;
+          }
+        } else {
+          auto err = resolveStore(source, field->key, program);
+          if (err) {
+            return err;
+          }
+        }
+        pushOperator(program, JS_OPERATOR::POP);
+      }
+      pushOperator(program, JS_OPERATOR::POP);
+    } else if (is(node, JS_NODE_TYPE::PATTERN_ARRAY)) {
+      auto expression = node->cast<JSArrayPatternNode>();
+      pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+      pushUint32(program, 0);
+      pushOperator(program, JS_OPERATOR::ITERATOR);
+      for (size_t index = 0; index < expression->items.size(); index++) {
+        auto item = expression->items[index];
+        if (item) {
+          auto field = item->cast<JSArrayPatternItemNode>();
+
+          if (field->alias->type == JS_NODE_TYPE::PATTERN_SPREAD_ITEM) {
+            if (index != expression->items.size() - 1) {
+              return createError(L"Rest element must be last element",
+                                 item->location);
+            }
+            auto spread = field->alias->cast<JSSpreadPatternItemNode>();
+            pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+            pushUint32(program, 0);
+            pushOperator(program, JS_OPERATOR::ARRAY_SPREAD);
+            auto err = resolveStore(source, spread->value, program);
+            if (err) {
+              return err;
+            }
+            pushOperator(program, JS_OPERATOR::POP);
+            break;
+          } else {
+            pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+            pushUint32(program, 0);
+            pushOperator(program, JS_OPERATOR::NEXT);
+            pushOperator(program, JS_OPERATOR::POP);
             if (field->value) {
               pushOperator(program, JS_OPERATOR::JNOT_NULL);
               auto address = program.codes.size();
@@ -10281,12 +10363,9 @@ private:
             if (err) {
               return err;
             }
-            pushOperator(program, JS_OPERATOR::POP);
-          } else {
-            pushOperator(program, JS_OPERATOR::POP);
           }
-          pushOperator(program, JS_OPERATOR::NEXT);
         }
+        pushOperator(program, JS_OPERATOR::POP);
       }
       pushOperator(program, JS_OPERATOR::POP);
     } else {
@@ -10460,6 +10539,15 @@ private:
           is(callee, JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER)) {
         pushOperator(program, JS_OPERATOR::MEMBER_CALL);
       } else if (is(callee, JS_NODE_TYPE::LITERAL_SUPER)) {
+        if (!_lexContext || !dynamic_cast<JSClassMethodNode *>(_lexContext) ||
+            dynamic_cast<JSClassMethodNode *>(_lexContext)->computed ||
+            dynamic_cast<JSClassMethodNode *>(_lexContext)->identifier->type !=
+                JS_NODE_TYPE::LITERAL_IDENTITY ||
+            dynamic_cast<JSClassMethodNode *>(_lexContext)
+                    ->identifier->location.get(source) != L"constructor") {
+          return createError(L"'super' keyword unexpected here",
+                             unwrap(callee)->location);
+        }
         pushOperator(program, JS_OPERATOR::SUPER_CALL);
       } else {
         pushOperator(program, JS_OPERATOR::CALL);
@@ -10476,13 +10564,13 @@ private:
   }
 
   std::wstring pushBreakFrame() {
-    _breaks.push_back({.label = _label});
+    _breaks.push_back({.label = _label, .scope = _scope});
     auto label = _label;
     _label = L"";
     return label;
   }
   void pushContinueFrame(const std::wstring &label) {
-    _continues.push_back({.label = label});
+    _continues.push_back({.label = label, .scope = _scope});
   }
 
   void popContinueFrame(JSProgram &program, size_t addr) {
@@ -10631,6 +10719,7 @@ public:
   beginScope(const std::wstring &source, JSNode *node, JSProgram &program) {
     std::unordered_map<JSNode *, size_t> ctx;
     pushOperator(program, JS_OPERATOR::BEGIN);
+    ++_scope;
     for (auto declar : node->scope->declarations) {
       switch (declar.type) {
       case JS_DECLARATION_TYPE::VAR:
@@ -10687,6 +10776,7 @@ public:
       }
       *(size_t *)(program.codes.data() + address) = program.codes.size();
     }
+    --_scope;
     pushOperator(program, JS_OPERATOR::END);
     return nullptr;
   }
@@ -10694,6 +10784,8 @@ public:
   JSNode *resolveFunctionDeclaration(const std::wstring &source, JSNode *node,
                                      JSProgram &program) {
     auto func = node->cast<JSFunctionBaseNode>();
+    auto lexCtx = _lexContext;
+    _lexContext = node;
     auto ctx = beginScope(source, node, program);
     for (auto arg : func->arguments) {
       auto argument = arg->cast<JSFunctionArgumentDeclarationNode>();
@@ -10704,6 +10796,7 @@ public:
         if (err) {
           return err;
         }
+        pushOperator(program, JS_OPERATOR::POP);
       } else {
         pushOperator(program, JS_OPERATOR::EMPTY_CHECK);
         if (argument->value) {
@@ -10721,6 +10814,7 @@ public:
         if (err) {
           return err;
         }
+        pushOperator(program, JS_OPERATOR::POP);
       }
     }
     auto err = resolve(source, func->body, program);
@@ -10730,7 +10824,12 @@ public:
     if (func->body->type != JS_NODE_TYPE::DECLARATION_FUNCTION_BODY) {
       pushOperator(program, JS_OPERATOR::RET);
     }
-    return endScope(source, node, program, ctx);
+    err = endScope(source, node, program, ctx);
+    if (err) {
+      return err;
+    }
+    _lexContext = lexCtx;
+    return nullptr;
   }
 
   JSNode *resolveFunctionBodyDeclaration(const std::wstring &source,
@@ -10905,9 +11004,9 @@ public:
                                           JSNode *node, JSProgram &program) {
     auto func = node->cast<JSArrowDeclarationNode>();
     if (func->async) {
-      pushOperator(program, JS_OPERATOR::ASYNCFUNCTION);
+      pushOperator(program, JS_OPERATOR::ASYNCARROW);
     } else {
-      pushOperator(program, JS_OPERATOR::FUNCTION);
+      pushOperator(program, JS_OPERATOR::ARROW);
     }
     auto address = program.codes.size();
     pushAddress(program, 0);
@@ -10920,11 +11019,6 @@ public:
       return err;
     }
     *(size_t *)(program.codes.data() + end) = program.codes.size();
-    pushOperator(program, JS_OPERATOR::STR);
-    pushString(program, L"bind");
-    pushOperator(program, JS_OPERATOR::THIS);
-    pushOperator(program, JS_OPERATOR::MEMBER_CALL);
-    pushUint32(program, 1);
     return nullptr;
   }
 
@@ -10976,14 +11070,20 @@ public:
     std::unordered_map<JSNode *, size_t> ctx;
     auto funcion = node->cast<JSFunctionBaseNode>();
     auto clazz = node->cast<JSClassDeclaration>();
-    if (node->scope && !funcion && !clazz) {
+    if (node->scope && !funcion && !clazz &&
+        node->type != JS_NODE_TYPE::STATEMENT_FOR_AWAIT_OF &&
+        node->type != JS_NODE_TYPE::STATEMENT_FOR_IN &&
+        node->type != JS_NODE_TYPE::STATEMENT_FOR_OF) {
       ctx = beginScope(source, node, program);
     }
     auto err = resolveNode(source, node, program);
     if (err) {
       return err;
     }
-    if (node->scope && !funcion && !clazz) {
+    if (node->scope && !funcion && !clazz &&
+        node->type != JS_NODE_TYPE::STATEMENT_FOR_AWAIT_OF &&
+        node->type != JS_NODE_TYPE::STATEMENT_FOR_IN &&
+        node->type != JS_NODE_TYPE::STATEMENT_FOR_OF) {
       auto err = endScope(source, node, program, ctx);
       if (err) {
         return err;
@@ -11048,6 +11148,15 @@ public:
         }
         opt = JS_OPERATOR::MEMBER_CALL;
       } else if (is(tag, JS_NODE_TYPE::LITERAL_SUPER)) {
+        if (!_lexContext || !dynamic_cast<JSClassMethodNode *>(_lexContext) ||
+            dynamic_cast<JSClassMethodNode *>(_lexContext)->computed ||
+            dynamic_cast<JSClassMethodNode *>(_lexContext)->identifier->type !=
+                JS_NODE_TYPE::LITERAL_IDENTITY ||
+            dynamic_cast<JSClassMethodNode *>(_lexContext)
+                    ->identifier->location.get(source) != L"constructor") {
+          return createError(L"'super' keyword unexpected here",
+                             unwrap(tag)->location);
+        }
         opt = JS_OPERATOR::SUPER_CALL;
       } else {
         auto err = resolveMemberChain(source, tag, program, addresses);
@@ -11223,26 +11332,57 @@ public:
     if (err) {
       return err;
     }
+    pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+    pushUint32(program, 0);
+    pushOperator(program, JS_OPERATOR::ITERATOR);
     auto start = program.codes.size();
+    pushOperator(program, JS_OPERATOR::BEGIN);
+    pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+    pushUint32(program, 0);
     pushOperator(program, JS_OPERATOR::NEXT);
     pushOperator(program, JS_OPERATOR::JTRUE);
     auto end_address = program.codes.size();
     pushAddress(program, 0);
-    err = resolveStore(source, statement->left, program);
-    if (err) {
-      return err;
+    pushOperator(program, JS_OPERATOR::POP);
+    if (statement->left->type == JS_NODE_TYPE::DECLARATION_VARIABLE) {
+      auto declaration = statement->left->cast<JSVariableDeclaraionNode>();
+      if (declaration->declarations.size() != 1) {
+        return createError(L"Invalid left-hand side in for-of loop: Must have "
+                           L"a single binding.",
+                           statement->left->location);
+      }
+      auto declar =
+          declaration->declarations[0]->cast<JSVariableDeclaratorNode>();
+      if (declar->initialize) {
+        return createError(
+            L"for-of loop variable declaration may not have an initializer.",
+            declar->initialize->location);
+      }
+      err = resolveStore(source, declar->identifier, program);
+      if (err) {
+        return err;
+      }
+    } else {
+      err = resolveStore(source, statement->left, program);
+      if (err) {
+        return err;
+      }
     }
+    pushOperator(program, JS_OPERATOR::POP);
     err = resolve(source, statement->body, program);
     if (err) {
       return err;
     }
     pushOperator(program, JS_OPERATOR::JMP);
     pushAddress(program, start);
-    auto end = program.codes.size();
-    *(size_t *)(program.codes.data() + end_address) = end;
+    *(size_t *)(program.codes.data() + end_address) = program.codes.size();
+    pushOperator(program, JS_OPERATOR::POP);
+    pushOperator(program, JS_OPERATOR::POP);
+    pushOperator(program, JS_OPERATOR::END);
+    popBreakFrame(program, label, program.codes.size());
+    pushOperator(program, JS_OPERATOR::POP);
     pushOperator(program, JS_OPERATOR::POP);
     popContinueFrame(program, start);
-    popBreakFrame(program, label, end);
     return nullptr;
   }
   JSNode *resolveForInStatement(const std::wstring &source, JSNode *node,
@@ -11254,28 +11394,58 @@ public:
     if (err) {
       return err;
     }
-    auto start = program.codes.size();
+    pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+    pushUint32(program, 0);
     pushOperator(program, JS_OPERATOR::GET_KEYS);
+    pushOperator(program, JS_OPERATOR::ITERATOR);
+    auto start = program.codes.size();
+    pushOperator(program, JS_OPERATOR::BEGIN);
+    pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+    pushUint32(program, 0);
     pushOperator(program, JS_OPERATOR::NEXT);
     pushOperator(program, JS_OPERATOR::JTRUE);
     auto end_address = program.codes.size();
     pushAddress(program, 0);
-    err = resolveStore(source, statement->left, program);
-    if (err) {
-      return err;
+    pushOperator(program, JS_OPERATOR::POP);
+    if (statement->left->type == JS_NODE_TYPE::DECLARATION_VARIABLE) {
+      auto declaration = statement->left->cast<JSVariableDeclaraionNode>();
+      if (declaration->declarations.size() != 1) {
+        return createError(L"Invalid left-hand side in for-in loop: Must have "
+                           L"a single binding.",
+                           statement->left->location);
+      }
+      auto declar =
+          declaration->declarations[0]->cast<JSVariableDeclaratorNode>();
+      if (declar->initialize) {
+        return createError(
+            L"for-in loop variable declaration may not have an initializer.",
+            declar->initialize->location);
+      }
+      err = resolveStore(source, declar->identifier, program);
+      if (err) {
+        return err;
+      }
+    } else {
+      err = resolveStore(source, statement->left, program);
+      if (err) {
+        return err;
+      }
     }
+    pushOperator(program, JS_OPERATOR::POP);
     err = resolve(source, statement->body, program);
     if (err) {
       return err;
     }
     pushOperator(program, JS_OPERATOR::JMP);
     pushAddress(program, start);
-    auto end = program.codes.size();
-    *(size_t *)(program.codes.data() + end_address) = end;
+    *(size_t *)(program.codes.data() + end_address) = program.codes.size();
+    pushOperator(program, JS_OPERATOR::POP);
+    pushOperator(program, JS_OPERATOR::POP);
+    pushOperator(program, JS_OPERATOR::END);
+    popBreakFrame(program, label, program.codes.size());
     pushOperator(program, JS_OPERATOR::POP);
     pushOperator(program, JS_OPERATOR::POP);
     popContinueFrame(program, start);
-    popBreakFrame(program, label, end);
     return nullptr;
   }
   JSNode *resolveForAwaitOfStatement(const std::wstring &source, JSNode *node,
@@ -11287,26 +11457,57 @@ public:
     if (err) {
       return err;
     }
+    pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+    pushUint32(program, 0);
+    pushOperator(program, JS_OPERATOR::ITERATOR);
     auto start = program.codes.size();
+    pushOperator(program, JS_OPERATOR::BEGIN);
+    pushOperator(program, JS_OPERATOR::PUSH_VALUE);
+    pushUint32(program, 0);
     pushOperator(program, JS_OPERATOR::AWAIT_NEXT);
     pushOperator(program, JS_OPERATOR::JTRUE);
     auto end_address = program.codes.size();
     pushAddress(program, 0);
-    err = resolveStore(source, statement->left, program);
-    if (err) {
-      return err;
+    pushOperator(program, JS_OPERATOR::POP);
+    if (statement->left->type == JS_NODE_TYPE::DECLARATION_VARIABLE) {
+      auto declaration = statement->left->cast<JSVariableDeclaraionNode>();
+      if (declaration->declarations.size() != 1) {
+        return createError(L"Invalid left-hand side in for-of loop: Must have "
+                           L"a single binding.",
+                           statement->left->location);
+      }
+      auto declar =
+          declaration->declarations[0]->cast<JSVariableDeclaratorNode>();
+      if (declar->initialize) {
+        return createError(
+            L"for-of loop variable declaration may not have an initializer.",
+            declar->initialize->location);
+      }
+      err = resolveStore(source, declar->identifier, program);
+      if (err) {
+        return err;
+      }
+    } else {
+      err = resolveStore(source, statement->left, program);
+      if (err) {
+        return err;
+      }
     }
+    pushOperator(program, JS_OPERATOR::POP);
     err = resolve(source, statement->body, program);
     if (err) {
       return err;
     }
     pushOperator(program, JS_OPERATOR::JMP);
     pushAddress(program, start);
-    auto end = program.codes.size();
-    *(size_t *)(program.codes.data() + end_address) = end;
+    *(size_t *)(program.codes.data() + end_address) = program.codes.size();
+    pushOperator(program, JS_OPERATOR::POP);
+    pushOperator(program, JS_OPERATOR::POP);
+    pushOperator(program, JS_OPERATOR::END);
+    popBreakFrame(program, label, program.codes.size());
+    pushOperator(program, JS_OPERATOR::POP);
     pushOperator(program, JS_OPERATOR::POP);
     popContinueFrame(program, start);
-    popBreakFrame(program, label, end);
     return nullptr;
   }
   JSNode *resolveObjectDeclaration(const std::wstring &source, JSNode *node,
@@ -11476,6 +11677,8 @@ public:
       pushOperator(program, JS_OPERATOR::STORE);
       pushString(program, declaration->identifier->location.get(source));
     }
+    auto lexCtx = _lexContext;
+    _lexContext = node;
     auto ctx = beginScope(source, node, program);
     pushOperator(program, JS_OPERATOR::PUSH_VALUE);
     pushUint32(program, 0);
@@ -11640,6 +11843,7 @@ public:
     if (err) {
       return err;
     }
+    _lexContext = lexCtx;
     return nullptr;
   }
   JSNode *resolveVariableDeclaration(const std::wstring &source, JSNode *node,
@@ -11659,6 +11863,7 @@ public:
       if (err) {
         return err;
       }
+      pushOperator(program, JS_OPERATOR::POP);
     }
     return nullptr;
   }
@@ -11666,14 +11871,19 @@ public:
   JSNode *resolveBlockStatement(const std::wstring &source, JSNode *node,
                                 JSProgram &program) {
     auto statement = unwrap(node)->cast<JSBlockStatement>();
-    auto label = pushBreakFrame();
+    std::wstring label;
+    if (!_label.empty()) {
+      label = pushBreakFrame();
+    }
     for (auto statement : statement->statements) {
       auto err = resolve(source, statement, program);
       if (err) {
         return err;
       }
     }
-    popBreakFrame(program, label, program.codes.size());
+    if (!_label.empty()) {
+      popBreakFrame(program, label, program.codes.size());
+    }
     return nullptr;
   }
   JSNode *resolveDebuggerStatement(const std::wstring &source, JSNode *node,
@@ -11714,34 +11924,54 @@ public:
     if (statement->label) {
       label = statement->label->location.get(source);
     }
+    auto it = _breaks.rbegin();
+    while (it != _breaks.rend()) {
+      if (it->label == label) {
+        break;
+      }
+      it++;
+    }
+    if (it == _breaks.rend()) {
+      return createError(L"Undefined label '" + label + L"'", node->location);
+    }
+    auto scope = it->scope;
+    while (scope <= _scope) {
+      pushOperator(program, JS_OPERATOR::END);
+      scope++;
+    }
     pushOperator(program, JS_OPERATOR::JMP);
     auto address = program.codes.size();
     pushAddress(program, 0);
-    for (auto it = _breaks.rbegin(); it != _breaks.rend(); it++) {
-      if (it->label == label) {
-        it->addresses.push_back(address);
-        return nullptr;
-      }
-    }
-    return createError(L"Undefined label '" + label + L"'", node->location);
+    it->addresses.push_back(address);
+    return nullptr;
   }
   JSNode *resolveContinueStatement(const std::wstring &source, JSNode *node,
                                    JSProgram &program) {
-    auto statement = node->cast<JSBreakStatement>();
+    auto statement = node->cast<JSContinueStatement>();
     std::wstring label = L"";
     if (statement->label) {
       label = statement->label->location.get(source);
     }
+    auto it = _continues.rbegin();
+    while (it != _continues.rend()) {
+      if (it->label == label) {
+        break;
+      }
+      it++;
+    }
+    if (it == _continues.rend()) {
+      return createError(L"Undefined label '" + label + L"'", node->location);
+    }
+    auto scope = it->scope;
+    while (scope <= _scope) {
+      pushOperator(program, JS_OPERATOR::END);
+      scope++;
+    }
     pushOperator(program, JS_OPERATOR::JMP);
     auto address = program.codes.size();
     pushAddress(program, 0);
-    for (auto it = _continues.rbegin(); it != _continues.rend(); it++) {
-      if (it->label == label) {
-        it->addresses.push_back(address);
-        return nullptr;
-      }
-    }
-    return createError(L"Undefined label '" + label + L"'", node->location);
+    it->addresses.push_back(address);
+    return nullptr;
   }
   JSNode *resolveThrowStatement(const std::wstring &source, JSNode *node,
                                 JSProgram &program) {
@@ -11761,9 +11991,8 @@ public:
       if (err) {
         return err;
       }
-    } else {
-      pushOperator(program, JS_OPERATOR::POP);
     }
+    pushOperator(program, JS_OPERATOR::POP);
     auto err = resolve(source, statement->body, program);
     if (err) {
       return err;
@@ -11773,7 +12002,10 @@ public:
   JSNode *resolveTryStatement(const std::wstring &source, JSNode *node,
                               JSProgram &program) {
     auto statement = unwrap(node)->cast<JSTryStatement>();
-    auto label = pushBreakFrame();
+    std::wstring label;
+    if (!_label.empty()) {
+      label = pushBreakFrame();
+    }
     pushOperator(program, JS_OPERATOR::TRY_BEGIN);
     size_t onerror = program.codes.size();
     pushAddress(program, 0);
@@ -11803,8 +12035,10 @@ public:
       pushOperator(program, JS_OPERATOR::JMP);
       auto onfinish_end = program.codes.size();
       pushAddress(program, 0);
-      popBreakFrame(program, label, program.codes.size());
-      label = pushBreakFrame();
+      if (!_label.empty()) {
+        popBreakFrame(program, label, program.codes.size());
+        label = pushBreakFrame();
+      }
       *(size_t *)(program.codes.data() + onfinish) = program.codes.size();
       auto err = resolve(source, statement->onfinish, program);
       if (err) {
@@ -11812,13 +12046,18 @@ public:
       }
       *(size_t *)(program.codes.data() + onfinish_end) = program.codes.size();
     }
-    popBreakFrame(program, label, program.codes.size());
+    if (!_label.empty()) {
+      popBreakFrame(program, label, program.codes.size());
+    }
     return nullptr;
   }
   JSNode *resolveIfStatement(const std::wstring &source, JSNode *node,
                              JSProgram &program) {
     auto statement = unwrap(node)->cast<JSIfStatement>();
-    auto label = pushBreakFrame();
+    std::wstring label;
+    if (!_label.empty()) {
+      label = pushBreakFrame();
+    }
     auto err = resolve(source, statement->condition, program);
     if (err) {
       return err;
@@ -11842,7 +12081,9 @@ public:
       }
     }
     *(uint64_t *)(program.codes.data() + end) = program.codes.size();
-    popBreakFrame(program, label, program.codes.size());
+    if (!_label.empty()) {
+      popBreakFrame(program, label, program.codes.size());
+    }
     return nullptr;
   }
   JSNode *resolveSwitchStatement(const std::wstring &source, JSNode *node,
@@ -12174,6 +12415,11 @@ public:
   }
   JSNode *resolveYieldExpression(const std::wstring &source, JSNode *node,
                                  JSProgram &program) {
+    if (!_lexContext || dynamic_cast<JSFunctionBaseNode *>(_lexContext) ||
+        !dynamic_cast<JSFunctionBaseNode *>(_lexContext)->generator) {
+      return createError(L"yield expression must used in generator",
+                         node->location);
+    }
     auto expression = unwrap(node)->cast<JSYieldExpressionNode>();
     auto err = resolve(source, expression->value, program);
     if (err) {
@@ -12184,6 +12430,11 @@ public:
   }
   JSNode *resolveYieldDelegateExpression(const std::wstring &source,
                                          JSNode *node, JSProgram &program) {
+    if (!_lexContext || dynamic_cast<JSFunctionBaseNode *>(_lexContext) ||
+        !dynamic_cast<JSFunctionBaseNode *>(_lexContext)->generator) {
+      return createError(L"yield expression must used in generator",
+                         node->location);
+    }
     auto expression = unwrap(node)->cast<JSYieldExpressionNode>();
     auto err = resolve(source, expression->value, program);
     if (err) {
@@ -12194,6 +12445,11 @@ public:
   }
   JSNode *resolveAwaitExpression(const std::wstring &source, JSNode *node,
                                  JSProgram &program) {
+    if (!_lexContext || dynamic_cast<JSFunctionBaseNode *>(_lexContext) ||
+        !dynamic_cast<JSFunctionBaseNode *>(_lexContext)->async) {
+      return createError(L"yield expression must used in async",
+                         node->location);
+    }
     auto expression = unwrap(node)->cast<JSYieldExpressionNode>();
     auto err = resolve(source, expression->value, program);
     if (err) {
@@ -12311,6 +12567,7 @@ public:
     if (err) {
       return err;
     }
+    pushOperator(program, JS_OPERATOR::POP);
     return nullptr;
   }
   JSNode *resolveThis(const std::wstring &source, JSNode *node,
@@ -12327,6 +12584,8 @@ public:
       pushOperator(program, JS_OPERATOR::ENABLE);
       pushString(program, str);
     }
+    auto ctx = _lexContext;
+    _lexContext = node;
     for (auto statement : prog->statements) {
       auto err = resolve(source, statement, program);
       if (err) {
@@ -12334,6 +12593,7 @@ public:
       }
     }
     pushOperator(program, JS_OPERATOR::HLT);
+    _lexContext = ctx;
     return nullptr;
   }
 
@@ -12474,6 +12734,15 @@ private:
   }
   void runFunction(JSContext *ctx, const JSProgram &program,
                    JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runArrow(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runAsyncArrow(JSContext *ctx, const JSProgram &program,
+                     JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
@@ -12750,6 +13019,9 @@ private:
     ectx.pc = program.codes.size();
   }
   void runNext(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+    return;
     auto generator = *ectx.stack.rbegin();
     // TODO: get iterator
     auto next = ctx->getField(generator, L"next");
@@ -12791,10 +13063,6 @@ private:
   }
   void runArraySpread(JSContext *ctx, const JSProgram &program,
                       JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
-  }
-  void runSuper(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
@@ -12914,6 +13182,32 @@ private:
     // not implement
     ectx.pc = program.codes.size();
   }
+  void runIterator(JSContext *ctx, const JSProgram &program,
+                   JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runSetPrivateField(JSContext *ctx, const JSProgram &program,
+                          JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runGetPrivateField(JSContext *ctx, const JSProgram &program,
+                          JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runSetPrivateSetter(JSContext *ctx, const JSProgram &program,
+                           JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runSetPrivateGetter(JSContext *ctx, const JSProgram &program,
+                           JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+
   JSValue *run(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     for (;;) {
       if (ectx.pc >= program.codes.size()) {
@@ -12985,6 +13279,12 @@ private:
       case neo::JS_OPERATOR::ARRAY:
         runArray(ctx, program, ectx);
         break;
+      case neo::JS_OPERATOR::ARROW:
+        runArrow(ctx, program, ectx);
+        break;
+      case neo::JS_OPERATOR::ASYNCARROW:
+        runAsyncArrow(ctx, program, ectx);
+        break;
       case JS_OPERATOR::FUNCTION:
         runFunction(ctx, program, ectx);
         break;
@@ -13008,6 +13308,18 @@ private:
         break;
       case JS_OPERATOR::SET_FIELD:
         runSetField(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::GET_PRIVATE_FIELD:
+        runGetPrivateField(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_PRIVATE_FIELD:
+        runSetPrivateField(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_PRIVATE_SETTER:
+        runSetPrivateSetter(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_PRIVATE_GETTER:
+        runSetPrivateGetter(ctx, program, ectx);
         break;
       case neo::JS_OPERATOR::SET_INITIALIZER:
         runSetInitializer(ctx, program, ectx);
@@ -13153,9 +13465,6 @@ private:
       case JS_OPERATOR::THIS:
         runThis(ctx, program, ectx);
         break;
-      case JS_OPERATOR::SUPER:
-        runSuper(ctx, program, ectx);
-        break;
       case JS_OPERATOR::SUPER_CALL:
         runSuperCall(ctx, program, ectx);
         break;
@@ -13191,6 +13500,9 @@ private:
         break;
       case neo::JS_OPERATOR::EMPTY_CHECK:
         runEmptyCheck(ctx, program, ectx);
+        break;
+      case neo::JS_OPERATOR::ITERATOR:
+        runIterator(ctx, program, ectx);
         break;
       case JS_OPERATOR::SET_GETTER:
         runSetGetter(ctx, program, ectx);
