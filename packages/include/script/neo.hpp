@@ -1928,8 +1928,6 @@ enum class JS_OPERATOR {
   SET_PRIVATE_ACCESSOR_GETTER,
   SET_PRIVATE_ACCESSOR_SETTER,
   SET_PRIVATE_METHOD,
-  SET_PRIVATE_GETTER,
-  SET_PRIVATE_SETTER,
   GET_KEYS,
   SET_SUPER_FIELD,
   GET_SUPER_FIELD,
@@ -2503,14 +2501,6 @@ struct JSProgram {
       }
       case JS_OPERATOR::SET_PRIVATE_FIELD: {
         ss << L"SET_PRIVATE_FIELD";
-        break;
-      }
-      case JS_OPERATOR::SET_PRIVATE_GETTER: {
-        ss << L"SET_PRIVATE_GETTER";
-        break;
-      }
-      case JS_OPERATOR::SET_PRIVATE_SETTER: {
-        ss << L"SET_PRIVATE_SETTER";
         break;
       }
       case JS_OPERATOR::SET_PRIVATE_INITIALIZER: {
@@ -13335,16 +13325,6 @@ private:
     // not implement
     ectx.pc = program.codes.size();
   }
-  void runSetPrivateSetter(JSContext *ctx, const JSProgram &program,
-                           JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
-  }
-  void runSetPrivateGetter(JSContext *ctx, const JSProgram &program,
-                           JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
-  }
   void runSetPrivateInitializer(JSContext *ctx, const JSProgram &program,
                                 JSEvalContext &ectx) {
     // not implement
@@ -13491,12 +13471,6 @@ private:
         break;
       case JS_OPERATOR::SET_PRIVATE_FIELD:
         runSetPrivateField(ctx, program, ectx);
-        break;
-      case JS_OPERATOR::SET_PRIVATE_SETTER:
-        runSetPrivateSetter(ctx, program, ectx);
-        break;
-      case JS_OPERATOR::SET_PRIVATE_GETTER:
-        runSetPrivateGetter(ctx, program, ectx);
         break;
       case neo::JS_OPERATOR::SET_INITIALIZER:
         runSetInitializer(ctx, program, ectx);
