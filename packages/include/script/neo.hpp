@@ -1920,16 +1920,24 @@ enum class JS_OPERATOR {
   SET_FIELD,
   SET_GETTER,
   SET_SETTER,
+  SET_ACCESSOR_GETTER,
+  SET_ACCESSOR_SETTER,
+  SET_METHOD,
   GET_PRIVATE_FIELD,
   SET_PRIVATE_FIELD,
+  SET_PRIVATE_ACCESSOR_GETTER,
+  SET_PRIVATE_ACCESSOR_SETTER,
+  SET_PRIVATE_METHOD,
   SET_PRIVATE_GETTER,
   SET_PRIVATE_SETTER,
   GET_KEYS,
   SET_SUPER_FIELD,
   GET_SUPER_FIELD,
   SET_INITIALIZER,
+  SET_PRIVATE_INITIALIZER,
   CALL,
   MEMBER_CALL,
+  PRIVATE_MEMBER_CALL,
   VOID,
   TYPEOF,
   NEW,
@@ -2159,6 +2167,11 @@ struct JSProgram {
       }
       case JS_OPERATOR::MEMBER_CALL: {
         ss << L"MEMBER_CALL " << *(uint32_t *)(codes.data() + offset);
+        offset += 2;
+        break;
+      }
+      case JS_OPERATOR::PRIVATE_MEMBER_CALL: {
+        ss << L"PRIVATE_MEMBER_CALL " << *(uint32_t *)(codes.data() + offset);
         offset += 2;
         break;
       }
@@ -2498,6 +2511,36 @@ struct JSProgram {
       }
       case JS_OPERATOR::SET_PRIVATE_SETTER: {
         ss << L"SET_PRIVATE_SETTER";
+        break;
+      }
+      case JS_OPERATOR::SET_PRIVATE_INITIALIZER: {
+        ss << L"SET_PRIVATE_INITIALIZER "
+           << *(uint64_t *)(codes.data() + offset);
+        offset += 4;
+        break;
+      }
+      case JS_OPERATOR::SET_ACCESSOR_GETTER: {
+        ss << L"SET_ACCESSOR_GETTER";
+        break;
+      }
+      case JS_OPERATOR::SET_ACCESSOR_SETTER: {
+        ss << L"SET_ACCESSOR_SETTER";
+        break;
+      }
+      case JS_OPERATOR::SET_METHOD: {
+        ss << L"SET_METHOD";
+        break;
+      }
+      case JS_OPERATOR::SET_PRIVATE_ACCESSOR_GETTER: {
+        ss << L"SET_PRIVATE_ACCESSOR_GETTER";
+        break;
+      }
+      case JS_OPERATOR::SET_PRIVATE_ACCESSOR_SETTER: {
+        ss << L"SET_PRIVATE_ACCESSOR_SETTER";
+        break;
+      }
+      case JS_OPERATOR::SET_PRIVATE_METHOD: {
+        ss << L"SET_PRIVATE_METHOD";
         break;
       }
       }
@@ -3042,6 +3085,25 @@ private:
     if (tag) {
       tag->addParent(node);
     }
+    position = current;
+    return node;
+  }
+
+  JSNode *readPrivateName(const std::wstring &source, JSPosition &position) {
+
+    auto current = position;
+    if (source[current.offset] == '#') {
+      current.offset++;
+    } else {
+      return nullptr;
+    }
+    auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier) {
+      return createError(L"Invalid or unexpected token", source, current);
+    }
+    auto node = new JSPrivateNameNode{};
+    node->location = getLocation(source, position, current);
+    delete identifier;
     position = current;
     return node;
   }
@@ -6367,24 +6429,32 @@ private:
       }
       auto backup2 = current;
       auto identifier = readIdentifyLiteral(source, current);
+
       if (!identifier) {
-        current = backup;
-      } else {
-        delete identifier;
-        node->static_ = true;
+        identifier = readPrivateName(source, current);
+      }
+      if (!identifier) {
+        identifier = readStringLiteral(source, current);
+      }
+      if (identifier && identifier->type == JS_NODE_TYPE::ERROR) {
+        delete node;
+        return identifier;
+      }
+      if (identifier || checkSymbol({L"*"}, source, current) ||
+          checkSymbol({L"["}, source, current)) {
         current = backup2;
-        while (skipInvisible(source, current)) {
-        }
-        auto err = readComments(source, current, node->comments);
-        if (err != nullptr) {
-          delete node;
-          return err;
-        }
+        node->static_ = true;
+        delete identifier;
+      } else {
+        current = backup;
       }
     }
     auto identifier = readIdentifyLiteral(source, current);
     if (!identifier) {
       identifier = readStringLiteral(source, current);
+    }
+    if (!identifier) {
+      identifier = readPrivateName(source, current);
     }
     if (!identifier) {
       if (checkSymbol({L"["}, source, current)) {
@@ -6500,6 +6570,9 @@ private:
       if (!identifier) {
         identifier = readStringLiteral(source, current);
       }
+      if (!identifier) {
+        identifier = readPrivateName(source, current);
+      }
       if (identifier && identifier->type == JS_NODE_TYPE::ERROR) {
         delete node;
         return identifier;
@@ -6526,6 +6599,9 @@ private:
       auto identifier = readIdentifyLiteral(source, current);
       if (!identifier) {
         identifier = readStringLiteral(source, current);
+      }
+      if (!identifier) {
+        identifier = readPrivateName(source, current);
       }
       if (identifier && identifier->type == JS_NODE_TYPE::ERROR) {
         delete node;
@@ -6554,6 +6630,9 @@ private:
     auto identifier = readIdentifyLiteral(source, current);
     if (!identifier) {
       identifier = readStringLiteral(source, current);
+    }
+    if (!identifier) {
+      identifier = readPrivateName(source, current);
     }
     if (!identifier) {
       if (checkSymbol({L"["}, source, current)) {
@@ -6719,6 +6798,9 @@ private:
     auto identifier = readIdentifyLiteral(source, current);
     if (!identifier) {
       identifier = readStringLiteral(source, current);
+    }
+    if (!identifier) {
+      identifier = readPrivateName(source, current);
     }
     if (!identifier) {
       if (checkSymbol({L"["}, source, current)) {
@@ -7764,6 +7846,9 @@ private:
       node = readNumberLiteral(source, position);
     }
     if (!node) {
+      node = readPrivateName(source, position);
+    }
+    if (!node) {
       node = readRegexpLiteral(source, position);
     }
     if (!node) {
@@ -7961,6 +8046,9 @@ private:
     }
     auto identifier = readIdentifyLiteral(source, current);
     if (!identifier) {
+      identifier = readPrivateName(source, current);
+    }
+    if (!identifier) {
       delete node;
       return createError(L"Unexpected end of input", source, current);
     }
@@ -8134,6 +8222,9 @@ private:
       return err;
     }
     auto identifier = readIdentifyLiteral(source, current);
+    if (!identifier) {
+      identifier = readPrivateName(source, current);
+    }
     if (!identifier) {
       delete node;
       return identifier;
@@ -10217,7 +10308,11 @@ private:
         }
       }
       if (!is(expression->host, JS_NODE_TYPE::LITERAL_SUPER)) {
-        pushOperator(program, JS_OPERATOR::SET_FIELD);
+        if (expression->field->type == JS_NODE_TYPE::PRIVATE_NAME) {
+          pushOperator(program, JS_OPERATOR::SET_PRIVATE_FIELD);
+        } else {
+          pushOperator(program, JS_OPERATOR::SET_FIELD);
+        }
       } else {
         pushOperator(program, JS_OPERATOR::SET_SUPER_FIELD);
       }
@@ -10440,7 +10535,11 @@ private:
         pushAddress(program, 0);
       }
       if (!is(expression->host, JS_NODE_TYPE::LITERAL_SUPER)) {
-        pushOperator(program, JS_OPERATOR::GET_FIELD);
+        if (expression->field->type == JS_NODE_TYPE::PRIVATE_NAME) {
+          pushOperator(program, JS_OPERATOR::GET_PRIVATE_FIELD);
+        } else {
+          pushOperator(program, JS_OPERATOR::GET_FIELD);
+        }
       } else {
         pushOperator(program, JS_OPERATOR::GET_SUPER_FIELD);
       }
@@ -10472,6 +10571,7 @@ private:
                is(node, JS_NODE_TYPE::EXPRESSION_OPTIONAL_CALL)) {
       auto expression = node->cast<JSCallExpressionNode>();
       auto callee = unwrap(expression->callee);
+      bool isPrivate = false;
       if (callee->type == JS_NODE_TYPE::EXPRESSION_MEMBER ||
           callee->type == JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER) {
         auto expression = callee->cast<JSMemberExpressionNode>();
@@ -10487,6 +10587,9 @@ private:
         }
         pushOperator(program, JS_OPERATOR::STR);
         pushString(program, expression->field->location.get(source));
+        if (expression->field->type == JS_NODE_TYPE::PRIVATE_NAME) {
+          isPrivate = true;
+        }
       } else if (is(callee, JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER) ||
                  is(callee,
                     JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER)) {
@@ -10537,7 +10640,11 @@ private:
           is(callee, JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER) ||
           is(callee, JS_NODE_TYPE::EXPRESSION_OPTIONAL_MEMBER) ||
           is(callee, JS_NODE_TYPE::EXPRESSION_OPTIONAL_COMPUTED_MEMBER)) {
-        pushOperator(program, JS_OPERATOR::MEMBER_CALL);
+        if (isPrivate) {
+          pushOperator(program, JS_OPERATOR::PRIVATE_MEMBER_CALL);
+        } else {
+          pushOperator(program, JS_OPERATOR::MEMBER_CALL);
+        }
       } else if (is(callee, JS_NODE_TYPE::LITERAL_SUPER)) {
         if (!_lexContext || !dynamic_cast<JSClassMethodNode *>(_lexContext) ||
             dynamic_cast<JSClassMethodNode *>(_lexContext)->computed ||
@@ -11135,7 +11242,11 @@ public:
         }
         pushOperator(program, JS_OPERATOR::STR);
         pushString(program, expr->field->location.get(source));
-        opt = JS_OPERATOR::MEMBER_CALL;
+        if (expr->field->type == JS_NODE_TYPE::PRIVATE_NAME) {
+          opt = JS_OPERATOR::PRIVATE_MEMBER_CALL;
+        } else {
+          opt = JS_OPERATOR::MEMBER_CALL;
+        }
       } else if (is(tag, JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER)) {
         auto expr = (tag)->cast<JSComputedMemberExpressionNode>();
         auto err = resolveMemberChain(source, expr->host, program, addresses);
@@ -11722,11 +11833,15 @@ public:
         pushOperator(program, JS_OPERATOR::PUSH_VALUE);
         pushUint32(program, 2);
         if (!p->static_) {
-          pushOperator(program, JS_OPERATOR::STR);
-          pushString(program, L"prototype");
-          pushOperator(program, JS_OPERATOR::GET_FIELD);
+          pushOperator(program, JS_OPERATOR::FALSE);
+        } else {
+          pushOperator(program, JS_OPERATOR::TRUE);
         }
-        pushOperator(program, JS_OPERATOR::SET_FIELD);
+        if (p->identifier->type == JS_NODE_TYPE::PRIVATE_NAME) {
+          pushOperator(program, JS_OPERATOR::SET_PRIVATE_METHOD);
+        } else {
+          pushOperator(program, JS_OPERATOR::SET_METHOD);
+        }
         pushOperator(program, JS_OPERATOR::POP);
       } else if (prop->type == JS_NODE_TYPE::CLASS_ACCESSOR) {
         auto p = prop->cast<JSClassAccessorNode>();
@@ -11766,14 +11881,22 @@ public:
         pushOperator(program, JS_OPERATOR::PUSH_VALUE);
         pushUint32(program, 2);
         if (!p->static_) {
-          pushOperator(program, JS_OPERATOR::STR);
-          pushString(program, L"prototype");
-          pushOperator(program, JS_OPERATOR::GET_FIELD);
-        }
-        if (p->kind == JS_ACCESSOR_TYPE::GET) {
-          pushOperator(program, JS_OPERATOR::SET_GETTER);
+          pushOperator(program, JS_OPERATOR::FALSE);
         } else {
-          pushOperator(program, JS_OPERATOR::SET_SETTER);
+          pushOperator(program, JS_OPERATOR::TRUE);
+        }
+        if (p->identifier->type == JS_NODE_TYPE::PRIVATE_NAME) {
+          if (p->kind == JS_ACCESSOR_TYPE::GET) {
+            pushOperator(program, JS_OPERATOR::SET_PRIVATE_ACCESSOR_GETTER);
+          } else {
+            pushOperator(program, JS_OPERATOR::SET_PRIVATE_ACCESSOR_SETTER);
+          }
+        } else {
+          if (p->kind == JS_ACCESSOR_TYPE::GET) {
+            pushOperator(program, JS_OPERATOR::SET_ACCESSOR_GETTER);
+          } else {
+            pushOperator(program, JS_OPERATOR::SET_ACCESSOR_SETTER);
+          }
         }
         pushOperator(program, JS_OPERATOR::POP);
       } else if (prop->type == JS_NODE_TYPE::CLASS_PROPERTY) {
@@ -11798,7 +11921,11 @@ public:
           }
           pushOperator(program, JS_OPERATOR::PUSH_VALUE);
           pushUint32(program, 2);
-          pushOperator(program, JS_OPERATOR::SET_FIELD);
+          if (p->identifier->type == JS_NODE_TYPE::PRIVATE_NAME) {
+            pushOperator(program, JS_OPERATOR::SET_PRIVATE_FIELD);
+          } else {
+            pushOperator(program, JS_OPERATOR::SET_FIELD);
+          }
           pushOperator(program, JS_OPERATOR::POP);
         } else {
           if (p->computed) {
@@ -11812,7 +11939,11 @@ public:
           }
           pushOperator(program, JS_OPERATOR::PUSH_VALUE);
           pushUint32(program, 2);
-          pushOperator(program, JS_OPERATOR::SET_INITIALIZER);
+          if (p->identifier->type == JS_NODE_TYPE::PRIVATE_NAME) {
+            pushOperator(program, JS_OPERATOR::SET_PRIVATE_INITIALIZER);
+          } else {
+            pushOperator(program, JS_OPERATOR::SET_INITIALIZER);
+          }
           auto address = program.codes.size();
           pushAddress(program, 0);
           pushOperator(program, JS_OPERATOR::JMP);
@@ -12844,6 +12975,13 @@ private:
     }
     ectx.stack.push_back(call(ctx, func, obj, arguments));
   }
+  void runPrivateMemberCall(JSContext *ctx, const JSProgram &program,
+                            JSEvalContext &ectx) {
+
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+
   void runVoid(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
 
     // not implement
@@ -13207,6 +13345,45 @@ private:
     // not implement
     ectx.pc = program.codes.size();
   }
+  void runSetPrivateInitializer(JSContext *ctx, const JSProgram &program,
+                                JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+
+  void runSetMethod(JSContext *ctx, const JSProgram &program,
+                    JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+
+  void runSetAccessorGetter(JSContext *ctx, const JSProgram &program,
+                            JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runSetAccessorSetter(JSContext *ctx, const JSProgram &program,
+                            JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+  void runSetPrivateMethod(JSContext *ctx, const JSProgram &program,
+                           JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+
+  void runSetPrivateAccessorGetter(JSContext *ctx, const JSProgram &program,
+                                   JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
+
+  void runSetPrivateAccessorSetter(JSContext *ctx, const JSProgram &program,
+                                   JSEvalContext &ectx) {
+    // not implement
+    ectx.pc = program.codes.size();
+  }
 
   JSValue *run(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     for (;;) {
@@ -13329,6 +13506,9 @@ private:
         break;
       case JS_OPERATOR::MEMBER_CALL:
         runMemberCall(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::PRIVATE_MEMBER_CALL:
+        runPrivateMemberCall(ctx, program, ectx);
         break;
       case JS_OPERATOR::VOID:
         runVoid(ctx, program, ectx);
@@ -13524,6 +13704,27 @@ private:
         break;
       case JS_OPERATOR::EXPORT_ALL:
         runExportAll(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_PRIVATE_INITIALIZER:
+        runSetPrivateInitializer(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_ACCESSOR_GETTER:
+        runSetAccessorGetter(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_ACCESSOR_SETTER:
+        runSetAccessorSetter(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_METHOD:
+        runSetMethod(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_PRIVATE_ACCESSOR_GETTER:
+        runSetPrivateAccessorGetter(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_PRIVATE_ACCESSOR_SETTER:
+        runSetPrivateAccessorSetter(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::SET_PRIVATE_METHOD:
+        runSetPrivateMethod(ctx, program, ectx);
         break;
       }
     }
