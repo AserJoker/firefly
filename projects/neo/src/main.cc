@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     file.close();
     std::wstring js(buf, size);
     delete[] buf;
-    auto runtime = new JSRuntime();
+    auto runtime = new JSRuntime(argc, argv);
     auto ctx = new JSContext(runtime);
     auto func = ctx->createNativeFunction(print, L"print");
     auto global = ctx->getGlobal();
