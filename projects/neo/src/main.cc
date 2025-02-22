@@ -17,9 +17,13 @@ using namespace neo;
 
 JSValue *print(JSContext *ctx, JSValue *self, std::vector<JSValue *> args) {
   for (auto &arg : args) {
-    std::wcout << ctx->checkedString(ctx->toString(arg)) << std::endl;
+    auto str = ctx->toString(arg);
+    if (str->getType() == neo::JS_TYPE::EXCEPTION) {
+      return str;
+    }
+    std::wcout << ctx->checkedString(str) << std::endl;
   }
-  return ctx->createNumber(args.size());
+  return ctx->createUndefined();
 }
 std::string filename = "../script/index.js";
 
@@ -51,7 +55,8 @@ int main(int argc, char *argv[]) {
     auto func = ctx->createNativeFunction(print, L"print");
     auto global = ctx->getGlobal();
     ctx->setField(global, L"print", func);
-    ctx->eval(L"../script/index.js", js);
+    auto res = ctx->eval(L"../script/index.js", js);
+    std::wcout << ctx->checkedString(ctx->toString(res)) << std::endl;
     delete ctx;
     delete runtime;
     return 0;

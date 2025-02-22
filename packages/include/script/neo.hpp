@@ -78,7 +78,6 @@ struct JSLocation {
 };
 
 // JSON
-namespace {
 
 enum class JSON_NODE_TYPE { OBJECT, ARRAY, STRING, NUMBER, NIL, BOOLEAN };
 
@@ -303,10 +302,8 @@ public:
     return L"";
   }
 };
-} // namespace
 
 // Parser
-namespace {
 
 enum class JS_ACCESSOR_TYPE { GET, SET };
 
@@ -8873,10 +8870,7 @@ public:
   virtual ~JSParser() {}
 };
 
-} // namespace
-
 // CodeGenerator
-namespace {
 enum class JS_OPERATOR {
   BEGIN = 0,
   END,
@@ -8994,7 +8988,7 @@ struct JSProgram {
   std::wstring filename;
   std::vector<std::wstring> constants;
   std::vector<uint16_t> codes;
-  std::vector<JSPosition> stacks;
+  std::unordered_map<size_t, JSStackFrame> stacks;
   JSNode *error;
   JSProgram() : error(nullptr) {}
   virtual ~JSProgram() {
@@ -9529,6 +9523,12 @@ struct JSProgram {
       }
       ss << std::endl;
     }
+    ss << L"[.section stack]" << std::endl;
+    for (auto &[offset, frame] : stacks) {
+      ss << L"." << offset << L": \"" << frame.position.funcname << L" ( "
+         << frame.filename << L":" << frame.position.line << L":"
+         << frame.position.column << L" )\"" << std::endl;
+    }
     return ss.str();
   }
 };
@@ -9982,6 +9982,11 @@ private:
       } else {
         pushOperator(program, JS_OPERATOR::CALL);
       }
+      auto addr = program.codes.size();
+      program.stacks[addr] = {
+          .position = callee->location.end,
+          .filename = program.filename,
+      };
       pushUint32(program, (uint32_t)expression->arguments.size());
     } else if (is(node, JS_NODE_TYPE::EXPRESSION_GROUP)) {
       auto expression = node->cast<JSGroupExpressionNode>();
@@ -10147,6 +10152,7 @@ public:
 
   std::unordered_map<JSNode *, size_t>
   beginScope(const std::wstring &source, JSNode *node, JSProgram &program) {
+    std::vector<JSLexDeclaration> functions;
     std::unordered_map<JSNode *, size_t> ctx;
     pushOperator(program, JS_OPERATOR::BEGIN);
     ++_scope;
@@ -10167,34 +10173,36 @@ public:
       case JS_DECLARATION_TYPE::FUNCTION: {
         pushOperator(program, JS_OPERATOR::VAR);
         pushString(program, declar.name);
-        auto func = declar.declaration->cast<JSFunctionBaseNode>();
-        if (func->async) {
-          if (func->generator) {
-            pushOperator(program, JS_OPERATOR::ASYNCGENERATOR);
-          } else {
-            pushOperator(program, JS_OPERATOR::ASYNCFUNCTION);
-          }
-        } else {
-          if (func->generator) {
-            pushOperator(program, JS_OPERATOR::GENERATOR);
-          } else {
-            pushOperator(program, JS_OPERATOR::FUNCTION);
-          }
-        }
-        ctx[declar.declaration] = program.codes.size();
-        pushAddress(program, 0);
-        pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
-        pushString(program, declar.name);
-        for (auto ref : func->closure) {
-          pushOperator(program, JS_OPERATOR::UNDEFINED);
-          pushOperator(program, JS_OPERATOR::REF);
-          pushString(program, ref);
-        }
-        pushOperator(program, JS_OPERATOR::STORE);
-        pushString(program, declar.name);
-        pushOperator(program, JS_OPERATOR::POP);
+        functions.push_back(declar);
       } break;
       }
+    }
+    for (auto &declar : functions) {
+      auto func = declar.declaration->cast<JSFunctionBaseNode>();
+      if (func->async) {
+        if (func->generator) {
+          pushOperator(program, JS_OPERATOR::ASYNCGENERATOR);
+        } else {
+          pushOperator(program, JS_OPERATOR::ASYNCFUNCTION);
+        }
+      } else {
+        if (func->generator) {
+          pushOperator(program, JS_OPERATOR::GENERATOR);
+        } else {
+          pushOperator(program, JS_OPERATOR::FUNCTION);
+        }
+      }
+      ctx[declar.declaration] = program.codes.size();
+      pushAddress(program, 0);
+      pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
+      pushString(program, declar.name);
+      for (auto ref : func->closure) {
+        pushOperator(program, JS_OPERATOR::REF);
+        pushString(program, ref);
+      }
+      pushOperator(program, JS_OPERATOR::STORE);
+      pushString(program, declar.name);
+      pushOperator(program, JS_OPERATOR::POP);
     }
     return ctx;
   }
@@ -10450,8 +10458,6 @@ public:
     auto address = program.codes.size();
     pushAddress(program, 0);
     for (auto &ref : func->closure) {
-      pushOperator(program, JS_OPERATOR::LOAD);
-      pushString(program, ref);
       pushOperator(program, JS_OPERATOR::REF);
       pushString(program, ref);
     }
@@ -10474,8 +10480,6 @@ public:
       pushOperator(program, JS_OPERATOR::LOAD);
       pushString(program, func->identifier->location.get(source));
       for (auto &ref : func->closure) {
-        pushOperator(program, JS_OPERATOR::LOAD);
-        pushString(program, ref);
         pushOperator(program, JS_OPERATOR::REF);
         pushString(program, ref);
       }
@@ -10496,8 +10500,6 @@ public:
       auto address = program.codes.size();
       pushAddress(program, 0);
       for (auto &ref : func->closure) {
-        pushOperator(program, JS_OPERATOR::LOAD);
-        pushString(program, ref);
         pushOperator(program, JS_OPERATOR::REF);
         pushString(program, ref);
       }
@@ -10640,6 +10642,8 @@ public:
         pushOperator(program, JS_OPERATOR::POP);
       }
       pushOperator(program, opt);
+      program.stacks[program.codes.size()] = {
+          .position = temp->tag->location.end, .filename = program.filename};
       pushUint32(program, temp->expressions.size() + 1);
     } else {
       auto str = temp->quasis[0]->location.get(source);
@@ -11012,8 +11016,6 @@ public:
         pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
         pushString(program, func->key->location.get(source));
         for (auto &ref : func->closure) {
-          pushOperator(program, JS_OPERATOR::LOAD);
-          pushString(program, ref);
           pushOperator(program, JS_OPERATOR::REF);
           pushString(program, ref);
         }
@@ -11059,8 +11061,6 @@ public:
         pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
         pushString(program, func->key->location.get(source));
         for (auto &ref : func->closure) {
-          pushOperator(program, JS_OPERATOR::LOAD);
-          pushString(program, ref);
           pushOperator(program, JS_OPERATOR::REF);
           pushString(program, ref);
         }
@@ -11173,8 +11173,6 @@ public:
         pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
         pushString(program, func->identifier->location.get(source));
         for (auto &ref : func->closure) {
-          pushOperator(program, JS_OPERATOR::LOAD);
-          pushString(program, ref);
           pushOperator(program, JS_OPERATOR::REF);
           pushString(program, ref);
         }
@@ -11229,8 +11227,6 @@ public:
         pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
         pushString(program, func->identifier->location.get(source));
         for (auto &ref : func->closure) {
-          pushOperator(program, JS_OPERATOR::LOAD);
-          pushString(program, ref);
           pushOperator(program, JS_OPERATOR::REF);
           pushString(program, ref);
         }
@@ -11885,6 +11881,9 @@ public:
       }
     }
     pushOperator(program, JS_OPERATOR::NEW);
+    program.stacks[program.codes.size()] = {
+        .position = expression->callee->location.end,
+        .filename = program.filename};
     pushUint32(program, (uint32_t)expression->arguments.size());
     return nullptr;
   }
@@ -12109,7 +12108,6 @@ public:
     }
   }
 };
-} // namespace
 
 class JSScope;
 
@@ -12418,6 +12416,36 @@ public:
   inline JSBase *clone() override;
 };
 
+class JSUndefined : public JSBase {
+public:
+  JSUndefined() : JSBase(JS_TYPE::UNDEFINED) {}
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
+};
+
+class JSNull : public JSBase {
+public:
+  JSNull() : JSBase(JS_TYPE::OBJECT) {}
+
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
+};
+
+class JSSymbol : public JSBase {
+private:
+  std::wstring _description;
+
+public:
+  JSSymbol(const std::wstring &description)
+      : JSBase(JS_TYPE::SYMBOL), _description(description) {}
+
+  const std::wstring &getDescription() const { return _description; }
+
+public:
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
+};
+
 class JSNumber : public JSBase {
 private:
   double _value;
@@ -12461,13 +12489,6 @@ public:
   inline JSBase *clone() override;
 };
 
-class JSUndefined : public JSBase {
-public:
-  JSUndefined() : JSBase(JS_TYPE::UNDEFINED) {}
-  inline JSBase *toString() override;
-  inline JSBase *clone() override;
-};
-
 struct JSField {
   bool configurable{};
   bool enumable{};
@@ -12483,6 +12504,7 @@ class JSObject : public JSBase {
 private:
   std::unordered_map<std::wstring, JSField> _fields;
   std::unordered_map<JSAtom *, JSField> _symboledFields;
+  std::unordered_map<std::wstring, JSField> _privateFields;
   bool _sealed;
   bool _frozen;
   bool _extensible;
@@ -12502,6 +12524,14 @@ public:
   }
 
   std::unordered_map<std::wstring, JSField> &getFields() { return _fields; }
+
+  const std::unordered_map<std::wstring, JSField> &getPrivateFields() const {
+    return _privateFields;
+  }
+
+  std::unordered_map<std::wstring, JSField> &getPrivateFields() {
+    return _privateFields;
+  }
 
   bool isSealed() const { return _sealed; }
 
@@ -12582,14 +12612,6 @@ public:
                     JSValue *value) override;
 };
 
-class JSNull : public JSObject {
-public:
-  JSNull() : JSObject(nullptr) {}
-
-  inline JSBase *toString() override;
-  inline JSBase *clone() override;
-};
-
 class JSCallable : public JSObject {
 private:
   std::unordered_map<std::wstring, JSAtom *> _closure;
@@ -12653,7 +12675,8 @@ private:
 public:
   JSException(const TYPE &type, const std::wstring &message,
               const std::vector<JSStackFrame> &stack)
-      : JSBase(JS_TYPE::EXCEPTION), _message(message), _stack(stack){};
+      : JSBase(JS_TYPE::EXCEPTION), _message(message), _type(type),
+        _stack(stack){};
 
   const TYPE &getType() const { return _type; }
 
@@ -12670,6 +12693,7 @@ public:
     case TYPE::TYPE:
       return L"TypeError";
     };
+    return L"Error";
   }
 
   const std::wstring &getMessage() const { return _message; };
@@ -12819,6 +12843,8 @@ private:
 
   std::wstring _currentPath;
 
+  std::vector<JSStackFrame> _callstacks;
+
 private:
   JSValue *_global;
 
@@ -12826,7 +12852,13 @@ public:
   JSContext(JSRuntime *runtime) : _runtime(runtime) {
     _root = new JSScope();
     _current = _root;
-    _global = createObject();
+    _callstacks.push_back({
+        .position =
+            {
+                .funcname = L"neo.run",
+            },
+    });
+    initializeGlobal();
   }
 
   ~JSContext() {
@@ -12834,6 +12866,35 @@ public:
     delete _root;
     _root = nullptr;
     _runtime = nullptr;
+  }
+
+  void initializeGlobal();
+
+  void pushCallStack(const std::wstring &filename, const std::wstring &funcname,
+                     size_t column, size_t line) {
+    _callstacks.rbegin()->position.column = column;
+    _callstacks.rbegin()->position.line = line;
+    _callstacks.rbegin()->filename = filename;
+    _callstacks.push_back({
+        .position = {.funcname = funcname},
+    });
+  }
+
+  void popCallStack() { _callstacks.pop_back(); }
+
+  std::vector<JSStackFrame> trace(const std::wstring &filename, size_t column,
+                                  size_t line) {
+    auto result = _callstacks;
+    result.rbegin()->filename = filename;
+    result.rbegin()->position.column = column;
+    result.rbegin()->position.line = line;
+    return result;
+  }
+
+  const std::vector<JSStackFrame> &getCallStack() { return _callstacks; }
+
+  void setCallStack(const std::vector<JSStackFrame> &stacks) {
+    _callstacks = stacks;
   }
 
   JSRuntime *getRuntime() { return _runtime; }
@@ -12865,13 +12926,31 @@ public:
     _current = scope;
   }
 
+  void recycle(JSValue *val) { _current->getRoot()->addChild(val->getAtom()); }
+
+  void recycle(JSAtom *atom) { _current->getRoot()->addChild(atom); }
+
+  JSValue *checkUninitialized(JSValue *value) {
+    if (value->getType() == JS_TYPE::UNINITIALIZED) {
+      return createException(JSException::TYPE::REFERENCE,
+                             L"Cannot access variable before initialization");
+    }
+    return nullptr;
+  }
+
   JSValue *createUndefined() {
     return _current->createValue(new JSUndefined{});
   }
+
   JSValue *createUninitialized() {
     return _current->createValue(new JSUninitialize{});
   }
+
   JSValue *createNull() { return _current->createValue(new JSNull{}); }
+
+  JSValue *createSymbol(const std::wstring &description = L"") {
+    return _current->createValue(new JSSymbol{description});
+  }
 
   JSValue *createNumber(double value) {
     return _current->createValue(new JSNumber{value});
@@ -12930,7 +13009,8 @@ public:
                            const std::wstring &message,
                            const std::wstring &filename = L"",
                            size_t column = 0, size_t line = 0) {
-    return _current->createValue(new JSException{type, message, {}});
+    return _current->createValue(
+        new JSException{type, message, trace(filename, column, line)});
   }
 
   JSValue *getGlobal() { return _global; }
@@ -12964,6 +13044,13 @@ public:
 
   JSValue *call(JSValue *func, JSValue *self,
                 const std::vector<JSValue *> args) {
+    if (auto err = checkUninitialized(func)) {
+      return err;
+    }
+    if (func->getType() < JS_TYPE::FUNCTION) {
+      return createException(JSException::TYPE::TYPE,
+                             L"vairable is not a function");
+    }
     auto fn = const_cast<JSCallable *>(
         dynamic_cast<const JSCallable *>(func->getAtom()->getData()));
     for (auto &[key, val] : fn->getClosure()) {
@@ -12974,37 +13061,73 @@ public:
   }
 
   JSValue *construct(JSValue *constructor, const std::vector<JSValue *> args) {
+    if (auto err = checkUninitialized(constructor)) {
+      return err;
+    }
     auto obj = createObject();
-    call(constructor, obj, args);
+    auto res = call(constructor, obj, args);
+    if (res->getType() >= JS_TYPE::OBJECT) {
+      return res;
+    }
     return obj;
   }
 
   JSValue *setField(JSValue *obj, const std::wstring &name, JSValue *value) {
+    if (auto err = checkUninitialized(obj)) {
+      return err;
+    }
+    if (auto err = checkUninitialized(value)) {
+      return err;
+    }
     auto object = dynamic_cast<JSObject *>(obj->getData());
     return object->setField(this, obj, name, value);
   }
 
   JSValue *getField(JSValue *obj, const std::wstring &name) {
+    if (auto err = checkUninitialized(obj)) {
+      return err;
+    }
     auto object = dynamic_cast<JSObject *>(obj->getData());
     return object->getField(this, obj, name);
   }
 
   JSValue *setField(JSValue *obj, JSValue *name, JSValue *value) {
+    if (auto err = checkUninitialized(obj)) {
+      return err;
+    }
+    if (auto err = checkUninitialized(name)) {
+      return err;
+    }
+    if (auto err = checkUninitialized(value)) {
+      return err;
+    }
     auto object = dynamic_cast<JSObject *>(obj->getData());
     return object->setField(this, obj, name, value);
   }
 
   JSValue *getField(JSValue *obj, JSValue *name) {
+    if (auto err = checkUninitialized(obj)) {
+      return err;
+    }
+    if (auto err = checkUninitialized(name)) {
+      return err;
+    }
     auto object = dynamic_cast<JSObject *>(obj->getData());
     return object->getField(this, obj, name);
   }
 
   JSValue *setIndex(JSValue *obj, size_t index, JSValue *value) {
+    if (auto err = checkUninitialized(obj)) {
+      return err;
+    }
     auto object = dynamic_cast<JSObject *>(obj->getData());
     return object->setIndex(this, obj, index, value);
   }
 
   JSValue *getIndex(JSValue *obj, size_t index) {
+    if (auto err = checkUninitialized(obj)) {
+      return err;
+    }
     auto object = dynamic_cast<JSObject *>(obj->getData());
     return object->getIndex(this, obj, index);
   }
@@ -13015,6 +13138,9 @@ public:
   }
 
   JSValue *toString(JSValue *value) {
+    if (auto err = checkUninitialized(value)) {
+      return err;
+    }
     return _current->createValue(value->getData()->toString());
   }
 
@@ -13026,6 +13152,70 @@ public:
     return def;
   }
 };
+
+class JSSymbolConstructor {
+public:
+  static JSValue *constructor(JSContext *ctx, JSValue *self,
+                              std::vector<JSValue *> args) {
+    std::wstring description;
+    if (!args.empty()) {
+      auto str = ctx->toString(args[0]);
+      if (str->getType() == JS_TYPE::EXCEPTION) {
+        return str;
+      }
+      description = ctx->checkedString(str);
+    }
+    return ctx->createSymbol(description);
+  }
+
+  static JSValue *initialize(JSContext *ctx) {
+    auto global = ctx->getGlobal();
+    auto Symbol =
+        ctx->createNativeFunction(JSSymbolConstructor::constructor, L"Symbol");
+    auto err = ctx->setField(global, L"Symbol", Symbol);
+    if (err) {
+      return err;
+    }
+    return nullptr;
+  }
+};
+
+class JSFunctionConstructor {
+public:
+  static JSValue *constructor(JSContext *ctx, JSValue *_,
+                              std::vector<JSValue *> args) {
+    return nullptr;
+  }
+  static JSValue *initialize(JSContext *ctx) {
+    auto global = ctx->getGlobal();
+    auto prototype = ctx->createObject(ctx->createNull());
+    auto Function = ctx->getScope()->createValue(
+        new JSNativeFunction{prototype->getAtom(),
+                             L"Function",
+                             &JSFunctionConstructor::constructor,
+                             {}});
+    prototype->getAtom()->addChild(Function->getAtom());
+    auto err = ctx->setField(Function, L"constructor", Function);
+    if (err->getType() == JS_TYPE::EXCEPTION) {
+      return err;
+    }
+    err = ctx->setField(prototype, L"constructor", Function);
+    if (err) {
+      return err;
+    }
+    err = ctx->setField(Function, L"prototype", prototype);
+    if (err) {
+      return err;
+    }
+    err = ctx->setField(global, L"Function", Function);
+    if (err) {
+      return err;
+    }
+    return nullptr;
+  }
+};
+
+class JSObjectConstructor {};
 
 struct JSEvalContext {
   size_t pc;
@@ -13058,12 +13248,15 @@ private:
 
 private:
   JSValue *call(JSContext *ctx, JSValue *func, JSValue *self,
-                std::vector<JSValue *> args) {
+                std::vector<JSValue *> args, const JSStackFrame &frame) {
+    ctx->pushCallStack(frame.filename, frame.position.funcname,
+                       frame.position.column, frame.position.line);
     auto scope = ctx->getScope();
     ctx->pushScope();
     auto res = ctx->call(func, self, args);
     auto result = scope->createValue(res->getAtom());
     ctx->popScope();
+    ctx->popCallStack();
     return result;
   }
   JSValue *construct(JSContext *ctx, JSValue *constructor,
@@ -13135,12 +13328,11 @@ private:
   }
   void runRef(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     auto identifier = getString(program, ectx.pc);
-    auto val = *ectx.stack.rbegin();
-    ectx.stack.pop_back();
     auto func = *ectx.stack.rbegin();
     auto callable = dynamic_cast<JSCallable *>(func->getData());
+    auto val = ctx->queryValue(identifier);
     if (callable->getClosure(identifier)) {
-      ctx->getScope()->getRoot()->addChild(callable->getClosure(identifier));
+      ctx->recycle(callable->getClosure(identifier));
     }
     callable->setClosure(identifier, val->getAtom());
     func->getAtom()->addChild(val->getAtom());
@@ -13247,6 +13439,7 @@ private:
   void runSetSetter(JSContext *ctx, const JSProgram &program,
                     JSEvalContext &ectx) {}
   void runCall(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
+    auto frame = program.stacks.at(ectx.pc);
     auto size = getUint32(program, ectx.pc);
     std::vector<JSValue *> arguments;
     for (size_t index = 0; index < size; index++) {
@@ -13256,7 +13449,8 @@ private:
     }
     auto func = *ectx.stack.rbegin();
     ectx.stack.pop_back();
-    auto result = call(ctx, func, ctx->createUndefined(), arguments);
+    frame.position.funcname = func->getData()->cast<JSCallable>()->getName();
+    auto result = call(ctx, func, ctx->createUndefined(), arguments, frame);
     if (result->getType() == JS_TYPE::EXCEPTION) {
       ectx.stack.push_back(result);
       ectx.pc = program.codes.size();
@@ -13266,6 +13460,7 @@ private:
   }
   void runMemberCall(JSContext *ctx, const JSProgram &program,
                      JSEvalContext &ectx) {
+    auto frame = program.stacks.at(ectx.pc);
     auto size = getUint32(program, ectx.pc);
     std::vector<JSValue *> arguments;
     for (size_t index = 0; index < size; index++) {
@@ -13283,7 +13478,8 @@ private:
       ectx.pc = program.codes.size();
       return;
     }
-    ectx.stack.push_back(call(ctx, func, obj, arguments));
+    frame.position.funcname = func->getData()->cast<JSCallable>()->getName();
+    ectx.stack.push_back(call(ctx, func, obj, arguments, frame));
   }
   void runPrivateMemberCall(JSContext *ctx, const JSProgram &program,
                             JSEvalContext &ectx) {
@@ -13297,12 +13493,14 @@ private:
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runTypeof(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
 
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runNew(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     auto size = getUint32(program, ectx.pc);
     std::vector<JSValue *> arguments;
@@ -13321,6 +13519,7 @@ private:
     }
     ectx.stack.push_back(result);
   }
+
   void runDelete(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
     // not implement
@@ -13587,64 +13786,77 @@ private:
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runThrow(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runEmptyCheck(JSContext *ctx, const JSProgram &program,
                      JSEvalContext &ectx) {
     if (ectx.stack.empty()) {
       ectx.stack.push_back(ctx->createUndefined());
     }
   }
+
   void runClass(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runWith(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runSetInitializer(JSContext *ctx, const JSProgram &program,
                          JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runImport(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runExport(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runExportAll(JSContext *ctx, const JSProgram &program,
                     JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runAssert(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runIterator(JSContext *ctx, const JSProgram &program,
                    JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runSetPrivateField(JSContext *ctx, const JSProgram &program,
                           JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runGetPrivateField(JSContext *ctx, const JSProgram &program,
                           JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
+
   void runSetPrivateInitializer(JSContext *ctx, const JSProgram &program,
                                 JSEvalContext &ectx) {
     // not implement
@@ -14110,10 +14322,21 @@ inline JSRuntime::~JSRuntime() {
 }
 
 /*****************************************/
+/* JSSymbol Implement                    */
+/*****************************************/
+
+inline JSBase *JSSymbol::clone() { return this; }
+
+inline JSBase *JSSymbol::toString() {
+  return new JSString(L"Symbol(" + _description + L")");
+}
+
+/*****************************************/
 /* JSString Implement                    */
 /*****************************************/
 
 inline JSBase *JSString::toString() { return new JSString(_value); }
+
 inline JSBase *JSString::clone() { return new JSString(_value); }
 
 /*****************************************/
@@ -14134,6 +14357,7 @@ inline JSBase *JSNumber::clone() { return new JSNumber(_value); };
 inline JSBase *JSBoolean::toString() {
   return new JSString(_value ? L"true" : L"false");
 }
+
 inline JSBase *JSBoolean::clone() { return new JSBoolean(_value); }
 /*****************************************/
 /* JSUndefined Implement                   */
@@ -14149,6 +14373,7 @@ inline JSBase *JSUndefined::clone() { return this; }
 inline JSBase *JSObject ::toString() {
   return new JSString(L"[Object object]");
 }
+
 inline JSBase *JSObject ::clone() { return this; }
 
 inline JSValue *JSObject ::getField(JSContext *ctx, JSValue *self,
@@ -14199,7 +14424,7 @@ inline JSValue *JSObject ::setField(JSContext *ctx, JSValue *self,
                      .value = value->getAtom(),
                      .writable = true};
   }
-  return value;
+  return nullptr;
 }
 
 inline JSValue *JSObject::getField(JSContext *ctx, JSValue *self,
@@ -14335,7 +14560,7 @@ inline JSValue *JSArray ::setIndex(JSContext *ctx, JSValue *self, size_t index,
   if (index >= _length) {
     _length = index + 1;
   }
-  return value;
+  return nullptr;
 }
 /*****************************************/
 /* JSNull Implement                      */
@@ -14375,9 +14600,7 @@ inline JSValue *JSFunction::call(JSContext *ctx, JSValue *self,
 /*****************************************/
 /* JSUninitialize Implement              */
 /*****************************************/
-inline JSBase *JSUninitialize::toString() {
-  return new JSString(L"Initialized");
-}
+inline JSBase *JSUninitialize::toString() { return nullptr; }
 inline JSBase *JSUninitialize::clone() { return this; }
 
 /*****************************************/
@@ -14386,6 +14609,7 @@ inline JSBase *JSUninitialize::clone() { return this; }
 
 inline JSBase *JSException ::toString() {
   std::wstringstream ss;
+  ss << getTypeName() << L": ";
   ss << _message << std::endl;
   for (auto it = _stack.rbegin(); it != _stack.rend(); it++) {
     auto funcname = it->position.funcname;
@@ -14408,6 +14632,9 @@ inline JSBase *JSException::clone() { return this; }
 /*****************************************/
 inline JSValue *JSContext::eval(const std::wstring &filename,
                                 const std::wstring &source) {
+  if (_global->getType() == JS_TYPE::EXCEPTION) {
+    return _global;
+  }
   if (!_runtime->hasProgram(filename)) {
     auto root = _runtime->getParser()->parse(source);
     if (root->type == JS_NODE_TYPE::ERROR) {
@@ -14440,6 +14667,15 @@ inline JSValue *JSContext::eval(const std::wstring &filename,
   auto vm = _runtime->getVirtualMachine();
   auto value = vm->eval(this, program);
   return value;
+}
+
+inline void JSContext::initializeGlobal() {
+  _global = createObject(createNull());
+  auto err = JSFunctionConstructor::initialize(this);
+  if (err) {
+    _global = err;
+    return;
+  }
 }
 
 } // namespace neo
