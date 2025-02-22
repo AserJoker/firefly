@@ -1908,6 +1908,7 @@ enum class JS_OPERATOR {
   OBJECT,
   ARRAY,
   SUPER_CALL,
+  SET_FUNCTION_NAME,
   FUNCTION,
   ASYNCFUNCTION,
   ARROW,
@@ -2008,8 +2009,7 @@ struct JSProgram {
   std::vector<uint16_t> codes;
   std::vector<JSPosition> stacks;
   JSNode *error;
-  JSProgram(const std::wstring &filename)
-      : filename(filename), error(nullptr) {}
+  JSProgram() : error(nullptr) {}
   virtual ~JSProgram() {
     if (error) {
       delete error;
@@ -2531,6 +2531,12 @@ struct JSProgram {
       }
       case JS_OPERATOR::SET_PRIVATE_METHOD: {
         ss << L"SET_PRIVATE_METHOD";
+        break;
+      }
+      case JS_OPERATOR::SET_FUNCTION_NAME: {
+        auto idx = *(uint32_t *)(codes.data() + offset);
+        ss << L"SET_FUNCTION_NAME \"" << constants[idx] << L"\"";
+        offset += 2;
         break;
       }
       }
@@ -9491,16 +9497,35 @@ class JSScope;
 class JSAtom;
 
 class JSBase {
-public:
-  JSBase() {}
-  virtual ~JSBase() {}
+private:
+  size_t _ref;
 
-  virtual inline JSValue *toString(JSContext *ctx) = 0;
+public:
+  JSBase() : _ref(0) {  }
+
+  virtual ~JSBase() {  }
+
+  size_t addRef() { return ++_ref; }
+
+  size_t dispose() { return --_ref; }
+
+  void release() {
+    if (!dispose()) {
+      delete this;
+    }
+  }
+
+  virtual inline JSBase *toString() = 0;
+
+  virtual inline JSBase *clone() = 0;
+
+  template <class T> T *cast() { return dynamic_cast<T *>(this); }
 };
 
 class JSUninitialize : public JSBase {
 public:
-  JSValue *toString(JSContext *ctx);
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
 };
 
 class JSAtom {
@@ -9519,13 +9544,16 @@ public:
     if (parent) {
       parent->addChild(this);
     }
+    if (_data) {
+      _data->addRef();
+    }
   }
 
   JSAtom() : _type(JS_TYPE::INTERNAL), _data(nullptr) {}
 
   ~JSAtom() {
     if (_data != nullptr) {
-      delete _data;
+      _data->release();
       _data = nullptr;
     }
     while (!_children.empty()) {
@@ -9555,10 +9583,14 @@ public:
   JSBase *getData() { return _data; }
 
   void setData(JSBase *data) {
-    if (_data && _data != data) {
-      delete _data;
+    if (_data == data) {
+      return;
+    }
+    if (_data) {
+      _data->release();
     }
     _data = data;
+    _data->addRef();
   }
 
   const JS_TYPE &getType() const { return _type; }
@@ -9710,6 +9742,8 @@ public:
 
   JSScope *getParent() { return _parent; }
 
+  JSAtom *getRoot() { return _root; }
+
   void removeChild(JSScope *scope) {
     auto it = std::find(_children.begin(), _children.end(), scope);
     if (it != _children.end()) {
@@ -9763,7 +9797,8 @@ public:
   void setValue(double value) { _value = value; }
 
 public:
-  inline JSValue *toString(JSContext *ctx) override;
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
 };
 
 class JSString : public JSBase {
@@ -9776,7 +9811,8 @@ public:
   void setValue(const std::wstring &value) { _value = value; }
 
 public:
-  inline JSValue *toString(JSContext *ctx) override;
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
 };
 
 class JSBoolean : public JSBase {
@@ -9789,12 +9825,14 @@ public:
   void setValue(bool value) { _value = value; }
 
 public:
-  inline JSValue *toString(JSContext *ctx) override;
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
 };
 
 class JSUndefined : public JSBase {
 public:
-  inline JSValue *toString(JSContext *ctx) override;
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
 };
 
 struct JSField {
@@ -9845,7 +9883,8 @@ public:
   void setExtensible(bool value) { _extensible = value; }
 
 public:
-  inline JSValue *toString(JSContext *ctx) override;
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
 
   virtual std::vector<std::wstring> getKeys(JSContext *ctx) {
     std::vector<std::wstring> keys;
@@ -9894,7 +9933,7 @@ public:
   size_t getLength() const { return _length; }
 
 public:
-  inline JSValue *toString(JSContext *ctx) override;
+  inline JSBase *toString() override;
 
   std::vector<std::wstring> getKeys(JSContext *ctx) override {
     std::vector<std::wstring> keys;
@@ -9913,7 +9952,9 @@ public:
 class JSNull : public JSObject {
 public:
   JSNull() : JSObject(nullptr) {}
-  inline JSValue *toString(JSContext *ctx) override;
+
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
 };
 
 class JSCallable : public JSObject {
@@ -9934,8 +9975,21 @@ public:
 
   const std::wstring &getName() const { return _name; }
 
+  void setName(const std::wstring &name) { _name = name; }
+
+  void setClosure(const std::wstring &name, JSAtom *atom) {
+    _closure[name] = atom;
+  }
+
+  JSAtom *getClosure(const std::wstring &name) {
+    if (_closure.contains(name)) {
+      return _closure.at(name);
+    }
+    return nullptr;
+  }
+
 public:
-  inline JSValue *toString(JSContext *ctx) override;
+  inline JSBase *toString() override;
 };
 
 class JSNativeFunction : public JSCallable {
@@ -9968,20 +10022,20 @@ public:
   const std::vector<JSStackFrame> &getStack() const { return _stack; }
 
 public:
-  inline JSValue *toString(JSContext *ctx) override;
+  inline JSBase *toString() override;
+  inline JSBase *clone() override;
 };
 
 class JSFunction : public JSCallable {
 private:
-  JSProgram *_program;
+  std::wstring _path;
   size_t _address;
 
 public:
-  JSFunction(JSAtom *prototype, const std::wstring &name, JSProgram *program,
-             size_t address,
+  JSFunction(JSAtom *prototype, const std::wstring &name,
+             const std::wstring &path, size_t address,
              const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSCallable(prototype, name, closure), _program(program),
-        _address(address) {}
+      : JSCallable(prototype, name, closure), _path(path), _address(address) {}
   JSValue *call(JSContext *ctx, JSValue *self,
                 const std::vector<JSValue *> args) override;
 };
@@ -9994,15 +10048,36 @@ private:
   JSParser *_parser;
   JSCodeGenerator *_generator;
   JSVirtualMachine *_vm;
+  std::unordered_map<std::wstring, JSProgram> _programs;
 
 public:
   JSRuntime();
+
   ~JSRuntime();
+
   JSParser *getParser() { return _parser; }
+
   JSCodeGenerator *getGenerator() { return _generator; }
+
   JSVirtualMachine *getVirtualMachine() { return _vm; }
 
   void setDirective(const std::wstring &directive) {}
+
+  const JSProgram &getProgram(const std::wstring &path) const {
+    return _programs.at(path);
+  }
+
+  bool hasProgram(const std::wstring &path) const {
+    return _programs.contains(path);
+  }
+
+  JSProgram &getProgram(const std::wstring &path) {
+    auto &program = _programs[path];
+    if (program.filename.empty()) {
+      program.filename = path;
+    }
+    return program;
+  }
 };
 
 class JSContext {
@@ -10097,6 +10172,22 @@ public:
     return val;
   }
 
+  JSValue *createFunction(
+      const std::wstring &name, const std::wstring &filename, size_t address,
+      const std::unordered_map<std::wstring, JSValue *> &closure = {}) {
+    std::unordered_map<std::wstring, JSAtom *> clo;
+    for (auto &[n, val] : closure) {
+      clo[n] = val->getAtom();
+    }
+    auto val = _current->createValue(
+        JS_TYPE::FUNCTION,
+        new JSFunction{nullptr, name, filename, address, clo});
+    for (auto &[n, atom] : clo) {
+      val->getAtom()->addChild(atom);
+    }
+    return val;
+  }
+
   JSValue *createException(const std::wstring &message,
                            const std::wstring &filename = L"",
                            size_t column = 0, size_t line = 0) {
@@ -10126,15 +10217,8 @@ public:
     if (variable->isConst() && variable->getType() != JS_TYPE::UNINITIALIZED) {
       return createException(L"TypeError: Assignment to constant variable.");
     }
-    if (value->getType() >= JS_TYPE::OBJECT) {
-      variable->setAtom(value->getAtom());
-    } else {
-      if (value->getType() == JS_TYPE::UNDEFINED) {
-        variable->setAtom(
-            _current->createAtom(JS_TYPE::UNDEFINED, new JSUndefined{}));
-      }
-      // TODO:
-    }
+    _current->getRoot()->addChild(variable->getAtom());
+    variable->getAtom()->setData(value->getData()->clone());
     return value;
   }
 
@@ -10145,9 +10229,6 @@ public:
     for (auto &[key, val] : fn->getClosure()) {
       auto value = _current->createValue(val);
       _current->storeValue(key, value);
-    }
-    for (auto &arg : args) {
-      _current->createValue(arg->getAtom());
     }
     return fn->call(this, self, args);
   }
@@ -10193,10 +10274,16 @@ public:
     return object->getKeys(this);
   }
 
-  std::wstring toString(JSValue *value) {
-    auto str = value->getAtom()->getData()->toString(this);
-    auto string = (JSString *)str->getAtom()->getData();
-    return string->getValue();
+  JSValue *toString(JSValue *value) {
+    return _current->createValue(JS_TYPE::STRING, value->getData()->toString());
+  }
+
+  const std::wstring &checkedString(JSValue *value) const {
+    static std::wstring def = L"";
+    if (value->getType() == JS_TYPE::STRING) {
+      return value->getData()->cast<JSString>()->getValue();
+    }
+    return def;
   }
 };
 
@@ -10832,6 +10919,8 @@ public:
         pushString(program, declar.name);
         break;
       case JS_DECLARATION_TYPE::FUNCTION: {
+        pushOperator(program, JS_OPERATOR::VAR);
+        pushString(program, declar.name);
         auto func = declar.declaration->cast<JSFunctionBaseNode>();
         if (func->async) {
           if (func->generator) {
@@ -10848,6 +10937,13 @@ public:
         }
         ctx[declar.declaration] = program.codes.size();
         pushAddress(program, 0);
+        pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
+        pushString(program, declar.name);
+        for (auto ref : func->closure) {
+          pushOperator(program, JS_OPERATOR::UNDEFINED);
+          pushOperator(program, JS_OPERATOR::REF);
+          pushString(program, ref);
+        }
         pushOperator(program, JS_OPERATOR::STORE);
         pushString(program, declar.name);
         pushOperator(program, JS_OPERATOR::POP);
@@ -11107,6 +11203,12 @@ public:
     }
     auto address = program.codes.size();
     pushAddress(program, 0);
+    for (auto &ref : func->closure) {
+      pushOperator(program, JS_OPERATOR::LOAD);
+      pushString(program, ref);
+      pushOperator(program, JS_OPERATOR::REF);
+      pushString(program, ref);
+    }
     pushOperator(program, JS_OPERATOR::JMP);
     auto end = program.codes.size();
     pushAddress(program, 0);
@@ -11126,6 +11228,8 @@ public:
       pushOperator(program, JS_OPERATOR::LOAD);
       pushString(program, func->identifier->location.get(source));
       for (auto &ref : func->closure) {
+        pushOperator(program, JS_OPERATOR::LOAD);
+        pushString(program, ref);
         pushOperator(program, JS_OPERATOR::REF);
         pushString(program, ref);
       }
@@ -11146,6 +11250,8 @@ public:
       auto address = program.codes.size();
       pushAddress(program, 0);
       for (auto &ref : func->closure) {
+        pushOperator(program, JS_OPERATOR::LOAD);
+        pushString(program, ref);
         pushOperator(program, JS_OPERATOR::REF);
         pushString(program, ref);
       }
@@ -11641,15 +11747,15 @@ public:
         pushOperator(program, JS_OPERATOR::SET_FIELD);
         pushOperator(program, JS_OPERATOR::POP);
       } else if (prop->type == JS_NODE_TYPE::OBJECT_METHOD) {
-        auto p = prop->cast<JSObjectMethodNode>();
-        if (p->async) {
-          if (p->generator) {
+        auto func = prop->cast<JSObjectMethodNode>();
+        if (func->async) {
+          if (func->generator) {
             pushOperator(program, JS_OPERATOR::ASYNCGENERATOR);
           } else {
             pushOperator(program, JS_OPERATOR::ASYNCFUNCTION);
           }
         } else {
-          if (p->generator) {
+          if (func->generator) {
             pushOperator(program, JS_OPERATOR::GENERATOR);
           } else {
             pushOperator(program, JS_OPERATOR::FUNCTION);
@@ -11657,38 +11763,46 @@ public:
         }
         auto address = program.codes.size();
         pushAddress(program, 0);
+        pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
+        pushString(program, func->key->location.get(source));
+        for (auto &ref : func->closure) {
+          pushOperator(program, JS_OPERATOR::LOAD);
+          pushString(program, ref);
+          pushOperator(program, JS_OPERATOR::REF);
+          pushString(program, ref);
+        }
         pushOperator(program, JS_OPERATOR::JMP);
         auto end_address = program.codes.size();
         pushAddress(program, 0);
         *(size_t *)(program.codes.data() + address) = program.codes.size();
-        auto err = resolveFunctionDeclaration(source, p, program);
+        auto err = resolveFunctionDeclaration(source, func, program);
         if (err) {
           return err;
         }
         *(size_t *)(program.codes.data() + end_address) = program.codes.size();
-        if (p->computed) {
-          auto err = resolve(source, p->key, program);
+        if (func->computed) {
+          auto err = resolve(source, func->key, program);
           if (err) {
             return err;
           }
         } else {
           pushOperator(program, JS_OPERATOR::STR);
-          pushString(program, p->key->location.get(source));
+          pushString(program, func->key->location.get(source));
         }
         pushOperator(program, JS_OPERATOR::PUSH_VALUE);
         pushUint32(program, 2);
         pushOperator(program, JS_OPERATOR::SET_FIELD);
         pushOperator(program, JS_OPERATOR::POP);
       } else if (prop->type == JS_NODE_TYPE::OBJECT_ACCESSOR) {
-        auto p = prop->cast<JSObjectAccessorNode>();
-        if (p->async) {
-          if (p->generator) {
+        auto func = prop->cast<JSObjectAccessorNode>();
+        if (func->async) {
+          if (func->generator) {
             pushOperator(program, JS_OPERATOR::ASYNCGENERATOR);
           } else {
             pushOperator(program, JS_OPERATOR::ASYNCFUNCTION);
           }
         } else {
-          if (p->generator) {
+          if (func->generator) {
             pushOperator(program, JS_OPERATOR::GENERATOR);
           } else {
             pushOperator(program, JS_OPERATOR::FUNCTION);
@@ -11696,27 +11810,35 @@ public:
         }
         auto address = program.codes.size();
         pushAddress(program, 0);
+        pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
+        pushString(program, func->key->location.get(source));
+        for (auto &ref : func->closure) {
+          pushOperator(program, JS_OPERATOR::LOAD);
+          pushString(program, ref);
+          pushOperator(program, JS_OPERATOR::REF);
+          pushString(program, ref);
+        }
         pushOperator(program, JS_OPERATOR::JMP);
         auto end_address = program.codes.size();
         pushAddress(program, 0);
         *(size_t *)(program.codes.data() + address) = program.codes.size();
-        auto err = resolveFunctionDeclaration(source, p, program);
+        auto err = resolveFunctionDeclaration(source, func, program);
         if (err) {
           return err;
         }
         *(size_t *)(program.codes.data() + end_address) = program.codes.size();
-        if (p->computed) {
-          auto err = resolve(source, p->key, program);
+        if (func->computed) {
+          auto err = resolve(source, func->key, program);
           if (err) {
             return err;
           }
         } else {
           pushOperator(program, JS_OPERATOR::STR);
-          pushString(program, p->key->location.get(source));
+          pushString(program, func->key->location.get(source));
         }
         pushOperator(program, JS_OPERATOR::PUSH_VALUE);
         pushUint32(program, 2);
-        if (p->kind == JS_ACCESSOR_TYPE::GET) {
+        if (func->kind == JS_ACCESSOR_TYPE::GET) {
           pushOperator(program, JS_OPERATOR::SET_GETTER);
         } else {
           pushOperator(program, JS_OPERATOR::SET_SETTER);
@@ -11786,15 +11908,15 @@ public:
     pushOperator(program, JS_OPERATOR::WITH);
     for (auto prop : declaration->properties) {
       if (prop->type == JS_NODE_TYPE::CLASS_METHOD) {
-        auto p = prop->cast<JSClassMethodNode>();
-        if (p->async) {
-          if (p->generator) {
+        auto func = prop->cast<JSClassMethodNode>();
+        if (func->async) {
+          if (func->generator) {
             pushOperator(program, JS_OPERATOR::ASYNCGENERATOR);
           } else {
             pushOperator(program, JS_OPERATOR::ASYNCFUNCTION);
           }
         } else {
-          if (p->generator) {
+          if (func->generator) {
             pushOperator(program, JS_OPERATOR::GENERATOR);
           } else {
             pushOperator(program, JS_OPERATOR::FUNCTION);
@@ -11802,47 +11924,55 @@ public:
         }
         auto address = program.codes.size();
         pushAddress(program, 0);
+        pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
+        pushString(program, func->identifier->location.get(source));
+        for (auto &ref : func->closure) {
+          pushOperator(program, JS_OPERATOR::LOAD);
+          pushString(program, ref);
+          pushOperator(program, JS_OPERATOR::REF);
+          pushString(program, ref);
+        }
         pushOperator(program, JS_OPERATOR::JMP);
         auto end_address = program.codes.size();
         pushAddress(program, 0);
         *(size_t *)(program.codes.data() + address) = program.codes.size();
-        auto err = resolveFunctionDeclaration(source, p, program);
+        auto err = resolveFunctionDeclaration(source, func, program);
         if (err) {
           return err;
         }
         *(size_t *)(program.codes.data() + end_address) = program.codes.size();
-        if (p->computed) {
-          auto err = resolve(source, p->identifier, program);
+        if (func->computed) {
+          auto err = resolve(source, func->identifier, program);
           if (err) {
             return err;
           }
         } else {
           pushOperator(program, JS_OPERATOR::STR);
-          pushString(program, p->identifier->location.get(source));
+          pushString(program, func->identifier->location.get(source));
         }
         pushOperator(program, JS_OPERATOR::PUSH_VALUE);
         pushUint32(program, 2);
-        if (!p->static_) {
+        if (!func->static_) {
           pushOperator(program, JS_OPERATOR::FALSE);
         } else {
           pushOperator(program, JS_OPERATOR::TRUE);
         }
-        if (p->identifier->type == JS_NODE_TYPE::PRIVATE_NAME) {
+        if (func->identifier->type == JS_NODE_TYPE::PRIVATE_NAME) {
           pushOperator(program, JS_OPERATOR::SET_PRIVATE_METHOD);
         } else {
           pushOperator(program, JS_OPERATOR::SET_METHOD);
         }
         pushOperator(program, JS_OPERATOR::POP);
       } else if (prop->type == JS_NODE_TYPE::CLASS_ACCESSOR) {
-        auto p = prop->cast<JSClassAccessorNode>();
-        if (p->async) {
-          if (p->generator) {
+        auto func = prop->cast<JSClassAccessorNode>();
+        if (func->async) {
+          if (func->generator) {
             pushOperator(program, JS_OPERATOR::ASYNCGENERATOR);
           } else {
             pushOperator(program, JS_OPERATOR::ASYNCFUNCTION);
           }
         } else {
-          if (p->generator) {
+          if (func->generator) {
             pushOperator(program, JS_OPERATOR::GENERATOR);
           } else {
             pushOperator(program, JS_OPERATOR::FUNCTION);
@@ -11850,39 +11980,47 @@ public:
         }
         auto address = program.codes.size();
         pushAddress(program, 0);
+        pushOperator(program, JS_OPERATOR::SET_FUNCTION_NAME);
+        pushString(program, func->identifier->location.get(source));
+        for (auto &ref : func->closure) {
+          pushOperator(program, JS_OPERATOR::LOAD);
+          pushString(program, ref);
+          pushOperator(program, JS_OPERATOR::REF);
+          pushString(program, ref);
+        }
         pushOperator(program, JS_OPERATOR::JMP);
         auto end_address = program.codes.size();
         pushAddress(program, 0);
         *(size_t *)(program.codes.data() + address) = program.codes.size();
-        auto err = resolveFunctionDeclaration(source, p, program);
+        auto err = resolveFunctionDeclaration(source, func, program);
         if (err) {
           return err;
         }
         *(size_t *)(program.codes.data() + end_address) = program.codes.size();
-        if (p->computed) {
-          auto err = resolve(source, p->identifier, program);
+        if (func->computed) {
+          auto err = resolve(source, func->identifier, program);
           if (err) {
             return err;
           }
         } else {
           pushOperator(program, JS_OPERATOR::STR);
-          pushString(program, p->identifier->location.get(source));
+          pushString(program, func->identifier->location.get(source));
         }
         pushOperator(program, JS_OPERATOR::PUSH_VALUE);
         pushUint32(program, 2);
-        if (!p->static_) {
+        if (!func->static_) {
           pushOperator(program, JS_OPERATOR::FALSE);
         } else {
           pushOperator(program, JS_OPERATOR::TRUE);
         }
-        if (p->identifier->type == JS_NODE_TYPE::PRIVATE_NAME) {
-          if (p->kind == JS_ACCESSOR_TYPE::GET) {
+        if (func->identifier->type == JS_NODE_TYPE::PRIVATE_NAME) {
+          if (func->kind == JS_ACCESSOR_TYPE::GET) {
             pushOperator(program, JS_OPERATOR::SET_PRIVATE_ACCESSOR_GETTER);
           } else {
             pushOperator(program, JS_OPERATOR::SET_PRIVATE_ACCESSOR_SETTER);
           }
         } else {
-          if (p->kind == JS_ACCESSOR_TYPE::GET) {
+          if (func->kind == JS_ACCESSOR_TYPE::GET) {
             pushOperator(program, JS_OPERATOR::SET_ACCESSOR_GETTER);
           } else {
             pushOperator(program, JS_OPERATOR::SET_ACCESSOR_SETTER);
@@ -12718,14 +12856,11 @@ public:
     return nullptr;
   }
 
-  JSProgram compile(const std::wstring &filename, const std::wstring &source,
-                    JSNode *node) {
-    JSProgram program = {filename};
+  void compile(JSProgram &program, const std::wstring &source, JSNode *node) {
     auto err = resolve(source, node, program);
     if (err) {
       program.error = err;
     }
-    return program;
   }
 };
 
@@ -12754,7 +12889,12 @@ private:
 private:
   JSValue *call(JSContext *ctx, JSValue *func, JSValue *self,
                 std::vector<JSValue *> args) {
-    return ctx->call(func, self, args);
+    auto scope = ctx->getScope();
+    ctx->pushScope();
+    auto res = ctx->call(func, self, args);
+    auto result = scope->createValue(res->getAtom());
+    ctx->popScope();
+    return result;
   }
   JSValue *construct(JSContext *ctx, JSValue *constructor,
                      std::vector<JSValue *> args) {
@@ -12824,7 +12964,16 @@ private:
     ectx.stack.push_back(value);
   }
   void runRef(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
+    auto identifier = getString(program, ectx.pc);
+    auto val = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto func = *ectx.stack.rbegin();
+    auto callable = dynamic_cast<JSCallable *>(func->getData());
+    if (callable->getClosure(identifier)) {
+      ctx->getScope()->getRoot()->addChild(callable->getClosure(identifier));
+    }
+    callable->setClosure(identifier, val->getAtom());
+    func->getAtom()->addChild(val->getAtom());
   }
   void runStr(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     auto str = getString(program, ectx.pc);
@@ -12855,8 +13004,9 @@ private:
   }
   void runFunction(JSContext *ctx, const JSProgram &program,
                    JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto entry = getAddress(program, ectx.pc);
+    auto func = ctx->createFunction(L"", program.filename, entry);
+    ectx.stack.push_back(func);
   }
   void runArrow(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement
@@ -13365,6 +13515,13 @@ private:
     ectx.pc = program.codes.size();
   }
 
+  void runSetFunctionName(JSContext *ctx, const JSProgram &program,
+                          JSEvalContext &ectx) {
+    auto name = getString(program, ectx.pc);
+    auto func = *ectx.stack.rbegin();
+    dynamic_cast<JSCallable *>(func->getData())->setName(name);
+  }
+
   JSValue *run(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     for (;;) {
       if (ectx.pc >= program.codes.size()) {
@@ -13700,6 +13857,9 @@ private:
       case JS_OPERATOR::SET_PRIVATE_METHOD:
         runSetPrivateMethod(ctx, program, ectx);
         break;
+      case JS_OPERATOR::SET_FUNCTION_NAME:
+        runSetFunctionName(ctx, program, ectx);
+        break;
       }
     }
     if (ectx.stack.empty()) {
@@ -13749,43 +13909,43 @@ inline JSRuntime::~JSRuntime() {
 /* JSString Implement                    */
 /*****************************************/
 
-inline JSValue *JSString::toString(JSContext *ctx) {
-  return ctx->createString(_value);
-}
+inline JSBase *JSString::toString() { return new JSString(_value); }
+inline JSBase *JSString::clone() { return new JSString(_value); }
 
 /*****************************************/
 /* JSNumber Implement                    */
 /*****************************************/
 
-inline JSValue *JSNumber::toString(JSContext *ctx) {
+inline JSBase *JSNumber::toString() {
   std::wstringstream ss;
   ss << _value;
-  return ctx->createString(ss.str());
+  return new JSString(ss.str());
 }
+inline JSBase *JSNumber::clone() { return new JSNumber(_value); };
 
 /*****************************************/
 /* JSBoolean Implement                   */
 /*****************************************/
 
-inline JSValue *JSBoolean ::toString(JSContext *ctx) {
-  return ctx->createString(_value ? L"true" : L"false");
+inline JSBase *JSBoolean::toString() {
+  return new JSString(_value ? L"true" : L"false");
 }
-
+inline JSBase *JSBoolean::clone() { return new JSBoolean(_value); }
 /*****************************************/
 /* JSUndefined Implement                   */
 /*****************************************/
 
-inline JSValue *JSUndefined ::toString(JSContext *ctx) {
-  return ctx->createString(L"undefined");
-}
+inline JSBase *JSUndefined::toString() { return new JSString(L"undefined"); }
+inline JSBase *JSUndefined::clone() { return this; }
 
 /*****************************************/
 /* JSObject Implement                   */
 /*****************************************/
 
-inline JSValue *JSObject ::toString(JSContext *ctx) {
-  return ctx->createString(L"[Object object]");
+inline JSBase *JSObject ::toString() {
+  return new JSString(L"[Object object]");
 }
+inline JSBase *JSObject ::clone() { return this; }
 
 inline JSValue *JSObject ::getField(JSContext *ctx, JSValue *self,
                                     const std::wstring &name) {
@@ -13857,7 +14017,7 @@ inline JSValue *JSObject::getField(JSContext *ctx, JSValue *self,
       }
     }
   }
-  return getField(ctx, self, name->getData()->toString(ctx));
+  return getField(ctx, self, ctx->checkedString(ctx->toString(name)));
 }
 
 inline JSValue *JSObject::setField(JSContext *ctx, JSValue *self, JSValue *name,
@@ -13870,9 +14030,7 @@ inline JSValue *JSObject::setField(JSContext *ctx, JSValue *self, JSValue *name,
     return setIndex(ctx, self, (size_t)idx, value);
   }
   if (name->getType() == JS_TYPE::SYMBOL) {
-    auto namestr =
-        dynamic_cast<JSString *>(name->getData()->toString(ctx)->getData())
-            ->getValue();
+    auto namestr = ctx->checkedString(ctx->toString(name));
     namestr = L"Symbol(" + namestr + L")";
     if (_symboledFields.contains(name->getAtom())) {
       auto &field = _symboledFields.at(name->getAtom());
@@ -13907,7 +14065,7 @@ inline JSValue *JSObject::setField(JSContext *ctx, JSValue *self, JSValue *name,
                                           .writable = true};
     }
   }
-  return setField(ctx, self, name->getData()->toString(ctx), value);
+  return setField(ctx, self, ctx->checkedString(ctx->toString(name)), value);
 }
 
 inline JSValue *JSObject::getIndex(JSContext *ctx, JSValue *self,
@@ -13924,18 +14082,20 @@ inline JSValue *JSObject::setIndex(JSContext *ctx, JSValue *self, size_t index,
 /* JSArray Implement                     */
 /*****************************************/
 
-inline JSValue *JSArray ::toString(JSContext *ctx) {
+inline JSBase *JSArray ::toString() {
   std::wstringstream ss;
   for (size_t index = 0; index < _length; index++) {
     if (_items.contains(index)) {
-      ss << ((JSString *)(_items[index]->getData()->toString(ctx)->getData()))
-                ->getValue();
+      auto str = _items[index]->getData()->toString();
+      str->addRef();
+      ss << str->cast<JSString>()->getValue();
+      str->dispose();
     }
     if (index != _length - 1) {
       ss << L",";
     }
   }
-  return ctx->createString(ss.str());
+  return new JSString(ss.str());
 }
 
 inline JSValue *JSArray ::getIndex(JSContext *ctx, JSValue *self,
@@ -13974,20 +14134,19 @@ inline JSValue *JSArray ::setIndex(JSContext *ctx, JSValue *self, size_t index,
 /* JSNull Implement                      */
 /*****************************************/
 
-inline JSValue *JSNull ::toString(JSContext *ctx) {
-  return ctx->createString(L"null");
-}
+inline JSBase *JSNull ::toString() { return new JSString(L"null"); }
+inline JSBase *JSNull ::clone() { return this; }
 
 /*****************************************/
 /* JSCallable Implement                  */
 /*****************************************/
 
-inline JSValue *JSCallable ::toString(JSContext *ctx) {
+inline JSBase *JSCallable ::toString() {
   auto name = _name;
   if (name.empty()) {
     name = L"anonymous";
   }
-  return ctx->createString(L"[Function " + name + L"]");
+  return new JSString(L"[Function " + name + L"]");
 }
 
 /*****************************************/
@@ -13995,23 +14154,30 @@ inline JSValue *JSCallable ::toString(JSContext *ctx) {
 /*****************************************/
 inline JSValue *JSFunction::call(JSContext *ctx, JSValue *self,
                                  std::vector<JSValue *> args) {
-  (void)_program;
-  (void)_address;
-  return ctx->createUndefined();
+  auto runtime = ctx->getRuntime();
+  auto vm = runtime->getVirtualMachine();
+  auto program = runtime->getProgram(_path);
+  auto current = ctx->getScope();
+  for (auto &[key, val] : getClosure()) {
+    auto value = current->createValue(val);
+    current->storeValue(key, value);
+  }
+  return vm->eval(ctx, program, {.pc = _address, .stack = args, .self = self});
 }
 
 /*****************************************/
 /* JSUninitialize Implement              */
 /*****************************************/
-inline JSValue *JSUninitialize::toString(JSContext *ctx) {
-  return ctx->createString(L"Initialized");
+inline JSBase *JSUninitialize::toString() {
+  return new JSString(L"Initialized");
 }
+inline JSBase *JSUninitialize::clone() { return this; }
 
 /*****************************************/
 /* JSException Implement                   */
 /*****************************************/
 
-inline JSValue *JSException ::toString(JSContext *ctx) {
+inline JSBase *JSException ::toString() {
   std::wstringstream ss;
   ss << _message << std::endl;
   for (auto it = _stack.rbegin(); it != _stack.rend(); it++) {
@@ -14026,31 +14192,36 @@ inline JSValue *JSException ::toString(JSContext *ctx) {
          << it->position.line << L":" << it->position.column << L")\n";
     }
   }
-  return ctx->createString(ss.str());
+  return new JSString(ss.str());
 }
+inline JSBase *JSException::clone() { return this; }
 
 /*****************************************/
 /* JSContext Implement                   */
 /*****************************************/
 inline JSValue *JSContext::eval(const std::wstring &filename,
                                 const std::wstring &source) {
-  auto root = _runtime->getParser()->parse(source);
-  if (root->type == JS_NODE_TYPE::ERROR) {
-    auto err = dynamic_cast<JSErrorNode *>(root);
+  if (!_runtime->hasProgram(filename)) {
+    auto root = _runtime->getParser()->parse(source);
+    if (root->type == JS_NODE_TYPE::ERROR) {
+      auto err = dynamic_cast<JSErrorNode *>(root);
 
-    auto exception =
-        createException(L"SyntaxError: " + err->message, filename,
-                        root->location.end.column, root->location.end.line);
+      auto exception =
+          createException(L"SyntaxError: " + err->message, filename,
+                          root->location.end.column, root->location.end.line);
+      delete root;
+      return exception;
+    }
+    auto &program = _runtime->getProgram(filename);
+    _runtime->getGenerator()->compile(program, source, root);
     delete root;
-    return exception;
   }
-  auto program = _runtime->getGenerator()->compile(filename, source, root);
+  auto program = _runtime->getProgram(filename);
   if (program.error) {
     auto err = dynamic_cast<JSErrorNode *>(program.error);
-    auto exception =
-        createException(L"SyntaxError: " + err->message, filename,
-                        root->location.end.column, root->location.end.line);
-    delete root;
+    auto exception = createException(L"SyntaxError: " + err->message, filename,
+                                     program.error->location.end.column,
+                                     program.error->location.end.line);
     return exception;
   }
   std::wfstream out("./1.asm", std::ios_base::out);
@@ -14061,7 +14232,6 @@ inline JSValue *JSContext::eval(const std::wstring &filename,
   out.close();
   auto vm = _runtime->getVirtualMachine();
   auto value = vm->eval(this, program);
-  delete root;
   return value;
 }
 
