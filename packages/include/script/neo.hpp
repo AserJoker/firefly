@@ -12621,7 +12621,7 @@ public:
   JSCallable(JSAtom *prototype, const std::wstring &name,
              const std::unordered_map<std::wstring, JSAtom *> &closure)
       : JSObject(prototype, JS_TYPE::FUNCTION), _closure(closure),
-        _name(name){};
+        _name(name) {};
   const std::unordered_map<std::wstring, JSAtom *> &getClosure() const {
     return _closure;
   }
@@ -12676,7 +12676,7 @@ public:
   JSException(const TYPE &type, const std::wstring &message,
               const std::vector<JSStackFrame> &stack)
       : JSBase(JS_TYPE::EXCEPTION), _message(message), _type(type),
-        _stack(stack){};
+        _stack(stack) {};
 
   const TYPE &getType() const { return _type; }
 
@@ -13196,7 +13196,7 @@ public:
                              {}});
     prototype->getAtom()->addChild(Function->getAtom());
     auto err = ctx->setField(Function, L"constructor", Function);
-    if (err->getType() == JS_TYPE::EXCEPTION) {
+    if (err) {
       return err;
     }
     err = ctx->setField(prototype, L"constructor", Function);

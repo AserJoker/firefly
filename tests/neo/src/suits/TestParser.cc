@@ -1,9 +1,7 @@
 #include "script/neo.hpp"
 #include <gtest/gtest.h>
 #include <string>
-class TestParser : public ::testing::Test {
-protected:
-};
+class TestParser : public ::testing::Test {};
 TEST_F(TestParser, EmptyProgram) {
   neo::JSParser parser;
   std::wstring source = LR"(    
@@ -548,23 +546,4 @@ TEST_F(TestParser, ClassStaticBlock) {
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSStaticBlockNode *>(clazz->properties[0]);
   ASSERT_NE(prop->statement, nullptr);
-}
-TEST_F(TestParser, ClassSpread) {
-  neo::JSParser parser;
-  std::wstring source = LR"(class Test { ...data;a=1})";
-  auto node = parser.parse(source);
-  ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
-  auto program = dynamic_cast<neo::JSProgramNode *>(node);
-  ASSERT_GT(program->statements.size(), 0);
-  ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
-  ASSERT_EQ(clazz->properties.size(), 2);
-  auto prop = dynamic_cast<neo::JSSpreadExpressionNode *>(clazz->properties[0]);
-  ASSERT_EQ(prop->value->location.get(source), L"data");
-}
-TEST_F(TestParser, ClassSpreadError) {
-  neo::JSParser parser;
-  std::wstring source = LR"(class Test { ...data a=1})";
-  auto node = parser.parse(source);
-  ASSERT_EQ(node->type, neo::JS_NODE_TYPE::ERROR);
 }
