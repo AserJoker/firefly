@@ -12806,11 +12806,34 @@ public:
 
   JSParser *getParser();
 
+  void setParser(JSParser *parser) {
+    if (_parser) {
+      delete _parser;
+    }
+    _parser = parser;
+  }
+
   JSCodeGenerator *getGenerator();
+
+  void setGenerator(JSCodeGenerator *generator) {
+    if (_generator) {
+      delete _generator;
+    }
+    _generator = generator;
+  }
 
   JSVirtualMachine *getVirtualMachine();
 
+  void setVirtualMachine(JSVirtualMachine *vm);
+
   JSLogger *getLogger();
+
+  void setLogger(JSLogger *logger) {
+    if (_logger) {
+      delete _logger;
+    }
+    _logger = logger;
+  }
 
   const std::vector<std::wstring> &getArgs() const { return _args; }
 
@@ -14279,6 +14302,13 @@ inline JSCodeGenerator *JSRuntime::getGenerator() {
     _generator = new JSCodeGenerator{};
   }
   return _generator;
+}
+
+inline void JSRuntime::setVirtualMachine(JSVirtualMachine *vm) {
+  if (_vm) {
+    delete _vm;
+  }
+  _vm = vm;
 }
 
 inline JSVirtualMachine *JSRuntime::getVirtualMachine() {
