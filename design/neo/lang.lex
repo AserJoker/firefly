@@ -1,0 +1,10 @@
+LineTerminator = [regex(\u0x000a|\u0x000d|\u0x2028|\u0x2029)]
+WhiteSpace = [regex(\u0x0009|\u0x000b|\u0x000c|\u0x0020|\u0x00a0|\u0xfeff)]
+InlineComment = [regex(//.*(\u0x000a|\u0x000d|\u0x2028|\u0x2029))]
+MultilineComment = [regex(/\*.*\*/)]
+Comment = [InlineComment]
+Comment = [MultilineComment]
+
+Expression = [Expression1]
+Expression = [Expression,Expression1]
+BLockStatement = [string("{").assert,statement*,string("})]

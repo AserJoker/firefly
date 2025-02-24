@@ -12511,13 +12511,15 @@ private:
   JSAtom *_prototype;
 
 public:
-  JSObject(JSAtom *prototype, const JS_TYPE &type = JS_TYPE::OBJECT)
+  JSObject(const JS_TYPE &type = JS_TYPE::OBJECT)
       : JSBase(type), _sealed(false), _frozen(false), _extensible(true),
-        _prototype(prototype) {}
+        _prototype(nullptr) {}
 
   JSAtom *getPrototype() { return _prototype; }
 
   const JSAtom *getPrototype() const { return _prototype; }
+
+  void setPrototype(JSAtom *prototype) { _prototype = prototype; }
 
   const std::unordered_map<std::wstring, JSField> &getFields() const {
     return _fields;
@@ -12583,7 +12585,7 @@ private:
   size_t _length{};
 
 public:
-  JSArray(JSAtom *prototype) : JSObject(prototype) {}
+  JSArray() {}
 
   std::unordered_map<size_t, JSAtom *> &getItems() { return _items; }
 
@@ -12618,10 +12620,9 @@ private:
   std::wstring _name;
 
 public:
-  JSCallable(JSAtom *prototype, const std::wstring &name,
+  JSCallable(const std::wstring &name,
              const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSObject(prototype, JS_TYPE::FUNCTION), _closure(closure),
-        _name(name) {};
+      : JSObject(JS_TYPE::FUNCTION), _closure(closure), _name(name){};
   const std::unordered_map<std::wstring, JSAtom *> &getClosure() const {
     return _closure;
   }
@@ -12653,10 +12654,9 @@ private:
   JS_NATIVE _native;
 
 public:
-  JSNativeFunction(JSAtom *prototype, const std::wstring &name,
-                   const JS_NATIVE &native,
+  JSNativeFunction(const std::wstring &name, const JS_NATIVE &native,
                    const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSCallable(prototype, name, closure), _native(native) {}
+      : JSCallable(name, closure), _native(native) {}
   JSValue *call(JSContext *ctx, JSValue *self,
                 const std::vector<JSValue *> args) {
     return _native(ctx, self, args);
@@ -12676,7 +12676,7 @@ public:
   JSException(const TYPE &type, const std::wstring &message,
               const std::vector<JSStackFrame> &stack)
       : JSBase(JS_TYPE::EXCEPTION), _message(message), _type(type),
-        _stack(stack) {};
+        _stack(stack){};
 
   const TYPE &getType() const { return _type; }
 
@@ -12711,10 +12711,9 @@ private:
   size_t _address;
 
 public:
-  JSFunction(JSAtom *prototype, const std::wstring &name,
-             const std::wstring &path, size_t address,
+  JSFunction(const std::wstring &name, const std::wstring &path, size_t address,
              const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSCallable(prototype, name, closure), _path(path), _address(address) {}
+      : JSCallable(name, closure), _path(path), _address(address) {}
   JSValue *call(JSContext *ctx, JSValue *self,
                 const std::vector<JSValue *> args) override;
 };
@@ -12881,7 +12880,10 @@ public:
                 .funcname = L"neo.run",
             },
     });
-    initializeGlobal();
+    auto err = initializeGlobal();
+    if (err) {
+      _global = err;
+    }
   }
 
   ~JSContext() {
@@ -12891,7 +12893,7 @@ public:
     _runtime = nullptr;
   }
 
-  void initializeGlobal();
+  JSValue *initializeGlobal();
 
   void pushCallStack(const std::wstring &filename, const std::wstring &funcname,
                      size_t column, size_t line) {
@@ -12989,14 +12991,29 @@ public:
 
   JSValue *createObject(JSValue *prototype = nullptr) {
     if (!prototype) {
-      prototype = createNull();
+      auto Object = getGlobal(L"Object");
+      if (Object && Object->getType() == JS_TYPE::EXCEPTION) {
+        return Object;
+      }
+      if (Object) {
+        auto proto = getField(Object, L"prototype");
+        if (proto->getType() == JS_TYPE::EXCEPTION) {
+          return proto;
+        }
+        prototype = proto;
+      }
+      if (!prototype) {
+        prototype = createNull();
+      }
     }
-    auto obj = _current->createValue(new JSObject{prototype->getAtom()});
+    auto obj = _current->createValue(new JSObject{});
+    auto object = dynamic_cast<JSObject *>(obj->getData());
+    object->setPrototype(prototype->getAtom());
     prototype->getAtom()->addChild(obj->getAtom());
     return obj;
   }
 
-  JSValue *createArray() { return _current->createValue(new JSArray{nullptr}); }
+  JSValue *createArray() { return _current->createValue(new JSArray{}); }
 
   JSValue *createNativeFunction(
       const JS_NATIVE &func, const std::wstring &name,
@@ -13005,10 +13022,46 @@ public:
     for (auto &[n, val] : closure) {
       clo[n] = val->getAtom();
     }
-    auto val =
-        _current->createValue(new JSNativeFunction{nullptr, name, func, clo});
+    auto val = _current->createValue(new JSNativeFunction{name, func, clo});
     for (auto &[n, atom] : clo) {
       val->getAtom()->addChild(atom);
+    }
+    auto Function = getGlobal(L"Function");
+    if (Function && Function->getType() == JS_TYPE::EXCEPTION) {
+      return Function;
+    }
+    if (Function) {
+      if (Function->getType() != JS_TYPE::FUNCTION) {
+        return createException(JSException::TYPE::INTERNAL,
+                               L"Function is not a constructor");
+      }
+      auto prototype = getField(Function, L"prototype");
+      if (!prototype) {
+        return createException(JSException::TYPE::INTERNAL,
+                               L"Function is not a constructor");
+      }
+      if (prototype->getType() == JS_TYPE::EXCEPTION) {
+        return prototype;
+      }
+      auto func = dynamic_cast<JSCallable *>(val->getData());
+      func->setPrototype(prototype->getAtom());
+      val->getAtom()->addChild(prototype->getAtom());
+      auto err = setField(val, L"constructor", Function);
+      if (err) {
+        return err;
+      }
+    }
+    auto prototype = createObject();
+    if (auto err = setField(prototype, L"constructor", val)) {
+      return err;
+    }
+    if (auto err = setField(val, L"prototype", prototype)) {
+      return err;
+    }
+    if (!name.empty()) {
+      if (auto err = setField(val, L"name", createString(name))) {
+        return err;
+      }
     }
     return val;
   }
@@ -13020,8 +13073,8 @@ public:
     for (auto &[n, val] : closure) {
       clo[n] = val->getAtom();
     }
-    auto val = _current->createValue(
-        new JSFunction{nullptr, name, filename, address, clo});
+    auto val =
+        _current->createValue(new JSFunction{name, filename, address, clo});
     for (auto &[n, atom] : clo) {
       val->getAtom()->addChild(atom);
     }
@@ -13093,6 +13146,46 @@ public:
       return res;
     }
     return obj;
+  }
+  JSValue *construct(JSBase *base, JSValue *constructor,
+                     const std::vector<JSValue *> args) {
+    if (auto err = checkUninitialized(constructor)) {
+      return err;
+    }
+    if (constructor->getType() == JS_TYPE::FUNCTION) {
+      auto prototype = getField(constructor, L"prototype");
+      if (!prototype) {
+        return createException(JSException::TYPE::TYPE,
+                               L"variable is not a constructor");
+      }
+      auto object = dynamic_cast<JSObject *>(base);
+      if (!object) {
+        return createException(JSException::TYPE::TYPE,
+                               L"variable is not a object");
+      }
+      object->setPrototype(prototype->getAtom());
+      auto obj = _current->createValue(base);
+      obj->getAtom()->addChild(prototype->getAtom());
+      auto err = setField(obj, L"constructor", constructor);
+      if (err) {
+        return err;
+      }
+      auto res = call(constructor, obj, args);
+      if (res->getType() >= JS_TYPE::OBJECT) {
+        return res;
+      }
+      return obj;
+    }
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a constructor");
+  }
+
+  JSValue *getGlobal(const std::wstring &name) {
+    auto &fields = dynamic_cast<JSObject *>(_global->getData())->getFields();
+    if (fields.contains(name)) {
+      return getField(_global, name);
+    }
+    return nullptr;
   }
 
   JSValue *setField(JSValue *obj, const std::wstring &name, JSValue *value) {
@@ -13212,11 +13305,9 @@ public:
   static JSValue *initialize(JSContext *ctx) {
     auto global = ctx->getGlobal();
     auto prototype = ctx->createObject(ctx->createNull());
-    auto Function = ctx->getScope()->createValue(
-        new JSNativeFunction{prototype->getAtom(),
-                             L"Function",
-                             &JSFunctionConstructor::constructor,
-                             {}});
+    auto Function = ctx->createNativeFunction(
+        &JSFunctionConstructor::constructor, L"Function");
+
     prototype->getAtom()->addChild(Function->getAtom());
     auto err = ctx->setField(Function, L"constructor", Function);
     if (err) {
@@ -13238,7 +13329,33 @@ public:
   }
 };
 
-class JSObjectConstructor {};
+class JSObjectConstructor {
+public:
+  static JSValue *constructor(JSContext *ctx, JSValue *_,
+                              std::vector<JSValue *> args) {
+    return nullptr;
+  }
+  static JSValue *initialize(JSContext *ctx) {
+    auto Object =
+        ctx->createNativeFunction(JSObjectConstructor::constructor, L"Object");
+    if (Object->getType() == JS_TYPE::EXCEPTION) {
+      return Object;
+    }
+    auto prototype = ctx->getField(Object, L"prototype");
+    if (prototype->getType() == JS_TYPE::EXCEPTION) {
+      return prototype;
+    }
+    auto err = ctx->setField(prototype, L"constructor", Object);
+    if (err) {
+      return err;
+    }
+    err = ctx->setField(ctx->getGlobal(), L"Object", Object);
+    if (err) {
+      return err;
+    }
+    return nullptr;
+  }
+};
 
 struct JSEvalContext {
   size_t pc;
@@ -14699,13 +14816,17 @@ inline JSValue *JSContext::eval(const std::wstring &filename,
   return value;
 }
 
-inline void JSContext::initializeGlobal() {
+inline JSValue *JSContext::initializeGlobal() {
   _global = createObject(createNull());
   auto err = JSFunctionConstructor::initialize(this);
   if (err) {
-    _global = err;
-    return;
+    return err;
   }
+  // err = JSObjectConstructor::initialize(this);
+  // if (err) {
+  //   return err;
+  // }
+  return nullptr;
 }
 
 } // namespace neo

@@ -1,1 +1,1 @@
-debugger a
+print(Function.name)
