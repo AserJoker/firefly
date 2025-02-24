@@ -15,6 +15,7 @@
 #include <iostream>
 #include <locale>
 #include <map>
+#include <new>
 #include <ostream>
 #include <set>
 #include <sstream>
@@ -24,6 +25,15 @@
 #include <vector>
 
 namespace neo {
+
+class JSAllocator {
+public:
+  JSAllocator() {}
+  virtual ~JSAllocator() {}
+  virtual void *alloc(size_t size) { return ::operator new(size); }
+  virtual void free(void *buf) { ::operator delete(buf); }
+  virtual void dispose() { delete this; }
+};
 
 enum class JS_TYPE {
   EXCEPTION,
@@ -12794,6 +12804,8 @@ private:
 
   JSLogger *_logger{};
 
+  JSAllocator *_allocator{};
+
   std::unordered_map<std::wstring, JSProgram> _programs;
 
   std::vector<std::wstring> _args;
@@ -12833,6 +12845,15 @@ public:
     }
     _logger = logger;
   }
+
+  JSAllocator *getAllocator() {
+    if (!_allocator) {
+      _allocator = new JSAllocator{};
+    }
+    return _allocator;
+  }
+
+  void setAllocator(JSAllocator *allocator) { _allocator = allocator; }
 
   const std::vector<std::wstring> &getArgs() const { return _args; }
 
@@ -14465,6 +14486,10 @@ inline JSRuntime::~JSRuntime() {
   if (_logger) {
     delete _logger;
     _logger = nullptr;
+  }
+  if (_allocator) {
+    _allocator->dispose();
+    _allocator = nullptr;
   }
 }
 
