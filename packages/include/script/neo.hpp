@@ -2126,7 +2126,7 @@ private:
   }
 
 private:
-  bool isLineTerminatior(wchar_t c) {
+  bool isLineTerminator(wchar_t c) {
     if (c == 0xa) {
       return true;
     }
@@ -2243,7 +2243,7 @@ private:
     loc.start = {
         .funcname = L"neo.compile", .line = 1, .column = 1, .offset = 0};
     while (loc.start.offset < start.offset) {
-      if (isLineTerminatior(source[loc.start.offset])) {
+      if (isLineTerminator(source[loc.start.offset])) {
         if (source[loc.start.offset] != '\r') {
           loc.start.column = 1;
           loc.start.line++;
@@ -2256,7 +2256,7 @@ private:
 
     loc.end = {.funcname = L"neo.compile", .line = 1, .column = 1, .offset = 0};
     while (loc.end.offset < end.offset) {
-      if (isLineTerminatior(source[loc.end.offset])) {
+      if (isLineTerminator(source[loc.end.offset])) {
         if (source[loc.end.offset] != '\r') {
           loc.end.column = 1;
           loc.end.line++;
@@ -2278,7 +2278,7 @@ private:
   }
 
   bool skipLineTerminator(const std::wstring &source, JSPosition &position) {
-    if (isLineTerminatior(source[position.offset])) {
+    if (isLineTerminator(source[position.offset])) {
       position.offset++;
       return true;
     }
@@ -2833,7 +2833,7 @@ private:
       auto *node = new JSInterpreterDirectiveNode();
       current.offset += 2;
       while (source[current.offset] &&
-             !isLineTerminatior(source[current.offset])) {
+             !isLineTerminator(source[current.offset])) {
         current.offset++;
       }
       node->location = getLocation(source, position, current);
@@ -8825,7 +8825,7 @@ private:
     if (source[position.offset] == '/') {
       if (source[position.offset + 1] == '/') {
         auto current = position;
-        while (!isLineTerminatior(source[current.offset])) {
+        while (!isLineTerminator(source[current.offset])) {
           current.offset++;
         }
         auto node = new JSCommentLiteralNode();
@@ -8841,7 +8841,7 @@ private:
             current.offset += 2;
             break;
           }
-          if (isLineTerminatior(source[current.offset])) {
+          if (isLineTerminator(source[current.offset])) {
             if (newline) {
               *newline = true;
             }
