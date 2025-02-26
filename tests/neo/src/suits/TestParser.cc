@@ -3,7 +3,7 @@
 #include <string>
 class TestParser : public ::testing::Test {};
 TEST_F(TestParser, EmptyProgram) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(    
     
   )";
@@ -13,7 +13,7 @@ TEST_F(TestParser, EmptyProgram) {
 }
 
 TEST_F(TestParser, ProgramInterpreter) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(#!/usr/bin/neo
    /*test comment*/)";
   auto node = parser.parse(source);
@@ -25,7 +25,7 @@ TEST_F(TestParser, ProgramInterpreter) {
 }
 
 TEST_F(TestParser, ProgramDirectives) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(
 'use a';
 'use b';/*test comment2*/'use c'/*
@@ -43,7 +43,7 @@ test multiline
 }
 
 TEST_F(TestParser, EmptyStatement) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(;)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -53,7 +53,7 @@ TEST_F(TestParser, EmptyStatement) {
   delete node;
 }
 TEST_F(TestParser, DebuggerStatement) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(debugger;)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -64,7 +64,7 @@ TEST_F(TestParser, DebuggerStatement) {
   delete node;
 }
 TEST_F(TestParser, DebuggerWithMultilineCommentExpression) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(debugger /*aaaa
 */"Hello world")";
   auto node = parser.parse(source);
@@ -82,7 +82,7 @@ TEST_F(TestParser, DebuggerWithMultilineCommentExpression) {
 }
 
 TEST_F(TestParser, DebuggerWithExpression) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(debugger "Hello world")";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::ERROR);
@@ -90,7 +90,7 @@ TEST_F(TestParser, DebuggerWithExpression) {
 }
 
 TEST_F(TestParser, DebuggerWithNewlineExpression) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(debugger 
 "Hello world")";
   auto node = parser.parse(source);
@@ -108,7 +108,7 @@ TEST_F(TestParser, DebuggerWithNewlineExpression) {
 }
 
 TEST_F(TestParser, Return) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(return)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -118,7 +118,7 @@ TEST_F(TestParser, Return) {
   delete node;
 }
 TEST_F(TestParser, ReturnValue) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(return a)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -131,7 +131,7 @@ TEST_F(TestParser, ReturnValue) {
   delete node;
 }
 TEST_F(TestParser, ReturnUselessValue) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(return
 a)";
   auto node = parser.parse(source);
@@ -144,7 +144,7 @@ a)";
   delete node;
 }
 TEST_F(TestParser, ReturnCommentUselessValue) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(return /*
 */a)";
   auto node = parser.parse(source);
@@ -158,7 +158,7 @@ TEST_F(TestParser, ReturnCommentUselessValue) {
 }
 
 TEST_F(TestParser, ReturnCommentValue) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(return /**/ a)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -171,7 +171,7 @@ TEST_F(TestParser, ReturnCommentValue) {
 }
 
 TEST_F(TestParser, Label) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(a:b)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -182,7 +182,7 @@ TEST_F(TestParser, Label) {
   ASSERT_EQ(lab->label->location.get(source), L"a");
 }
 TEST_F(TestParser, LabelComment) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(a //test
 :b)";
   auto node = parser.parse(source);
@@ -194,14 +194,14 @@ TEST_F(TestParser, LabelComment) {
   ASSERT_EQ(lab->label->location.get(source), L"a");
 }
 TEST_F(TestParser, LabelWithoutBody) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(a :)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::ERROR);
 }
 
 TEST_F(TestParser, Break) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(break)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -212,7 +212,7 @@ TEST_F(TestParser, Break) {
   ASSERT_EQ(bre->label, nullptr);
 }
 TEST_F(TestParser, BreakLabel) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(break test)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -223,7 +223,7 @@ TEST_F(TestParser, BreakLabel) {
   ASSERT_EQ(bre->label->location.get(source), L"test");
 }
 TEST_F(TestParser, BreakUseLessLabel) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(break 
 test)";
   auto node = parser.parse(source);
@@ -235,13 +235,13 @@ test)";
   ASSERT_EQ(bre->label, nullptr);
 }
 TEST_F(TestParser, BreakError) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(break "test")";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::ERROR);
 }
 TEST_F(TestParser, If) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(if(a);)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -254,7 +254,7 @@ TEST_F(TestParser, If) {
   ASSERT_EQ(ifs->alternate, nullptr);
 }
 TEST_F(TestParser, IfElse) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(if(a);else;)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -267,13 +267,13 @@ TEST_F(TestParser, IfElse) {
   ASSERT_EQ(ifs->alternate->type, neo::JS_NODE_TYPE::STATEMENT_EMPTY);
 }
 TEST_F(TestParser, IfWithoutAlt) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(if(a)else;)";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::ERROR);
 }
 TEST_F(TestParser, Switch) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(switch(a+b){case a:})";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -287,7 +287,7 @@ TEST_F(TestParser, Switch) {
   ASSERT_EQ(cas->statements.size(), 0);
 }
 TEST_F(TestParser, SwitchNoCase) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(switch(a+b){})";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -298,7 +298,7 @@ TEST_F(TestParser, SwitchNoCase) {
   ASSERT_EQ(sw->cases.size(), 0);
 }
 TEST_F(TestParser, SwitchDefault) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(switch(a+b){case 1:default:})";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -311,7 +311,7 @@ TEST_F(TestParser, SwitchDefault) {
   ASSERT_EQ(cas->match, nullptr);
 }
 TEST_F(TestParser, Class) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test extends A().B {;;;;;})";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -324,7 +324,7 @@ TEST_F(TestParser, Class) {
   ASSERT_EQ(clazz->properties.size(), 0);
 }
 TEST_F(TestParser, ClassProperty) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { a= 1
 b=2;c=3})";
   auto node = parser.parse(source);
@@ -336,13 +336,13 @@ b=2;c=3})";
   ASSERT_EQ(clazz->properties.size(), 3);
 }
 TEST_F(TestParser, ClassPropertyError) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { a= 1 b=2})";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::ERROR);
 }
 TEST_F(TestParser, ClassStaticProperty) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { static a = 1 })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -357,7 +357,7 @@ TEST_F(TestParser, ClassStaticProperty) {
   ASSERT_EQ(prop->value->location.get(source), L"1");
 }
 TEST_F(TestParser, ClassComputedProperty) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test {  ["aaa"+"bbb"] = 1 })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -372,7 +372,7 @@ TEST_F(TestParser, ClassComputedProperty) {
   ASSERT_EQ(prop->value->location.get(source), L"1");
 }
 TEST_F(TestParser, ClassMethod) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test {  method(){}method2(){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -388,7 +388,7 @@ TEST_F(TestParser, ClassMethod) {
 }
 
 TEST_F(TestParser, ClassStaticMethod) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { static method(){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -404,7 +404,7 @@ TEST_F(TestParser, ClassStaticMethod) {
   ASSERT_EQ(prop->static_, true);
 }
 TEST_F(TestParser, ClassAsyncMethod) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { async method(){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -420,7 +420,7 @@ TEST_F(TestParser, ClassAsyncMethod) {
   ASSERT_EQ(prop->async, true);
 }
 TEST_F(TestParser, ClassGeneratorMethod) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { * method(){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -436,7 +436,7 @@ TEST_F(TestParser, ClassGeneratorMethod) {
   ASSERT_EQ(prop->generator, true);
 }
 TEST_F(TestParser, ClassStaticNamedMethod) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { static(){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -452,7 +452,7 @@ TEST_F(TestParser, ClassStaticNamedMethod) {
   ASSERT_EQ(prop->static_, false);
 }
 TEST_F(TestParser, ClassAsyncNamedMethod) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { static async(){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -468,7 +468,7 @@ TEST_F(TestParser, ClassAsyncNamedMethod) {
   ASSERT_EQ(prop->static_, true);
 }
 TEST_F(TestParser, ClassFullNamedMethod) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { static async* method(){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -486,7 +486,7 @@ TEST_F(TestParser, ClassFullNamedMethod) {
   ASSERT_EQ(prop->generator, true);
 }
 TEST_F(TestParser, ClassGetAccessor) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { get data(){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -502,7 +502,7 @@ TEST_F(TestParser, ClassGetAccessor) {
   ASSERT_EQ(prop->kind, neo::JS_ACCESSOR_TYPE::GET);
 }
 TEST_F(TestParser, ClassSetAccessor) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { set data(data){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -518,7 +518,7 @@ TEST_F(TestParser, ClassSetAccessor) {
   ASSERT_EQ(prop->kind, neo::JS_ACCESSOR_TYPE::SET);
 }
 TEST_F(TestParser, ClassStaticAccessor) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { static get data(){} })";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
@@ -535,7 +535,7 @@ TEST_F(TestParser, ClassStaticAccessor) {
   ASSERT_EQ(prop->static_, true);
 }
 TEST_F(TestParser, ClassStaticBlock) {
-  neo::JSParser parser;
+  neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { static{}})";
   auto node = parser.parse(source);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);

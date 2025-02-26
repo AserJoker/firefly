@@ -1,7 +1,10 @@
 #include "script/neo.hpp"
 #include <gtest/gtest.h>
 class TestRuntime : public ::testing::Test {};
-class MockParser : public neo::JSParser {};
+class MockParser : public neo::JSParser {
+public:
+  MockParser(neo::JSAllocator *allocator) : neo::JSParser(allocator) {}
+};
 class MockGenerator : public neo::JSCodeGenerator {};
 class MockVirtualMachine : public neo::JSVirtualMachine {};
 class MockLogger : public neo::JSLogger {};
@@ -15,7 +18,7 @@ TEST_F(TestRuntime, args) {
 }
 TEST_F(TestRuntime, customParser) {
   auto runtime = new neo::JSRuntime(0, nullptr);
-  auto parser = new MockParser;
+  auto parser = new MockParser{new neo::JSAllocator};
   runtime->setParser(parser);
   ASSERT_EQ(runtime->getParser(), parser);
   delete runtime;

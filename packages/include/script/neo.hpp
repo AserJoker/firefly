@@ -33,6 +33,15 @@ public:
   virtual void *alloc(size_t size) { return ::operator new(size); }
   virtual void free(void *buf) { ::operator delete(buf); }
   virtual void dispose() { delete this; }
+  template <class T, class... ARGS> T *create(ARGS... args) {
+    auto buf = alloc(sizeof(T));
+    new (buf) T(args...);
+    return (T *)buf;
+  }
+  template <class T> void dispose(T *object) {
+    object->~T();
+    free(object);
+  }
 };
 
 enum class JS_TYPE {
@@ -445,18 +454,22 @@ struct JSNode {
   JSCompileScope *scope = nullptr;
   std::vector<JSNode *> children;
   std::vector<JSNode *> comments;
-  virtual ~JSNode() {
+  void dispose(JSAllocator *allocator) {
     for (auto child : children) {
-      delete child;
+      allocator->dispose(child);
     }
+    children.clear();
     for (auto comment : comments) {
-      delete comment;
+      allocator->dispose(comment);
     }
+    comments.clear();
     if (scope) {
-      delete scope;
+      allocator->dispose(scope);
       scope = nullptr;
     }
+    allocator->dispose(this);
   }
+  virtual ~JSNode() {}
   void addParent(JSNode *parent) {
     parent->children.push_back(this);
     this->parent = parent;
@@ -1937,20 +1950,16 @@ struct JSClassDeclaration : public JSNode {
 class JSParser {
 private:
   JSCompileScope *_scope = nullptr;
+  JSAllocator *_allocator{};
 
 private:
   JSCompileScope *pushScope(const JS_COMPILE_SCOPE_TYPE &type, JSNode *node) {
-    auto scope = new JSCompileScope{type, _scope, node};
+    auto scope = _allocator->create<JSCompileScope>(type, _scope, node);
     _scope = scope;
     return scope;
   }
 
-  void popScope() {
-    if (!_scope) {
-      ;
-    }
-    _scope = _scope->parent;
-  }
+  void popScope() { _scope = _scope->parent; }
 
   JSNode *resolveDeclarator(const JS_DECLARATION_TYPE &type,
                             const std::wstring &source, JSNode *identifier,
@@ -2129,7 +2138,7 @@ private:
   JSNode *createError(const std::wstring &message, const std::wstring &source,
                       const JSPosition &end) {
 
-    auto *node = new JSErrorNode();
+    auto *node = _allocator->create<JSErrorNode>();
     node->message = message;
     node->location = getLocation(source, {}, end);
     return node;
@@ -2315,12 +2324,12 @@ private:
         if (ptoken) {
           *ptoken = token;
         } else {
-          delete token;
+          token->dispose(_allocator);
         }
         return true;
       }
     }
-    delete token;
+    token->dispose(_allocator);
     return false;
   }
   bool checkSymbol(const std::vector<std::wstring> &symbols,
@@ -2337,12 +2346,12 @@ private:
         if (ptoken) {
           *ptoken = token;
         } else {
-          delete token;
+          token->dispose(_allocator);
         }
         return true;
       }
     }
-    delete token;
+    token->dispose(_allocator);
     return false;
   }
   JSNode *readSymbolToken(const std::wstring &source, JSPosition &position) {
@@ -2370,7 +2379,7 @@ private:
       }
       if (found) {
         current.offset = offset;
-        auto token = new JSTokenNode{};
+        auto token = _allocator->create<JSTokenNode>();
         token->location = getLocation(source, position, current);
         position = current;
         return token;
@@ -2401,18 +2410,18 @@ private:
     if (source[current.offset] != '`') {
       return nullptr;
     }
-    auto node = new JSTemplateLiteralNode{};
+    auto node = _allocator->create<JSTemplateLiteralNode>();
     current.offset++;
     auto start = current;
     JSNode *quasi = nullptr;
     for (;;) {
       if (!source[current.offset]) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       if (source[current.offset] == '`') {
         auto end = current;
-        quasi = new JSStringLiteralNode{};
+        quasi = _allocator->create<JSStringLiteralNode>();
         quasi->location = getLocation(source, start, end);
         node->quasis.push_back(quasi);
         quasi->addParent(node);
@@ -2421,7 +2430,7 @@ private:
       }
       if (source[current.offset] == '$' && source[current.offset + 1] == '{') {
         auto end = current;
-        quasi = new JSStringLiteralNode{};
+        quasi = _allocator->create<JSStringLiteralNode>();
         quasi->location = getLocation(source, start, end);
         node->quasis.push_back(quasi);
         quasi->addParent(node);
@@ -2431,16 +2440,16 @@ private:
         }
         auto err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         auto exp = readExpression(source, current);
         if (!exp) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (exp->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return exp;
         }
         node->expressions.push_back(exp);
@@ -2449,11 +2458,11 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         if (source[current.offset] != '}') {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         } else {
           start.offset = current.offset + 1;
@@ -2485,9 +2494,9 @@ private:
     if (!identifier) {
       return createError(L"Invalid or unexpected token", source, current);
     }
-    auto node = new JSPrivateNameNode{};
+    auto node = _allocator->create<JSPrivateNameNode>();
     node->location = getLocation(source, position, current);
-    delete identifier;
+    identifier->dispose(_allocator);
     position = current;
     return node;
   }
@@ -2505,7 +2514,7 @@ private:
              source[current.offset] == '$' || source[current.offset] == '_') {
         current.offset++;
       }
-      auto node = new JSIdentityLiteralNode();
+      auto node = _allocator->create<JSIdentityLiteralNode>();
       node->location = getLocation(source, position, current);
       position = current;
       return node;
@@ -2531,7 +2540,7 @@ private:
         current.offset++;
       }
       current.offset++;
-      auto token = new JSStringLiteralNode();
+      auto token = _allocator->create<JSStringLiteralNode>();
       token->location = getLocation(source, position, current);
       position = current;
       return token;
@@ -2546,13 +2555,13 @@ private:
       return identify;
     }
     if (identify->location.is(source, L"null")) {
-      auto node = new JSNullLiteralNode{};
+      auto node = _allocator->create<JSNullLiteralNode>();
       node->location = getLocation(source, position, current);
       position = current;
-      delete identify;
+      identify->dispose(_allocator);
       return node;
     }
-    delete identify;
+    identify->dispose(_allocator);
     return nullptr;
   }
 
@@ -2564,13 +2573,13 @@ private:
       return identify;
     }
     if (identify->location.is(source, L"undefined")) {
-      auto node = new JSUndefinedLiteralNode{};
+      auto node = _allocator->create<JSUndefinedLiteralNode>();
       node->location = getLocation(source, position, current);
       position = current;
-      delete identify;
+      identify->dispose(_allocator);
       return node;
     }
-    delete identify;
+    identify->dispose(_allocator);
     return nullptr;
   }
 
@@ -2581,13 +2590,13 @@ private:
       return identify;
     }
     if (identify->location.is(source, L"this")) {
-      auto node = new JSThisLiteralNode{};
+      auto node = _allocator->create<JSThisLiteralNode>();
       node->location = getLocation(source, position, current);
       position = current;
-      delete identify;
+      identify->dispose(_allocator);
       return node;
     }
-    delete identify;
+    identify->dispose(_allocator);
     return nullptr;
   }
 
@@ -2598,13 +2607,13 @@ private:
       return identify;
     }
     if (identify->location.is(source, L"super")) {
-      auto node = new JSSuperLiteralNode{};
+      auto node = _allocator->create<JSSuperLiteralNode>();
       node->location = getLocation(source, position, current);
-      delete identify;
+      identify->dispose(_allocator);
       position = current;
       return node;
     }
-    delete identify;
+    identify->dispose(_allocator);
     return nullptr;
   }
 
@@ -2616,13 +2625,13 @@ private:
     }
     if (identify && (identify->location.is(source, L"true") ||
                      identify->location.is(source, L"false"))) {
-      auto node = new JSBooleanLiteralNode{};
+      auto node = _allocator->create<JSBooleanLiteralNode>();
       node->location = getLocation(source, position, current);
       position = current;
-      delete identify;
+      identify->dispose(_allocator);
       return node;
     }
-    delete identify;
+    identify->dispose(_allocator);
     return nullptr;
   }
 
@@ -2641,7 +2650,7 @@ private:
                   source[current.offset] <= 'F')) {
             current.offset++;
           }
-          auto node = new JSNumberLiteralNode();
+          auto node = _allocator->create<JSNumberLiteralNode>();
           node->location = getLocation(source, position, current);
           position = current;
           return node;
@@ -2653,7 +2662,7 @@ private:
                   source[current.offset] <= '7')) {
             current.offset++;
           }
-          auto node = new JSNumberLiteralNode();
+          auto node = _allocator->create<JSNumberLiteralNode>();
           node->location = getLocation(source, position, current);
           position = current;
           return node;
@@ -2665,7 +2674,7 @@ private:
                   source[current.offset] <= '1')) {
             current.offset++;
           }
-          auto node = new JSNumberLiteralNode();
+          auto node = _allocator->create<JSNumberLiteralNode>();
           node->location = getLocation(source, position, current);
           position = current;
           return node;
@@ -2676,7 +2685,7 @@ private:
       }
       if (source[current.offset] == 'n') {
         current.offset++;
-        auto node = new JSBigIntLiteralNode();
+        auto node = _allocator->create<JSBigIntLiteralNode>();
         node->location = getLocation(source, position, current);
         position = current;
         return node;
@@ -2693,7 +2702,7 @@ private:
       while (source[current.offset] >= '0' && source[current.offset] <= '9') {
         current.offset++;
       }
-      auto node = new JSNumberLiteralNode();
+      auto node = _allocator->create<JSNumberLiteralNode>();
       node->location = getLocation(source, position, current);
       position = current;
       return node;
@@ -2714,7 +2723,7 @@ private:
       while (source[current.offset] >= '0' && source[current.offset] <= '9') {
         current.offset++;
       }
-      auto node = new JSNumberLiteralNode();
+      auto node = _allocator->create<JSNumberLiteralNode>();
       node->location = getLocation(source, position, current);
       position = current;
       return node;
@@ -2759,7 +2768,7 @@ private:
              source[current.offset] == 'm') {
         current.offset++;
       }
-      auto node = new JSRegexpLiteralNode{};
+      auto node = _allocator->create<JSRegexpLiteralNode>();
       node->location = getLocation(source, position, current);
       position = current;
       return node;
@@ -2769,12 +2778,12 @@ private:
 
   JSNode *readProgram(const std::wstring &source, JSPosition &position) {
     auto current = position;
-    auto *node = new JSProgramNode();
+    auto *node = _allocator->create<JSProgramNode>();
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto interpreter = readInterpreterDirective(source, current);
     if (interpreter) {
       if (interpreter->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return interpreter;
       } else {
         node->interpreter = interpreter;
@@ -2786,7 +2795,7 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto directive = readDirective(source, current);
@@ -2794,7 +2803,7 @@ private:
         break;
       }
       if (directive->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return directive;
       }
       node->directives.push_back(directive);
@@ -2805,7 +2814,7 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto statement = readStatement(source, current);
@@ -2813,7 +2822,7 @@ private:
         break;
       }
       if (statement->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return statement;
       }
       node->statements.push_back(statement);
@@ -2823,11 +2832,11 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (source[current.offset]) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     node->location = getLocation(source, position, current);
@@ -2840,7 +2849,7 @@ private:
                                    JSPosition &position) {
     auto current = position;
     if (source[position.offset] == '#' && source[position.offset + 1] == '!') {
-      auto *node = new JSInterpreterDirectiveNode();
+      auto *node = _allocator->create<JSInterpreterDirectiveNode>();
       current.offset += 2;
       while (source[current.offset] &&
              !isLineTerminator(source[current.offset])) {
@@ -2859,8 +2868,8 @@ private:
     if (!node || node->type == JS_NODE_TYPE::ERROR) {
       return node;
     }
-    delete node;
-    node = new JSDirectiveNode();
+    node->dispose(_allocator);
+    node = _allocator->create<JSDirectiveNode>();
     node->location = getLocation(source, position, current);
     auto newline = false;
     for (;;) {
@@ -2875,7 +2884,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -2886,7 +2895,7 @@ private:
     }
     if (!checkSymbol({L";"}, source, current) && !newline &&
         source[current.offset]) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     position = current;
@@ -2897,7 +2906,7 @@ private:
     if (checkSymbol({L";"}, source, position)) {
       auto current = position;
       current.offset++;
-      auto node = new JSEmptyStatementNode{};
+      auto node = _allocator->create<JSEmptyStatementNode>();
       node->location = getLocation(source, position, current);
       return node;
     }
@@ -2909,19 +2918,19 @@ private:
     if (!checkSymbol({L"{"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSBlockStatement{};
+    auto node = _allocator->create<JSBlockStatement>();
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto statement = readStatement(source, current);
     while (statement) {
       if (statement->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return statement;
       }
       node->statements.push_back(statement);
@@ -2930,13 +2939,13 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       statement = readStatement(source, current);
     }
     if (!checkSymbol({L"}"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid o runexcepted token", source, current);
     }
     popScope();
@@ -2950,7 +2959,7 @@ private:
     if (!checkIdentifier({L"debugger"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSDebuggerStatement{};
+    auto node = _allocator->create<JSDebuggerStatement>();
     auto newline = false;
     for (;;) {
       if (skipWhiteSpace(source, current)) {
@@ -2964,7 +2973,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -2979,7 +2988,7 @@ private:
       if (checkSymbol({L"}"}, source, current)) {
         current = backup;
       } else {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or nexcepted token", source, current);
       }
     }
@@ -2993,7 +3002,7 @@ private:
     if (!checkIdentifier({L"return"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSReturnStatement{};
+    auto node = _allocator->create<JSReturnStatement>();
 
     auto newline = false;
     for (;;) {
@@ -3008,7 +3017,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -3026,13 +3035,13 @@ private:
         auto val = readExpression(source, current);
         if (val) {
           if (val->type == JS_NODE_TYPE::ERROR) {
-            delete node;
+            node->dispose(_allocator);
             return val;
           }
           node->value = val;
           val->addParent(node);
         } else {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or nexcepted token", source, current);
         }
       }
@@ -3045,40 +3054,40 @@ private:
     auto current = position;
     auto identifier = readIdentifyLiteral(source, current);
     if (identifier && isKeyword(source, identifier->location)) {
-      delete identifier;
+      identifier->dispose(_allocator);
       identifier = nullptr;
     }
     if (!identifier || identifier->type == JS_NODE_TYPE::ERROR) {
       return identifier;
     }
-    auto node = new JSLabelStatement{};
+    auto node = _allocator->create<JSLabelStatement>();
     node->label = identifier;
     identifier->addParent(node);
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L":"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto statement = readStatement(source, current);
     if (!statement) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (statement->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return statement;
     }
     node->statement = statement;
@@ -3092,7 +3101,7 @@ private:
     if (!checkIdentifier({L"break"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSBreakStatement{};
+    auto node = _allocator->create<JSBreakStatement>();
     auto newline = false;
     for (;;) {
       if (skipWhiteSpace(source, current)) {
@@ -3106,7 +3115,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -3124,13 +3133,13 @@ private:
         auto val = readIdentifyLiteral(source, current);
         if (val) {
           if (val->type == JS_NODE_TYPE::ERROR) {
-            delete node;
+            node->dispose(_allocator);
             return val;
           }
           node->label = val;
           val->addParent(node);
         } else {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
       }
@@ -3145,7 +3154,7 @@ private:
     if (!checkIdentifier({L"continue"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSContinueStatement{};
+    auto node = _allocator->create<JSContinueStatement>();
     auto newline = false;
     for (;;) {
       if (skipWhiteSpace(source, current)) {
@@ -3159,7 +3168,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -3177,13 +3186,13 @@ private:
         auto val = readIdentifyLiteral(source, current);
         if (val) {
           if (val->type == JS_NODE_TYPE::ERROR) {
-            delete node;
+            node->dispose(_allocator);
             return val;
           }
           node->label = val;
           val->addParent(node);
         } else {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
       }
@@ -3197,32 +3206,32 @@ private:
     if (!checkIdentifier({L"if"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSIfStatement{};
+    auto node = _allocator->create<JSIfStatement>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto condition = readExpression(source, current);
     if (!condition) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (condition->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return condition;
     }
     node->condition = condition;
@@ -3231,27 +3240,27 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto consequent = readStatement(source, current);
     if (!consequent) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (consequent->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return consequent;
     }
     node->consequent = consequent;
@@ -3262,7 +3271,7 @@ private:
     }
     err = readComments(source, current, comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkIdentifier({L"else"}, source, current)) {
@@ -3273,16 +3282,16 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto alternate = readStatement(source, current);
       if (!alternate) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       if (alternate->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return alternate;
       }
       node->alternate = alternate;
@@ -3301,32 +3310,32 @@ private:
     if (!checkIdentifier({L"switch"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSSwitchStatement{};
+    auto node = _allocator->create<JSSwitchStatement>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto condition = readExpression(source, current);
     if (!condition) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (condition->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return condition;
     }
     node->condition = condition;
@@ -3335,36 +3344,36 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"{"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto cas = readSwitchCaseStatement(source, current);
     while (cas) {
       if (cas->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return cas;
       }
       node->cases.push_back(cas);
@@ -3373,13 +3382,13 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       cas = readSwitchCaseStatement(source, current);
     }
     if (!checkSymbol({L"}"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     popScope();
@@ -3391,53 +3400,53 @@ private:
   JSNode *readSwitchCaseStatement(const std::wstring &source,
                                   JSPosition &position) {
     auto current = position;
-    auto node = new JSSwitchCaseStatement{};
+    auto node = _allocator->create<JSSwitchCaseStatement>();
     if (checkIdentifier({L"default"}, source, current)) {
     } else if (checkIdentifier({L"case"}, source, current)) {
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto expr = readExpression(source, current);
       if (!expr) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       if (expr->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return expr;
       }
       node->match = expr;
       expr->addParent(node);
     } else {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L":"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto statement = readStatement(source, current);
     while (statement) {
       if (statement->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return statement;
       }
       node->statements.push_back(statement);
@@ -3446,7 +3455,7 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       statement = readStatement(source, current);
@@ -3461,7 +3470,7 @@ private:
     if (!checkIdentifier({L"throw"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSThrowStatement{};
+    auto node = _allocator->create<JSThrowStatement>();
 
     auto newline = false;
     for (;;) {
@@ -3476,7 +3485,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -3494,13 +3503,13 @@ private:
         auto val = readExpression(source, current);
         if (val) {
           if (val->type == JS_NODE_TYPE::ERROR) {
-            delete node;
+            node->dispose(_allocator);
             return val;
           }
           node->value = val;
           val->addParent(node);
         } else {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
       }
@@ -3515,21 +3524,21 @@ private:
     if (!checkIdentifier({L"try"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSTryStatement{};
+    auto node = _allocator->create<JSTryStatement>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readBlockStatement(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -3538,7 +3547,7 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkIdentifier({L"catch"}, source, current)) {
@@ -3546,16 +3555,16 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto onerror = readTryCatchStatement(source, current);
       if (!onerror) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       if (onerror->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return onerror;
       }
       node->onerror = onerror;
@@ -3566,23 +3575,23 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto onfinish = readBlockStatement(source, current);
       if (!onfinish) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       if (onfinish->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return onfinish;
       }
       node->onfinish = onfinish;
       onfinish->addParent(node);
     }
     if (!node->onfinish && !node->onerror) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     node->location = getLocation(source, position, current);
@@ -3593,13 +3602,13 @@ private:
   JSNode *readTryCatchStatement(const std::wstring &source,
                                 JSPosition &position) {
     auto current = position;
-    auto node = new JSTryCatchStatement{};
+    auto node = _allocator->create<JSTryCatchStatement>();
     if (checkSymbol({L"("}, source, current)) {
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto identifier = readIdentifyLiteral(source, current);
@@ -3610,7 +3619,7 @@ private:
         identifier = readArrayPattern(source, current);
       }
       if (!identifier) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       node->identifier = identifier;
@@ -3619,28 +3628,28 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L")"}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       while (skipInvisible(source, current)) {
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
     }
     auto body = readBlockStatement(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -3655,25 +3664,25 @@ private:
     if (!checkIdentifier({L"while"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSWhileStatement{};
+    auto node = _allocator->create<JSWhileStatement>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     auto condition = readExpression(source, current);
     if (!condition) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (condition->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return condition;
     }
     node->condition = condition;
@@ -3682,27 +3691,27 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readStatement(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -3718,21 +3727,21 @@ private:
     if (!checkIdentifier({L"do"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSDoWhileStatement{};
+    auto node = _allocator->create<JSDoWhileStatement>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readStatement(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -3741,38 +3750,38 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkIdentifier({L"while"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto condition = readExpression(source, current);
     if (!condition) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (condition->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return condition;
     }
     node->condition = condition;
@@ -3781,11 +3790,11 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     node->location = getLocation(source, position, current);
@@ -3798,24 +3807,24 @@ private:
     if (!checkIdentifier({L"for"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSForStatement{};
+    auto node = _allocator->create<JSForStatement>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto init = readExpression(source, current);
@@ -3824,7 +3833,7 @@ private:
     }
     if (init) {
       if (init->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return init;
       }
       node->init = init;
@@ -3834,24 +3843,24 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L";"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto condition = readExpression(source, current);
     if (condition) {
       if (condition->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return condition;
       }
       node->condition = condition;
@@ -3861,24 +3870,24 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L";"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto after = readExpression(source, current);
     if (after) {
       if (after->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return after;
       }
       node->after = after;
@@ -3888,27 +3897,27 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readStatement(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -3924,24 +3933,24 @@ private:
     if (!checkIdentifier({L"for"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSForInStatement{};
+    auto node = _allocator->create<JSForInStatement>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto init = readExpression17(source, current);
@@ -3949,11 +3958,11 @@ private:
       init = readVariableDeclaration(source, current);
     }
     if (!init) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (init->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return init;
     }
     node->left = init;
@@ -3962,28 +3971,28 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkIdentifier({L"in"}, source, current)) {
       popScope();
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto expr = readExpression(source, current);
     if (!expr) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (expr->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return expr;
     }
     node->right = expr;
@@ -3992,27 +4001,27 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readStatement(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -4028,24 +4037,24 @@ private:
     if (!checkIdentifier({L"for"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSForOfStatement{};
+    auto node = _allocator->create<JSForOfStatement>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto init = readExpression17(source, current);
@@ -4053,11 +4062,11 @@ private:
       init = readVariableDeclaration(source, current);
     }
     if (!init) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (init->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return init;
     }
     node->left = init;
@@ -4066,28 +4075,28 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkIdentifier({L"of"}, source, current)) {
       popScope();
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto expr = readExpression(source, current);
     if (!expr) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (expr->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return expr;
     }
     node->right = expr;
@@ -4096,27 +4105,27 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readStatement(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -4133,35 +4142,35 @@ private:
     if (!checkIdentifier({L"for"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSForAwaitOfStatement{};
+    auto node = _allocator->create<JSForAwaitOfStatement>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkIdentifier({L"await"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto init = readExpression17(source, current);
@@ -4169,11 +4178,11 @@ private:
       init = readVariableDeclaration(source, current);
     }
     if (!init) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (init->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return init;
     }
     node->left = init;
@@ -4182,27 +4191,27 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkIdentifier({L"of"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto expr = readExpression(source, current);
     if (!expr) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (expr->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return expr;
     }
     node->right = expr;
@@ -4211,27 +4220,27 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readStatement(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -4262,7 +4271,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -4277,7 +4286,7 @@ private:
       if (checkSymbol({L"}"}, source, current)) {
         current = backup;
       } else {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
     }
@@ -4289,7 +4298,7 @@ private:
   JSNode *readVariableDeclaration(const std::wstring &source,
                                   JSPosition &position) {
     auto current = position;
-    auto node = new JSVariableDeclaraionNode{};
+    auto node = _allocator->create<JSVariableDeclaraionNode>();
     if (checkIdentifier({L"const"}, source, current)) {
       node->kind = JS_DECLARATION_TYPE::CONST;
     } else if (checkIdentifier({L"let"}, source, current)) {
@@ -4297,31 +4306,31 @@ private:
     } else if (checkIdentifier({L"var"}, source, current)) {
       node->kind = JS_DECLARATION_TYPE::VAR;
     } else {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto declaration = readVariableDeclarator(source, current);
     if (!declaration) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     for (;;) {
       if (declaration->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return declaration;
       }
       node->declarations.push_back(declaration);
       declaration->addParent(node);
       auto err = declarVariable(node->kind, source, declaration);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup = current;
@@ -4329,7 +4338,7 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L","}, source, current)) {
@@ -4340,12 +4349,12 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       declaration = readVariableDeclarator(source, current);
       if (!declaration) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
     }
@@ -4357,7 +4366,7 @@ private:
   JSNode *readVariableDeclarator(const std::wstring &source,
                                  JSPosition &position) {
     auto current = position;
-    auto node = new JSVariableDeclaratorNode{};
+    auto node = _allocator->create<JSVariableDeclaratorNode>();
     auto identifier = readObjectPattern(source, current);
     if (!identifier) {
       identifier = readArrayPattern(source, current);
@@ -4366,7 +4375,7 @@ private:
       identifier = readIdentifyLiteral(source, current);
     }
     if (!identifier) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     node->identifier = identifier;
@@ -4376,7 +4385,7 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"="}, source, current)) {
@@ -4384,16 +4393,16 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto value = readExpression2(source, current);
       if (!value) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       if (value->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return value;
       }
       node->initialize = value;
@@ -4412,28 +4421,28 @@ private:
     if (!checkSymbol({L"*"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSImportNamespaceNode{};
+    auto node = _allocator->create<JSImportNamespaceNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkIdentifier({L"as"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto alias = readIdentifyLiteral(source, current);
     if (!alias) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     node->alias = alias;
@@ -4450,10 +4459,10 @@ private:
       return nullptr;
     }
     if (isKeyword(source, identifier->location)) {
-      delete identifier;
+      identifier->dispose(_allocator);
       return nullptr;
     }
-    auto node = new JSImportDefaultNode{};
+    auto node = _allocator->create<JSImportDefaultNode>();
     node->identifier = identifier;
     identifier->addParent(node);
     node->location = getLocation(source, position, current);
@@ -4475,10 +4484,10 @@ private:
       return identifier;
     }
     if (isKeyword(source, identifier->location)) {
-      delete identifier;
+      identifier->dispose(_allocator);
       return nullptr;
     }
-    auto node = new JSImportSpecifierNode{};
+    auto node = _allocator->create<JSImportSpecifierNode>();
     node->identifier = identifier;
     identifier->addParent(node);
     auto backup = current;
@@ -4486,7 +4495,7 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkIdentifier({L"as"}, source, current)) {
@@ -4494,12 +4503,12 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto alias = readIdentifyLiteral(source, current);
       if (!alias) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       node->alias = alias;
@@ -4519,34 +4528,34 @@ private:
     if (!identifier) {
       return nullptr;
     }
-    auto node = new JSImportAttributeNode{};
+    auto node = _allocator->create<JSImportAttributeNode>();
     node->key = identifier;
     identifier->addParent(node);
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L":"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto value = readStringLiteral(source, current);
     if (!value) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (value->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return value;
     }
     node->value = value;
@@ -4562,12 +4571,12 @@ private:
     if (!checkIdentifier({L"import"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSImportDeclarationNode{};
+    auto node = _allocator->create<JSImportDeclarationNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto src = readStringLiteral(source, current);
@@ -4578,7 +4587,7 @@ private:
       auto specifier = readImportNamespace(source, current);
       if (specifier) {
         if (specifier->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return specifier;
         }
         node->specifiers.push_back(specifier);
@@ -4587,7 +4596,7 @@ private:
         specifier = readImportDefault(source, current);
         if (specifier) {
           if (specifier->type == JS_NODE_TYPE::ERROR) {
-            delete node;
+            node->dispose(_allocator);
             return specifier;
           }
           node->specifiers.push_back(specifier);
@@ -4596,7 +4605,7 @@ private:
           }
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           if (checkSymbol({L","}, source, current)) {
@@ -4605,11 +4614,11 @@ private:
             }
             err = readComments(source, current, node->comments);
             if (err) {
-              delete node;
+              node->dispose(_allocator);
               return err;
             }
             if (!checkSymbol({L"{"}, source, current)) {
-              delete node;
+              node->dispose(_allocator);
               return createError(L"Invalid or unexpected token", source,
                                  current);
             } else {
@@ -4621,7 +4630,7 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         if (checkSymbol({L"{"}, source, current)) {
@@ -4629,14 +4638,14 @@ private:
           }
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           specifier = readImportSpecifier(source, current);
           for (;;) {
             if (specifier) {
               if (specifier->type == JS_NODE_TYPE::ERROR) {
-                delete node;
+                node->dispose(_allocator);
                 return specifier;
               }
               node->specifiers.push_back(specifier);
@@ -4646,7 +4655,7 @@ private:
             }
             err = readComments(source, current, node->comments);
             if (err) {
-              delete node;
+              node->dispose(_allocator);
               return err;
             }
             if (!checkSymbol({L","}, source, current)) {
@@ -4656,7 +4665,7 @@ private:
             }
             err = readComments(source, current, node->comments);
             if (err) {
-              delete node;
+              node->dispose(_allocator);
               return err;
             }
             specifier = readImportSpecifier(source, current);
@@ -4665,11 +4674,11 @@ private:
           }
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           if (!checkSymbol({L"}"}, source, current)) {
-            delete node;
+            node->dispose(_allocator);
             return createError(L"Invalid or unexpected token", source, current);
           }
         }
@@ -4679,29 +4688,29 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!node->specifiers.empty()) {
         if (!checkIdentifier({L"from"}, source, current)) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         while (skipInvisible(source, current)) {
         }
         err = readComments(source, current, node->comments);
         if (err) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
       }
       auto src = readStringLiteral(source, current);
       if (!src) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       if (src->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return src;
       }
       node->source = src;
@@ -4712,7 +4721,7 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkIdentifier({L"assert"}, source, current)) {
@@ -4720,25 +4729,25 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L"{"}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       while (skipInvisible(source, current)) {
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto attribute = readImportAttribute(source, current);
       if (attribute) {
         for (;;) {
           if (attribute->type == JS_NODE_TYPE::ERROR) {
-            delete node;
+            node->dispose(_allocator);
             return attribute;
           }
           node->attributes.push_back(attribute);
@@ -4747,7 +4756,7 @@ private:
           }
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           if (!checkSymbol({L","}, source, current)) {
@@ -4757,12 +4766,12 @@ private:
           }
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           attribute = readImportAttribute(source, current);
           if (!attribute) {
-            delete node;
+            node->dispose(_allocator);
             return createError(L"Invalid or unexpected token", source, current);
           }
         }
@@ -4771,11 +4780,11 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L"}"}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
     } else {
@@ -4794,7 +4803,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -4809,14 +4818,14 @@ private:
       if (checkSymbol({L"}"}, source, current)) {
         backup = current;
       } else {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
     }
     for (auto item : node->specifiers) {
       auto err = declarVariable(JS_DECLARATION_TYPE::CONST, source, item);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
     }
@@ -4828,17 +4837,17 @@ private:
   JSNode *readExportSpecifier(const std::wstring &source,
                               JSPosition &position) {
     auto current = position;
-    auto node = new JSExportSpecifierNode{};
+    auto node = _allocator->create<JSExportSpecifierNode>();
     auto left = readIdentifyLiteral(source, current);
     if (!left) {
       left = readStringLiteral(source, current);
     }
     if (!left) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     if (left->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return left;
     }
     node->identifier = left;
@@ -4847,7 +4856,7 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkIdentifier({L"as"}, source, current)) {
@@ -4855,7 +4864,7 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto identifier = readIdentifyLiteral(source, current);
@@ -4863,11 +4872,11 @@ private:
         identifier = readStringLiteral(source, current);
       }
       if (!identifier) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       if (identifier->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return identifier;
       }
       node->alias = identifier;
@@ -4884,12 +4893,12 @@ private:
     if (!checkSymbol({L"*"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSExportNamespaceNode{};
+    auto node = _allocator->create<JSExportNamespaceNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkIdentifier({L"as"}, source, current)) {
@@ -4897,16 +4906,16 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto alias = readIdentifyLiteral(source, current);
       if (!alias) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       if (alias->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return alias;
       }
       node->alias = alias;
@@ -4923,21 +4932,21 @@ private:
     if (!checkIdentifier({L"default"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSExportDefaultNode{};
+    auto node = _allocator->create<JSExportDefaultNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->expression = readExpression(source, current);
     if (!node->expression) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (node->expression->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return node->expression;
     }
     node->expression->addParent(node);
@@ -4952,12 +4961,12 @@ private:
     if (!checkIdentifier({L"export"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSExportDeclarationNode{};
+    auto node = _allocator->create<JSExportDeclarationNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto item = readFunctionDeclaration(source, current);
@@ -4971,7 +4980,7 @@ private:
       item = readExportDefaultSpecifier(source, current);
     }
     if (item) {
-      auto specifier = new JSExportNamedNode{};
+      auto specifier = _allocator->create<JSExportNamedNode>();
       specifier->declaration = item;
       item->addParent(specifier);
       specifier->location = item->location;
@@ -4981,7 +4990,7 @@ private:
       auto specifier = readExportNamespaceSpecifier(source, current);
       if (specifier) {
         if (specifier->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return specifier;
         }
         node->specifiers.push_back(specifier);
@@ -4992,14 +5001,14 @@ private:
           }
           auto err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           auto specifier = readExportSpecifier(source, current);
           for (;;) {
             if (specifier) {
               if (specifier->type == JS_NODE_TYPE::ERROR) {
-                delete node;
+                node->dispose(_allocator);
                 return specifier;
               }
               node->specifiers.push_back(specifier);
@@ -5009,7 +5018,7 @@ private:
             }
             auto err = readComments(source, current, node->comments);
             if (err) {
-              delete node;
+              node->dispose(_allocator);
               return err;
             }
             if (!checkSymbol({L","}, source, current)) {
@@ -5021,15 +5030,15 @@ private:
           }
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           if (!checkSymbol({L"}"}, source, current)) {
-            delete node;
+            node->dispose(_allocator);
             return createError(L"Invalid or unexcepted token", source, current);
           }
         } else {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
       }
@@ -5037,7 +5046,7 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (checkIdentifier({L"from"}, source, current)) {
@@ -5045,16 +5054,16 @@ private:
         }
         auto err = readComments(source, current, node->comments);
         if (err) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         auto src = readStringLiteral(source, current);
         if (!src) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
         if (src->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return src;
         }
         node->source = src;
@@ -5064,7 +5073,7 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         if (checkIdentifier({L"assert"}, source, current)) {
@@ -5072,25 +5081,25 @@ private:
           }
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           if (!checkSymbol({L"{"}, source, current)) {
-            delete node;
+            node->dispose(_allocator);
             return createError(L"Invalid or unexpected token", source, current);
           }
           while (skipInvisible(source, current)) {
           }
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           auto attribute = readImportAttribute(source, current);
           if (attribute) {
             for (;;) {
               if (attribute->type == JS_NODE_TYPE::ERROR) {
-                delete node;
+                node->dispose(_allocator);
                 return attribute;
               }
               node->attributes.push_back(attribute);
@@ -5099,7 +5108,7 @@ private:
               }
               err = readComments(source, current, node->comments);
               if (err) {
-                delete node;
+                node->dispose(_allocator);
                 return err;
               }
               if (!checkSymbol({L","}, source, current)) {
@@ -5109,12 +5118,12 @@ private:
               }
               err = readComments(source, current, node->comments);
               if (err) {
-                delete node;
+                node->dispose(_allocator);
                 return err;
               }
               attribute = readImportAttribute(source, current);
               if (!attribute) {
-                delete node;
+                node->dispose(_allocator);
                 return createError(L"Invalid or unexpected token", source,
                                    current);
               }
@@ -5124,11 +5133,11 @@ private:
           }
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           if (!checkSymbol({L"}"}, source, current)) {
-            delete node;
+            node->dispose(_allocator);
             return createError(L"Invalid or unexpected token", source, current);
           }
         } else {
@@ -5149,7 +5158,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -5164,7 +5173,7 @@ private:
       if (checkSymbol({L"}"}, source, current)) {
         backup = current;
       } else {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
     }
@@ -5255,7 +5264,7 @@ private:
     if (!expression || expression->type == JS_NODE_TYPE::ERROR) {
       return expression;
     }
-    auto node = new JSExpressionStatementNode{};
+    auto node = _allocator->create<JSExpressionStatementNode>();
     node->expression = expression;
     expression->addParent(node);
     auto newline = false;
@@ -5271,7 +5280,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return comment;
         }
         node->comments.push_back(comment);
@@ -5286,7 +5295,7 @@ private:
       if (checkSymbol({L"}"}, source, current)) {
         backup = current;
       } else {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
     }
@@ -5311,22 +5320,22 @@ private:
       }
     }
     auto current = position;
-    auto node = new JSObjectPropertyNode{};
+    auto node = _allocator->create<JSObjectPropertyNode>();
     if (checkSymbol({L"["}, source, current)) {
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto value = readExpression(source, current);
       if (!value) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or nexcepted token", source, current);
       }
       if (value->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return value;
       }
       node->key = value;
@@ -5335,11 +5344,11 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L"]"}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or nexcepted token", source, current);
       }
       node->computed = true;
@@ -5349,7 +5358,7 @@ private:
         identifier = readStringLiteral(source, current);
       }
       if (!identifier) {
-        delete node;
+        node->dispose(_allocator);
         return nullptr;
       }
       node->key = identifier;
@@ -5360,16 +5369,16 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto val = readExpression2(source, current);
       if (!val) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or nexcepted token", source, current);
       }
       if (val->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return val;
       }
       node->value = val;
@@ -5382,14 +5391,14 @@ private:
   JSNode *readObjectMethod(const std::wstring &source, JSPosition &position) {
     auto current = position;
     auto backup = current;
-    auto node = new JSObjectMethodNode{};
+    auto node = _allocator->create<JSObjectMethodNode>();
     if (checkIdentifier({L"async"}, source, current)) {
       node->async = true;
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (checkSymbol({L"("}, source, current)) {
@@ -5401,7 +5410,7 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"*"}, source, current)) {
@@ -5411,7 +5420,7 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"["}, source, current)) {
@@ -5419,16 +5428,16 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto value = readExpression(source, current);
       if (!value) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or nexcepted token", source, current);
       }
       if (value->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return value;
       }
       node->key = value;
@@ -5437,11 +5446,11 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L"]"}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or nexcepted token", source, current);
       }
       node->computed = true;
@@ -5451,7 +5460,7 @@ private:
         identifier = readStringLiteral(source, current);
       }
       if (!identifier) {
-        delete node;
+        node->dispose(_allocator);
         return nullptr;
       }
       node->key = identifier;
@@ -5461,25 +5470,25 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto argument = readFunctionArgument(source, current);
     while (argument) {
       if (argument->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return argument;
       }
       node->arguments.push_back(argument);
@@ -5492,7 +5501,7 @@ private:
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup = current;
@@ -5501,14 +5510,14 @@ private:
         break;
       }
       if (!checkSymbol({L","}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       while (skipInvisible(source, current)) {
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       argument = readFunctionArgument(source, current);
@@ -5517,27 +5526,27 @@ private:
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readFunctionBodyDeclaration(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -5550,20 +5559,20 @@ private:
 
   JSNode *readObjectAccessor(const std::wstring &source, JSPosition &position) {
     auto current = position;
-    auto node = new JSObjectAccessorNode{};
+    auto node = _allocator->create<JSObjectAccessorNode>();
     if (checkIdentifier({L"get"}, source, current)) {
       node->kind = JS_ACCESSOR_TYPE::GET;
     } else if (checkIdentifier({L"set"}, source, current)) {
       node->kind = JS_ACCESSOR_TYPE::SET;
     } else {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
 
@@ -5571,7 +5580,7 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"["}, source, current)) {
@@ -5579,16 +5588,16 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto value = readExpression(source, current);
       if (!value) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or nexcepted token", source, current);
       }
       if (value->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return value;
       }
       node->key = value;
@@ -5597,11 +5606,11 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L"]"}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or nexcepted token", source, current);
       }
       node->computed = true;
@@ -5611,7 +5620,7 @@ private:
         identifier = readStringLiteral(source, current);
       }
       if (!identifier) {
-        delete node;
+        node->dispose(_allocator);
         return nullptr;
       }
       node->key = identifier;
@@ -5621,12 +5630,12 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
 
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
@@ -5634,13 +5643,13 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto argument = readFunctionArgument(source, current);
     while (argument) {
       if (argument->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return argument;
       }
       node->arguments.push_back(argument);
@@ -5653,7 +5662,7 @@ private:
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup = current;
@@ -5662,14 +5671,14 @@ private:
         break;
       }
       if (!checkSymbol({L","}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       while (skipInvisible(source, current)) {
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       argument = readFunctionArgument(source, current);
@@ -5678,27 +5687,27 @@ private:
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readFunctionBodyDeclaration(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -5715,19 +5724,19 @@ private:
     if (!checkSymbol({L"{"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSObjectDeclarationNode{};
+    auto node = _allocator->create<JSObjectDeclarationNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto item = readObjectProperty(source, current);
     if (item) {
       for (;;) {
         if (item->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return item;
         }
         node->properties.push_back(item);
@@ -5736,7 +5745,7 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         auto backup = current;
@@ -5745,7 +5754,7 @@ private:
           break;
         }
         if (!checkSymbol({L","}, source, current)) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         } else {
           auto backup = current;
@@ -5758,12 +5767,12 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         item = readObjectProperty(source, current);
         if (!item) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
       }
@@ -5772,11 +5781,11 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"}"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     node->location = getLocation(source, position, current);
@@ -5802,13 +5811,13 @@ private:
     }
     auto current = position;
     auto backup = current;
-    auto node = new JSClassPropertyNode{};
+    auto node = _allocator->create<JSClassPropertyNode>();
     if (checkIdentifier({L"static"}, source, current)) {
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup2 = current;
@@ -5821,14 +5830,14 @@ private:
         identifier = readStringLiteral(source, current);
       }
       if (identifier && identifier->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return identifier;
       }
       if (identifier || checkSymbol({L"*"}, source, current) ||
           checkSymbol({L"["}, source, current)) {
         current = backup2;
         node->static_ = true;
-        delete identifier;
+        identifier->dispose(_allocator);
       } else {
         current = backup;
       }
@@ -5846,7 +5855,7 @@ private:
         }
         auto err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         identifier = readExpression(source, current);
@@ -5854,22 +5863,22 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         if (!checkSymbol({L"]"}, source, current)) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
         node->computed = true;
       }
     }
     if (!identifier) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     if (identifier->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return identifier;
     }
     node->identifier = identifier;
@@ -5878,7 +5887,7 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"="}, source, current)) {
@@ -5886,16 +5895,16 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto value = readExpression(source, current);
       if (!value) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       if (value->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return value;
       }
       node->value = value;
@@ -5915,7 +5924,7 @@ private:
       auto comment = readComment(source, current, &isCommentNewline);
       if (comment) {
         if (comment->type == JS_NODE_TYPE::ERROR) {
-          delete res;
+          res->dispose(_allocator);
           return comment;
         }
         res->comments.push_back(comment);
@@ -5929,7 +5938,7 @@ private:
       if (checkSymbol({L"}"}, source, current)) {
         current = backup;
       } else {
-        delete res;
+        res->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
     }
@@ -5940,13 +5949,13 @@ private:
   JSNode *readClassMethod(const std::wstring &source, JSPosition &position) {
     auto current = position;
     auto backup = current;
-    auto node = new JSClassMethodNode{};
+    auto node = _allocator->create<JSClassMethodNode>();
     if (checkIdentifier({L"static"}, source, current)) {
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup2 = current;
@@ -5958,14 +5967,14 @@ private:
         identifier = readPrivateName(source, current);
       }
       if (identifier && identifier->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return identifier;
       }
       if (identifier || checkSymbol({L"*"}, source, current) ||
           checkSymbol({L"["}, source, current)) {
         current = backup2;
         node->static_ = true;
-        delete identifier;
+        identifier->dispose(_allocator);
       } else {
         current = backup;
       }
@@ -5976,7 +5985,7 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup2 = current;
@@ -5988,14 +5997,14 @@ private:
         identifier = readPrivateName(source, current);
       }
       if (identifier && identifier->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return identifier;
       }
       if (identifier || checkSymbol({L"*"}, source, current) ||
           checkSymbol({L"["}, source, current)) {
         current = backup2;
         node->async = true;
-        delete identifier;
+        identifier->dispose(_allocator);
       } else {
         current = backup;
       }
@@ -6006,7 +6015,7 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
     }
@@ -6024,7 +6033,7 @@ private:
         }
         auto err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         identifier = readExpression(source, current);
@@ -6032,22 +6041,22 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         if (!checkSymbol({L"]"}, source, current)) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
         node->computed = true;
       }
     }
     if (!identifier) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     if (identifier->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return identifier;
     }
     node->identifier = identifier;
@@ -6056,11 +6065,11 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
@@ -6068,7 +6077,7 @@ private:
     if (argument) {
       for (;;) {
         if (argument->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return argument;
         }
         node->arguments.push_back(argument);
@@ -6081,7 +6090,7 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         if (!checkSymbol({L","}, source, current)) {
@@ -6091,12 +6100,12 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         argument = readFunctionArgument(source, current);
         if (!argument) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
       }
@@ -6105,27 +6114,27 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readFunctionBodyDeclaration(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -6138,14 +6147,14 @@ private:
 
   JSNode *readClassAccessor(const std::wstring &source, JSPosition &position) {
     auto current = position;
-    auto node = new JSClassAccessorNode{};
+    auto node = _allocator->create<JSClassAccessorNode>();
     auto backup = current;
     if (checkIdentifier({L"static"}, source, current)) {
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup2 = current;
@@ -6161,7 +6170,7 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkIdentifier({L"get"}, source, current)) {
@@ -6169,14 +6178,14 @@ private:
     } else if (checkIdentifier({L"set"}, source, current)) {
       node->kind = JS_ACCESSOR_TYPE::SET;
     } else {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto identifier = readIdentifyLiteral(source, current);
@@ -6192,7 +6201,7 @@ private:
         }
         auto err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         identifier = readExpression(source, current);
@@ -6200,22 +6209,22 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         if (!checkSymbol({L"]"}, source, current)) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
         node->computed = true;
       }
     }
     if (!identifier) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     if (identifier->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return identifier;
     }
     node->identifier = identifier;
@@ -6224,11 +6233,11 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
@@ -6236,7 +6245,7 @@ private:
     if (argument) {
       for (;;) {
         if (argument->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return argument;
         }
         node->arguments.push_back(argument);
@@ -6249,7 +6258,7 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         if (!checkSymbol({L","}, source, current)) {
@@ -6259,12 +6268,12 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         argument = readFunctionArgument(source, current);
         if (!argument) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexcepted token", source, current);
         }
       }
@@ -6273,27 +6282,27 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readFunctionBodyDeclaration(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -6309,23 +6318,23 @@ private:
     if (!checkIdentifier({L"static"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSStaticBlockNode{};
+    auto node = _allocator->create<JSStaticBlockNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
     auto block = readBlockStatement(source, current);
     if (!block) {
       popScope();
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     if (block->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return block;
     }
     popScope();
@@ -6342,23 +6351,23 @@ private:
     if (!checkIdentifier({L"class"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSClassDeclaration{};
+    auto node = _allocator->create<JSClassDeclaration>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto backup = current;
     auto identifier = readIdentifyLiteral(source, current);
     if (identifier) {
       if (identifier->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return identifier;
       }
       if (isKeyword(source, identifier->location)) {
-        delete identifier;
+        identifier->dispose(_allocator);
         current = backup;
         identifier = nullptr;
       }
@@ -6371,7 +6380,7 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkIdentifier({L"extends"}, source, current)) {
@@ -6379,12 +6388,12 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto extends = readExpression17(source, current);
       if (!extends) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       node->extends = extends;
@@ -6394,30 +6403,30 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     if (!checkSymbol({L"{"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto property = readClassProperty(source, current);
     if (property) {
       for (;;) {
         if (property->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return property;
         }
         if (property->type == JS_NODE_TYPE::STATEMENT_EMPTY) {
-          delete property;
+          property->dispose(_allocator);
         } else {
           node->properties.push_back(property);
           property->addParent(node);
@@ -6426,7 +6435,7 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         property = readClassProperty(source, current);
@@ -6439,11 +6448,11 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"}"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     popScope();
@@ -6451,7 +6460,7 @@ private:
     position = current;
     err = declarVariable(JS_DECLARATION_TYPE::CONST, source, node);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     return node;
@@ -6463,12 +6472,12 @@ private:
     if (!checkSymbol({L"["}, source, current)) {
       return nullptr;
     }
-    auto node = new JSArrayDeclarationNode{};
+    auto node = _allocator->create<JSArrayDeclarationNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"]"}, source, current)) {
@@ -6483,7 +6492,7 @@ private:
     for (;;) {
       if (item) {
         if (item->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return item;
         }
         item->addParent(node);
@@ -6493,7 +6502,7 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup = current;
@@ -6502,14 +6511,14 @@ private:
         break;
       }
       if (!checkSymbol({L","}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       while (skipInvisible(source, current)) {
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       item = readExpression2(source, current);
@@ -6518,7 +6527,7 @@ private:
       }
     }
     if (!checkSymbol({L"]"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     node->location = getLocation(source, position, current);
@@ -6531,21 +6540,21 @@ private:
     if (!checkSymbol({L"..."}, source, current)) {
       return nullptr;
     }
-    auto node = new JSSpreadPatternItemNode{};
+    auto node = _allocator->create<JSSpreadPatternItemNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto value = readPattern(source, current);
     if (!value) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     if (value->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return value;
     }
     node->value = value;
@@ -6558,26 +6567,26 @@ private:
   JSNode *readObjectPatternItem(const std::wstring &source,
                                 JSPosition &position) {
     auto current = position;
-    auto node = new JSObjectPatternItemNode{};
+    auto node = _allocator->create<JSObjectPatternItemNode>();
     if (checkSymbol({L"["}, source, current)) {
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto field = readExpression(source, current);
       if (!field) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       if (field->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return field;
       }
       if (!checkSymbol({L"]"}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       node->key = field;
@@ -6594,7 +6603,7 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (node->key) {
@@ -6603,30 +6612,30 @@ private:
         }
         auto err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         auto pattern = readPattern(source, current);
         if (!pattern) {
-          delete node;
+          node->dispose(_allocator);
           return nullptr;
         }
         if (pattern->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return pattern;
         }
         node->alias = pattern;
         pattern->addParent(node);
       }
     } else {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"="}, source, current)) {
@@ -6634,12 +6643,12 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto value = readExpression2(source, current);
       if (!value) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       node->value = value;
@@ -6654,12 +6663,12 @@ private:
     if (!checkSymbol({L"{"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSObjectPatternNode{};
+    auto node = _allocator->create<JSObjectPatternNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"}"}, source, current)) {
@@ -6672,7 +6681,7 @@ private:
     for (;;) {
       if (item) {
         if (item->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return item;
         }
         node->items.push_back(item);
@@ -6681,7 +6690,7 @@ private:
         }
         err = readComments(source, current, node->comments);
         if (err != nullptr) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
       }
@@ -6691,20 +6700,20 @@ private:
         break;
       }
       if (!checkSymbol({L","}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return nullptr;
       }
       while (skipInvisible(source, current)) {
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       item = readObjectPatternItem(source, current);
     }
     if (!checkSymbol({L"}"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     node->location = getLocation(source, position, current);
@@ -6715,10 +6724,10 @@ private:
   JSNode *readArrayPatternItem(const std::wstring &source,
                                JSPosition &position) {
     auto current = position;
-    auto node = new JSArrayPatternItemNode{};
+    auto node = _allocator->create<JSArrayPatternItemNode>();
     auto identifier = readPartPattern(source, current);
     if (!identifier || identifier->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return identifier;
     }
     node->alias = identifier;
@@ -6727,7 +6736,7 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"="}, source, current)) {
@@ -6735,12 +6744,12 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto value = readExpression2(source, current);
       if (!value) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       node->value = value;
@@ -6756,12 +6765,12 @@ private:
     if (!checkSymbol({L"["}, source, current)) {
       return nullptr;
     }
-    auto node = new JSArrayPatternNode{};
+    auto node = _allocator->create<JSArrayPatternNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"]"}, source, current)) {
@@ -6773,7 +6782,7 @@ private:
     for (;;) {
       if (item) {
         if (item->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return item;
         }
         item->addParent(node);
@@ -6783,7 +6792,7 @@ private:
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup = current;
@@ -6792,20 +6801,20 @@ private:
         break;
       }
       if (!checkSymbol({L","}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return nullptr;
       }
       while (skipInvisible(source, current)) {
       }
       err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       item = readArrayPatternItem(source, current);
     }
     if (!checkSymbol({L"]"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     node->location = getLocation(source, position, current);
@@ -6835,10 +6844,10 @@ private:
   JSNode *readFunctionArgument(const std::wstring &source,
                                JSPosition &position) {
     auto current = position;
-    auto node = new JSFunctionArgumentDeclarationNode{};
+    auto node = _allocator->create<JSFunctionArgumentDeclarationNode>();
     auto identifier = readPartPattern(source, current);
     if (!identifier) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     node->identifier = identifier;
@@ -6847,7 +6856,7 @@ private:
     }
     auto err = readComments(source, current, node->comments);
     if (err != nullptr) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"="}, source, current)) {
@@ -6855,16 +6864,16 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto value = readExpression3(source, current);
       if (!value) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       if (value->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return value;
       }
       node->value = value;
@@ -6878,9 +6887,9 @@ private:
   JSNode *readFunctionBodyDeclaration(const std::wstring &source,
                                       JSPosition &position) {
     auto current = position;
-    auto node = new JSFunctionBodyDeclarationNode{};
+    auto node = _allocator->create<JSFunctionBodyDeclarationNode>();
     if (!checkSymbol({L"{"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::BLOCK, node);
@@ -6889,7 +6898,7 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto directive = readDirective(source, current);
@@ -6897,7 +6906,7 @@ private:
         break;
       }
       if (directive->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return directive;
       }
       node->directives.push_back(directive);
@@ -6908,7 +6917,7 @@ private:
       }
       auto err = readComments(source, current, node->comments);
       if (err != nullptr) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto statement = readStatement(source, current);
@@ -6916,14 +6925,14 @@ private:
         break;
       }
       if (statement->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return statement;
       }
       node->statements.push_back(statement);
       statement->addParent(node);
     }
     if (!checkSymbol({L"}"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     node->location = getLocation(source, position, current);
@@ -6935,7 +6944,7 @@ private:
   JSNode *readFunctionDeclaration(const std::wstring &source,
                                   JSPosition &position) {
     auto current = position;
-    auto node = new JSFunctionDeclarationNode{};
+    auto node = _allocator->create<JSFunctionDeclarationNode>();
     if (checkIdentifier({L"async"}, source, current)) {
       node->async = true;
     }
@@ -6943,18 +6952,18 @@ private:
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkIdentifier({L"function"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     while (skipInvisible(source, current)) {
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"*"}, source, current)) {
@@ -6964,7 +6973,7 @@ private:
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto identifier = readIdentifyLiteral(source, current);
@@ -6972,7 +6981,7 @@ private:
       node->identifier = identifier;
       identifier->addParent(node);
       if (isKeyword(source, identifier->location)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
     }
@@ -6980,26 +6989,26 @@ private:
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
 
     if (!checkSymbol({L"("}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto argument = readFunctionArgument(source, current);
     while (argument) {
       if (argument->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return argument;
       }
       node->arguments.push_back(argument);
@@ -7012,7 +7021,7 @@ private:
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup = current;
@@ -7021,14 +7030,14 @@ private:
         break;
       }
       if (!checkSymbol({L","}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexcepted token", source, current);
       }
       while (skipInvisible(source, current)) {
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       argument = readFunctionArgument(source, current);
@@ -7037,27 +7046,27 @@ private:
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     while (skipInvisible(source, current)) {
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readFunctionBodyDeclaration(source, current);
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     if (body->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return body;
     }
     node->body = body;
@@ -7067,7 +7076,7 @@ private:
     position = current;
     err = declarVariable(JS_DECLARATION_TYPE::FUNCTION, source, node);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     return node;
@@ -7076,7 +7085,7 @@ private:
   JSNode *readArrowFunctionDeclaration(const std::wstring &source,
                                        JSPosition &position) {
     auto current = position;
-    auto node = new JSArrowDeclarationNode;
+    auto node = _allocator->create<JSArrowDeclarationNode>();
     node->scope = pushScope(JS_COMPILE_SCOPE_TYPE::LEX, node);
     auto backup = current;
     if (checkIdentifier({L"async"}, source, current)) {
@@ -7085,7 +7094,7 @@ private:
       };
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (checkSymbol({L"=>"}, source, current)) {
@@ -7098,14 +7107,14 @@ private:
       };
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto arg = readFunctionArgument(source, current);
       if (arg) {
         for (;;) {
           if (arg->type == JS_NODE_TYPE::ERROR) {
-            delete node;
+            node->dispose(_allocator);
             return arg;
           }
           node->arguments.push_back(arg);
@@ -7118,7 +7127,7 @@ private:
           };
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           auto backup = current;
@@ -7128,20 +7137,20 @@ private:
           }
           if (!checkSymbol({L","}, source, current)) {
             popScope();
-            delete node;
+            node->dispose(_allocator);
             return nullptr;
           }
           while (skipInvisible(source, current)) {
           };
           err = readComments(source, current, node->comments);
           if (err) {
-            delete node;
+            node->dispose(_allocator);
             return err;
           }
           arg = readFunctionArgument(source, current);
           if (!arg) {
             popScope();
-            delete node;
+            node->dispose(_allocator);
             return nullptr;
           }
         }
@@ -7151,34 +7160,34 @@ private:
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L")"}, source, current)) {
         popScope();
-        delete node;
+        node->dispose(_allocator);
         return nullptr;
       }
       while (skipInvisible(source, current)) {
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L"=>"}, source, current)) {
         popScope();
-        delete node;
+        node->dispose(_allocator);
         return nullptr;
       }
     } else {
       auto identifier = readIdentifyLiteral(source, current);
       if (identifier == nullptr) {
         popScope();
-        delete node;
+        node->dispose(_allocator);
         return nullptr;
       }
-      auto arg = new JSFunctionArgumentDeclarationNode{};
+      auto arg = _allocator->create<JSFunctionArgumentDeclarationNode>();
       arg->identifier = identifier;
       arg->location = identifier->location;
       identifier->addParent(arg);
@@ -7192,12 +7201,12 @@ private:
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L"=>"}, source, current)) {
         popScope();
-        delete node;
+        node->dispose(_allocator);
         return nullptr;
       }
     }
@@ -7205,7 +7214,7 @@ private:
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto body = readFunctionBodyDeclaration(source, current);
@@ -7213,7 +7222,7 @@ private:
       body = readExpression2(source, current);
     }
     if (!body) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexcepted token", source, current);
     }
     node->body = body;
@@ -7270,7 +7279,7 @@ private:
       node = readIdentifyLiteral(source, current);
       if (node) {
         if (isKeyword(source, node->location)) {
-          delete node;
+          node->dispose(_allocator);
           node = nullptr;
         } else {
           position = current;
@@ -7284,12 +7293,12 @@ private:
                               JSPosition &position) {
     auto current = position;
     if (checkSymbol({L"("}, source, current)) {
-      auto node = new JSGroupExpressionNode{};
+      auto node = _allocator->create<JSGroupExpressionNode>();
       while (skipInvisible(source, current)) {
       };
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto expr = readExpression(source, current);
@@ -7305,11 +7314,11 @@ private:
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       if (!checkSymbol({L")"}, source, current)) {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       node->location = getLocation(source, position, current);
@@ -7334,12 +7343,12 @@ private:
     if (!checkIdentifier({L"new"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSNewExpressionNode{};
+    auto node = _allocator->create<JSNewExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto callee = readIdentifyLiteral(source, current);
@@ -7347,11 +7356,11 @@ private:
       callee = readGroupExpression(source, current);
     }
     if (!callee) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (callee->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return callee;
     }
     for (;;) {
@@ -7359,8 +7368,8 @@ private:
       };
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
-        delete callee;
+        node->dispose(_allocator);
+        callee->dispose(_allocator);
         return err;
       }
       auto next = readCallExpression(source, current, callee);
@@ -7372,29 +7381,29 @@ private:
         node->children = call->children;
         call->children.clear();
         call->comments.clear();
-        delete call;
+        call->dispose(_allocator);
         node->location = getLocation(source, position, current);
         position = current;
         return node;
       }
       next = readOptionalMemberExpression(source, current, callee);
       if (next) {
-        delete next;
-        delete node;
+        next->dispose(_allocator);
+        node->dispose(_allocator);
         return createError(L"Invalid optional chain from new expression",
                            source, current);
       }
       next = readOptionalComputedMemberExpression(source, current, callee);
       if (next) {
-        delete next;
-        delete node;
+        next->dispose(_allocator);
+        node->dispose(_allocator);
         return createError(L"Invalid optional chain from new expression",
                            source, current);
       }
       next = readOptionalCallExpression(source, current, callee);
       if (next) {
-        delete next;
-        delete node;
+        next->dispose(_allocator);
+        node->dispose(_allocator);
         return createError(L"Invalid optional chain from new expression",
                            source, current);
       }
@@ -7406,8 +7415,8 @@ private:
         callee = next;
       }
       if (!next) {
-        delete callee;
-        delete node;
+        callee->dispose(_allocator);
+        node->dispose(_allocator);
         return nullptr;
       }
     }
@@ -7420,12 +7429,12 @@ private:
     if (!checkSymbol({L"."}, source, current)) {
       return nullptr;
     }
-    auto node = new JSMemberExpressionNode{};
+    auto node = _allocator->create<JSMemberExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto identifier = readIdentifyLiteral(source, current);
@@ -7433,12 +7442,12 @@ private:
       identifier = readPrivateName(source, current);
     }
     if (!identifier) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Unexpected end of input", source, current);
     }
     if (isKeyword(source, identifier->location)) {
-      delete identifier;
-      delete node;
+      identifier->dispose(_allocator);
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source,
                          identifier->location.start);
     }
@@ -7457,21 +7466,21 @@ private:
     if (!checkSymbol({L"["}, source, current)) {
       return nullptr;
     }
-    auto node = new JSComputedMemberExpressionNode{};
+    auto node = _allocator->create<JSComputedMemberExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto field = readExpression(source, current);
     if (!field) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (field->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return field;
     }
     node->field = field;
@@ -7479,11 +7488,11 @@ private:
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"]"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     node->host = left;
@@ -7507,7 +7516,7 @@ private:
     if (value->type == JS_NODE_TYPE::ERROR) {
       return value;
     }
-    auto node = new JSSpreadExpressionNode{};
+    auto node = _allocator->create<JSSpreadExpressionNode>();
     node->value = value;
     value->addParent(node);
     node->location = getLocation(source, position, current);
@@ -7521,12 +7530,12 @@ private:
     if (!checkSymbol({L"("}, source, current)) {
       return nullptr;
     }
-    auto node = new JSCallExpressionNode{};
+    auto node = _allocator->create<JSCallExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto arg = readExpression2(source, current);
@@ -7534,7 +7543,7 @@ private:
       arg = readSpreadExpression(source, current);
     }
     if (arg && arg->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return arg;
     }
     while (arg) {
@@ -7544,7 +7553,7 @@ private:
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       auto backup = current;
@@ -7553,14 +7562,14 @@ private:
         current = backup;
         break;
       } else {
-        delete node;
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       while (skipInvisible(source, current)) {
       };
       err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
+        node->dispose(_allocator);
         return err;
       }
       arg = readExpression2(source, current);
@@ -7568,7 +7577,7 @@ private:
         arg = readSpreadExpression(source, current);
       }
       if (arg && arg->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return arg;
       }
     }
@@ -7576,11 +7585,11 @@ private:
     };
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L")"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     node->callee = left;
@@ -7597,12 +7606,12 @@ private:
     if (!checkSymbol({L"?."}, source, current)) {
       return nullptr;
     }
-    auto node = new JSOptionalMemberExpressionNode{};
+    auto node = _allocator->create<JSOptionalMemberExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto identifier = readIdentifyLiteral(source, current);
@@ -7610,7 +7619,7 @@ private:
       identifier = readPrivateName(source, current);
     }
     if (!identifier) {
-      delete node;
+      node->dispose(_allocator);
       return identifier;
     }
     node->field = identifier;
@@ -7635,7 +7644,7 @@ private:
     if (!computed || computed->type == JS_NODE_TYPE::ERROR) {
       return computed;
     }
-    auto node = new JSOptionalMemberExpressionNode;
+    auto node = _allocator->create<JSOptionalMemberExpressionNode>();
     auto computedNode =
         dynamic_cast<JSComputedMemberExpressionNode *>(computed);
     node->host = computedNode->host;
@@ -7645,7 +7654,7 @@ private:
     node->location = computedNode->location;
     computedNode->children.clear();
     computedNode->comments.clear();
-    delete computedNode;
+    computedNode->dispose(_allocator);
     position = current;
     return node;
   }
@@ -7661,7 +7670,7 @@ private:
     if (!call || call->type == JS_NODE_TYPE::ERROR) {
       return call;
     }
-    auto node = new JSCallExpressionNode;
+    auto node = _allocator->create<JSCallExpressionNode>();
     auto callNode = dynamic_cast<JSCallExpressionNode *>(call);
     node->callee = callNode->callee;
     node->arguments = callNode->arguments;
@@ -7670,7 +7679,7 @@ private:
     node->location = callNode->location;
     callNode->children.clear();
     callNode->comments.clear();
-    delete callNode;
+    callNode->dispose(_allocator);
     position = current;
     return node;
   }
@@ -7692,7 +7701,7 @@ private:
         };
         auto err = readComments(source, current, node->comments);
         if (err) {
-          delete node;
+          node->dispose(_allocator);
           return err;
         }
         JSNode *next = readCallExpression(source, current, node);
@@ -7725,7 +7734,7 @@ private:
           if (next && next->type != JS_NODE_TYPE::ERROR) {
             if (optional) {
               current = next->location.start;
-              delete next;
+              next->dispose(_allocator);
               return createError(L"Invalid tagged template on optional chain",
                                  source, current);
             }
@@ -7735,7 +7744,7 @@ private:
           break;
         }
         if (next->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return next;
         }
         node = next;
@@ -7751,18 +7760,18 @@ private:
       return nullptr;
     }
 
-    auto node = new JSNewExpressionNode{};
+    auto node = _allocator->create<JSNewExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto callee = readIdentifyLiteral(source, current);
     if (callee && isKeyword(source, callee->location)) {
       current = callee->location.start;
-      delete callee;
+      callee->dispose(_allocator);
       callee = nullptr;
     }
     if (!callee) {
@@ -7775,12 +7784,12 @@ private:
       callee = readNewExpression(source, current);
     }
     if (!callee) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid optional chain from new expression", source,
                          current);
     }
     if (callee->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return callee;
     }
     for (;;) {
@@ -7788,32 +7797,32 @@ private:
       };
       auto err = readComments(source, current, node->comments);
       if (err) {
-        delete node;
-        delete callee;
+        node->dispose(_allocator);
+        callee->dispose(_allocator);
         return err;
       }
       auto next = readCallExpression(source, current, callee);
       if (next) {
-        delete next;
-        delete node;
+        next->dispose(_allocator);
+        node->dispose(_allocator);
         return nullptr;
       }
       next = readOptionalMemberExpression(source, current, callee);
       if (next) {
-        delete next;
-        delete node;
+        next->dispose(_allocator);
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       next = readOptionalComputedMemberExpression(source, current, callee);
       if (next) {
-        delete next;
-        delete node;
+        next->dispose(_allocator);
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       next = readOptionalCallExpression(source, current, callee);
       if (next) {
-        delete next;
-        delete node;
+        next->dispose(_allocator);
+        node->dispose(_allocator);
         return createError(L"Invalid or unexpected token", source, current);
       }
       next = readMemberExpression(source, current, callee);
@@ -7851,7 +7860,7 @@ private:
     if (node) {
       auto current = position;
       auto newline = false;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       for (;;) {
         if (skipWhiteSpace(source, current)) {
           continue;
@@ -7863,8 +7872,8 @@ private:
         auto comment = readComment(source, current);
         if (comment) {
           if (comment->type == JS_NODE_TYPE::ERROR) {
-            delete n;
-            delete node;
+            n->dispose(_allocator);
+            node->dispose(_allocator);
             return comment;
           }
           n->comments.push_back(comment);
@@ -7882,7 +7891,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -7895,22 +7904,22 @@ private:
     if (!checkIdentifier({L"typeof"}, source, current, &token)) {
       return nullptr;
     }
-    auto node = new JSTypeofExpressioNode{};
+    auto node = _allocator->create<JSTypeofExpressioNode>();
     token->addParent(node);
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto value = readExpression14(source, current);
     if (!value) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (value->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return value;
     }
     node->value = value;
@@ -7925,21 +7934,21 @@ private:
     if (!checkIdentifier({L"void"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSVoidExpressionNode{};
+    auto node = _allocator->create<JSVoidExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto value = readExpression14(source, current);
     if (!value) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (value->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return value;
     }
     node->value = value;
@@ -7955,21 +7964,21 @@ private:
     if (!checkIdentifier({L"delete"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSDeleteExpressionNode{};
+    auto node = _allocator->create<JSDeleteExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto value = readExpression14(source, current);
     if (!value) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (value->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return value;
     }
     node->value = value;
@@ -7985,21 +7994,21 @@ private:
     if (!checkIdentifier({L"await"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSAwaitExpressionNode{};
+    auto node = _allocator->create<JSAwaitExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto value = readExpression14(source, current);
     if (!value) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (value->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return value;
     }
     node->value = value;
@@ -8026,16 +8035,16 @@ private:
       JSNode *token = nullptr;
       if (checkSymbol({L"~", L"!", L"+", L"-", L"++", L"--"}, source, current,
                       &token)) {
-        auto n = new JSBinaryExpressionNode{};
+        auto n = _allocator->create<JSBinaryExpressionNode>();
         n->opt = token;
         token->addParent(n);
         auto value = readExpression14(source, current);
         if (!value) {
-          delete node;
+          node->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (value->type == JS_NODE_TYPE::ERROR) {
-          delete node;
+          node->dispose(_allocator);
           return value;
         }
         n->right = value;
@@ -8044,7 +8053,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete node;
+        node->dispose(_allocator);
         node = nullptr;
       }
     }
@@ -8059,13 +8068,13 @@ private:
     auto node = readExpression14(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8078,17 +8087,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression13(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8097,7 +8106,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8108,13 +8117,13 @@ private:
     auto node = readExpression13(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8127,17 +8136,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression12(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8146,7 +8155,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8157,13 +8166,13 @@ private:
     auto node = readExpression12(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8176,17 +8185,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression11(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8195,7 +8204,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8206,13 +8215,13 @@ private:
     auto node = readExpression11(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8225,17 +8234,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression10(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8244,7 +8253,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8255,13 +8264,13 @@ private:
     auto node = readExpression10(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8275,17 +8284,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression9(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8294,7 +8303,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8305,13 +8314,13 @@ private:
     auto node = readExpression9(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8325,17 +8334,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression8(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8344,7 +8353,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8355,13 +8364,13 @@ private:
     auto node = readExpression8(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8374,17 +8383,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression7(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8393,7 +8402,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8404,13 +8413,13 @@ private:
     auto node = readExpression7(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8423,17 +8432,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression6(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8442,7 +8451,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8453,13 +8462,13 @@ private:
     auto node = readExpression6(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8472,17 +8481,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression5(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8491,7 +8500,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8502,13 +8511,13 @@ private:
     auto node = readExpression5(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8521,17 +8530,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression4(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8540,7 +8549,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8551,13 +8560,13 @@ private:
     auto node = readExpression4(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8570,17 +8579,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression3(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8589,7 +8598,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8601,25 +8610,25 @@ private:
     if (!checkIdentifier({L"yield"}, source, current)) {
       return nullptr;
     }
-    auto node = new JSYieldExpressionNode{};
+    auto node = _allocator->create<JSYieldExpressionNode>();
     while (skipInvisible(source, current)) {
     };
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (checkSymbol({L"*"}, source, current)) {
-      auto n = new JSYieldDelegateExpressionNode;
+      auto n = _allocator->create<JSYieldDelegateExpressionNode>();
       n->comments = node->comments;
       node->comments.clear();
-      delete node;
+      node->dispose(_allocator);
       node = n;
     }
     auto value = readExpression2(source, current);
     if (value) {
       if (value->type == JS_NODE_TYPE::ERROR) {
-        delete node;
+        node->dispose(_allocator);
         return value;
       }
       node->value = value;
@@ -8638,17 +8647,17 @@ private:
       return condition;
     }
     auto backup = current;
-    auto node = new JSConditionExpressionNode{};
+    auto node = _allocator->create<JSConditionExpressionNode>();
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
-      delete condition;
+      node->dispose(_allocator);
+      condition->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L"?"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       position = backup;
       return condition;
     }
@@ -8656,16 +8665,16 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto consequent = readExpression2(source, current);
     if (!consequent) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (consequent->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return consequent;
     }
     node->consequent = consequent;
@@ -8675,11 +8684,11 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     if (!checkSymbol({L":"}, source, current)) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
 
@@ -8687,16 +8696,16 @@ private:
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto alternate = readExpression2(source, current);
     if (!alternate) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (alternate->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return alternate;
     }
     node->alternate = alternate;
@@ -8713,14 +8722,14 @@ private:
     if (!left || left->type == JS_NODE_TYPE::ERROR) {
       return left;
     }
-    auto node = new JSAssigmentExpressionNode{};
+    auto node = _allocator->create<JSAssigmentExpressionNode>();
     node->left = left;
     left->addParent(node);
     while (skipInvisible(source, current)) {
     }
     auto err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     JSNode *token = nullptr;
@@ -8728,30 +8737,30 @@ private:
                       L">>=", L">>>=", L"&=", L"|=", L"^=", L"&&=", L"||=",
                       LR"(??=)"},
                      source, current, &token)) {
-      delete node;
+      node->dispose(_allocator);
       return nullptr;
     }
     node->opt = token;
     token->addParent(node);
     err = checkAssigment(left, source);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     while (skipInvisible(source, current)) {
     }
     err = readComments(source, current, node->comments);
     if (err) {
-      delete node;
+      node->dispose(_allocator);
       return err;
     }
     auto right = readExpression2(source, current);
     if (!right) {
-      delete node;
+      node->dispose(_allocator);
       return createError(L"Invalid or unexpected token", source, current);
     }
     if (right->type == JS_NODE_TYPE::ERROR) {
-      delete node;
+      node->dispose(_allocator);
       return right;
     }
     node->right = right;
@@ -8781,13 +8790,13 @@ private:
     auto node = readExpression2(source, position);
     if (node && node->type != JS_NODE_TYPE::ERROR) {
       auto current = position;
-      auto n = new JSBinaryExpressionNode{};
+      auto n = _allocator->create<JSBinaryExpressionNode>();
       while (skipInvisible(source, current)) {
       }
       auto err = readComments(source, current, n->comments);
       if (err) {
-        delete n;
-        delete node;
+        n->dispose(_allocator);
+        node->dispose(_allocator);
         return err;
       }
       JSNode *token = nullptr;
@@ -8800,17 +8809,17 @@ private:
         }
         auto err = readComments(source, current, n->comments);
         if (err) {
-          delete n;
-          delete node;
+          n->dispose(_allocator);
+          node->dispose(_allocator);
           return err;
         }
         auto right = readExpression1(source, current);
         if (!right) {
-          delete n;
+          n->dispose(_allocator);
           return createError(L"Invalid or unexpected token", source, current);
         }
         if (right->type == JS_NODE_TYPE::ERROR) {
-          delete n;
+          n->dispose(_allocator);
           return right;
         }
         n->right = right;
@@ -8819,7 +8828,7 @@ private:
         position = current;
         node = n;
       } else {
-        delete n;
+        n->dispose(_allocator);
       }
     }
     return node;
@@ -8838,7 +8847,7 @@ private:
         while (!isLineTerminator(source[current.offset])) {
           current.offset++;
         }
-        auto node = new JSCommentLiteralNode();
+        auto node = _allocator->create<JSCommentLiteralNode>();
         node->location = getLocation(source, position, current);
         position = current;
         return node;
@@ -8861,7 +8870,7 @@ private:
           }
           current.offset++;
         }
-        auto node = new JSMultilineCommentLiteralNode();
+        auto node = _allocator->create<JSMultilineCommentLiteralNode>();
         node->location = getLocation(source, position, current);
         position = current;
         return node;
@@ -8877,6 +8886,7 @@ public:
     resolveBinding(source, node);
     return node;
   }
+  JSParser(JSAllocator *allocator) : _allocator(allocator) {}
   virtual ~JSParser() {}
 };
 
@@ -14430,7 +14440,7 @@ public:
 
 inline JSParser *JSRuntime::getParser() {
   if (_parser == nullptr) {
-    _parser = new JSParser{};
+    _parser = new JSParser{getAllocator()};
   }
   return _parser;
 }
