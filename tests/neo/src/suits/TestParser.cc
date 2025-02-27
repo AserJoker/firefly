@@ -125,7 +125,7 @@ TEST_F(TestParser, ReturnValue) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_RETURN);
-  auto ret = dynamic_cast<neo::JSReturnStatement *>(program->statements[0]);
+  auto ret = dynamic_cast<neo::JSReturnStatementNode *>(program->statements[0]);
   ASSERT_NE(ret->value, nullptr);
   ASSERT_EQ(ret->value->type, neo::JS_NODE_TYPE::LITERAL_IDENTITY);
   delete node;
@@ -139,7 +139,7 @@ a)";
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_RETURN);
-  auto ret = dynamic_cast<neo::JSReturnStatement *>(program->statements[0]);
+  auto ret = dynamic_cast<neo::JSReturnStatementNode *>(program->statements[0]);
   ASSERT_EQ(ret->value, nullptr);
   delete node;
 }
@@ -152,7 +152,7 @@ TEST_F(TestParser, ReturnCommentUselessValue) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_RETURN);
-  auto ret = dynamic_cast<neo::JSReturnStatement *>(program->statements[0]);
+  auto ret = dynamic_cast<neo::JSReturnStatementNode *>(program->statements[0]);
   ASSERT_EQ(ret->value, nullptr);
   delete node;
 }
@@ -165,7 +165,7 @@ TEST_F(TestParser, ReturnCommentValue) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_RETURN);
-  auto ret = dynamic_cast<neo::JSReturnStatement *>(program->statements[0]);
+  auto ret = dynamic_cast<neo::JSReturnStatementNode *>(program->statements[0]);
   ASSERT_EQ(ret->value->type, neo::JS_NODE_TYPE::LITERAL_IDENTITY);
   delete node;
 }
@@ -178,7 +178,7 @@ TEST_F(TestParser, Label) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_LABEL);
-  auto lab = dynamic_cast<neo::JSLabelStatement *>(program->statements[0]);
+  auto lab = dynamic_cast<neo::JSLabelStatementNode *>(program->statements[0]);
   ASSERT_EQ(lab->label->location.get(source), L"a");
 }
 TEST_F(TestParser, LabelComment) {
@@ -190,7 +190,7 @@ TEST_F(TestParser, LabelComment) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_LABEL);
-  auto lab = dynamic_cast<neo::JSLabelStatement *>(program->statements[0]);
+  auto lab = dynamic_cast<neo::JSLabelStatementNode *>(program->statements[0]);
   ASSERT_EQ(lab->label->location.get(source), L"a");
 }
 TEST_F(TestParser, LabelWithoutBody) {
@@ -208,7 +208,7 @@ TEST_F(TestParser, Break) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_BREAK);
-  auto bre = dynamic_cast<neo::JSBreakStatement *>(program->statements[0]);
+  auto bre = dynamic_cast<neo::JSBreakStatementNode *>(program->statements[0]);
   ASSERT_EQ(bre->label, nullptr);
 }
 TEST_F(TestParser, BreakLabel) {
@@ -219,7 +219,7 @@ TEST_F(TestParser, BreakLabel) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_BREAK);
-  auto bre = dynamic_cast<neo::JSBreakStatement *>(program->statements[0]);
+  auto bre = dynamic_cast<neo::JSBreakStatementNode *>(program->statements[0]);
   ASSERT_EQ(bre->label->location.get(source), L"test");
 }
 TEST_F(TestParser, BreakUseLessLabel) {
@@ -231,7 +231,7 @@ test)";
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_BREAK);
-  auto bre = dynamic_cast<neo::JSBreakStatement *>(program->statements[0]);
+  auto bre = dynamic_cast<neo::JSBreakStatementNode *>(program->statements[0]);
   ASSERT_EQ(bre->label, nullptr);
 }
 TEST_F(TestParser, BreakError) {
@@ -248,7 +248,7 @@ TEST_F(TestParser, If) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_IF);
-  auto ifs = dynamic_cast<neo::JSIfStatement *>(program->statements[0]);
+  auto ifs = dynamic_cast<neo::JSIfStatementNode *>(program->statements[0]);
   ASSERT_EQ(ifs->condition->location.get(source), L"a");
   ASSERT_EQ(ifs->consequent->type, neo::JS_NODE_TYPE::STATEMENT_EMPTY);
   ASSERT_EQ(ifs->alternate, nullptr);
@@ -261,7 +261,7 @@ TEST_F(TestParser, IfElse) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_TRUE(program->statements.size() > 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_IF);
-  auto ifs = dynamic_cast<neo::JSIfStatement *>(program->statements[0]);
+  auto ifs = dynamic_cast<neo::JSIfStatementNode *>(program->statements[0]);
   ASSERT_EQ(ifs->condition->location.get(source), L"a");
   ASSERT_EQ(ifs->consequent->type, neo::JS_NODE_TYPE::STATEMENT_EMPTY);
   ASSERT_EQ(ifs->alternate->type, neo::JS_NODE_TYPE::STATEMENT_EMPTY);
@@ -280,9 +280,9 @@ TEST_F(TestParser, Switch) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_SWITCH);
-  auto sw = dynamic_cast<neo::JSSwitchStatement *>(program->statements[0]);
+  auto sw = dynamic_cast<neo::JSSwitchStatementNode *>(program->statements[0]);
   ASSERT_EQ(sw->cases.size(), 1);
-  auto cas = dynamic_cast<neo::JSSwitchCaseStatement *>(sw->cases[0]);
+  auto cas = dynamic_cast<neo::JSSwitchCaseStatementNode *>(sw->cases[0]);
   ASSERT_EQ(cas->match->location.get(source), L"a");
   ASSERT_EQ(cas->statements.size(), 0);
 }
@@ -294,7 +294,7 @@ TEST_F(TestParser, SwitchNoCase) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_SWITCH);
-  auto sw = dynamic_cast<neo::JSSwitchStatement *>(program->statements[0]);
+  auto sw = dynamic_cast<neo::JSSwitchStatementNode *>(program->statements[0]);
   ASSERT_EQ(sw->cases.size(), 0);
 }
 TEST_F(TestParser, SwitchDefault) {
@@ -305,9 +305,9 @@ TEST_F(TestParser, SwitchDefault) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::STATEMENT_SWITCH);
-  auto sw = dynamic_cast<neo::JSSwitchStatement *>(program->statements[0]);
+  auto sw = dynamic_cast<neo::JSSwitchStatementNode *>(program->statements[0]);
   ASSERT_EQ(sw->cases.size(), 2);
-  auto cas = dynamic_cast<neo::JSSwitchCaseStatement *>(sw->cases[1]);
+  auto cas = dynamic_cast<neo::JSSwitchCaseStatementNode *>(sw->cases[1]);
   ASSERT_EQ(cas->match, nullptr);
 }
 TEST_F(TestParser, Class) {
@@ -318,7 +318,8 @@ TEST_F(TestParser, Class) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->identifier->location.get(source), L"Test");
   ASSERT_EQ(clazz->extends->location.get(source), L"A().B");
   ASSERT_EQ(clazz->properties.size(), 0);
@@ -332,7 +333,8 @@ b=2;c=3})";
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 3);
 }
 TEST_F(TestParser, ClassPropertyError) {
@@ -349,7 +351,8 @@ TEST_F(TestParser, ClassStaticProperty) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassPropertyNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->static_, true);
@@ -364,7 +367,8 @@ TEST_F(TestParser, ClassComputedProperty) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassPropertyNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->computed, true);
@@ -379,7 +383,8 @@ TEST_F(TestParser, ClassMethod) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 2);
   auto prop = dynamic_cast<neo::JSClassMethodNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(method)");
@@ -395,7 +400,8 @@ TEST_F(TestParser, ClassStaticMethod) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassMethodNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(method)");
@@ -411,7 +417,8 @@ TEST_F(TestParser, ClassAsyncMethod) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassMethodNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(method)");
@@ -427,7 +434,8 @@ TEST_F(TestParser, ClassGeneratorMethod) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassMethodNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(method)");
@@ -443,7 +451,8 @@ TEST_F(TestParser, ClassStaticNamedMethod) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassMethodNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(static)");
@@ -459,7 +468,8 @@ TEST_F(TestParser, ClassAsyncNamedMethod) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassMethodNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(async)");
@@ -475,7 +485,8 @@ TEST_F(TestParser, ClassFullNamedMethod) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassMethodNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(method)");
@@ -493,7 +504,8 @@ TEST_F(TestParser, ClassGetAccessor) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassAccessorNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(data)");
@@ -509,7 +521,8 @@ TEST_F(TestParser, ClassSetAccessor) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassAccessorNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(data)");
@@ -525,7 +538,8 @@ TEST_F(TestParser, ClassStaticAccessor) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSClassAccessorNode *>(clazz->properties[0]);
   ASSERT_EQ(prop->identifier->location.get(source), LR"(data)");
@@ -542,7 +556,8 @@ TEST_F(TestParser, ClassStaticBlock) {
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
   ASSERT_EQ(program->statements[0]->type, neo::JS_NODE_TYPE::DECLARATION_CLASS);
-  auto clazz = dynamic_cast<neo::JSClassDeclaration *>(program->statements[0]);
+  auto clazz =
+      dynamic_cast<neo::JSClassDeclarationNode *>(program->statements[0]);
   ASSERT_EQ(clazz->properties.size(), 1);
   auto prop = dynamic_cast<neo::JSStaticBlockNode *>(clazz->properties[0]);
   ASSERT_NE(prop->statement, nullptr);
