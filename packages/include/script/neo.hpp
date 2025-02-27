@@ -20,6 +20,7 @@
 #include <set>
 #include <sstream>
 #include <string>
+#include <typeinfo>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -29,18 +30,99 @@ namespace neo {
 class JSAllocator {
 public:
   JSAllocator() {}
+
   virtual ~JSAllocator() {}
+
   virtual void *alloc(size_t size) { return ::operator new(size); }
+
+  virtual void *alloc(size_t size, const std::type_info &info) {
+    return alloc(size);
+  }
+
   virtual void free(void *buf) { ::operator delete(buf); }
+
+  virtual void free(void *buf, const std::type_info &info) { free(buf); }
+
   virtual void dispose() { delete this; }
+
   template <class T, class... ARGS> T *create(ARGS... args) {
-    auto buf = alloc(sizeof(T));
+    auto buf = alloc(sizeof(T), typeid(T));
     new (buf) T(this, args...);
     return (T *)buf;
   }
+
   template <class T> void dispose(T *object) {
     object->~T();
     free(object);
+  }
+};
+
+class JSLogger {
+public:
+  enum class LEVEL { DEBUG = 0, INFO, LOG, WARN, ERROR, PANIC };
+
+private:
+  LEVEL _mask{LEVEL::LOG};
+  JSAllocator *_allocator;
+
+protected:
+  virtual void write(const std::wstring &level, const std::wstring &msg) {
+    auto now = std::chrono::system_clock::now();
+    auto time = std::chrono::system_clock::to_time_t(now);
+    auto puttime = std::put_time(std::localtime(&time), L"%Y-%M-%D %H:%M:%S");
+    std::wstringstream ss;
+    ss << puttime;
+    std::wcout << std::format(L"{} [{}]: {}", ss.str(), level, msg)
+               << std::endl;
+  };
+
+public:
+  JSLogger(JSAllocator *allocator) : _allocator(allocator) {}
+
+  virtual ~JSLogger() {}
+
+  JSAllocator *getAllocator() { return _allocator; }
+
+  void setMask(const LEVEL &level) { _mask = level; }
+
+  const LEVEL &getMask() const { return _mask; }
+
+  template <class... ARGS>
+  void debug(std::wformat_string<ARGS...> fmt, ARGS &&...args) {
+    if (getMask() >= LEVEL::DEBUG) {
+      return;
+    }
+    write(L"DEBUG", std::format(fmt, std::forward<ARGS>(args)...));
+  }
+  template <class... ARGS> void info(const std::wstring &fmt, ARGS... args) {
+    if (getMask() >= LEVEL::INFO) {
+      return;
+    }
+    write(L"INFO", std::format(fmt, std::forward<ARGS>(args)...));
+  }
+  template <class... ARGS> void log(const std::wstring &fmt, ARGS... args) {
+    if (getMask() >= LEVEL::LOG) {
+      return;
+    }
+    write(L"LOG", std::format(fmt, std::forward<ARGS>(args)...));
+  }
+  template <class... ARGS> void warn(const std::wstring &fmt, ARGS... args) {
+    if (getMask() >= LEVEL::WARN) {
+      return;
+    }
+    write(L"WARN", std::format(fmt, std::forward<ARGS>(args)...));
+  }
+  template <class... ARGS> void error(const std::wstring &fmt, ARGS... args) {
+    if (getMask() >= LEVEL::ERROR) {
+      return;
+    }
+    write(L"ERROR", std::format(fmt, std::forward<ARGS>(args)...));
+  }
+  template <class... ARGS> void panic(const std::wstring &fmt, ARGS... args) {
+    if (getMask() >= LEVEL::PANIC) {
+      return;
+    }
+    write(L"PAINC", std::format(fmt, std::forward<ARGS>(args)...));
   }
 };
 
@@ -12722,17 +12804,24 @@ private:
   bool _frozen;
   bool _extensible;
   JSAtom *_prototype;
+  JSAtom *_constructor;
 
 public:
   JSObject(JSAllocator *allocator, const JS_TYPE &type = JS_TYPE::OBJECT)
       : JSBase(allocator, type), _sealed(false), _frozen(false),
-        _extensible(true), _prototype(nullptr) {}
+        _extensible(true), _prototype(nullptr), _constructor(nullptr) {}
 
   JSAtom *getPrototype() { return _prototype; }
 
   const JSAtom *getPrototype() const { return _prototype; }
 
   void setPrototype(JSAtom *prototype) { _prototype = prototype; }
+
+  JSAtom *getConstructor() { return _constructor; }
+
+  const JSAtom *getConstructor() const { return _constructor; }
+
+  void setConstructor(JSAtom *constructor) { _constructor = constructor; }
 
   const std::unordered_map<std::wstring, JSField> &getFields() const {
     return _fields;
@@ -12868,9 +12957,9 @@ private:
   JS_NATIVE _native;
 
 public:
-  JSNativeFunction(JSAllocator *allocator, const std::wstring &name,
-                   const JS_NATIVE &native,
-                   const std::unordered_map<std::wstring, JSAtom *> &closure)
+  JSNativeFunction(
+      JSAllocator *allocator, const std::wstring &name, const JS_NATIVE &native,
+      const std::unordered_map<std::wstring, JSAtom *> &closure = {})
       : JSCallable(allocator, name, closure), _native(native) {}
   JSValue *call(JSContext *ctx, JSValue *self,
                 const std::vector<JSValue *> args) {
@@ -12937,75 +13026,6 @@ public:
 
 class JSVirtualMachine;
 
-class JSLogger {
-public:
-  enum class LEVEL { DEBUG = 0, INFO, LOG, WARN, ERROR, PANIC };
-
-private:
-  LEVEL _mask{LEVEL::LOG};
-  JSAllocator *_allocator;
-
-protected:
-  virtual void write(const std::wstring &level, const std::wstring &msg) {
-    auto now = std::chrono::system_clock::now();
-    auto time = std::chrono::system_clock::to_time_t(now);
-    auto puttime = std::put_time(std::localtime(&time), L"%Y-%M-%D %H:%M:%S");
-    std::wstringstream ss;
-    ss << puttime;
-    std::wcout << std::format(L"{} [{}]: {}", ss.str(), level, msg)
-               << std::endl;
-  };
-
-public:
-  JSLogger(JSAllocator *allocator) : _allocator(allocator) {}
-
-  virtual ~JSLogger() {}
-
-  JSAllocator *getAllocator() { return _allocator; }
-
-  void setMask(const LEVEL &level) { _mask = level; }
-
-  const LEVEL &getMask() const { return _mask; }
-
-  template <class... ARGS>
-  void debug(std::wformat_string<ARGS...> fmt, ARGS &&...args) {
-    if (getMask() >= LEVEL::DEBUG) {
-      return;
-    }
-    write(L"DEBUG", std::format(fmt, std::forward<ARGS>(args)...));
-  }
-  template <class... ARGS> void info(const std::wstring &fmt, ARGS... args) {
-    if (getMask() >= LEVEL::INFO) {
-      return;
-    }
-    write(L"INFO", std::format(fmt, std::forward<ARGS>(args)...));
-  }
-  template <class... ARGS> void log(const std::wstring &fmt, ARGS... args) {
-    if (getMask() >= LEVEL::LOG) {
-      return;
-    }
-    write(L"LOG", std::format(fmt, std::forward<ARGS>(args)...));
-  }
-  template <class... ARGS> void warn(const std::wstring &fmt, ARGS... args) {
-    if (getMask() >= LEVEL::WARN) {
-      return;
-    }
-    write(L"WARN", std::format(fmt, std::forward<ARGS>(args)...));
-  }
-  template <class... ARGS> void error(const std::wstring &fmt, ARGS... args) {
-    if (getMask() >= LEVEL::ERROR) {
-      return;
-    }
-    write(L"ERROR", std::format(fmt, std::forward<ARGS>(args)...));
-  }
-  template <class... ARGS> void panic(const std::wstring &fmt, ARGS... args) {
-    if (getMask() >= LEVEL::PANIC) {
-      return;
-    }
-    write(L"PAINC", std::format(fmt, std::forward<ARGS>(args)...));
-  }
-};
-
 class JSRuntime {
 private:
   JSParser *_parser{};
@@ -13030,6 +13050,9 @@ public:
   JSParser *getParser();
 
   void setParser(JSParser *parser) {
+    if (_parser == parser) {
+      return;
+    }
     if (_parser) {
       getAllocator()->dispose(_parser);
     }
@@ -13039,6 +13062,9 @@ public:
   JSCodeGenerator *getGenerator();
 
   void setGenerator(JSCodeGenerator *generator) {
+    if (_generator == generator) {
+      return;
+    }
     if (_generator) {
       getAllocator()->dispose(_generator);
     }
@@ -13052,6 +13078,9 @@ public:
   JSLogger *getLogger();
 
   void setLogger(JSLogger *logger) {
+    if (logger == _logger) {
+      return;
+    }
     if (_logger) {
       getAllocator()->dispose(_logger);
     }
@@ -13065,11 +13094,23 @@ public:
     return _allocator;
   }
 
-  void setAllocator(JSAllocator *allocator) { _allocator = allocator; }
+  void setAllocator(JSAllocator *allocator) {
+    if (_allocator == allocator) {
+      return;
+    }
+    if (_allocator) {
+      _allocator->dispose();
+    }
+    _allocator = allocator;
+  }
 
   const std::vector<std::wstring> &getArgs() const { return _args; }
 
-  void setDirective(const std::wstring &directive) {}
+  void enableFeature(const std::wstring &feature) {}
+
+  void disableFeature(const std::wstring &feature) {}
+
+  bool isSupportFeature(const std::wstring &feature) { return false; }
 
   const JSProgram &getProgram(const std::wstring &path) const {
     return _programs.at(path);
@@ -13084,6 +13125,24 @@ public:
     if (program.filename.empty()) {
       program.filename = path;
       program.allocator = _allocator;
+    }
+    return program;
+  }
+
+  JSProgram &compile(const std::wstring &path, const std::wstring &source) {
+    if (_programs.contains(path)) {
+      _programs.erase(path);
+    }
+    auto &program = getProgram(path);
+    auto node = getParser()->parse(source);
+    if (node->type == JS_NODE_TYPE::ERROR) {
+      program.error = node;
+      return program;
+    }
+    auto err = getGenerator()->resolveProgram(source, node, program);
+    getAllocator()->dispose(node);
+    if (err) {
+      program.error = err;
     }
     return program;
   }
@@ -13234,6 +13293,10 @@ public:
   }
 
   JSValue *createObject(JSValue *prototype = nullptr) {
+
+    auto obj =
+        _current->createValue(_runtime->getAllocator()->create<JSObject>());
+    auto object = dynamic_cast<JSObject *>(obj->getData());
     if (!prototype) {
       auto Object = getGlobal(L"Object");
       if (Object && Object->getType() == JS_TYPE::EXCEPTION) {
@@ -13245,16 +13308,14 @@ public:
           return proto;
         }
         prototype = proto;
-      }
-      if (!prototype) {
-        prototype = createNull();
+        object->setConstructor(Object->getAtom());
+        obj->getAtom()->addChild(Object->getAtom());
       }
     }
-    auto obj =
-        _current->createValue(_runtime->getAllocator()->create<JSObject>());
-    auto object = dynamic_cast<JSObject *>(obj->getData());
-    object->setPrototype(prototype->getAtom());
-    prototype->getAtom()->addChild(obj->getAtom());
+    if (prototype) {
+      object->setPrototype(prototype->getAtom());
+      prototype->getAtom()->addChild(obj->getAtom());
+    }
     return obj;
   }
 
@@ -13269,37 +13330,29 @@ public:
     for (auto &[n, val] : closure) {
       clo[n] = val->getAtom();
     }
-    auto val = _current->createValue(
-        _runtime->getAllocator()->create<JSNativeFunction>(name, func, clo));
-    for (auto &[n, atom] : clo) {
-      val->getAtom()->addChild(atom);
-    }
+    auto function =
+        _runtime->getAllocator()->create<JSNativeFunction>(name, func, clo);
     auto Function = getGlobal(L"Function");
     if (Function && Function->getType() == JS_TYPE::EXCEPTION) {
       return Function;
     }
-    if (Function) {
-      if (Function->getType() != JS_TYPE::FUNCTION) {
-        return createException(JSException::TYPE::INTERNAL,
-                               L"Function is not a constructor");
-      }
-      auto prototype = getField(Function, L"prototype");
-      if (!prototype) {
-        return createException(JSException::TYPE::INTERNAL,
-                               L"Function is not a constructor");
-      }
-      if (prototype->getType() == JS_TYPE::EXCEPTION) {
-        return prototype;
-      }
-      auto func = dynamic_cast<JSCallable *>(val->getData());
-      func->setPrototype(prototype->getAtom());
-      val->getAtom()->addChild(prototype->getAtom());
-      auto err = setField(val, L"constructor", Function);
-      if (err) {
-        return err;
-      }
-    }
     auto prototype = createObject();
+
+    auto proto = getField(Function, L"prototype");
+    if (!proto) {
+      return createException(JSException::TYPE::TYPE,
+                             L"variable is not a constructor");
+    }
+    auto val = _current->createValue(function);
+    function->setPrototype(proto->getAtom());
+    val->getAtom()->addChild(proto->getAtom());
+    auto err = setField(val, L"constructor", Function);
+    if (err) {
+      return err;
+    }
+    for (auto &[n, atom] : clo) {
+      val->getAtom()->addChild(atom);
+    }
     if (auto err = setField(prototype, L"constructor", val)) {
       return err;
     }
@@ -13390,6 +13443,8 @@ public:
       return err;
     }
     auto obj = createObject();
+    obj->getData()->cast<JSObject>()->setConstructor(constructor->getAtom());
+    obj->getAtom()->addChild(constructor->getAtom());
     auto res = call(constructor, obj, args);
     if (res->getType() >= JS_TYPE::OBJECT) {
       return res;
@@ -13420,7 +13475,7 @@ public:
         return err;
       }
       auto res = call(constructor, obj, args);
-      if (res->getType() >= JS_TYPE::OBJECT) {
+      if (res && res->getType() >= JS_TYPE::OBJECT) {
         return res;
       }
       return obj;
@@ -13549,14 +13604,19 @@ class JSFunctionConstructor {
 public:
   static JSValue *constructor(JSContext *ctx, JSValue *_,
                               std::vector<JSValue *> args) {
+    if (args.empty()) {
+      ctx->getRuntime()->compile(L"", L"");
+      return ctx->createFunction(L"", L"", 0);
+    }
     return nullptr;
   }
   static JSValue *initialize(JSContext *ctx) {
     auto global = ctx->getGlobal();
-    auto prototype = ctx->createObject(ctx->createNull());
-    auto Function = ctx->createNativeFunction(
-        &JSFunctionConstructor::constructor, L"Function");
-
+    auto prototype = ctx->createObject();
+    auto constructor = ctx->getAllocator()->create<JSNativeFunction>(
+        L"Function", &JSFunctionConstructor::constructor);
+    auto Function = ctx->getScope()->createValue(constructor);
+    constructor->setPrototype(prototype->getAtom());
     prototype->getAtom()->addChild(Function->getAtom());
     auto err = ctx->setField(Function, L"constructor", Function);
     if (err) {
@@ -13574,13 +13634,17 @@ public:
     if (err) {
       return err;
     }
+    err = ctx->setField(Function, L"name", ctx->createString(L"Function"));
+    if (err) {
+      return err;
+    }
     return nullptr;
   }
 };
 
 class JSObjectConstructor {
 public:
-  static JSValue *constructor(JSContext *ctx, JSValue *_,
+  static JSValue *constructor(JSContext *ctx, JSValue *self,
                               std::vector<JSValue *> args) {
     return nullptr;
   }
@@ -13598,6 +13662,15 @@ public:
     if (err) {
       return err;
     }
+    auto Function = ctx->getGlobal(L"Function");
+    auto funcproto = ctx->getField(Function, L"prototype");
+    funcproto->getData()->cast<JSObject>()->setConstructor(Object->getAtom());
+    funcproto->getAtom()->addChild(Object->getAtom());
+    funcproto->getData()->cast<JSObject>()->setPrototype(prototype->getAtom());
+    funcproto->getAtom()->addChild(prototype->getAtom());
+    auto null = ctx->createNull();
+    prototype->getData()->cast<JSObject>()->setPrototype(null->getAtom());
+    prototype->getAtom()->addChild(null->getAtom());
     err = ctx->setField(ctx->getGlobal(), L"Object", Object);
     if (err) {
       return err;
@@ -14677,6 +14750,9 @@ inline JSCodeGenerator *JSRuntime::getGenerator() {
 }
 
 inline void JSRuntime::setVirtualMachine(JSVirtualMachine *vm) {
+  if (_vm == vm) {
+    return;
+  }
   if (_vm) {
     getAllocator()->dispose(_vm);
   }
@@ -14787,7 +14863,13 @@ inline JSBase *JSUndefined::clone() { return this; }
 /*****************************************/
 
 inline JSBase *JSObject ::toString() {
-  return getAllocator()->create<JSString>(L"[Object object]");
+  if (_prototype->getData()->cast<JSNull>()) {
+    return getAllocator()->create<JSString>(L"[Object: null prototype] {}");
+  } else {
+    auto func = _constructor->getData()->cast<JSCallable>();
+    return getAllocator()->create<JSString>(
+        std::format(L"[{} object]", func->getName()));
+  }
 }
 
 inline JSBase *JSObject ::clone() { return this; }
@@ -15053,22 +15135,7 @@ inline JSValue *JSContext::eval(const std::wstring &filename,
   if (_global->getType() == JS_TYPE::EXCEPTION) {
     return _global;
   }
-  if (!_runtime->hasProgram(filename)) {
-    auto root = _runtime->getParser()->parse(source);
-    if (root->type == JS_NODE_TYPE::ERROR) {
-      auto err = dynamic_cast<JSErrorNode *>(root);
-
-      auto exception =
-          createException(JSException::TYPE::SYNTAX, err->message, filename,
-                          root->location.end.column, root->location.end.line);
-      getAllocator()->dispose(root);
-      return exception;
-    }
-    auto &program = _runtime->getProgram(filename);
-    _runtime->getGenerator()->compile(program, source, root);
-    getAllocator()->dispose(root);
-  }
-  auto program = _runtime->getProgram(filename);
+  auto program = _runtime->compile(filename, source);
   if (program.error) {
     auto err = dynamic_cast<JSErrorNode *>(program.error);
     auto exception = createException(
@@ -15093,10 +15160,14 @@ inline JSValue *JSContext::initializeGlobal() {
   if (err) {
     return err;
   }
-  // err = JSObjectConstructor::initialize(this);
-  // if (err) {
-  //   return err;
-  // }
+  err = JSObjectConstructor::initialize(this);
+  if (err) {
+    return err;
+  }
+  err = JSSymbolConstructor::initialize(this);
+  if (err) {
+    return err;
+  }
   return nullptr;
 }
 
