@@ -126,6 +126,8 @@ public:
   }
 };
 
+enum class JS_EVAL_TYPE { EVAL, FUNCTION, PROGRAM };
+
 enum class JS_TYPE {
   EXCEPTION,
   INTERRUPT,
@@ -2205,6 +2207,7 @@ class JSParser {
 private:
   JSCompileScope *_scope = nullptr;
   JSAllocator *_allocator{};
+  JS_EVAL_TYPE _type{JS_EVAL_TYPE::PROGRAM};
 
 private:
   JSCompileScope *pushScope(const JS_COMPILE_SCOPE_TYPE &type, JSNode *node) {
@@ -3309,7 +3312,7 @@ private:
     auto identifier = readIdentifyLiteral(source, current);
     if (identifier && isKeyword(source, identifier->location)) {
       _allocator->dispose(identifier);
-      identifier = nullptr;
+      return nullptr;
     }
     if (!identifier || identifier->type == JS_NODE_TYPE::ERROR) {
       return identifier;
@@ -7084,7 +7087,24 @@ private:
       node = readArrayPattern(source, position);
     }
     if (!node) {
-      node = readExpression17(source, position);
+      auto current = position;
+      auto backupDeclarations = _scope->declarations;
+      auto backupRefs = _scope->refs;
+      node = readExpression17(source, current);
+      if (node) {
+        if (node->type != JS_NODE_TYPE::LITERAL_IDENTITY &&
+            node->type != JS_NODE_TYPE::LITERAL_STRING &&
+            node->type != JS_NODE_TYPE::LITERAL_NUMBER &&
+            node->type != JS_NODE_TYPE::EXPRESSION_MEMBER &&
+            node->type != JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER) {
+          _allocator->dispose(node);
+          _scope->declarations = backupDeclarations;
+          _scope->refs = backupRefs;
+          return nullptr;
+        } else {
+          position = current;
+        }
+      }
     }
     return node;
   }
@@ -9133,9 +9153,16 @@ private:
   }
 
 public:
-  virtual JSNode *parse(const std::wstring &source) {
+  virtual JSNode *parse(const std::wstring &source,
+                        const JS_EVAL_TYPE &type = JS_EVAL_TYPE::PROGRAM) {
+    this->_type = type;
     JSPosition pos = {};
-    auto node = readProgram(source, pos);
+    JSNode *node = nullptr;
+    if (_type == JS_EVAL_TYPE::FUNCTION) {
+      node = readFunctionDeclaration(source, pos);
+    } else {
+      node = readProgram(source, pos);
+    }
     resolveBinding(source, node);
     return node;
   }
@@ -9262,7 +9289,7 @@ struct JSProgram {
   std::vector<std::wstring> constants;
   std::vector<uint16_t> codes;
   std::unordered_map<size_t, JSStackFrame> stacks;
-  JSNode *error{};
+  JSErrorNode *error{};
   JSAllocator *allocator{};
   JSProgram() {}
   virtual ~JSProgram() {
@@ -12379,7 +12406,7 @@ public:
   void compile(JSProgram &program, const std::wstring &source, JSNode *node) {
     auto err = resolve(source, node, program);
     if (err) {
-      program.error = err;
+      program.error = err->cast<JSErrorNode>();
     }
   }
 };
@@ -13129,20 +13156,21 @@ public:
     return program;
   }
 
-  JSProgram &compile(const std::wstring &path, const std::wstring &source) {
+  JSProgram &compile(const std::wstring &path, const std::wstring &source,
+                     const JS_EVAL_TYPE &type = JS_EVAL_TYPE::PROGRAM) {
     if (_programs.contains(path)) {
       _programs.erase(path);
     }
     auto &program = getProgram(path);
-    auto node = getParser()->parse(source);
+    auto node = getParser()->parse(source, type);
     if (node->type == JS_NODE_TYPE::ERROR) {
-      program.error = node;
+      program.error = node->cast<JSErrorNode>();
       return program;
     }
-    auto err = getGenerator()->resolveProgram(source, node, program);
+    auto err = getGenerator()->resolve(source, node, program);
     getAllocator()->dispose(node);
     if (err) {
-      program.error = err;
+      program.error = err->cast<JSErrorNode>();
     }
     return program;
   }
@@ -13223,7 +13251,8 @@ public:
 
   void setCurrentPath(const std::wstring &path) { _currentPath = path; }
 
-  JSValue *eval(const std::wstring &filename, const std::wstring &source);
+  JSValue *eval(const std::wstring &filename, const std::wstring &source,
+                const JS_EVAL_TYPE &type = JS_EVAL_TYPE::PROGRAM);
 
   void pushScope() {
     _current = getAllocator()->create<JSScope>(_current);
@@ -13605,10 +13634,40 @@ public:
   static JSValue *constructor(JSContext *ctx, JSValue *_,
                               std::vector<JSValue *> args) {
     if (args.empty()) {
-      ctx->getRuntime()->compile(L"", L"");
+      ctx->getRuntime()->compile(L"", L"", JS_EVAL_TYPE::FUNCTION);
       return ctx->createFunction(L"", L"", 0);
     }
-    return nullptr;
+
+    std::wstring argument;
+    if (args.size() > 1) {
+      for (size_t index = 0; index < args.size() - 1; index++) {
+        auto str = ctx->toString(args[index]);
+        if (str->getType() == JS_TYPE::EXCEPTION) {
+          return str;
+        }
+        argument += ctx->checkedString(str);
+        if (index != args.size() - 2) {
+          argument += L",";
+        }
+      }
+    }
+    auto str = ctx->toString(args[args.size() - 1]);
+    if (str->getType() == JS_TYPE::EXCEPTION) {
+      return str;
+    }
+    auto body = ctx->checkedString(str);
+    std::wstring source =
+        std::format(L"(function anonymous({}){{{}}})", argument, body);
+    auto &program =
+        ctx->getRuntime()->compile(source, source, JS_EVAL_TYPE::FUNCTION);
+    if (program.error) {
+      return ctx->createException(JSException::TYPE::SYNTAX,
+                                  program.error->message);
+    }
+    std::wofstream out("2.asm");
+    out << program.toString();
+    out.close();
+    return ctx->createFunction(L"", source, 0);
   }
   static JSValue *initialize(JSContext *ctx) {
     auto global = ctx->getGlobal();
@@ -15131,11 +15190,12 @@ inline JSBase *JSException::clone() { return this; }
 /* JSContext Implement                   */
 /*****************************************/
 inline JSValue *JSContext::eval(const std::wstring &filename,
-                                const std::wstring &source) {
+                                const std::wstring &source,
+                                const JS_EVAL_TYPE &type) {
   if (_global->getType() == JS_TYPE::EXCEPTION) {
     return _global;
   }
-  auto program = _runtime->compile(filename, source);
+  auto program = _runtime->compile(filename, source, type);
   if (program.error) {
     auto err = dynamic_cast<JSErrorNode *>(program.error);
     auto exception = createException(

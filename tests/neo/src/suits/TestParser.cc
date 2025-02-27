@@ -533,7 +533,7 @@ TEST_F(TestParser, ClassSetAccessor) {
 TEST_F(TestParser, ClassStaticAccessor) {
   neo::JSParser parser{new neo::JSAllocator};
   std::wstring source = LR"(class Test { static get data(){} })";
-  auto node = parser.parse(source);
+  auto node = parser.parse(source,neo::JS_EVAL_TYPE::PROGRAM);
   ASSERT_EQ(node->type, neo::JS_NODE_TYPE::PROGRAM);
   auto program = dynamic_cast<neo::JSProgramNode *>(node);
   ASSERT_GT(program->statements.size(), 0);
