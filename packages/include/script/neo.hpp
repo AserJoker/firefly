@@ -2366,25 +2366,23 @@ private:
           }
           scope = scope->parent;
         }
-        if (declaration) {
-          if (node->type == JS_NODE_TYPE::DECLARATION_FUNCTION_BODY) {
-            if (declaration == node->parent) {
-              continue;
-            }
-          } else if (node == declaration) {
+        if (node->type == JS_NODE_TYPE::DECLARATION_FUNCTION_BODY) {
+          if (declaration == node->parent) {
             continue;
           }
-          for (auto scope : scopes) {
-            auto func = dynamic_cast<JSFunctionBaseNode *>(scope->node);
-            if (func) {
-              func->closure.insert(name);
-              func->scope->refs.insert(name);
-            }
-            auto clazz = dynamic_cast<JSClassDeclarationNode *>(scope->node);
-            if (clazz) {
-              clazz->closure.insert(name);
-              clazz->scope->refs.insert(name);
-            }
+        } else if (node == declaration) {
+          continue;
+        }
+        for (auto scope : scopes) {
+          auto func = dynamic_cast<JSFunctionBaseNode *>(scope->node);
+          if (func) {
+            func->closure.insert(name);
+            func->scope->refs.insert(name);
+          }
+          auto clazz = dynamic_cast<JSClassDeclarationNode *>(scope->node);
+          if (clazz) {
+            clazz->closure.insert(name);
+            clazz->scope->refs.insert(name);
           }
         }
       }
