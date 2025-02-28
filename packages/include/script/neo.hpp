@@ -9157,12 +9157,7 @@ public:
                         const JS_EVAL_TYPE &type = JS_EVAL_TYPE::PROGRAM) {
     this->_type = type;
     JSPosition pos = {};
-    JSNode *node = nullptr;
-    if (_type == JS_EVAL_TYPE::FUNCTION) {
-      node = readFunctionDeclaration(source, pos);
-    } else {
-      node = readProgram(source, pos);
-    }
+    auto node = readProgram(source, pos);
     resolveBinding(source, node);
     return node;
   }
@@ -12669,6 +12664,13 @@ public:
   JSAllocator *getAllocator() { return _allocator; }
 
   ~JSScope() {
+    if (_parent) {
+      auto it =
+          std::find(_parent->_children.begin(), _parent->_children.end(), this);
+      if (it != _parent->_children.end()) {
+        _parent->_children.erase(it);
+      }
+    }
     _parent = nullptr;
     for (auto child : _children) {
       _allocator->dispose(child);
@@ -13269,10 +13271,23 @@ public:
 
   JSScope *getScope() { return _current; }
 
-  void setScope(JSScope *scope) {
+  JSScope *getRootScope() { return _root; }
+
+  JSScope *setScope(JSScope *scope) {
+    auto old = _current;
     _runtime->getLogger()->debug(L"scope change: 0x{:x} -> 0x{:x}",
                                  (ptrdiff_t)_current, (ptrdiff_t)scope);
     _current = scope;
+    return old;
+  }
+
+  JSScope *setRootScope(JSScope *scope) {
+    _runtime->getLogger()->debug(L"scope change: 0x{:x} -> 0x{:x}",
+                                 (ptrdiff_t)_current, (ptrdiff_t)scope);
+    auto old = _root;
+    _root = scope;
+    _current = scope;
+    return old;
   }
 
   void recycle(JSValue *val) { _current->getRoot()->addChild(val->getAtom()); }
@@ -13658,16 +13673,13 @@ public:
     auto body = ctx->checkedString(str);
     std::wstring source =
         std::format(L"(function anonymous({}){{{}}})", argument, body);
-    auto &program =
-        ctx->getRuntime()->compile(source, source, JS_EVAL_TYPE::FUNCTION);
-    if (program.error) {
-      return ctx->createException(JSException::TYPE::SYNTAX,
-                                  program.error->message);
-    }
-    std::wofstream out("2.asm");
-    out << program.toString();
-    out.close();
-    return ctx->createFunction(L"", source, 0);
+    auto current = ctx->setScope(
+        ctx->getAllocator()->create<JSScope>(ctx->getRootScope()));
+    auto val = ctx->eval(source, source, JS_EVAL_TYPE::FUNCTION);
+    auto result = current->createValue(val->getAtom());
+    current = ctx->setScope(current);
+    ctx->getAllocator()->dispose(current);
+    return result;
   }
   static JSValue *initialize(JSContext *ctx) {
     auto global = ctx->getGlobal();
@@ -15195,23 +15207,33 @@ inline JSValue *JSContext::eval(const std::wstring &filename,
   if (_global->getType() == JS_TYPE::EXCEPTION) {
     return _global;
   }
-  auto program = _runtime->compile(filename, source, type);
-  if (program.error) {
-    auto err = dynamic_cast<JSErrorNode *>(program.error);
-    auto exception = createException(
-        JSException::TYPE::SYNTAX, err->message, filename,
-        program.error->location.end.column, program.error->location.end.line);
-    return exception;
+  if (!_runtime->hasProgram(filename)) {
+    auto &program = _runtime->compile(filename, source, type);
+    if (program.error) {
+      auto err = dynamic_cast<JSErrorNode *>(program.error);
+      auto exception = createException(
+          JSException::TYPE::SYNTAX, err->message, filename,
+          program.error->location.end.column, program.error->location.end.line);
+      return exception;
+    }
   }
-  std::wfstream out("./1.asm", std::ios_base::out);
-  if (!out.is_open()) {
-    return createException(JSException::TYPE::ERROR, L"cannot open 1.asm");
+  auto &program = _runtime->getProgram(filename);
+  if (type == JS_EVAL_TYPE::PROGRAM) {
+    std::wfstream out("./1.asm", std::ios_base::out);
+    if (!out.is_open()) {
+      return createException(JSException::TYPE::ERROR, L"cannot open 1.asm");
+    }
+    out << program.toString();
+    out.close();
+  } else {
+    std::wfstream out("./2.asm", std::ios_base::out);
+    if (!out.is_open()) {
+      return createException(JSException::TYPE::ERROR, L"cannot open 1.asm");
+    }
+    out << program.toString();
+    out.close();
   }
-  out << program.toString();
-  out.close();
-  auto vm = _runtime->getVirtualMachine();
-  auto value = vm->eval(this, program);
-  return value;
+  return _runtime->getVirtualMachine()->eval(this, program);
 }
 
 inline JSValue *JSContext::initializeGlobal() {
