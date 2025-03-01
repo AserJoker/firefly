@@ -2366,23 +2366,25 @@ private:
           }
           scope = scope->parent;
         }
-        if (node->type == JS_NODE_TYPE::DECLARATION_FUNCTION_BODY) {
-          if (declaration == node->parent) {
+        if (declaration) {
+          if (node->type == JS_NODE_TYPE::DECLARATION_FUNCTION_BODY) {
+            if (declaration == node->parent) {
+              continue;
+            }
+          } else if (node == declaration) {
             continue;
           }
-        } else if (node == declaration) {
-          continue;
-        }
-        for (auto scope : scopes) {
-          auto func = dynamic_cast<JSFunctionBaseNode *>(scope->node);
-          if (func) {
-            func->closure.insert(name);
-            func->scope->refs.insert(name);
-          }
-          auto clazz = dynamic_cast<JSClassDeclarationNode *>(scope->node);
-          if (clazz) {
-            clazz->closure.insert(name);
-            clazz->scope->refs.insert(name);
+          for (auto scope : scopes) {
+            auto func = dynamic_cast<JSFunctionBaseNode *>(scope->node);
+            if (func) {
+              func->closure.insert(name);
+              func->scope->refs.insert(name);
+            }
+            auto clazz = dynamic_cast<JSClassDeclarationNode *>(scope->node);
+            if (clazz) {
+              clazz->closure.insert(name);
+              clazz->scope->refs.insert(name);
+            }
           }
         }
       }
@@ -12670,10 +12672,9 @@ public:
       }
     }
     _parent = nullptr;
-    for (auto child : _children) {
-      _allocator->dispose(child);
+    while (!_children.empty()) {
+      _allocator->dispose(*_children.begin());
     }
-    _children.clear();
     for (auto variable : _variables) {
       _allocator->dispose(variable);
     }
@@ -12947,15 +12948,20 @@ class JSCallable : public JSObject {
 private:
   std::unordered_map<std::wstring, JSAtom *> _closure;
   std::wstring _name;
+  bool _globalContext;
 
 public:
   JSCallable(JSAllocator *allocator, const std::wstring &name,
              const std::unordered_map<std::wstring, JSAtom *> &closure)
-      : JSObject(allocator, JS_TYPE::FUNCTION), _closure(closure),
-        _name(name){};
+      : JSObject(allocator, JS_TYPE::FUNCTION), _closure(closure), _name(name),
+        _globalContext(false){};
   const std::unordered_map<std::wstring, JSAtom *> &getClosure() const {
     return _closure;
   }
+
+  bool isGlobalContext() const { return _globalContext; }
+
+  void setGlobalContext(bool context) { _globalContext = context; }
 
   virtual JSValue *call(JSContext *ctx, JSValue *self,
                         const std::vector<JSValue *> args) = 0;
@@ -13471,13 +13477,27 @@ public:
       return createException(JSException::TYPE::TYPE,
                              L"vairable is not a function");
     }
+    auto current = getScope();
     auto fn = const_cast<JSCallable *>(
         dynamic_cast<const JSCallable *>(func->getAtom()->getData()));
+    if (fn->isGlobalContext()) {
+      setScope(_root);
+    }
+    pushScope();
     for (auto &[key, val] : fn->getClosure()) {
       auto value = _current->createValue(val);
       _current->storeValue(key, value);
     }
-    return fn->call(this, self, args);
+    auto res = fn->call(this, self, args);
+    if (res->getType() == JS_TYPE::EXCEPTION) {
+      return res;
+    }
+    auto result = current->createValue(res->getAtom());
+    popScope();
+    if (fn->isGlobalContext()) {
+      setScope(current);
+    }
+    return result;
   }
 
   JSValue *construct(JSValue *constructor, const std::vector<JSValue *> args) {
@@ -13669,11 +13689,12 @@ public:
       return str;
     }
     auto body = ctx->checkedString(str);
-    std::wstring source =
-        std::format(L"(function anonymous({}){{{}}})", argument, body);
+    std::wstring source = std::format(L"(function ({}){{{}}})", argument, body);
     auto current = ctx->setScope(
         ctx->getAllocator()->create<JSScope>(ctx->getRootScope()));
     auto val = ctx->eval(source, source, JS_EVAL_TYPE::FUNCTION);
+    auto callable = val->getData()->cast<JSCallable>();
+    callable->setGlobalContext(true);
     auto result = current->createValue(val->getAtom());
     current = ctx->setScope(current);
     ctx->getAllocator()->dispose(current);
@@ -15158,11 +15179,6 @@ inline JSValue *JSFunction::call(JSContext *ctx, JSValue *self,
   auto runtime = ctx->getRuntime();
   auto vm = runtime->getVirtualMachine();
   auto program = runtime->getProgram(_path);
-  auto current = ctx->getScope();
-  for (auto &[key, val] : getClosure()) {
-    auto value = current->createValue(val);
-    current->storeValue(key, value);
-  }
   return vm->eval(ctx, program, {.pc = _address, .stack = args, .self = self});
 }
 
