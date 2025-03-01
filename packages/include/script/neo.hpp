@@ -13806,13 +13806,9 @@ private:
                 std::vector<JSValue *> args, const JSStackFrame &frame) {
     ctx->pushCallStack(frame.filename, frame.position.funcname,
                        frame.position.column, frame.position.line);
-    auto scope = ctx->getScope();
-    ctx->pushScope();
     auto res = ctx->call(func, self, args);
-    auto result = scope->createValue(res->getAtom());
-    ctx->popScope();
     ctx->popCallStack();
-    return result;
+    return res;
   }
   JSValue *construct(JSContext *ctx, JSValue *constructor,
                      std::vector<JSValue *> args) {
@@ -15252,7 +15248,11 @@ inline JSValue *JSContext::eval(const std::wstring &filename,
 
 inline JSValue *JSContext::initializeGlobal() {
   _global = createObject(createNull());
-  auto err = JSFunctionConstructor::initialize(this);
+  auto err = setField(_global, L"global", _global);
+  if (err) {
+    return err;
+  }
+  err = JSFunctionConstructor::initialize(this);
   if (err) {
     return err;
   }
