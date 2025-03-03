@@ -1,0 +1,16 @@
+#pragma once
+enum class JS_TYPE {
+  EXCEPTION,
+  INTERRUPT,
+  INTERNAL,
+  UNINITIALIZED,
+  UNDEFINED,
+  NUMBER,
+  STRING,
+  BOOLEAN,
+  BIGINT,
+  SYMBOL,
+  OBJECT,
+  FUNCTION,
+  CLASS,
+};

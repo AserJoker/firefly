@@ -1,38 +1,38 @@
-#include "script/neo.hpp"
+#include "script/engine/JSVirtualMachine.hpp"
+#include "script/engine/JSRuntime.hpp"
 #include <gtest/gtest.h>
+
 class TestRuntime : public ::testing::Test {};
-class MockParser : public neo::JSParser {
+class MockParser : public JSParser {
 public:
-  MockParser(neo::JSAllocator *allocator) : neo::JSParser(allocator) {}
+  MockParser(JSAllocator *allocator) : JSParser(allocator) {}
 };
-class MockGenerator : public neo::JSCodeGenerator {
+class MockGenerator : public JSCodeGenerator {
 public:
-  MockGenerator(neo::JSAllocator *allocator)
-      : neo::JSCodeGenerator(allocator) {}
+  MockGenerator(JSAllocator *allocator) : JSCodeGenerator(allocator) {}
 };
-class MockVirtualMachine : public neo::JSVirtualMachine {
+class MockVirtualMachine : public JSVirtualMachine {
 public:
-  MockVirtualMachine(neo::JSAllocator *allocator)
-      : neo::JSVirtualMachine(allocator) {}
+  MockVirtualMachine(JSAllocator *allocator) : JSVirtualMachine(allocator) {}
 };
-class MockLogger : public neo::JSLogger {};
+class MockLogger : public JSLogger {};
 TEST_F(TestRuntime, args) {
   const char *mockArgs[] = {"test args"};
-  auto runtime = new neo::JSRuntime(1, (char **)&mockArgs[0]);
+  auto runtime = new JSRuntime(1, (char **)&mockArgs[0]);
   auto args = runtime->getArgs();
   ASSERT_EQ(args.size(), 1);
   ASSERT_EQ(args[0], L"test args");
   delete runtime;
 }
 TEST_F(TestRuntime, customParser) {
-  auto runtime = new neo::JSRuntime(0, nullptr);
+  auto runtime = new JSRuntime(0, nullptr);
   auto parser = runtime->getAllocator()->create<MockParser>();
   runtime->setParser(parser);
   ASSERT_EQ(runtime->getParser(), parser);
   delete runtime;
 }
 TEST_F(TestRuntime, customGenerator) {
-  auto runtime = new neo::JSRuntime(0, nullptr);
+  auto runtime = new JSRuntime(0, nullptr);
   auto generator = runtime->getAllocator()->create<MockGenerator>();
   runtime->setGenerator(generator);
   ASSERT_EQ(runtime->getGenerator(), generator);

@@ -1,5 +1,5 @@
 
-#include "script/neo.hpp"
+#include "script/engine/JSContext.hpp"
 #include <codecvt>
 #include <exception>
 #include <fmt/format.h>
@@ -8,17 +8,17 @@
 #include <locale>
 #include <stdexcept>
 #include <vector>
+#include <SDL2/SDL.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
-using namespace neo;
 
 JSValue *print(JSContext *ctx, JSValue *self, std::vector<JSValue *> args) {
   for (auto &arg : args) {
     auto str = ctx->toString(arg);
-    if (str->getType() == neo::JS_TYPE::EXCEPTION) {
+    if (str->getType() == JS_TYPE::EXCEPTION) {
       return str;
     }
     std::wcout << ctx->checkedString(str) << std::endl;
