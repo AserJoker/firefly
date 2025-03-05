@@ -6,6 +6,7 @@
 #include "script/engine/JSFunction.hpp"
 #include "script/engine/JSNaN.hpp"
 #include "script/engine/JSNaNType.hpp"
+#include "script/engine/JSNativeFunction.hpp"
 #include "script/engine/JSNull.hpp"
 #include "script/engine/JSNumber.hpp"
 #include "script/engine/JSObject.hpp"
@@ -204,7 +205,12 @@ JSValue *JSContext::createNativeFunction(
   for (auto &[n, val] : closure) {
     clo[n] = val->getAtom();
   }
-  return nullptr;
+  auto val = _current->createValue(
+      getAllocator()->create<JSNativeFunction>(name, func, clo));
+  for (auto &[_, atom] : clo) {
+    val->getAtom()->addChild(atom);
+  }
+  return val;
 }
 
 JSValue *JSContext::createFunction(
