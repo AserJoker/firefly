@@ -1,0 +1,12 @@
+#pragma once
+#include "script/engine/JSObjectType.hpp"
+#include "script/engine/JSType.hpp"
+class JSCallableType : public JSObjectType {
+public:
+  JSCallableType(JSAllocator *allocator);
+
+public:
+  const wchar_t *getTypeName() const override;
+
+  JSValue *toString(JSContext *ctx, JSValue *value) const override;
+};

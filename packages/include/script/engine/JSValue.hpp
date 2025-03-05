@@ -1,6 +1,5 @@
 #pragma once
 #include "JSAtom.hpp"
-#include "JSBase.hpp"
 #include "JSType.hpp"
 class JSValue {
 private:
@@ -17,19 +16,21 @@ public:
 
   JSAllocator *getAllocator() { return _allocator; }
 
-  JSAtom *getAtom() { return _atom; }
+  inline auto getAtom() { return _atom; }
 
-  const JSAtom *getAtom() const { return _atom; }
+  inline auto getAtom() const { return _atom; }
 
-  void setAtom(JSAtom *atom) { _atom = atom; }
+  inline void setAtom(JSAtom *atom) { _atom = atom; }
 
-  JSBase *getData() { return _atom->getData(); }
+  inline auto getData() { return _atom->getData(); }
 
-  const JSBase *getData() const { return _atom->getData(); }
+  inline auto getData() const { return _atom->getData(); }
 
-  const JS_TYPE &getType() const { return _atom->getType(); }
+  inline auto getType() const { return _atom->getType(); }
 
-  bool isConst() const { return _const; }
+  inline auto isConst() const { return _const; }
 
-  void setConst(bool value) { _const = value; }
+  inline void setConst(bool value) { _const = value; }
+
+  template <class T> bool isTypeof() const { return _atom->isTypeof<T>(); }
 };

@@ -1,11 +1,7 @@
 #include "script/engine/JSNumber.hpp"
-#include "script/engine/JSString.hpp"
-#include <sstream>
+#include "script/engine/JSNumberType.hpp"
+#include "script/util/JSSingleton.hpp"
+
 JSNumber::JSNumber(JSAllocator *allocator, double value)
-    : JSBase(allocator, JS_TYPE::NUMBER), _value(value) {}
-JSBase *JSNumber::toString() {
-  std::wstringstream ss;
-  ss << _value;
-  return getAllocator()->create<JSString>(ss.str());
-}
-JSBase *JSNumber::clone() { return getAllocator()->create<JSNumber>(_value); };
+    : JSBase(allocator, JSSingleton::instance<JSNumberType>(allocator)),
+      _value(value) {}

@@ -1,7 +1,8 @@
 #pragma once
 
 #include "JSAtom.hpp"
-#include "JSValue.hpp"
+#include "JSType.hpp"
+#include <string>
 #include <unordered_map>
 class JSContext;
 struct JSField {
@@ -17,8 +18,7 @@ struct JSField {
 
 class JSObject : public JSBase {
 private:
-  std::unordered_map<std::wstring, JSField> _fields;
-  std::unordered_map<JSAtom *, JSField> _symboledFields;
+  std::unordered_map<JSAtom *, JSField> _fields;
   std::unordered_map<std::wstring, JSField> _privateFields;
   bool _sealed;
   bool _frozen;
@@ -27,7 +27,7 @@ private:
   JSAtom *_constructor;
 
 public:
-  JSObject(JSAllocator *allocator, const JS_TYPE &type = JS_TYPE::OBJECT);
+  JSObject(JSAllocator *allocator, JSType *type = nullptr);
 
   inline JSAtom *getPrototype() { return _prototype; }
 
@@ -43,13 +43,11 @@ public:
     _constructor = constructor;
   }
 
-  inline const std::unordered_map<std::wstring, JSField> &getFields() const {
+  inline const std::unordered_map<JSAtom *, JSField> &getFields() const {
     return _fields;
   }
 
-  inline std::unordered_map<std::wstring, JSField> &getFields() {
-    return _fields;
-  }
+  inline std::unordered_map<JSAtom *, JSField> &getFields() { return _fields; }
 
   inline const std::unordered_map<std::wstring, JSField> &
   getPrivateFields() const {
@@ -71,35 +69,4 @@ public:
   inline void setFrozen(bool value) { _frozen = value; }
 
   inline void setExtensible(bool value) { _extensible = value; }
-
-public:
-  JSBase *toString() override;
-
-  JSBase *clone() override;
-
-  virtual std::vector<std::wstring> getKeys(JSContext *ctx) {
-    std::vector<std::wstring> keys;
-    for (auto &[key, field] : _fields) {
-      if (field.enumable) {
-        keys.push_back(key);
-      }
-    }
-    return keys;
-  };
-
-  virtual JSValue *getField(JSContext *ctx, JSValue *self,
-                            const std::wstring &name);
-
-  virtual JSValue *setField(JSContext *ctx, JSValue *self,
-                            const std::wstring &name, JSValue *value);
-
-  virtual JSValue *getIndex(JSContext *ctx, JSValue *self, size_t index);
-
-  virtual JSValue *setIndex(JSContext *ctx, JSValue *self, size_t index,
-                            JSValue *value);
-
-  virtual JSValue *getField(JSContext *ctx, JSValue *self, JSValue *name);
-
-  virtual JSValue *setField(JSContext *ctx, JSValue *self, JSValue *name,
-                            JSValue *value);
 };

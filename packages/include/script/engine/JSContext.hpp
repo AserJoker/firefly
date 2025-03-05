@@ -6,6 +6,7 @@
 #include "JSScope.hpp"
 #include "JSStackFrame.hpp"
 #include "script/engine/JSCallable.hpp"
+#include "script/engine/JSValue.hpp"
 
 class JSContext {
 private:
@@ -74,11 +75,17 @@ public:
 
   JSValue *checkUninitialized(JSValue *value);
 
+  JSValue *createValue(JSValue *value);
+
+  JSValue *createValue(JSAtom *atom);
+
   JSValue *createUndefined();
 
   JSValue *createUninitialized();
 
   JSValue *createNull();
+
+  JSValue *createNaN();
 
   JSValue *createSymbol(const std::wstring &description = L"");
 
@@ -114,28 +121,27 @@ public:
   JSValue *call(JSValue *func, JSValue *self,
                 const std::vector<JSValue *> args);
 
-  JSValue *construct(JSValue *constructor, const std::vector<JSValue *> args);
-
-  JSValue *construct(JSBase *base, JSValue *constructor,
-                     const std::vector<JSValue *> args);
-
   JSValue *getGlobal(const std::wstring &name);
-
-  JSValue *setField(JSValue *obj, const std::wstring &name, JSValue *value);
-
-  JSValue *getField(JSValue *obj, const std::wstring &name);
 
   JSValue *setField(JSValue *obj, JSValue *name, JSValue *value);
 
   JSValue *getField(JSValue *obj, JSValue *name);
 
-  JSValue *setIndex(JSValue *obj, size_t index, JSValue *value);
-
-  JSValue *getIndex(JSValue *obj, size_t index);
-
-  std::vector<std::wstring> getKeys(JSValue *obj);
+  JSValue *getKeys(JSValue *obj);
 
   JSValue *toString(JSValue *value);
 
+  JSValue *toNumber(JSValue *value);
+
+  JSValue *toBoolean(JSValue *value);
+
   const std::wstring &checkedString(JSValue *value) const;
+
+  double checkedNumber(JSValue *value) const;
+
+  bool checkedBoolean(JSValue *value) const;
+
+  bool isNaN(JSValue *value) const;
+
+  JSValue *isEqual(JSValue *left, JSValue *right);
 };

@@ -1,20 +1,19 @@
 #include "script/engine/JSContext.hpp"
+#include "script/engine/JSObjectType.hpp"
 #include "script/engine/JSRuntime.hpp"
 #include "script/engine/JSValue.hpp"
+#include "script/util/JSSingleton.hpp"
 #include <gtest/gtest.h>
 
 class TestVariable : public ::testing::Test {};
 class MockVariable : public JSBase {
 public:
   static inline size_t count = 0;
-  MockVariable(JSAllocator *allocator) : JSBase(allocator, JS_TYPE::OBJECT) {
+  MockVariable(JSAllocator *allocator)
+      : JSBase(allocator, JSSingleton::instance<JSObjectType>(allocator)) {
     MockVariable::count++;
   }
   virtual ~MockVariable() { --MockVariable::count; }
-
-public:
-  JSBase *toString() override { return this; }
-  JSBase *clone() override { return this; }
 };
 TEST_F(TestVariable, gc) {
   auto runtime = new JSRuntime(0, nullptr);

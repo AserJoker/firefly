@@ -1,19 +1,23 @@
 #include "script/engine/JSContext.hpp"
 #include "script/engine/JSArray.hpp"
 #include "script/engine/JSBoolean.hpp"
+#include "script/engine/JSException.hpp"
+#include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSFunction.hpp"
-#include "script/engine/JSNativeFunction.hpp"
+#include "script/engine/JSNaN.hpp"
+#include "script/engine/JSNaNType.hpp"
 #include "script/engine/JSNull.hpp"
 #include "script/engine/JSNumber.hpp"
+#include "script/engine/JSObject.hpp"
+#include "script/engine/JSObjectType.hpp"
 #include "script/engine/JSString.hpp"
+#include "script/engine/JSStringType.hpp"
 #include "script/engine/JSSymbol.hpp"
 #include "script/engine/JSUndefined.hpp"
 #include "script/engine/JSUninitialize.hpp"
+#include "script/engine/JSUninitializeType.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/engine/JSVirtualMachine.hpp"
-#include "script/runtime/JSFunctionConstructor.hpp"
-#include "script/runtime/JSObjectConstructor.hpp"
-#include "script/runtime/JSSymbolConstructor.hpp"
 #include <fstream>
 
 JSContext::JSContext(JSRuntime *runtime) : _runtime(runtime) {
@@ -40,7 +44,7 @@ JSContext::~JSContext() {
 
 JSValue *JSContext::eval(const std::wstring &filename,
                          const std::wstring &source, const JS_EVAL_TYPE &type) {
-  if (_global->getType() == JS_TYPE::EXCEPTION) {
+  if (_global->isTypeof<JSExceptionType>()) {
     return _global;
   }
   if (!_runtime->hasProgram(filename)) {
@@ -74,19 +78,7 @@ JSValue *JSContext::eval(const std::wstring &filename,
 
 JSValue *JSContext::initializeGlobal() {
   _global = createObject(createNull());
-  auto err = setField(_global, L"global", _global);
-  if (err) {
-    return err;
-  }
-  err = JSFunctionConstructor::initialize(this);
-  if (err) {
-    return err;
-  }
-  err = JSObjectConstructor::initialize(this);
-  if (err) {
-    return err;
-  }
-  err = JSSymbolConstructor::initialize(this);
+  auto err = setField(_global, createString(L"global"), _global);
   if (err) {
     return err;
   }
@@ -143,11 +135,18 @@ JSScope *JSContext::setRootScope(JSScope *scope) {
 }
 
 JSValue *JSContext::checkUninitialized(JSValue *value) {
-  if (value->getType() == JS_TYPE::UNINITIALIZED) {
+  if (value->isTypeof<JSUninitializeType>()) {
     return createException(JSException::TYPE::REFERENCE,
                            L"Cannot access variable before initialization");
   }
   return nullptr;
+}
+
+JSValue *JSContext::createValue(JSValue *value) {
+  return _current->createValue(value->getAtom());
+}
+JSValue *JSContext::createValue(JSAtom *atom) {
+  return _current->createValue(atom);
 }
 JSValue *JSContext::createUndefined() {
   return _current->createValue(_runtime->getAllocator()->create<JSUndefined>());
@@ -160,6 +159,10 @@ JSValue *JSContext::createUninitialized() {
 
 JSValue *JSContext::createNull() {
   return _current->createValue(_runtime->getAllocator()->create<JSNull>());
+}
+
+JSValue *JSContext::createNaN() {
+  return _current->createValue(_runtime->getAllocator()->create<JSNaN>());
 }
 
 JSValue *JSContext::createSymbol(const std::wstring &description) {
@@ -183,30 +186,11 @@ JSValue *JSContext::createBoolean(bool value) {
 }
 
 JSValue *JSContext::createObject(JSValue *prototype) {
-
-  auto obj =
-      _current->createValue(_runtime->getAllocator()->create<JSObject>());
-  auto object = dynamic_cast<JSObject *>(obj->getData());
-  if (!prototype) {
-    auto Object = getGlobal(L"Object");
-    if (Object && Object->getType() == JS_TYPE::EXCEPTION) {
-      return Object;
-    }
-    if (Object) {
-      auto proto = getField(Object, L"prototype");
-      if (proto->getType() == JS_TYPE::EXCEPTION) {
-        return proto;
-      }
-      prototype = proto;
-      object->setConstructor(Object->getAtom());
-      obj->getAtom()->addChild(Object->getAtom());
-    }
-  }
-  if (prototype) {
-    object->setPrototype(prototype->getAtom());
-    prototype->getAtom()->addChild(obj->getAtom());
-  }
-  return obj;
+  auto object = _current->createValue(getAllocator()->create<JSObject>());
+  auto obj = object->getData()->cast<JSObject>();
+  obj->setPrototype(prototype->getAtom());
+  object->getAtom()->addChild(prototype->getAtom());
+  return object;
 }
 
 JSValue *JSContext::createArray() {
@@ -220,41 +204,7 @@ JSValue *JSContext::createNativeFunction(
   for (auto &[n, val] : closure) {
     clo[n] = val->getAtom();
   }
-  auto function =
-      _runtime->getAllocator()->create<JSNativeFunction>(name, func, clo);
-  auto Function = getGlobal(L"Function");
-  if (Function && Function->getType() == JS_TYPE::EXCEPTION) {
-    return Function;
-  }
-  auto prototype = createObject();
-
-  auto proto = getField(Function, L"prototype");
-  if (!proto) {
-    return createException(JSException::TYPE::TYPE,
-                           L"variable is not a constructor");
-  }
-  auto val = _current->createValue(function);
-  function->setPrototype(proto->getAtom());
-  val->getAtom()->addChild(proto->getAtom());
-  auto err = setField(val, L"constructor", Function);
-  if (err) {
-    return err;
-  }
-  for (auto &[n, atom] : clo) {
-    val->getAtom()->addChild(atom);
-  }
-  if (auto err = setField(prototype, L"constructor", val)) {
-    return err;
-  }
-  if (auto err = setField(val, L"prototype", prototype)) {
-    return err;
-  }
-  if (!name.empty()) {
-    if (auto err = setField(val, L"name", createString(name))) {
-      return err;
-    }
-  }
-  return val;
+  return nullptr;
 }
 
 JSValue *JSContext::createFunction(
@@ -291,188 +241,110 @@ JSValue *JSContext::queryValue(const std::wstring &name) {
     }
     scope = scope->getParent();
   }
-  auto keys = getKeys(_global);
-  if (std::find(keys.begin(), keys.end(), name) == keys.end()) {
-    return createException(JSException::TYPE::REFERENCE,
-                           name + L" is not defined");
+  auto &fields = _global->getData()->cast<JSObject>()->getFields();
+  for (auto &[atomKey, _] : fields) {
+    if (atomKey->isTypeof<JSStringType>()) {
+      return getField(_global, createString(name));
+    }
   }
-  return getField(_global, name);
+  return createException(JSException::TYPE::SYNTAX,
+                         std::format(L"'{}' is not defined", name));
 }
 
 JSValue *JSContext::assigmentValue(JSValue *variable, JSValue *value) {
-  if (variable->isConst() && variable->getType() != JS_TYPE::UNINITIALIZED) {
-    return createException(JSException::TYPE::TYPE,
-                           L"Assignment to constant variable.");
-  }
-  _current->getRoot()->addChild(variable->getAtom());
-  variable->getAtom()->setData(value->getData()->clone());
+
   return value;
 }
 
 JSValue *JSContext::call(JSValue *func, JSValue *self,
                          const std::vector<JSValue *> args) {
-  if (auto err = checkUninitialized(func)) {
-    return err;
-  }
-  if (func->getType() < JS_TYPE::FUNCTION) {
-    return createException(JSException::TYPE::TYPE,
-                           L"vairable is not a function");
-  }
-  auto current = getScope();
-  auto fn = const_cast<JSCallable *>(
-      dynamic_cast<const JSCallable *>(func->getAtom()->getData()));
-  if (fn->isGlobalContext()) {
-    setScope(_root);
-  }
-  pushScope();
-  for (auto &[key, val] : fn->getClosure()) {
-    auto value = _current->createValue(val);
-    _current->storeValue(key, value);
-  }
-  auto res = fn->call(this, self, args);
-  if (res->getType() == JS_TYPE::EXCEPTION) {
-    return res;
-  }
-  auto result = current->createValue(res->getAtom());
-  popScope();
-  if (fn->isGlobalContext()) {
-    setScope(current);
-  }
-  return result;
-}
-
-JSValue *JSContext::construct(JSValue *constructor,
-                              const std::vector<JSValue *> args) {
-  if (auto err = checkUninitialized(constructor)) {
-    return err;
-  }
-  auto obj = createObject();
-  obj->getData()->cast<JSObject>()->setConstructor(constructor->getAtom());
-  obj->getAtom()->addChild(constructor->getAtom());
-  auto res = call(constructor, obj, args);
-  if (res->getType() >= JS_TYPE::OBJECT) {
-    return res;
-  }
-  return obj;
-}
-JSValue *JSContext::construct(JSBase *base, JSValue *constructor,
-                              const std::vector<JSValue *> args) {
-  if (auto err = checkUninitialized(constructor)) {
-    return err;
-  }
-  if (constructor->getType() == JS_TYPE::FUNCTION) {
-    auto prototype = getField(constructor, L"prototype");
-    if (!prototype) {
-      return createException(JSException::TYPE::TYPE,
-                             L"variable is not a constructor");
-    }
-    auto object = dynamic_cast<JSObject *>(base);
-    if (!object) {
-      return createException(JSException::TYPE::TYPE,
-                             L"variable is not a object");
-    }
-    object->setPrototype(prototype->getAtom());
-    auto obj = _current->createValue(base);
-    obj->getAtom()->addChild(prototype->getAtom());
-    auto err = setField(obj, L"constructor", constructor);
-    if (err) {
-      return err;
-    }
-    auto res = call(constructor, obj, args);
-    if (res && res->getType() >= JS_TYPE::OBJECT) {
-      return res;
-    }
-    return obj;
-  }
-  return createException(JSException::TYPE::TYPE,
-                         L"variable is not a constructor");
+  return nullptr;
 }
 
 JSValue *JSContext::getGlobal(const std::wstring &name) {
   auto &fields = dynamic_cast<JSObject *>(_global->getData())->getFields();
-  if (fields.contains(name)) {
-    return getField(_global, name);
+  for (auto &[keyAtom, value] : fields) {
+    if (keyAtom->isTypeof<JSStringType>()) {
+      if (keyAtom->getData()->cast<JSString>()->getValue() == name) {
+        return getField(_global, createString(name));
+      }
+    }
   }
   return nullptr;
 }
 
-JSValue *JSContext::setField(JSValue *obj, const std::wstring &name,
-                             JSValue *value) {
-  if (auto err = checkUninitialized(obj)) {
-    return err;
-  }
-  if (auto err = checkUninitialized(value)) {
-    return err;
-  }
-  auto object = dynamic_cast<JSObject *>(obj->getData());
-  return object->setField(this, obj, name, value);
-}
-
-JSValue *JSContext::getField(JSValue *obj, const std::wstring &name) {
-  if (auto err = checkUninitialized(obj)) {
-    return err;
-  }
-  auto object = dynamic_cast<JSObject *>(obj->getData());
-  return object->getField(this, obj, name);
-}
-
 JSValue *JSContext::setField(JSValue *obj, JSValue *name, JSValue *value) {
-  if (auto err = checkUninitialized(obj)) {
-    return err;
+  auto type = obj->getType();
+  auto object = type->pack(this, obj);
+  if (object->isTypeof<JSExceptionType>()) {
+    return object;
   }
-  if (auto err = checkUninitialized(name)) {
-    return err;
-  }
-  if (auto err = checkUninitialized(value)) {
-    return err;
-  }
-  auto object = dynamic_cast<JSObject *>(obj->getData());
-  return object->setField(this, obj, name, value);
+  auto otype = object->getType()->cast<JSObjectType>();
+  return otype->setField(this, object, name, value);
 }
 
 JSValue *JSContext::getField(JSValue *obj, JSValue *name) {
-  if (auto err = checkUninitialized(obj)) {
-    return err;
+  auto type = obj->getType();
+  auto object = type->pack(this, obj);
+  if (object->isTypeof<JSExceptionType>()) {
+    return object;
   }
-  if (auto err = checkUninitialized(name)) {
-    return err;
-  }
-  auto object = dynamic_cast<JSObject *>(obj->getData());
-  return object->getField(this, obj, name);
+  auto otype = object->getType()->cast<JSObjectType>();
+  return otype->getField(this, object, name);
 }
 
-JSValue *JSContext::setIndex(JSValue *obj, size_t index, JSValue *value) {
-  if (auto err = checkUninitialized(obj)) {
-    return err;
+JSValue *JSContext::getKeys(JSValue *obj) {
+  auto type = obj->getType();
+  auto object = type->pack(this, obj);
+  if (object->isTypeof<JSExceptionType>()) {
+    return object;
   }
-  auto object = dynamic_cast<JSObject *>(obj->getData());
-  return object->setIndex(this, obj, index, value);
-}
-
-JSValue *JSContext::getIndex(JSValue *obj, size_t index) {
-  if (auto err = checkUninitialized(obj)) {
-    return err;
-  }
-  auto object = dynamic_cast<JSObject *>(obj->getData());
-  return object->getIndex(this, obj, index);
-}
-
-std::vector<std::wstring> JSContext::getKeys(JSValue *obj) {
-  auto object = dynamic_cast<JSObject *>(obj->getData());
-  return object->getKeys(this);
+  auto otype = object->getType()->cast<JSObjectType>();
+  return otype->getKeys(this, object);
 }
 
 JSValue *JSContext::toString(JSValue *value) {
-  if (auto err = checkUninitialized(value)) {
-    return err;
-  }
-  return _current->createValue(value->getData()->toString());
+  return value->getType()->toString(this, value);
+}
+
+JSValue *JSContext::toNumber(JSValue *value) {
+  return value->getType()->toNumber(this, value);
+}
+
+JSValue *JSContext::toBoolean(JSValue *value) {
+  return value->getType()->toBoolean(this, value);
 }
 
 const std::wstring &JSContext::checkedString(JSValue *value) const {
   static std::wstring def = L"";
-  if (value->getType() == JS_TYPE::STRING) {
+  if (value->isTypeof<JSStringType>()) {
     return value->getData()->cast<JSString>()->getValue();
   }
   return def;
+}
+
+double JSContext::checkedNumber(JSValue *value) const {
+  if (value->isTypeof<JSNumber>()) {
+    return value->getData()->cast<JSNumber>()->getValue();
+  }
+  return 0;
+}
+
+bool JSContext::checkedBoolean(JSValue *value) const {
+  if (value->isTypeof<JSBoolean>()) {
+    return value->getData()->cast<JSBoolean>()->getValue();
+  }
+  return false;
+}
+
+bool JSContext::isNaN(JSValue *value) const {
+  return value->isTypeof<JSNaNType>();
+}
+
+JSValue *JSContext::isEqual(JSValue *left, JSValue *right) {
+  auto type = left->getType();
+  if (left->getType()->getPriority() < right->getType()->getPriority()) {
+    type = right->getType();
+  }
+  return type->equal(this, left, right);
 }

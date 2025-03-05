@@ -1,9 +1,12 @@
 #pragma once
-#include "../util/JSAllocator.hpp"
 #include "../compiler/JSProgram.hpp"
+#include "../util/JSAllocator.hpp"
 #include "JSContext.hpp"
 #include "JSEvalContext.hpp"
+#include "JSExceptionType.hpp"
+#include "script/util/JSSingleton.hpp"
 #include <cstdint>
+
 class JSVirtualMachine {
 private:
   JSAllocator *_allocator;
@@ -40,7 +43,7 @@ private:
   }
   JSValue *construct(JSContext *ctx, JSValue *constructor,
                      std::vector<JSValue *> args) {
-    return ctx->construct(constructor, args);
+    return ctx->createUndefined();
   }
 
 private:
@@ -88,7 +91,7 @@ private:
     auto name = getString(program, ectx.pc);
     auto val = ctx->queryValue(name);
     ectx.stack.push_back(val);
-    if (val->getType() == JS_TYPE::EXCEPTION) {
+    if (val->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.pc = program.codes.size();
     }
   }
@@ -97,7 +100,7 @@ private:
     auto value = *ectx.stack.rbegin();
     ectx.stack.pop_back();
     auto variable = ctx->queryValue(name);
-    if (variable->getType() == JS_TYPE::EXCEPTION) {
+    if (variable->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.stack.push_back(variable);
       ectx.pc = program.codes.size();
       return;
@@ -190,7 +193,7 @@ private:
     auto field = *ectx.stack.rbegin();
     ectx.stack.pop_back();
     auto result = ctx->getField(obj, field);
-    if (result->getType() == JS_TYPE::EXCEPTION) {
+    if (result->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.stack.push_back(result);
       ectx.pc = program.codes.size();
       return;
@@ -206,7 +209,7 @@ private:
     auto val = *ectx.stack.rbegin();
     ectx.stack.pop_back();
     auto result = ctx->setField(obj, field, val);
-    if (result->getType() == JS_TYPE::EXCEPTION) {
+    if (result->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.stack.push_back(result);
       ectx.pc = program.codes.size();
       return;
@@ -230,7 +233,7 @@ private:
     ectx.stack.pop_back();
     frame.position.funcname = func->getData()->cast<JSCallable>()->getName();
     auto result = call(ctx, func, ctx->createUndefined(), arguments, frame);
-    if (result->getType() == JS_TYPE::EXCEPTION) {
+    if (result->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.stack.push_back(result);
       ectx.pc = program.codes.size();
       return;
@@ -252,7 +255,7 @@ private:
     auto obj = *ectx.stack.rbegin();
     ectx.stack.pop_back();
     auto func = ctx->getField(obj, field);
-    if (func->getType() == JS_TYPE::EXCEPTION) {
+    if (func->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.stack.push_back(func);
       ectx.pc = program.codes.size();
       return;
@@ -291,7 +294,7 @@ private:
     auto constructor = *ectx.stack.rbegin();
     ectx.stack.pop_back();
     auto result = construct(ctx, constructor, arguments);
-    if (result->getType() == JS_TYPE::EXCEPTION) {
+    if (result->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.stack.push_back(result);
       ectx.pc = program.codes.size();
       return;
@@ -448,34 +451,6 @@ private:
     // not implement
     ectx.pc = program.codes.size();
     return;
-    auto generator = *ectx.stack.rbegin();
-    // TODO: get iterator
-    auto next = ctx->getField(generator, L"next");
-    if (next->getType() == JS_TYPE::EXCEPTION) {
-      ectx.stack.push_back(next);
-      ectx.pc = program.codes.size();
-      return;
-    }
-    auto result = ctx->call(next, generator, {});
-    if (result->getType() == JS_TYPE::EXCEPTION) {
-      ectx.stack.push_back(result);
-      ectx.pc = program.codes.size();
-      return;
-    }
-    auto value = ctx->getField(result, L"value");
-    if (value->getType() == JS_TYPE::EXCEPTION) {
-      ectx.stack.push_back(value);
-      ectx.pc = program.codes.size();
-      return;
-    }
-    auto done = ctx->getField(result, L"done");
-    if (done->getType() == JS_TYPE::EXCEPTION) {
-      ectx.stack.push_back(done);
-      ectx.pc = program.codes.size();
-      return;
-    }
-    ectx.stack.push_back(value);
-    ectx.stack.push_back(done);
   }
   void runAwaitNext(JSContext *ctx, const JSProgram &program,
                     JSEvalContext &ectx) {
@@ -512,19 +487,8 @@ private:
   }
   void runArgumentSpread(JSContext *ctx, const JSProgram &program,
                          JSEvalContext &ectx) {
-    auto arr = ctx->createArray();
-    size_t index = 0;
-    while (!ectx.stack.empty()) {
-      auto arg = *ectx.stack.rbegin();
-      ectx.stack.pop_back();
-      auto err = ctx->setIndex(arr, index, arg);
-      if (err->getType() == JS_TYPE::EXCEPTION) {
-        ectx.stack.push_back(err);
-        ectx.pc = program.codes.size();
-        return;
-      }
-    }
-    ectx.stack.push_back(arr);
+    // not implement
+    ectx.pc = program.codes.size();
   }
   void runHlt(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     if (ectx.stack.empty()) {

@@ -32,7 +32,9 @@ public:
 
   void setData(JSBase *data);
 
-  inline const JS_TYPE &getType() const { return _data->getType(); }
+  inline auto getType() const { return _data->getType(); }
+
+  template <class T> bool isTypeof() const { return _data->isTypeof<T>(); }
 
 public:
   static void gc(JSAllocator *allocator);

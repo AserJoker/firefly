@@ -1,5 +1,7 @@
 
 #include "script/engine/JSContext.hpp"
+#include "script/engine/JSExceptionType.hpp"
+#include <SDL2/SDL.h>
 #include <codecvt>
 #include <exception>
 #include <fmt/format.h>
@@ -8,17 +10,15 @@
 #include <locale>
 #include <stdexcept>
 #include <vector>
-#include <SDL2/SDL.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
-
 JSValue *print(JSContext *ctx, JSValue *self, std::vector<JSValue *> args) {
   for (auto &arg : args) {
     auto str = ctx->toString(arg);
-    if (str->getType() == JS_TYPE::EXCEPTION) {
+    if (str->isTypeof<JSExceptionType>()) {
       return str;
     }
     std::wcout << ctx->checkedString(str) << std::endl;
@@ -52,11 +52,11 @@ int main(int argc, char *argv[]) {
     delete[] buf;
     auto runtime = new JSRuntime(argc, argv);
     auto ctx = new JSContext(runtime);
-    auto func = ctx->createNativeFunction(print, L"print");
-    auto global = ctx->getGlobal();
-    ctx->setField(global, L"print", func);
-    auto res = ctx->eval(L"../script/index.js", js);
-    std::wcout << ctx->checkedString(ctx->toString(res)) << std::endl;
+    // auto func = ctx->createNativeFunction(print, L"print");
+    // auto global = ctx->getGlobal();
+    // ctx->setField(global, ctx->createString(L"print"), func);
+    // auto res = ctx->eval(L"../script/index.js", js);
+    // std::wcout << ctx->checkedString(ctx->toString(res)) << std::endl;
     delete ctx;
     delete runtime;
     return 0;

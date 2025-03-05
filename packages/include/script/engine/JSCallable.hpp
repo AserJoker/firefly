@@ -1,6 +1,7 @@
 #pragma once
 
 #include "JSObject.hpp"
+#include "JSType.hpp"
 #include "JSValue.hpp"
 #include <functional>
 class JSContext;
@@ -15,7 +16,8 @@ private:
 
 public:
   JSCallable(JSAllocator *allocator, const std::wstring &name,
-             const std::unordered_map<std::wstring, JSAtom *> &closure);
+             const std::unordered_map<std::wstring, JSAtom *> &closure,
+             JSType *type);
   inline const std::unordered_map<std::wstring, JSAtom *> &getClosure() const {
     return _closure;
   }
@@ -23,9 +25,6 @@ public:
   inline bool isGlobalContext() const { return _globalContext; }
 
   inline void setGlobalContext(bool context) { _globalContext = context; }
-
-  virtual JSValue *call(JSContext *ctx, JSValue *self,
-                        const std::vector<JSValue *> args) = 0;
 
   inline const std::wstring &getName() const { return _name; }
 
@@ -43,5 +42,6 @@ public:
   }
 
 public:
-  JSBase *toString() override;
+  virtual JSValue *call(JSContext *ctx, JSValue *self,
+                        const std::vector<JSValue *> args) = 0;
 };

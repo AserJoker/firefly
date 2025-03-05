@@ -1,9 +1,13 @@
 #include "script/engine/JSBase.hpp"
-JSBase::JSBase(JSAllocator *allocator, const JS_TYPE &type)
-    : _allocator(allocator), _ref(0), _type(type) {}
+#include "script/engine/JSType.hpp"
+JSBase::JSBase(JSAllocator *allocator, JSType *type)
+    : JSRef(allocator), _type(type) {
+  _type->addRef();
+}
 
-void JSBase::release() {
-  if (!dispose()) {
-    _allocator->dispose(this);
+JSBase::~JSBase() {
+  if (_type) {
+    _type->release();
+    _type = nullptr;
   }
 }

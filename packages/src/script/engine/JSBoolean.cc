@@ -1,11 +1,8 @@
 #include "script/engine/JSBoolean.hpp"
-#include "script/engine/JSString.hpp"
+#include "script/engine/JSBooleanType.hpp"
 #include "script/util/JSAllocator.hpp"
+#include "script/util/JSSingleton.hpp"
 
 JSBoolean::JSBoolean(JSAllocator *allocator, bool value)
-    : JSBase(allocator, JS_TYPE::BOOLEAN), _value(value) {}
-JSBase *JSBoolean::toString() {
-  return getAllocator()->create<JSString>(_value ? L"true" : L"false");
-}
-
-JSBase *JSBoolean::clone() { return getAllocator()->create<JSBoolean>(_value); }
+    : JSBase(allocator, JSSingleton::instance<JSBooleanType>(allocator)),
+      _value(value) {}

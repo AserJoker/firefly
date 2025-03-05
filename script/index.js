@@ -1,3 +1,8 @@
-let a = 1;
-const fn = Function("a", "return a");
-print(fn(2));
+'use strict'
+const obj = {};
+Object.defineProperty(obj, "a", {
+  configurable: true,
+  writable: false,
+  value: 123,
+});
+obj.a = 234;

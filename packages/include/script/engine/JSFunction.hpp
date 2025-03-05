@@ -9,7 +9,8 @@ public:
   JSFunction(JSAllocator *allocator, const std::wstring &name,
              const std::wstring &path, size_t address,
              const std::unordered_map<std::wstring, JSAtom *> &closure);
-             
+
+public:
   JSValue *call(JSContext *ctx, JSValue *self,
                 const std::vector<JSValue *> args) override;
 };

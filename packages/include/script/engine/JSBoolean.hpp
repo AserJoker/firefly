@@ -6,10 +6,8 @@ private:
 
 public:
   JSBoolean(JSAllocator *allocator, bool value);
-  inline bool getValue() const { return _value; }
-  inline void setValue(bool value) { _value = value; }
 
-public:
-  JSBase *toString() override;
-  JSBase *clone() override;
+  inline bool getValue() const { return _value; }
+  
+  inline void setValue(bool value) { _value = value; }
 };

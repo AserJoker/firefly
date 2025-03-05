@@ -38,8 +38,4 @@ public:
   inline const std::wstring &getMessage() const { return _message; };
 
   inline const std::vector<JSStackFrame> &getStack() const { return _stack; }
-
-public:
-  JSBase *toString() override;
-  JSBase *clone() override;
 };

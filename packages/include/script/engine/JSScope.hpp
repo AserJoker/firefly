@@ -1,5 +1,6 @@
 #pragma once
 #include "JSValue.hpp"
+#include <string>
 #include <unordered_map>
 
 class JSScope {
