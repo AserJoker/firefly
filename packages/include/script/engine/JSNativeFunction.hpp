@@ -10,7 +10,7 @@ public:
       JSAllocator *allocator, const std::wstring &name, const JS_NATIVE &native,
       const std::unordered_map<std::wstring, JSAtom *> &closure = {});
 
-public:
-  JSValue *call(JSContext *ctx, JSValue *self,
-                const std::vector<JSValue *> args) override;
+  inline const JS_NATIVE &getNative() const { return _native; }
+
+  inline JS_NATIVE &getNative() { return _native; }
 };

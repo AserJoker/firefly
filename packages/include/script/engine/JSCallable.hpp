@@ -40,8 +40,4 @@ public:
     }
     return nullptr;
   }
-
-public:
-  virtual JSValue *call(JSContext *ctx, JSValue *self,
-                        const std::vector<JSValue *> args) = 0;
 };

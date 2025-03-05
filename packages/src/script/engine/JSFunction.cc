@@ -1,7 +1,5 @@
 #include "script/engine/JSFunction.hpp"
-#include "script/engine/JSContext.hpp"
 #include "script/engine/JSFunctionType.hpp"
-#include "script/engine/JSVirtualMachine.hpp"
 #include "script/util/JSSingleton.hpp"
 JSFunction::JSFunction(
     JSAllocator *allocator, const std::wstring &name, const std::wstring &path,
@@ -9,11 +7,3 @@ JSFunction::JSFunction(
     : JSCallable(allocator, name, closure,
                  JSSingleton::instance<JSFunctionType>(allocator)),
       _path(path), _address(address) {}
-
-JSValue *JSFunction::call(JSContext *ctx, JSValue *self,
-                          std::vector<JSValue *> args) {
-  auto runtime = ctx->getRuntime();
-  auto vm = runtime->getVirtualMachine();
-  auto program = runtime->getProgram(_path);
-  return vm->eval(ctx, program, {.pc = _address, .stack = args, .self = self});
-}
