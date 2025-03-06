@@ -22,6 +22,8 @@
 #include "script/engine/JSUninitializeType.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/engine/JSVirtualMachine.hpp"
+#include "script/runtime/JSFunctionConstructor.hpp"
+#include "script/runtime/JSObjectConstructor.hpp"
 #include <fstream>
 
 JSContext::JSContext(JSRuntime *runtime) : _runtime(runtime) {
@@ -83,6 +85,14 @@ JSValue *JSContext::eval(const std::wstring &filename,
 JSValue *JSContext::initializeGlobal() {
   _global = createObject(createNull());
   auto err = setField(_global, createString(L"global"), _global);
+  if (err) {
+    return err;
+  }
+  err = JSFunctionConstructor::initialize(this);
+  if (err) {
+    return err;
+  }
+  err = JSObjectConstructor::initialize(this);
   if (err) {
     return err;
   }
@@ -196,7 +206,18 @@ JSValue *JSContext::createBoolean(bool value) {
 
 JSValue *JSContext::createObject(JSValue *prototype) {
   if (!prototype) {
-    prototype = createNull();
+    auto Object = getGlobal(L"Object");
+    if (Object) {
+      if (!Object->isTypeof<JSExceptionType>()) {
+        return Object;
+      }
+      prototype = getField(Object, createString(L"prototype"));
+    } else {
+      prototype = createNull();
+    }
+  }
+  if (prototype->isTypeof<JSExceptionType>()) {
+    return prototype;
   }
   auto object = _current->createValue(getAllocator()->create<JSObject>());
   auto obj = object->getData()->cast<JSObject>();
@@ -212,6 +233,12 @@ JSValue *JSContext::createArray() {
 JSValue *JSContext::createNativeFunction(
     const JS_NATIVE &func, const std::wstring &name,
     const std::unordered_map<std::wstring, JSValue *> &closure) {
+  auto Function = getGlobal(L"Function");
+  if (Function) {
+    if (Function->isTypeof<JSExceptionType>()) {
+      return Function;
+    }
+  }
   std::unordered_map<std::wstring, JSAtom *> clo;
   for (auto &[n, val] : closure) {
     clo[n] = val->getAtom();
@@ -220,6 +247,33 @@ JSValue *JSContext::createNativeFunction(
       getAllocator()->create<JSNativeFunction>(name, func, clo));
   for (auto &[_, atom] : clo) {
     val->getAtom()->addChild(atom);
+  }
+  auto prototype = createObject();
+  auto err = defineProperty(val, createString(L"prototype"), prototype, true,
+                            false, true);
+  if (err) {
+    return err;
+  }
+  err = defineProperty(prototype, createString(L"constructor"), val, true,
+                       false, true);
+  if (err) {
+    return err;
+  }
+  err = defineProperty(val, createString(L"name"), createString(name), false,
+                       false, false);
+  if (err) {
+    return err;
+  }
+  if (Function) {
+    auto prototype = getField(Function, createString(L"prototype"));
+    val->getData()->cast<JSCallable>()->setPrototype(prototype->getAtom());
+    val->getAtom()->addChild(prototype->getAtom());
+    defineProperty(val, createString(L"constructor"), Function, true, false,
+                   true);
+  } else {
+    auto prototype = createObject();
+    val->getData()->cast<JSCallable>()->setPrototype(prototype->getAtom());
+    val->getAtom()->addChild(prototype->getAtom());
   }
   return val;
 }
@@ -314,6 +368,31 @@ JSValue *JSContext::setField(JSValue *obj, JSValue *name, JSValue *value) {
   }
   auto otype = object->getType()->cast<JSObjectType>();
   return otype->setField(this, object, name, value);
+}
+JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *value,
+                                   bool configurable, bool enumable,
+                                   bool writable) {
+  auto type = obj->getType();
+  auto object = type->pack(this, obj);
+  if (object->isTypeof<JSExceptionType>()) {
+    return object;
+  }
+  auto otype = object->getType()->cast<JSObjectType>();
+  return otype->defineProperty(this, object, name, value, configurable,
+                               enumable, writable);
+}
+
+JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *getter,
+                                   JSValue *setter, bool configurable,
+                                   bool enumable) {
+  auto type = obj->getType();
+  auto object = type->pack(this, obj);
+  if (object->isTypeof<JSExceptionType>()) {
+    return object;
+  }
+  auto otype = object->getType()->cast<JSObjectType>();
+  return otype->defineProperty(this, object, name, getter, setter, configurable,
+                               enumable);
 }
 
 JSValue *JSContext::getField(JSValue *obj, JSValue *name) {

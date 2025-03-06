@@ -20,6 +20,7 @@ JSAtom::~JSAtom() {
   while (!_children.empty()) {
     removeChild(*_children.begin());
   }
+  _allocator = nullptr;
 }
 
 void JSAtom::addChild(JSAtom *child) {

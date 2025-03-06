@@ -66,8 +66,8 @@ JSField *JSObjectType::getOwnFieldDescriptor(JSContext *ctx, JSValue *value,
                                              JSValue *name) const {
   auto object = value->getData()->cast<JSObject>();
   ctx->pushScope();
-  auto fields = object->getFields();
-  for (auto [keyAtom, field] : fields) {
+  auto &fields = object->getFields();
+  for (auto &[keyAtom, field] : fields) {
     auto key = ctx->createValue(keyAtom);
     if (ctx->checkedBoolean(ctx->isEqual(key, name))) {
       ctx->popScope();
@@ -114,7 +114,7 @@ JSValue *JSObjectType::setField(JSContext *ctx, JSValue *object, JSValue *name,
   auto &fields = obj->getFields();
   for (auto &[keyAtom, field] : fields) {
     auto key = ctx->createValue(keyAtom);
-    if (ctx->isEqual(key, name)) {
+    if (ctx->checkedBoolean(ctx->isEqual(key, name))) {
       pfield = &field;
       break;
     }
@@ -123,7 +123,7 @@ JSValue *JSObjectType::setField(JSContext *ctx, JSValue *object, JSValue *name,
     if (pfield->value != nullptr) {
       auto oldvalue = ctx->createValue(pfield->value);
       if (oldvalue->getType() != value->getType() ||
-          !ctx->isEqual(oldvalue, value)) {
+          !ctx->checkedBoolean(ctx->isEqual(oldvalue, value))) {
         if (!pfield->writable || obj->isFrozen()) {
           return ctx->createException(
               JSException::TYPE::TYPE,
@@ -197,6 +197,7 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
   if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
     name = ctx->toString(name);
   }
+  // name = ctx->clone(name);
   std::wstring fieldname = ctx->checkedString(ctx->toString(name));
   JSField *field = getOwnFieldDescriptor(ctx, object, name);
   if (field) {
@@ -211,7 +212,7 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
     }
     auto oldvalue = ctx->createValue(field->value);
     if (oldvalue->getType() != value->getType() ||
-        !ctx->isEqual(oldvalue, value)) {
+        !ctx->checkedBoolean(ctx->isEqual(oldvalue, value))) {
       if (!field->writable || obj->isFrozen()) {
         return ctx->createException(
             JSException::TYPE::TYPE,
@@ -235,9 +236,9 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
                       fieldname));
     }
     object->getAtom()->addChild(value->getAtom());
-    auto pname = ctx->clone(name);
-    object->getAtom()->addChild(pname->getAtom());
-    object->getData()->cast<JSObject>()->getFields()[pname->getAtom()] = {
+    object->getAtom()->addChild(name->getAtom());
+    auto &fields = object->getData()->cast<JSObject>()->getFields();
+    fields[name->getAtom()] = {
         .configurable = configurable,
         .enumable = enumable,
         .value = value->getAtom(),

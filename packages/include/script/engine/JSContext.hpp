@@ -127,6 +127,12 @@ public:
 
   JSValue *setField(JSValue *obj, JSValue *name, JSValue *value);
 
+  JSValue *defineProperty(JSValue *obj, JSValue *name, JSValue *value,
+                          bool configurable, bool enumable, bool writable);
+
+  JSValue *defineProperty(JSValue *obj, JSValue *name, JSValue *getter,
+                          JSValue *setter, bool configurable, bool enumable);
+
   JSValue *getField(JSValue *obj, JSValue *name);
 
   JSValue *getKeys(JSValue *obj);

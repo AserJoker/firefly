@@ -2,6 +2,7 @@
 #include "script/engine/JSNativeFunction.hpp"
 JSNativeFunctionType::JSNativeFunctionType(JSAllocator *allocator)
     : JSCallableType(allocator) {}
+    
 JSValue *JSNativeFunctionType::call(JSContext *ctx, JSValue *func,
                                     JSValue *self,
                                     std::vector<JSValue *> args) const {

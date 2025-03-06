@@ -1,7 +1,7 @@
 
 #include "script/engine/JSContext.hpp"
 #include "script/engine/JSExceptionType.hpp"
-#include <SDL2/SDL.h>
+// #include <SDL2/SDL.h>
 #include <codecvt>
 #include <exception>
 #include <iostream>

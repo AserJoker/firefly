@@ -2,7 +2,6 @@
 #include "../util/JSAllocator.hpp"
 #include "JSType.hpp"
 #include "script/util/JSRef.hpp"
-#include "script/util/JSSingleton.hpp"
 class JSBase : public JSRef {
 private:
   JSType *_type;
@@ -17,6 +16,6 @@ public:
   template <class T> T *cast() { return dynamic_cast<T *>(this); }
 
   template <class T> bool isTypeof() const {
-    return getType() == (const JSType *)JSSingleton::query<T>();
+    return getType()->cast<T>() != nullptr;
   }
 };

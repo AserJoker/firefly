@@ -12,7 +12,10 @@ public:
   JSValue(JSAllocator *allocator, JSAtom *atom)
       : _allocator(allocator), _atom(atom), _const(false) {}
 
-  ~JSValue() {}
+  ~JSValue() {
+    _allocator = nullptr;
+    _atom = nullptr;
+  }
 
   JSAllocator *getAllocator() { return _allocator; }
 

@@ -46,3 +46,15 @@ TEST_F(TestContext, setIndex) {
   delete ctx;
   delete runtime;
 }
+TEST_F(TestContext, getFieldFromPrototype) {
+  auto runtime = new JSRuntime(0, NULL);
+  auto ctx = new JSContext(runtime);
+  auto proto = ctx->createObject(ctx->createNull());
+  auto num = ctx->createNumber(123);
+  ctx->setField(proto, ctx->createString(L"num"), num);
+  auto obj = ctx->createObject(proto);
+  auto val = ctx->getField(obj, ctx->createString(L"num"));
+  ASSERT_EQ(ctx->checkedNumber(val), 123);
+  delete ctx;
+  delete runtime;
+}
