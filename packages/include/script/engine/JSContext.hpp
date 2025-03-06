@@ -79,6 +79,8 @@ public:
 
   JSValue *createValue(JSAtom *atom);
 
+  JSValue *clone(JSValue *value);
+
   JSValue *createUndefined();
 
   JSValue *createUninitialized();

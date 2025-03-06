@@ -235,8 +235,9 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
                       fieldname));
     }
     object->getAtom()->addChild(value->getAtom());
-    object->getAtom()->addChild(name->getAtom());
-    object->getData()->cast<JSObject>()->getFields()[name->getAtom()] = {
+    auto pname = ctx->clone(name);
+    object->getAtom()->addChild(pname->getAtom());
+    object->getData()->cast<JSObject>()->getFields()[pname->getAtom()] = {
         .configurable = configurable,
         .enumable = enumable,
         .value = value->getAtom(),
@@ -291,11 +292,12 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
                       fieldname));
     }
     object->getAtom()->addChild(getter->getAtom());
-    object->getAtom()->addChild(name->getAtom());
+    auto pname = ctx->clone(name);
+    object->getAtom()->addChild(pname->getAtom());
     if (setter) {
       object->getAtom()->addChild(setter->getAtom());
     }
-    object->getData()->cast<JSObject>()->getFields()[name->getAtom()] = {
+    object->getData()->cast<JSObject>()->getFields()[pname->getAtom()] = {
         .configurable = configurable,
         .enumable = enumable,
         .value = nullptr,

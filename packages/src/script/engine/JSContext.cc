@@ -152,6 +152,11 @@ JSValue *JSContext::createValue(JSValue *value) {
 JSValue *JSContext::createValue(JSAtom *atom) {
   return _current->createValue(atom);
 }
+
+JSValue *JSContext::clone(JSValue *value) {
+  auto type = value->getType();
+  return type->clone(this, value);
+}
 JSValue *JSContext::createUndefined() {
   return _current->createValue(_runtime->getAllocator()->create<JSUndefined>());
 }

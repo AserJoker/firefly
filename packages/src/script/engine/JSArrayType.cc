@@ -80,6 +80,11 @@ JSValue *JSArrayType::setField(JSContext *ctx, JSValue *array, JSValue *name,
         items[idx] = value->getAtom();
         if (idx >= arr->getLength()) {
           arr->getLength() = idx + 1;
+          auto err = ctx->setField(array, ctx->createString(L"array"),
+                                   ctx->createNumber(arr->getLength()));
+          if (err) {
+            return err;
+          }
         }
       }
       return nullptr;
