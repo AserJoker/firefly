@@ -29,8 +29,9 @@ JSValue *JSArrayType::toString(JSContext *ctx, JSValue *value) const {
 
 JSValue *JSArrayType::getField(JSContext *ctx, JSValue *array,
                                JSValue *name) const {
-  if (name->isTypeof<JSNumberType>()) {
-    auto num = ctx->checkedNumber(name);
+  auto numval = ctx->toNumber(name);
+  if (numval->isTypeof<JSNumberType>()) {
+    auto num = ctx->checkedNumber(numval);
     size_t idx = (size_t)num;
     if (idx == num) {
       auto arr = array->getData()->cast<JSArray>();
@@ -46,8 +47,9 @@ JSValue *JSArrayType::getField(JSContext *ctx, JSValue *array,
 
 JSValue *JSArrayType::setField(JSContext *ctx, JSValue *array, JSValue *name,
                                JSValue *value) const {
-  if (name->isTypeof<JSNumberType>()) {
-    auto num = ctx->checkedNumber(name);
+  auto numval = ctx->toNumber(name);
+  if (numval->isTypeof<JSNumberType>()) {
+    auto num = ctx->checkedNumber(numval);
     size_t idx = (size_t)num;
     if (idx == num) {
       auto arr = array->getData()->cast<JSArray>();
