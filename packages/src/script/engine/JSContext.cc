@@ -1,6 +1,9 @@
 #include "script/engine/JSContext.hpp"
 #include "script/engine/JSArray.hpp"
 #include "script/engine/JSBoolean.hpp"
+#include "script/engine/JSBooleanType.hpp"
+#include "script/engine/JSCallable.hpp"
+#include "script/engine/JSCallableType.hpp"
 #include "script/engine/JSException.hpp"
 #include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSFunction.hpp"
@@ -187,6 +190,9 @@ JSValue *JSContext::createBoolean(bool value) {
 }
 
 JSValue *JSContext::createObject(JSValue *prototype) {
+  if (!prototype) {
+    prototype = createNull();
+  }
   auto object = _current->createValue(getAllocator()->create<JSObject>());
   auto obj = object->getData()->cast<JSObject>();
   obj->setPrototype(prototype->getAtom());
@@ -264,7 +270,23 @@ JSValue *JSContext::assigmentValue(JSValue *variable, JSValue *value) {
 
 JSValue *JSContext::call(JSValue *func, JSValue *self,
                          const std::vector<JSValue *> args) {
-  return nullptr;
+  auto type = func->getType()->cast<JSCallableType>();
+  if (!type) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a function");
+  }
+  auto current = _current;
+  auto fn = func->getData()->cast<JSCallable>();
+  pushScope();
+  auto &closures = fn->getClosure();
+  for (auto &[name, atom] : closures) {
+    auto val = _current->createValue(atom);
+    _current->storeValue(name, val);
+  }
+  auto res = type->call(this, func, self, args);
+  auto result = current->createValue(res->getAtom());
+  popScope();
+  return result;
 }
 
 JSValue *JSContext::getGlobal(const std::wstring &name) {
@@ -330,14 +352,14 @@ const std::wstring &JSContext::checkedString(JSValue *value) const {
 }
 
 double JSContext::checkedNumber(JSValue *value) const {
-  if (value->isTypeof<JSNumber>()) {
+  if (value->isTypeof<JSNumberType>()) {
     return value->getData()->cast<JSNumber>()->getValue();
   }
   return 0;
 }
 
 bool JSContext::checkedBoolean(JSValue *value) const {
-  if (value->isTypeof<JSBoolean>()) {
+  if (value->isTypeof<JSBooleanType>()) {
     return value->getData()->cast<JSBoolean>()->getValue();
   }
   return false;
@@ -348,6 +370,12 @@ bool JSContext::isNaN(JSValue *value) const {
 }
 
 JSValue *JSContext::isEqual(JSValue *left, JSValue *right) {
+  if (left->isTypeof<JSObjectType>()) {
+    left = left->getType()->cast<JSObjectType>()->unpack(this, left);
+  }
+  if (right->isTypeof<JSObjectType>()) {
+    right = right->getType()->cast<JSObjectType>()->unpack(this, right);
+  }
   auto type = left->getType();
   if (left->getType()->getPriority() < right->getType()->getPriority()) {
     type = right->getType();

@@ -14,3 +14,4 @@ Debug
 Release
 Testing
 tests/*/entry.cc
+build-linux

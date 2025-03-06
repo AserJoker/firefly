@@ -3,8 +3,8 @@
 #include "script/engine/JSException.hpp"
 #include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSObject.hpp"
-#include "script/engine/JSString.hpp"
 #include "script/engine/JSStringType.hpp"
+#include "script/engine/JSSymbolType.hpp"
 #include "script/engine/JSType.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSAllocator.hpp"
@@ -39,6 +39,45 @@ JSValue *JSObjectType::equal(JSContext *ctx, JSValue *value,
   return ctx->createBoolean(value->getAtom() == another->getAtom());
 }
 
+JSField *JSObjectType::getFieldDescriptor(JSContext *ctx, JSValue *value,
+                                          JSValue *name) const {
+  JSField *field = nullptr;
+  auto object = value->getData()->cast<JSObject>();
+  ctx->pushScope();
+  while (!field) {
+    if (!object) {
+      break;
+    }
+    auto &fields = object->getFields();
+    for (auto &[keyAtom, f] : fields) {
+      auto key = ctx->createValue(keyAtom);
+      if (ctx->checkedBoolean(ctx->isEqual(key, name))) {
+        field = &f;
+        break;
+      }
+    }
+    object = object->getPrototype()->getData()->cast<JSObject>();
+  }
+  ctx->popScope();
+  return field;
+}
+
+JSField *JSObjectType::getOwnFieldDescriptor(JSContext *ctx, JSValue *value,
+                                             JSValue *name) const {
+  auto object = value->getData()->cast<JSObject>();
+  ctx->pushScope();
+  auto fields = object->getFields();
+  for (auto [keyAtom, field] : fields) {
+    auto key = ctx->createValue(keyAtom);
+    if (ctx->checkedBoolean(ctx->isEqual(key, name))) {
+      ctx->popScope();
+      return &field;
+    }
+  }
+  ctx->popScope();
+  return nullptr;
+}
+
 JSValue *JSObjectType::getKeys(JSContext *ctx, JSValue *value) const {
   auto arr = ctx->createArray();
   ctx->pushScope();
@@ -66,13 +105,11 @@ JSValue *JSObjectType::unpack(JSContext *ctx, JSValue *value) const {
 JSValue *JSObjectType::setField(JSContext *ctx, JSValue *object, JSValue *name,
                                 JSValue *value) const {
   ctx->pushScope();
-  std::wstring fieldname = name->getType()
-                               ->toString(ctx, name)
-                               ->getData()
-                               ->cast<JSString>()
-                               ->getValue();
+  if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
+    name = ctx->toString(name);
+  }
+  std::wstring fieldname = ctx->checkedString(ctx->toString(name));
   auto obj = object->getData()->cast<JSObject>();
-
   JSField *pfield = nullptr;
   auto &fields = obj->getFields();
   for (auto &[keyAtom, field] : fields) {
@@ -85,7 +122,7 @@ JSValue *JSObjectType::setField(JSContext *ctx, JSValue *object, JSValue *name,
   if (pfield) {
     if (pfield->value != nullptr) {
       auto oldvalue = ctx->createValue(pfield->value);
-      if (oldvalue->getType() != value->getType() &&
+      if (oldvalue->getType() != value->getType() ||
           !ctx->isEqual(oldvalue, value)) {
         if (!pfield->writable || obj->isFrozen()) {
           return ctx->createException(
@@ -97,14 +134,14 @@ JSValue *JSObjectType::setField(JSContext *ctx, JSValue *object, JSValue *name,
           object->getAtom()->addChild(value->getAtom());
           object->getAtom()->removeChild(oldvalue->getAtom());
           pfield->value = value->getAtom();
+          ctx->recycle(oldvalue->getAtom());
         }
       }
     } else {
       if (!pfield->setter) {
         return ctx->createException(
             JSException::TYPE::TYPE,
-            std::format(L"Cannot assign to read only property '{}' of object "
-                        L"'#<Object>'",
+            std::format(L"Cannot add property {}, object is not extensible",
                         fieldname));
       }
       auto setter = ctx->createValue(pfield->setter);
@@ -126,30 +163,24 @@ JSValue *JSObjectType::setField(JSContext *ctx, JSValue *object, JSValue *name,
 JSValue *JSObjectType::getField(JSContext *ctx, JSValue *object,
                                 JSValue *name) const {
   auto current = ctx->getScope();
+  if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
+    name = ctx->toString(name);
+  }
   JSValue *result = nullptr;
-  ctx->pushScope();
-  JSAtom *resAtom = nullptr;
-  auto &fields = object->getData()->cast<JSObject>()->getFields();
-  for (auto &[keyAtom, field] : fields) {
-    auto key = ctx->createValue(keyAtom);
-    if (ctx->isEqual(key, name)) {
-      if (field.value) {
-        resAtom = field.value;
-      } else {
-        auto getter = ctx->createValue(field.getter);
-        auto res = ctx->call(getter, object, {name});
-        if (res->isTypeof<JSExceptionType>()) {
-          return res;
-        }
-        resAtom = res->getAtom();
+  JSField *field = getFieldDescriptor(ctx, object, name);
+  if (field) {
+    ctx->pushScope();
+    if (field->value) {
+      result = current->createValue(field->value);
+    } else {
+      auto getter = ctx->createValue(field->getter);
+      auto res = ctx->call(getter, object, {name});
+      if (res->isTypeof<JSExceptionType>()) {
+        return res;
       }
+      result = current->createValue(res->getAtom());
     }
-  }
-  if (resAtom) {
-    result = current->createValue(resAtom);
-  }
-  ctx->popScope();
-  if (result) {
+    ctx->popScope();
     return result;
   } else {
     return ctx->createUndefined();
@@ -163,30 +194,20 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
 
   auto obj = object->getData()->cast<JSObject>();
   ctx->pushScope();
-  std::wstring fieldname = name->getType()
-                               ->toString(ctx, name)
-                               ->getData()
-                               ->cast<JSString>()
-                               ->getValue();
-  auto &fields = obj->getFields();
-  JSField *field = nullptr;
-  for (auto &[keyAtom, f] : fields) {
-    auto key = ctx->createValue(keyAtom);
-    if (ctx->isEqual(key, name)) {
-      field = &f;
-      break;
-    }
+  if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
+    name = ctx->toString(name);
   }
+  std::wstring fieldname = ctx->checkedString(ctx->toString(name));
+  JSField *field = getOwnFieldDescriptor(ctx, object, name);
   if (field) {
-    if (!field->configurable) {
-      if (field->configurable != configurable || field->enumable != enumable ||
-          field->getter != nullptr) {
-        return ctx->createException(
-            JSException::TYPE::TYPE,
-            std::format(L"Cannot assign to read only property '{}' of object "
-                        L"'#<Object>'",
-                        fieldname));
-      }
+    if (!field->configurable &&
+        (field->configurable != configurable || field->enumable != enumable ||
+         field->getter != nullptr)) {
+      return ctx->createException(
+          JSException::TYPE::TYPE,
+          std::format(L"Cannot assign to read only property '{}' of object "
+                      L"'#<Object>'",
+                      fieldname));
     }
     auto oldvalue = ctx->createValue(field->value);
     if (oldvalue->getType() != value->getType() ||
@@ -215,7 +236,7 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
     }
     object->getAtom()->addChild(value->getAtom());
     object->getAtom()->addChild(name->getAtom());
-    fields[name->getAtom()] = {
+    object->getData()->cast<JSObject>()->getFields()[name->getAtom()] = {
         .configurable = configurable,
         .enumable = enumable,
         .value = value->getAtom(),
@@ -234,30 +255,20 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
                                       bool enumable) const {
   auto obj = object->getData()->cast<JSObject>();
   ctx->pushScope();
-  std::wstring fieldname = name->getType()
-                               ->toString(ctx, name)
-                               ->getData()
-                               ->cast<JSString>()
-                               ->getValue();
-  auto &fields = obj->getFields();
-  JSField *field = nullptr;
-  for (auto &[keyAtom, f] : fields) {
-    auto key = ctx->createValue(keyAtom);
-    if (ctx->isEqual(key, name)) {
-      field = &f;
-      break;
-    }
+  if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
+    name = ctx->toString(name);
   }
+  std::wstring fieldname = ctx->checkedString(ctx->toString(name));
+  JSField *field = getOwnFieldDescriptor(ctx, object, name);
   if (field) {
-    if (!field->configurable) {
-      if (field->configurable != configurable || field->enumable != enumable ||
-          field->value != nullptr) {
-        return ctx->createException(
-            JSException::TYPE::TYPE,
-            std::format(L"Cannot assign to read only property '{}' of object "
-                        L"'#<Object>'",
-                        fieldname));
-      }
+    if (!field->configurable &&
+        (field->configurable != configurable || field->enumable != enumable ||
+         field->value != nullptr)) {
+      return ctx->createException(
+          JSException::TYPE::TYPE,
+          std::format(L"Cannot assign to read only property '{}' of object "
+                      L"'#<Object>'",
+                      fieldname));
     }
     field->configurable = configurable;
     field->enumable = enumable;
@@ -284,7 +295,7 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
     if (setter) {
       object->getAtom()->addChild(setter->getAtom());
     }
-    fields[name->getAtom()] = {
+    object->getData()->cast<JSObject>()->getFields()[name->getAtom()] = {
         .configurable = configurable,
         .enumable = enumable,
         .value = nullptr,

@@ -12,21 +12,22 @@ public:
 
   template <class T> static T *instance(JSAllocator *allocator) {
     auto &store = JSRef::registry();
-    if (!store.contains(typeid(T).name())) {
+    std::string name = typeid(T).name();
+    if (!store.contains(name)) {
       auto ins = allocator->create<T>();
-      store[typeid(T).name()] = ins;
+      store[name] = ins;
     }
-    auto ins = dynamic_cast<T *>(store.at(typeid(T).name()));
+    auto ins = dynamic_cast<T *>(store.at(name));
     return ins;
   }
 
   template <class T> static T *query() {
     auto &store = JSRef::registry();
-    if (!store.contains(typeid(T).name())) {
+    std::string name = typeid(T).name();
+    if (!store.contains(name)) {
       return nullptr;
     }
-    auto ins = dynamic_cast<T *>(store.at(typeid(T).name()));
-    ins->addRef();
+    auto ins = dynamic_cast<T *>(store.at(name));
     return ins;
   }
 };

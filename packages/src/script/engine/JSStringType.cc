@@ -5,7 +5,9 @@
 #include "script/util/JSAllocator.hpp"
 #include <string>
 JSStringType::JSStringType(JSAllocator *allocator) : JSType(allocator, 2) {}
+
 const wchar_t *JSStringType::getTypeName() const { return L"string"; }
+
 JSValue *JSStringType::toString(JSContext *ctx, JSValue *value) const {
   return ctx->createString(value->getData()->cast<JSString>()->getValue());
 }

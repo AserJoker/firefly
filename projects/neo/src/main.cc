@@ -4,11 +4,8 @@
 #include <SDL2/SDL.h>
 #include <codecvt>
 #include <exception>
-#include <fmt/format.h>
-#include <fstream>
 #include <iostream>
 #include <locale>
-#include <stdexcept>
 #include <vector>
 
 #ifdef _WIN32
@@ -38,25 +35,12 @@ int main(int argc, char *argv[]) {
     filename = argv[1];
   }
   try {
-    std::wifstream file(filename.c_str(), std::ios::in | std::ios::binary);
-    if (!file.is_open()) {
-      throw std::runtime_error(fmt::format("Failed to open file:{}", filename));
-    }
-    file.seekg(0, std::ios::end);
-    auto size = file.tellg();
-    file.seekg(0, std::ios::beg);
-    wchar_t *buf = new wchar_t[size];
-    file.read(buf, size);
-    file.close();
-    std::wstring js(buf, size);
-    delete[] buf;
     auto runtime = new JSRuntime(argc, argv);
     auto ctx = new JSContext(runtime);
-    // auto func = ctx->createNativeFunction(print, L"print");
-    // auto global = ctx->getGlobal();
-    // ctx->setField(global, ctx->createString(L"print"), func);
-    // auto res = ctx->eval(L"../script/index.js", js);
-    // std::wcout << ctx->checkedString(ctx->toString(res)) << std::endl;
+    auto obj = ctx->createObject(ctx->createNull());
+    auto num = ctx->createNumber(123);
+    ctx->setField(obj, ctx->createString(L"test"), num);
+    ctx->getField(obj, ctx->createString(L"test"));
     delete ctx;
     delete runtime;
     return 0;

@@ -3,8 +3,12 @@
 #include "script/engine/JSNumber.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSAllocator.hpp"
-JSNumberType::JSNumberType(JSAllocator *allocator) : JSType(allocator, 1) {}
+JSNumberType::JSNumberType(JSAllocator *allocator) : JSType(allocator, 1) {
+}
+
+
 const wchar_t *JSNumberType::getTypeName() const { return L"number"; }
+
 JSValue *JSNumberType::toString(JSContext *ctx, JSValue *value) const {
   auto number = value->getData()->cast<JSNumber>();
   return ctx->createString(std::format(L"{}", number->getValue()));

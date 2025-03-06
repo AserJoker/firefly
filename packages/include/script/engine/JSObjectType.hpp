@@ -1,4 +1,5 @@
 #pragma once
+#include "JSObject.hpp"
 #include "JSType.hpp"
 #include "script/engine/JSContext.hpp"
 class JSObjectType : public JSType {
@@ -20,6 +21,13 @@ public:
 
   JSValue *equal(JSContext *ctx, JSValue *value,
                  JSValue *another) const override;
+
+public:
+  JSField *getFieldDescriptor(JSContext *ctx, JSValue *value,
+                              JSValue *name) const;
+
+  JSField *getOwnFieldDescriptor(JSContext *ctx, JSValue *value,
+                                 JSValue *name) const;
 
 public:
   virtual JSValue *getKeys(JSContext *ctx, JSValue *value) const;

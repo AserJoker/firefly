@@ -7,3 +7,4 @@ foreach(PROJECT ${PROJECTS})
         add_subdirectory(${PROJECT})
     endif()
 endforeach(PROJECT ${PROJECTS})
+
