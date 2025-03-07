@@ -123,7 +123,15 @@ public:
   JSValue *call(JSValue *func, JSValue *self,
                 const std::vector<JSValue *> args);
 
-  JSValue *getGlobal(const std::wstring &name);
+  JSValue *getGlobal(JSValue *name);
+
+  JSValue *getPrototypeOf(JSValue *value);
+
+  JSValue *setPrototype(JSValue *value, JSValue *prototype);
+
+  JSValue *getConstructorOf(JSValue *value);
+
+  JSValue *setConstructor(JSValue *value, JSValue *prototype);
 
   JSValue *setField(JSValue *obj, JSValue *name, JSValue *value);
 

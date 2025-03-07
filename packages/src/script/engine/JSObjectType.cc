@@ -1,4 +1,6 @@
 #include "script/engine/JSObjectType.hpp"
+#include "script/engine/JSCallable.hpp"
+#include "script/engine/JSCallableType.hpp"
 #include "script/engine/JSContext.hpp"
 #include "script/engine/JSException.hpp"
 #include "script/engine/JSExceptionType.hpp"
@@ -6,6 +8,7 @@
 #include "script/engine/JSStringType.hpp"
 #include "script/engine/JSSymbolType.hpp"
 #include "script/engine/JSType.hpp"
+#include "script/engine/JSUndefinedType.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSAllocator.hpp"
 #include <string>
@@ -15,7 +18,43 @@ JSObjectType::JSObjectType(JSAllocator *allocator) : JSType(allocator, 3) {}
 const wchar_t *JSObjectType::getTypeName() const { return L"object"; }
 
 JSValue *JSObjectType::toString(JSContext *ctx, JSValue *value) const {
-  return ctx->createString(L"[Object object]");
+  auto toString = ctx->getField(value, ctx->createString(L"toString"));
+  if (!toString->isTypeof<JSUndefinedType>()) {
+    if (toString->isTypeof<JSExceptionType>()) {
+      return toString;
+    }
+    if (toString->isTypeof<JSCallableType>()) {
+      return ctx->call(toString, value, {});
+    } else {
+      return ctx->createException(JSException::TYPE::TYPE,
+                                  L"Cannot convert object to primitive value");
+    }
+  }
+  auto Object = ctx->getGlobal(ctx->createString(L"Object"));
+  if (!Object) {
+    return ctx->createException(JSException::TYPE::TYPE,
+                                L"'Object' is not function");
+  }
+  if (Object->isTypeof<JSExceptionType>()) {
+    return Object;
+  }
+  auto prototype = ctx->getField(Object, ctx->createString(L"prototype"));
+  if (!prototype) {
+    return ctx->createException(JSException::TYPE::TYPE,
+                                L"'Object.prototype' is not object");
+  }
+  if (prototype->isTypeof<JSExceptionType>()) {
+    return prototype;
+  }
+  toString = ctx->getField(Object, ctx->createString(L"toString"));
+  if (toString && toString->isTypeof<JSExceptionType>()) {
+    return toString;
+  } else if (toString->isTypeof<JSCallableType>()) {
+    return ctx->call(toString, value, {});
+  } else {
+    return ctx->createException(JSException::TYPE::TYPE,
+                                L"Cannot convert object to primitive value");
+  }
 }
 
 JSValue *JSObjectType::toNumber(JSContext *ctx, JSValue *value) const {
@@ -75,6 +114,50 @@ JSField *JSObjectType::getOwnFieldDescriptor(JSContext *ctx, JSValue *value,
     }
   }
   ctx->popScope();
+  return nullptr;
+}
+
+JSValue *JSObjectType::setPrototype(JSContext *ctx, JSValue *value,
+                                    JSValue *prototype) const {
+  auto object = value->getData()->cast<JSObject>();
+  auto old = object->getPrototype();
+  if (old) {
+    value->getAtom()->removeChild(old);
+    ctx->recycle(old);
+  }
+  object->setPrototype(prototype->getAtom());
+  value->getAtom()->addChild(prototype->getAtom());
+  return nullptr;
+}
+
+JSValue *JSObjectType::getPrototypeOf(JSContext *ctx, JSValue *value) const {
+  auto object = value->getData()->cast<JSObject>();
+  auto prototype = object->getPrototype();
+  if (prototype) {
+    return ctx->createValue(prototype);
+  } else {
+    return ctx->createNull();
+  }
+}
+JSValue *JSObjectType::setConstructor(JSContext *ctx, JSValue *value,
+                                      JSValue *constructor) const {
+  auto object = value->getData()->cast<JSObject>();
+  auto old = object->getConstructor();
+  if (old) {
+    value->getAtom()->removeChild(old);
+    ctx->recycle(old);
+  }
+  object->setConstructor(constructor->getAtom());
+  value->getAtom()->addChild(constructor->getAtom());
+  return nullptr;
+}
+
+JSValue *JSObjectType::getConstructorOf(JSContext *ctx, JSValue *value) const {
+  auto object = value->getData()->cast<JSObject>();
+  auto constructor = object->getConstructor();
+  if (constructor) {
+    return ctx->createValue(constructor);
+  }
   return nullptr;
 }
 

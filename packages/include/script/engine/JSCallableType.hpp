@@ -8,8 +8,6 @@ public:
 public:
   const wchar_t *getTypeName() const override;
 
-  JSValue *toString(JSContext *ctx, JSValue *value) const override;
-
 public:
   virtual JSValue *call(JSContext *ctx, JSValue *func, JSValue *self,
                         std::vector<JSValue *> args) const = 0;

@@ -2,6 +2,7 @@
 #include "JSObject.hpp"
 #include "JSType.hpp"
 #include "script/engine/JSContext.hpp"
+#include "script/engine/JSValue.hpp"
 class JSObjectType : public JSType {
 public:
   JSObjectType(JSAllocator *allocator);
@@ -28,6 +29,16 @@ public:
 
   JSField *getOwnFieldDescriptor(JSContext *ctx, JSValue *value,
                                  JSValue *name) const;
+
+  JSValue *setPrototype(JSContext *ctx, JSValue *value,
+                        JSValue *prototype) const;
+
+  JSValue *getPrototypeOf(JSContext *ctx, JSValue *value) const;
+
+  JSValue *setConstructor(JSContext *ctx, JSValue *value,
+                          JSValue *constructor) const;
+
+  JSValue *getConstructorOf(JSContext *ctx, JSValue *value) const;
 
 public:
   virtual JSValue *getKeys(JSContext *ctx, JSValue *value) const;

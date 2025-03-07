@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
   try {
     auto runtime = new JSRuntime(argc, argv);
     auto ctx = new JSContext(runtime);
-    auto obj = ctx->createObject(ctx->createNull());
+    auto obj = ctx->createObject();
     auto num = ctx->createNumber(123);
     ctx->setField(obj, ctx->createString(L"test"), num);
     ctx->getField(obj, ctx->createString(L"test"));
