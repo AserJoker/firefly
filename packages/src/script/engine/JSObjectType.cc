@@ -46,7 +46,7 @@ JSValue *JSObjectType::toString(JSContext *ctx, JSValue *value) const {
   if (prototype->isTypeof<JSExceptionType>()) {
     return prototype;
   }
-  toString = ctx->getField(Object, ctx->createString(L"toString"));
+  toString = ctx->getField(prototype, ctx->createString(L"toString"));
   if (toString && toString->isTypeof<JSExceptionType>()) {
     return toString;
   } else if (toString->isTypeof<JSCallableType>()) {

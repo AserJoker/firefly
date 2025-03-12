@@ -85,22 +85,15 @@ void JSAtom::gc(JSAllocator *allocator) {
         continue;
       }
       cache.push_back(it);
-      if (std::find(disposed.begin(), disposed.end(), it) != disposed.end()) {
-        continue;
-      }
-      if (std::find(alived.begin(), alived.end(), it) != alived.end()) {
-        continue;
-      }
-      auto alive = false;
+      bool alived = false;
       for (auto parent : it->_parents) {
         if (parent->_data == nullptr) {
-          alive = true;
+          alived = true;
           break;
         }
         workflow.push_back(parent);
       }
-      if (alive) {
-        alived.push_back(it);
+      if (alived) {
         break;
       }
     }

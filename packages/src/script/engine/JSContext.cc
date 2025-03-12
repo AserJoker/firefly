@@ -374,7 +374,7 @@ JSValue *JSContext::getGlobal(JSValue *name) {
     return nullptr;
   }
   pushScope();
-  auto &fields = dynamic_cast<JSObject *>(_global->getData())->getFields();
+  auto &fields = _global->getData()->cast<JSObject>()->getFields();
   for (auto &[keyAtom, value] : fields) {
     if (keyAtom->isTypeof<JSStringType>()) {
       auto key = createValue(keyAtom);

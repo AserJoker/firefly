@@ -2,6 +2,7 @@
 
 #include "JSAtom.hpp"
 #include "JSType.hpp"
+#include <map>
 #include <string>
 #include <unordered_map>
 class JSContext;
@@ -18,7 +19,7 @@ struct JSField {
 
 class JSObject : public JSBase {
 private:
-  std::unordered_map<JSAtom *, JSField> _fields;
+  std::map<JSAtom *, JSField> _fields;
   std::unordered_map<std::wstring, JSField> _privateFields;
   bool _sealed;
   bool _frozen;
@@ -43,11 +44,11 @@ public:
     _constructor = constructor;
   }
 
-  inline const std::unordered_map<JSAtom *, JSField> &getFields() const {
+  inline const std::map<JSAtom *, JSField> &getFields() const {
     return _fields;
   }
 
-  inline std::unordered_map<JSAtom *, JSField> &getFields() { return _fields; }
+  inline std::map<JSAtom *, JSField> &getFields() { return _fields; }
 
   inline const std::unordered_map<std::wstring, JSField> &
   getPrivateFields() const {
