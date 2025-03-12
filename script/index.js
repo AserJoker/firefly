@@ -1,2 +1,4 @@
-'use strict'
-const arr = [];
+"use strict";
+class Test {
+  constructor() {}
+}

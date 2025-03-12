@@ -13,6 +13,12 @@ private:
   static JSValue *toPrimitive(JSContext *ctx, JSValue *self,
                               std::vector<JSValue *> args);
 
+  static JSValue *for_(JSContext *ctx, JSValue *self,
+                       std::vector<JSValue *> args);
+
+  static JSValue *keyFor(JSContext *ctx, JSValue *self,
+                         std::vector<JSValue *> args);
+
 public:
   static JSValue *initialize(JSContext *ctx);
 };

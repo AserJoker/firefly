@@ -1,6 +1,10 @@
 #include "script/runtime/JSSymbolConstructor.hpp"
 #include "script/engine/JSContext.hpp"
+#include "script/engine/JSException.hpp"
+#include "script/engine/JSObject.hpp"
+#include "script/engine/JSSymbolType.hpp"
 #include "script/engine/JSValue.hpp"
+#include <string>
 #include <vector>
 JSValue *JSSymbolConstructor::toString(JSContext *ctx, JSValue *self,
                                        std::vector<JSValue *> args) {
@@ -23,6 +27,72 @@ JSValue *JSSymbolConstructor::toPrimitive(JSContext *ctx, JSValue *self,
                                           std::vector<JSValue *> args) {
   return ctx->getMetadata(self, L"primitive");
 }
+JSValue *JSSymbolConstructor::for_(JSContext *ctx, JSValue *self,
+                                   std::vector<JSValue *> args) {
+  auto current = ctx->getScope();
+  ctx->pushScope();
+  auto Symbol = ctx->getGlobal(ctx->createString(L"Symbol"));
+  auto map = ctx->getMetadata(Symbol, L"globalSymbolMap");
+  if (!map) {
+    map = ctx->createObject();
+    ctx->setMetadata(Symbol, L"globalSymbolMap", map);
+  }
+  JSValue *key = nullptr;
+  if (!args.empty()) {
+    key = ctx->toString(args[0]);
+  } else {
+    key = ctx->createString(L"undefined");
+  }
+  CHECK(ctx, key);
+  auto result = ctx->getField(map, key);
+  CHECK(ctx, result);
+  if (!result->isTypeof<JSSymbolType>()) {
+    result = ctx->createSymbol(ctx->checkedString(key));
+    auto err = ctx->setField(map, key, result);
+    CHECK(ctx, err);
+  }
+  result = current->createValue(result->getAtom());
+  ctx->popScope();
+  return result;
+}
+
+JSValue *JSSymbolConstructor::keyFor(JSContext *ctx, JSValue *self,
+                                     std::vector<JSValue *> args) {
+  auto current = ctx->getScope();
+  ctx->pushScope();
+  auto Symbol = ctx->getGlobal(ctx->createString(L"Symbol"));
+  auto map = ctx->getMetadata(Symbol, L"globalSymbolMap");
+  if (!map) {
+    map = ctx->createObject();
+    ctx->setMetadata(Symbol, L"globalSymbolMap", map);
+  }
+  JSValue *value = nullptr;
+  if (!args.empty()) {
+    value = ctx->toString(args[0]);
+  } else {
+    value = ctx->createUndefined();
+  }
+  CHECK(ctx, value);
+  if (!value->isTypeof<JSSymbolType>()) {
+    return ctx->createException(
+        JSException::TYPE::TYPE,
+        std::format(L"{} is not a symbol", value->getType()->getTypeName()));
+  }
+  JSValue *result = nullptr;
+  auto obj = map->getData()->cast<JSObject>();
+  for (auto &[keyAtom, valueAtom] : obj->getFields()) {
+    if (valueAtom.value == value->getAtom()) {
+      result = ctx->createValue(keyAtom);
+    }
+  }
+  if (!result) {
+    result = ctx->createUndefined();
+  }
+  CHECK(ctx, result);
+  result = current->createValue(result->getAtom());
+  ctx->popScope();
+  return result;
+}
 
 JSValue *JSSymbolConstructor::initialize(JSContext *ctx) {
   auto Symbol = ctx->createNativeFunction(&constructor, L"Symbol");
@@ -33,7 +103,12 @@ JSValue *JSSymbolConstructor::initialize(JSContext *ctx) {
   auto err = ctx->setField(prototype, ctx->createString(L"toString"),
                            ctx->createNativeFunction(toString, L"toString"));
   CHECK(ctx, err);
-
+  err = ctx->setField(Symbol, ctx->createString(L"for"),
+                      ctx->createNativeFunction(for_, L"for"));
+  CHECK(ctx, err);
+  err = ctx->setField(Symbol, ctx->createString(L"keyFor"),
+                      ctx->createNativeFunction(keyFor, L"keyFor"));
+  CHECK(ctx, err);
   err = ctx->setField(Symbol, ctx->createString(L"asyncIterator"),
                       ctx->createSymbol(L"asyncIterator"));
   CHECK(ctx, err);
