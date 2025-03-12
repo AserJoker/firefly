@@ -52,14 +52,10 @@ void JSAtom::setData(JSBase *data) {
 }
 
 void JSAtom::gc(JSAllocator *allocator) {
-  std::vector<JSAtom *> alived = {};
   std::vector<JSAtom *> disposed = {};
   while (!_destroyed.empty()) {
     auto item = *_destroyed.rbegin();
     _destroyed.pop_back();
-    if (std::find(alived.begin(), alived.end(), item) != alived.end()) {
-      continue;
-    }
     if (std::find(disposed.begin(), disposed.end(), item) != disposed.end()) {
       continue;
     }
