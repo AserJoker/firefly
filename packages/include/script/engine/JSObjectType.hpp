@@ -3,6 +3,7 @@
 #include "JSType.hpp"
 #include "script/engine/JSContext.hpp"
 #include "script/engine/JSValue.hpp"
+#include <string>
 class JSObjectType : public JSType {
 public:
   JSObjectType(JSAllocator *allocator);
@@ -51,6 +52,12 @@ public:
   virtual JSValue *getField(JSContext *ctx, JSValue *object,
                             JSValue *name) const;
 
+  JSValue *setPrivateField(JSContext *ctx, JSValue *object,
+                           const std::wstring &name, JSValue *value) const;
+
+  JSValue *getPrivateField(JSContext *ctx, JSValue *object,
+                           const std::wstring &name) const;
+
   virtual JSValue *defineProperty(JSContext *ctx, JSValue *object,
                                   JSValue *name, JSValue *value,
                                   bool configurable = true,
@@ -61,4 +68,12 @@ public:
                                   JSValue *name, JSValue *getter,
                                   JSValue *setter, bool configurable = true,
                                   bool enumable = true) const;
+
+  JSValue *definePrivateProperty(JSContext *ctx, JSValue *object,
+                                 const std::wstring &name,
+                                 JSValue *value) const;
+
+  JSValue *definePrivateProperty(JSContext *ctx, JSValue *object,
+                                 const std::wstring &name, JSValue *getter,
+                                 JSValue *setter) const;
 };

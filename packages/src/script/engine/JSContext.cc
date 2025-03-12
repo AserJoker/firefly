@@ -24,6 +24,7 @@
 #include "script/engine/JSVirtualMachine.hpp"
 #include "script/runtime/JSFunctionConstructor.hpp"
 #include "script/runtime/JSObjectConstructor.hpp"
+#include "script/runtime/JSSymbolConstructor.hpp"
 #include <fstream>
 
 JSContext::JSContext(JSRuntime *runtime) : _runtime(runtime), _global(nullptr) {
@@ -93,6 +94,10 @@ JSValue *JSContext::initializeGlobal() {
     return err;
   }
   err = JSObjectConstructor::initialize(this);
+  if (err) {
+    return err;
+  }
+  err = JSSymbolConstructor::initialize(this);
   if (err) {
     return err;
   }
@@ -383,12 +388,15 @@ JSValue *JSContext::getGlobal(JSValue *name) {
   return nullptr;
 }
 JSValue *JSContext::getPrototypeOf(JSValue *value) {
+  CHECK(this, value);
   if (!value->isTypeof<JSObjectType>()) {
     value = value->getType()->pack(this, value);
   }
   return value->getType()->cast<JSObjectType>()->getPrototypeOf(this, value);
 }
 JSValue *JSContext::setPrototype(JSValue *value, JSValue *prototype) {
+  CHECK(this, value);
+  CHECK(this, prototype);
   if (!value->isTypeof<JSObjectType>()) {
     return createException(JSException::TYPE::TYPE,
                            L"variable is not a object");
@@ -398,6 +406,7 @@ JSValue *JSContext::setPrototype(JSValue *value, JSValue *prototype) {
 }
 
 JSValue *JSContext::getConstructorOf(JSValue *value) {
+  CHECK(this, value);
   if (!value->isTypeof<JSObjectType>()) {
     value = value->getType()->pack(this, value);
   }
@@ -405,6 +414,8 @@ JSValue *JSContext::getConstructorOf(JSValue *value) {
 }
 
 JSValue *JSContext::setConstructor(JSValue *value, JSValue *constructor) {
+  CHECK(this, value);
+  CHECK(this, constructor);
   if (!value->isTypeof<JSObjectType>()) {
     return createException(JSException::TYPE::TYPE,
                            L"variable is not a object");
@@ -414,6 +425,9 @@ JSValue *JSContext::setConstructor(JSValue *value, JSValue *constructor) {
 }
 
 JSValue *JSContext::setField(JSValue *obj, JSValue *name, JSValue *value) {
+  CHECK(this, obj);
+  CHECK(this, name);
+  CHECK(this, value);
   auto type = obj->getType();
   auto object = type->pack(this, obj);
   if (object->isTypeof<JSExceptionType>()) {
@@ -426,6 +440,8 @@ JSValue *JSContext::setField(JSValue *obj, JSValue *name, JSValue *value) {
 JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *value,
                                    bool configurable, bool enumable,
                                    bool writable) {
+  CHECK(this, obj);
+  CHECK(this, value);
   auto type = obj->getType();
   auto object = type->pack(this, obj);
   if (object->isTypeof<JSExceptionType>()) {
@@ -439,6 +455,9 @@ JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *value,
 JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *getter,
                                    JSValue *setter, bool configurable,
                                    bool enumable) {
+  CHECK(this, obj);
+  CHECK(this, getter);
+  CHECK(this, setter);
   auto type = obj->getType();
   auto object = type->pack(this, obj);
   if (object->isTypeof<JSExceptionType>()) {
@@ -448,8 +467,41 @@ JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *getter,
   return otype->defineProperty(this, object, name, getter, setter, configurable,
                                enumable);
 }
+JSValue *JSContext::getPrivateField(JSValue *obj, const std::wstring &name) {
+  CHECK(this, obj);
+  auto type = obj->getType()->cast<JSObjectType>();
+  return type->getPrivateField(this, obj, name);
+}
+
+JSValue *JSContext::setPrivateField(JSValue *obj, const std::wstring &name,
+                                    JSValue *value) {
+  CHECK(this, obj);
+  CHECK(this, value);
+  auto type = obj->getType()->cast<JSObjectType>();
+  return type->setPrivateField(this, obj, name, value);
+}
+
+JSValue *JSContext::definePrivateProperty(JSValue *obj,
+                                          const std::wstring &name,
+                                          JSValue *value) {
+  CHECK(this, obj);
+  CHECK(this, value);
+  auto type = obj->getType()->cast<JSObjectType>();
+  return type->definePrivateProperty(this, obj, name, value);
+}
+
+JSValue *JSContext::definePrivateProperty(JSValue *obj,
+                                          const std::wstring &name,
+                                          JSValue *getter, JSValue *setter) {
+  CHECK(this, obj);
+  CHECK(this, getter);
+  CHECK(this, setter);
+  auto type = obj->getType()->cast<JSObjectType>();
+  return type->definePrivateProperty(this, obj, name, getter, setter);
+}
 
 JSValue *JSContext::getField(JSValue *obj, JSValue *name) {
+  CHECK(this, obj);
   auto type = obj->getType();
   auto object = type->pack(this, obj);
   if (object->isTypeof<JSExceptionType>()) {
@@ -460,6 +512,7 @@ JSValue *JSContext::getField(JSValue *obj, JSValue *name) {
 }
 
 JSValue *JSContext::getKeys(JSValue *obj) {
+  CHECK(this, obj);
   auto type = obj->getType();
   auto object = type->pack(this, obj);
   if (object->isTypeof<JSExceptionType>()) {
@@ -470,14 +523,17 @@ JSValue *JSContext::getKeys(JSValue *obj) {
 }
 
 JSValue *JSContext::toString(JSValue *value) {
+  CHECK(this, value);
   return value->getType()->toString(this, value);
 }
 
 JSValue *JSContext::toNumber(JSValue *value) {
+  CHECK(this, value);
   return value->getType()->toNumber(this, value);
 }
 
 JSValue *JSContext::toBoolean(JSValue *value) {
+  CHECK(this, value);
   return value->getType()->toBoolean(this, value);
 }
 
@@ -508,6 +564,8 @@ bool JSContext::isNaN(JSValue *value) const {
 }
 
 JSValue *JSContext::isEqual(JSValue *left, JSValue *right) {
+  CHECK(this, left);
+  CHECK(this, right);
   if (left->isTypeof<JSObjectType>()) {
     left = left->getType()->cast<JSObjectType>()->unpack(this, left);
   }
@@ -519,4 +577,31 @@ JSValue *JSContext::isEqual(JSValue *left, JSValue *right) {
     type = right->getType();
   }
   return type->equal(this, left, right);
+}
+void JSContext::setMetadata(JSValue *value, const std::wstring &name,
+                            JSValue *metadata) {
+  auto base = value->getData();
+  auto &meta = base->getMetadata();
+  if (meta.contains(name)) {
+    value->getAtom()->removeChild(meta.at(name));
+  }
+  if (metadata) {
+    value->getAtom()->addChild(metadata->getAtom());
+    meta[name] = metadata->getAtom();
+  } else {
+    meta.erase(name);
+  }
+}
+
+JSValue *JSContext::getMetadata(JSValue *value, const std::wstring &name) {
+  auto base = value->getData();
+  auto &meta = base->getMetadata();
+  if (meta.contains(name)) {
+    return createValue(meta.at(name));
+  }
+  return nullptr;
+}
+JSValue *JSContext::pack(JSValue *value) {
+  CHECK(this, value);
+  return value->getType()->pack(this, value);
 }

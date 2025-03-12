@@ -188,6 +188,7 @@ JSValue *JSObjectType::unpack(JSContext *ctx, JSValue *value) const {
 JSValue *JSObjectType::setField(JSContext *ctx, JSValue *object, JSValue *name,
                                 JSValue *value) const {
   ctx->pushScope();
+  name = ctx->clone(name);
   if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
     name = ctx->toString(name);
   }
@@ -228,7 +229,7 @@ JSValue *JSObjectType::setField(JSContext *ctx, JSValue *object, JSValue *name,
                         fieldname));
       }
       auto setter = ctx->createValue(pfield->setter);
-      auto err = ctx->call(setter, object, {name, value});
+      auto err = ctx->call(setter, object, {value});
       if (err->isTypeof<JSExceptionType>()) {
         return err;
       }
@@ -257,7 +258,7 @@ JSValue *JSObjectType::getField(JSContext *ctx, JSValue *object,
       result = current->createValue(field->value);
     } else {
       auto getter = ctx->createValue(field->getter);
-      auto res = ctx->call(getter, object, {name});
+      auto res = ctx->call(getter, object, {});
       if (res->isTypeof<JSExceptionType>()) {
         return res;
       }
@@ -267,6 +268,87 @@ JSValue *JSObjectType::getField(JSContext *ctx, JSValue *object,
     return result;
   } else {
     return ctx->createUndefined();
+  }
+}
+
+JSValue *JSObjectType::setPrivateField(JSContext *ctx, JSValue *object,
+                                       const std::wstring &name,
+                                       JSValue *value) const {
+  ctx->pushScope();
+  auto obj = object->getData()->cast<JSObject>();
+  JSField *field = nullptr;
+  auto &fields = obj->getPrivateFields();
+  if (!fields.contains(name)) {
+    return ctx->createException(
+        JSException::TYPE::SYNTAX,
+        std::format(
+            L"Private field '#{}' must be declared in an enclosing class",
+            name));
+  }
+  field = &fields.at(name);
+  if (field->value != nullptr) {
+    auto oldvalue = ctx->createValue(field->value);
+    if (oldvalue->getType() != value->getType() ||
+        !ctx->checkedBoolean(ctx->isEqual(oldvalue, value))) {
+      if (!field->writable || obj->isFrozen()) {
+        return ctx->createException(
+            JSException::TYPE::TYPE,
+            std::format(L"Cannot assign to read only property '{}' of object "
+                        L"'#<Object>'",
+                        name));
+      } else {
+        object->getAtom()->addChild(value->getAtom());
+        object->getAtom()->removeChild(oldvalue->getAtom());
+        field->value = value->getAtom();
+        ctx->recycle(oldvalue->getAtom());
+      }
+    }
+  } else {
+    if (!field->setter) {
+      return ctx->createException(
+          JSException::TYPE::TYPE,
+          std::format(L"Cannot add property {}, object is not extensible",
+                      name));
+    }
+    auto setter = ctx->createValue(field->setter);
+    auto err = ctx->call(setter, object, {value});
+    if (err->isTypeof<JSExceptionType>()) {
+      return err;
+    }
+  }
+  ctx->popScope();
+  return nullptr;
+}
+
+JSValue *JSObjectType::getPrivateField(JSContext *ctx, JSValue *object,
+                                       const std::wstring &name) const {
+  auto current = ctx->getScope();
+  auto obj = object->getData()->cast<JSObject>();
+  JSValue *result = nullptr;
+  JSField *field = nullptr;
+  if (obj->getPrivateFields().contains(name)) {
+    field = &obj->getPrivateFields().at(name);
+  }
+  if (field) {
+    ctx->pushScope();
+    if (field->value) {
+      result = current->createValue(field->value);
+    } else {
+      auto getter = ctx->createValue(field->getter);
+      auto res = ctx->call(getter, object, {});
+      if (res->isTypeof<JSExceptionType>()) {
+        return res;
+      }
+      result = current->createValue(res->getAtom());
+    }
+    ctx->popScope();
+    return result;
+  } else {
+    return ctx->createException(
+        JSException::TYPE::SYNTAX,
+        std::format(
+            L"Private field '#{}' must be declared in an enclosing class",
+            name));
   }
 }
 
@@ -280,7 +362,7 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
   if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
     name = ctx->toString(name);
   }
-  // name = ctx->clone(name);
+  name = ctx->clone(name);
   std::wstring fieldname = ctx->checkedString(ctx->toString(name));
   JSField *field = getOwnFieldDescriptor(ctx, object, name);
   if (field) {
@@ -388,6 +470,76 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
         .writable = true,
         .getter = getter->getAtom(),
         .setter = setter == nullptr ? nullptr : setter->getAtom(),
+    };
+  }
+  ctx->popScope();
+  return nullptr;
+}
+
+JSValue *JSObjectType::definePrivateProperty(JSContext *ctx, JSValue *object,
+                                             const std::wstring &name,
+                                             JSValue *value) const {
+  auto obj = object->getData()->cast<JSObject>();
+  ctx->pushScope();
+  if (obj->getPrivateFields().contains(name)) {
+    return ctx->createException(
+        JSException::TYPE::TYPE,
+        std::format(L"Cannot create duplicate private field:'{}' to object",
+                    name));
+  } else {
+    if (obj->isSealed() || !obj->isExtensible() || obj->isFrozen()) {
+      return ctx->createException(
+          JSException::TYPE::TYPE,
+          std::format(L"Cannot assign to read only property '{}' of object "
+                      L"'#<Object>'",
+                      name));
+    }
+    object->getAtom()->addChild(value->getAtom());
+    auto &fields = obj->getPrivateFields();
+    fields[name] = {
+        .configurable = false,
+        .enumable = false,
+        .value = value->getAtom(),
+        .writable = true,
+        .getter = nullptr,
+        .setter = nullptr,
+    };
+  }
+  ctx->popScope();
+  return nullptr;
+}
+
+JSValue *JSObjectType::definePrivateProperty(JSContext *ctx, JSValue *object,
+                                             const std::wstring &name,
+                                             JSValue *getter,
+                                             JSValue *setter) const {
+  auto obj = object->getData()->cast<JSObject>();
+  ctx->pushScope();
+  if (obj->getPrivateFields().contains(name)) {
+    return ctx->createException(
+        JSException::TYPE::TYPE,
+        std::format(L"Cannot create duplicate private field:'{}' to object",
+                    name));
+  } else {
+    if (obj->isSealed() || !obj->isExtensible() || obj->isFrozen()) {
+      return ctx->createException(
+          JSException::TYPE::TYPE,
+          std::format(L"Cannot assign to read only property '{}' of object "
+                      L"'#<Object>'",
+                      name));
+    }
+    object->getAtom()->addChild(getter->getAtom());
+    if (setter) {
+      object->getAtom()->addChild(setter->getAtom());
+    }
+    auto &fields = obj->getPrivateFields();
+    fields[name] = {
+        .configurable = false,
+        .enumable = false,
+        .value = nullptr,
+        .writable = false,
+        .getter = getter->getAtom(),
+        .setter = setter != nullptr ? setter->getAtom() : nullptr,
     };
   }
   ctx->popScope();

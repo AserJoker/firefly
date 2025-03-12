@@ -6,7 +6,9 @@
 #include "JSScope.hpp"
 #include "JSStackFrame.hpp"
 #include "script/engine/JSCallable.hpp"
+#include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSValue.hpp"
+#include <string>
 
 class JSContext {
 private:
@@ -73,6 +75,10 @@ public:
 
   inline void recycle(JSAtom *atom) { _current->getRoot()->addChild(atom); }
 
+  inline bool isException(JSValue *value) {
+    return value->isTypeof<JSExceptionType>();
+  }
+
   JSValue *checkUninitialized(JSValue *value);
 
   JSValue *createValue(JSValue *value);
@@ -131,7 +137,9 @@ public:
 
   JSValue *getConstructorOf(JSValue *value);
 
-  JSValue *setConstructor(JSValue *value, JSValue *prototype);
+  JSValue *setConstructor(JSValue *value, JSValue *constructor);
+
+  JSValue *getField(JSValue *obj, JSValue *name);
 
   JSValue *setField(JSValue *obj, JSValue *name, JSValue *value);
 
@@ -141,7 +149,16 @@ public:
   JSValue *defineProperty(JSValue *obj, JSValue *name, JSValue *getter,
                           JSValue *setter, bool configurable, bool enumable);
 
-  JSValue *getField(JSValue *obj, JSValue *name);
+  JSValue *getPrivateField(JSValue *obj, const std::wstring &name);
+
+  JSValue *setPrivateField(JSValue *obj, const std::wstring &name,
+                           JSValue *value);
+
+  JSValue *definePrivateProperty(JSValue *obj, const std::wstring &name,
+                                 JSValue *value);
+
+  JSValue *definePrivateProperty(JSValue *obj, const std::wstring &name,
+                                 JSValue *getter, JSValue *setter);
 
   JSValue *getKeys(JSValue *obj);
 
@@ -160,4 +177,15 @@ public:
   bool isNaN(JSValue *value) const;
 
   JSValue *isEqual(JSValue *left, JSValue *right);
+
+  void setMetadata(JSValue *value, const std::wstring &name, JSValue *metadata);
+
+  JSValue *getMetadata(JSValue *value, const std::wstring &name);
+
+  JSValue *pack(JSValue *value);
 };
+
+#define CHECK(ctx, value)                                                      \
+  if (value && ctx->isException(value)) {                                      \
+    return value;                                                              \
+  }
