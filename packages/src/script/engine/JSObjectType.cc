@@ -19,42 +19,32 @@ const wchar_t *JSObjectType::getTypeName() const { return L"object"; }
 
 JSValue *JSObjectType::toString(JSContext *ctx, JSValue *value) const {
   auto toString = ctx->getField(value, ctx->createString(L"toString"));
-  if (!toString->isTypeof<JSUndefinedType>()) {
-    if (toString->isTypeof<JSExceptionType>()) {
-      return toString;
-    }
-    if (toString->isTypeof<JSCallableType>()) {
-      return ctx->call(toString, value, {});
-    } else {
-      return ctx->createException(JSException::TYPE::TYPE,
-                                  L"Cannot convert object to primitive value");
-    }
-  }
-  auto Object = ctx->getGlobal(ctx->createString(L"Object"));
-  if (!Object) {
-    return ctx->createException(JSException::TYPE::TYPE,
-                                L"'Object' is not function");
-  }
-  if (Object->isTypeof<JSExceptionType>()) {
-    return Object;
-  }
-  auto prototype = ctx->getField(Object, ctx->createString(L"prototype"));
-  if (!prototype) {
-    return ctx->createException(JSException::TYPE::TYPE,
-                                L"'Object.prototype' is not object");
-  }
-  if (prototype->isTypeof<JSExceptionType>()) {
-    return prototype;
-  }
-  toString = ctx->getField(prototype, ctx->createString(L"toString"));
-  if (toString && toString->isTypeof<JSExceptionType>()) {
-    return toString;
-  } else if (toString->isTypeof<JSCallableType>()) {
+  CHECK(ctx, toString);
+  if (toString->isTypeof<JSCallableType>()) {
     return ctx->call(toString, value, {});
-  } else {
+  } else if (!toString->isTypeof<JSUndefinedType>()) {
     return ctx->createException(JSException::TYPE::TYPE,
                                 L"Cannot convert object to primitive value");
   }
+  auto Object = ctx->getField(ctx->getGlobal(), ctx->createString(L"Object"));
+  CHECK(ctx, Object);
+  if (!Object->isTypeof<JSCallableType>()) {
+    return ctx->createException(JSException::TYPE::TYPE,
+                                L"'Object' is not function");
+  }
+  auto prototype = ctx->getField(Object, ctx->createString(L"prototype"));
+  CHECK(ctx, prototype);
+  if (!prototype->isTypeof<JSObjectType>()) {
+    return ctx->createException(JSException::TYPE::TYPE,
+                                L"'Object.prototype' is not object");
+  }
+  toString = ctx->getField(prototype, ctx->createString(L"toString"));
+  CHECK(ctx, toString);
+  if (!toString->isTypeof<JSCallableType>()) {
+    return ctx->createException(JSException::TYPE::TYPE,
+                                L"Cannot convert object to primitive value");
+  }
+  return ctx->call(toString, value, {});
 }
 
 JSValue *JSObjectType::toNumber(JSContext *ctx, JSValue *value) const {

@@ -16,6 +16,6 @@ protected:
   }
 };
 TEST_F(TestSymbol, constructor) {
-  auto Symbol = ctx->getGlobal(ctx->createString(L"Symbol"));
+  auto Symbol = ctx->getField(ctx->getGlobal(), ctx->createString(L"Symbol"));
   ASSERT_TRUE(Symbol->isTypeof<JSCallableType>());
 }

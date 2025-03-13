@@ -25,7 +25,7 @@ JSValue *JSSymbolType::clone(JSContext *ctx, JSValue *value) const {
       value->getData()->cast<JSSymbol>()->getDescription());
 }
 JSValue *JSSymbolType::pack(JSContext *ctx, JSValue *value) const {
-  auto Symbol = ctx->getGlobal(ctx->createString(L"Symbol"));
+  auto Symbol = ctx->getField(ctx->getGlobal(), ctx->createString(L"Symbol"));
   CHECK(ctx, Symbol);
   auto prototype = ctx->getField(Symbol, ctx->createString(L"prototype"));
   CHECK(ctx, prototype);
@@ -36,6 +36,9 @@ JSValue *JSSymbolType::pack(JSContext *ctx, JSValue *value) const {
   err = ctx->setConstructor(object, Symbol);
   CHECK(ctx, err);
   ctx->setMetadata(object, L"primitive", value);
+  auto fieldname = ctx->createString(L"descriptin");
+  err = ctx->setField(prototype, fieldname, ctx->getField(value, fieldname));
+  CHECK(ctx, err);
   return object;
 };
 JSValue *JSSymbolType::equal(JSContext *ctx, JSValue *value,

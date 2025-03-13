@@ -129,8 +129,6 @@ public:
   JSValue *call(JSValue *func, JSValue *self,
                 const std::vector<JSValue *> args);
 
-  JSValue *getGlobal(JSValue *name);
-
   JSValue *getPrototypeOf(JSValue *value);
 
   JSValue *setPrototype(JSValue *value, JSValue *prototype);

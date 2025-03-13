@@ -19,8 +19,9 @@ protected:
   }
 };
 TEST_F(TestFunction, constructor) {
-  auto Function = ctx->getGlobal(ctx->createString(L"Function"));
-  ASSERT_TRUE(Function && Function->isTypeof<JSCallableType>());
+  auto Function =
+      ctx->getField(ctx->getGlobal(), ctx->createString(L"Function"));
+  ASSERT_TRUE(Function->isTypeof<JSCallableType>());
   ASSERT_TRUE(ctx->checkedBoolean(ctx->isEqual(
       Function, ctx->getField(Function, ctx->createString(L"constructor")))));
   ASSERT_TRUE(ctx->checkedBoolean(
@@ -28,16 +29,17 @@ TEST_F(TestFunction, constructor) {
                    ctx->createString(L"Function"))));
 }
 TEST_F(TestFunction, prototype) {
-  auto Function = ctx->getGlobal(ctx->createString(L"Function"));
-  ASSERT_TRUE(Function && Function->isTypeof<JSCallableType>());
-  auto Object = ctx->getGlobal(ctx->createString(L"Object"));
-  ASSERT_TRUE(Object && Object->isTypeof<JSObjectType>());
+  auto Function =
+      ctx->getField(ctx->getGlobal(), ctx->createString(L"Function"));
+  ASSERT_TRUE(Function->isTypeof<JSCallableType>());
+  auto Object = ctx->getField(ctx->getGlobal(), ctx->createString(L"Object"));
+  ASSERT_TRUE(Object->isTypeof<JSCallableType>());
   auto prototype = ctx->getField(Function, ctx->createString(L"prototype"));
-  ASSERT_TRUE(prototype && prototype->isTypeof<JSObjectType>());
+  ASSERT_TRUE(prototype->isTypeof<JSObjectType>());
   ASSERT_TRUE(ctx->checkedBoolean(ctx->isEqual(
       Function, ctx->getField(prototype, ctx->createString(L"constructor")))));
   auto proto = ctx->getPrototypeOf(prototype);
-  ASSERT_TRUE(proto && proto->isTypeof<JSObjectType>());
+  ASSERT_TRUE(proto->isTypeof<JSObjectType>());
   ASSERT_TRUE(ctx->checkedBoolean(ctx->isEqual(
       proto, ctx->getField(Object, ctx->createString(L"prototype")))));
 }

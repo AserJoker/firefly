@@ -29,9 +29,8 @@ JSValue *JSSymbolConstructor::toPrimitive(JSContext *ctx, JSValue *self,
 }
 JSValue *JSSymbolConstructor::for_(JSContext *ctx, JSValue *self,
                                    std::vector<JSValue *> args) {
-  auto current = ctx->getScope();
-  ctx->pushScope();
-  auto Symbol = ctx->getGlobal(ctx->createString(L"Symbol"));
+  auto Symbol = ctx->getField(ctx->getGlobal(), ctx->createString(L"Symbol"));
+  CHECK(ctx, Symbol);
   auto map = ctx->getMetadata(Symbol, L"globalSymbolMap");
   if (!map) {
     map = ctx->createObject();
@@ -51,16 +50,13 @@ JSValue *JSSymbolConstructor::for_(JSContext *ctx, JSValue *self,
     auto err = ctx->setField(map, key, result);
     CHECK(ctx, err);
   }
-  result = current->createValue(result->getAtom());
-  ctx->popScope();
   return result;
 }
 
 JSValue *JSSymbolConstructor::keyFor(JSContext *ctx, JSValue *self,
                                      std::vector<JSValue *> args) {
-  auto current = ctx->getScope();
-  ctx->pushScope();
-  auto Symbol = ctx->getGlobal(ctx->createString(L"Symbol"));
+  auto Symbol = ctx->getField(ctx->getGlobal(), ctx->createString(L"Symbol"));
+  CHECK(ctx, Symbol);
   auto map = ctx->getMetadata(Symbol, L"globalSymbolMap");
   if (!map) {
     map = ctx->createObject();
@@ -89,8 +85,6 @@ JSValue *JSSymbolConstructor::keyFor(JSContext *ctx, JSValue *self,
     result = ctx->createUndefined();
   }
   CHECK(ctx, result);
-  result = current->createValue(result->getAtom());
-  ctx->popScope();
   return result;
 }
 

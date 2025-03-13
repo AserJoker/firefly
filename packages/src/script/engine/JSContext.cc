@@ -210,30 +210,27 @@ JSValue *JSContext::createBoolean(bool value) {
 }
 
 JSValue *JSContext::createObject(JSValue *prototype) {
-  auto Object = getGlobal(createString(L"Object"));
-  if (!prototype) {
-    if (Object) {
-      if (Object->isTypeof<JSExceptionType>()) {
-        return Object;
-      }
-      prototype = getField(Object, createString(L"prototype"));
-    } else {
-      prototype = createNull();
-    }
-  }
-  if (prototype->isTypeof<JSExceptionType>()) {
-    return prototype;
-  }
+
   auto object = _current->createValue(getAllocator()->create<JSObject>());
   auto obj = object->getData()->cast<JSObject>();
-  obj->setPrototype(prototype->getAtom());
-  object->getAtom()->addChild(prototype->getAtom());
-  if (Object) {
-    auto err = setConstructor(object, Object);
-    if (err) {
-      return err;
+  auto global = getGlobal();
+  if (global) {
+    auto Object = getField(global, createString(L"Object"));
+    CHECK(this, Object);
+    if (Object->isTypeof<JSCallableType>()) {
+      if (!prototype) {
+        prototype = getField(Object, createString(L"prototype"));
+        auto err = setConstructor(object, Object);
+        CHECK(this, err);
+      }
     }
   }
+  if (!prototype) {
+    prototype = createNull();
+  }
+  CHECK(this, prototype);
+  obj->setPrototype(prototype->getAtom());
+  object->getAtom()->addChild(prototype->getAtom());
   return object;
 }
 
@@ -244,12 +241,8 @@ JSValue *JSContext::createArray() {
 JSValue *JSContext::createNativeFunction(
     const JS_NATIVE &func, const std::wstring &name,
     const std::unordered_map<std::wstring, JSValue *> &closure) {
-  auto Function = getGlobal(createString(L"Function"));
-  if (Function) {
-    if (Function->isTypeof<JSExceptionType>()) {
-      return Function;
-    }
-  }
+  auto Function = getField(getGlobal(), createString(L"Function"));
+  CHECK(this, Function);
   std::unordered_map<std::wstring, JSAtom *> clo;
   for (auto &[n, val] : closure) {
     clo[n] = val->getAtom();
@@ -262,40 +255,28 @@ JSValue *JSContext::createNativeFunction(
   auto prototype = createObject();
   auto err = defineProperty(val, createString(L"prototype"), prototype, true,
                             false, true);
-  if (err) {
-    return err;
-  }
+  CHECK(this, err);
   err = defineProperty(prototype, createString(L"constructor"), val, true,
                        false, true);
-  if (err) {
-    return err;
-  }
+  CHECK(this, err);
   err = defineProperty(val, createString(L"name"), createString(name), false,
                        false, false);
-  if (err) {
-    return err;
-  }
-  if (Function) {
+  CHECK(this, err);
+  if (Function->isTypeof<JSCallableType>()) {
     auto prototype = getField(Function, createString(L"prototype"));
     val->getData()->cast<JSCallable>()->setPrototype(prototype->getAtom());
     val->getAtom()->addChild(prototype->getAtom());
     err = defineProperty(val, createString(L"constructor"), Function, true,
                          false, true);
-    if (err) {
-      return err;
-    }
+    CHECK(this, err);
     err = setConstructor(val, Function);
-    if (err) {
-      return err;
-    }
+    CHECK(this, err);
   } else {
     auto prototype = createObject();
     val->getData()->cast<JSCallable>()->setPrototype(prototype->getAtom());
     val->getAtom()->addChild(prototype->getAtom());
   }
-  if (err) {
-    return err;
-  }
+  CHECK(this, err);
   return val;
 }
 
@@ -369,24 +350,6 @@ JSValue *JSContext::call(JSValue *func, JSValue *self,
   return result;
 }
 
-JSValue *JSContext::getGlobal(JSValue *name) {
-  if (!_global) {
-    return nullptr;
-  }
-  pushScope();
-  auto &fields = _global->getData()->cast<JSObject>()->getFields();
-  for (auto &[keyAtom, value] : fields) {
-    if (keyAtom->isTypeof<JSStringType>()) {
-      auto key = createValue(keyAtom);
-      if (checkedBoolean(isEqual(key, name))) {
-        popScope();
-        return getField(_global, name);
-      }
-    }
-  }
-  popScope();
-  return nullptr;
-}
 JSValue *JSContext::getPrototypeOf(JSValue *value) {
   CHECK(this, value);
   if (!value->isTypeof<JSObjectType>()) {

@@ -21,8 +21,11 @@ JSValue *JSObjectConstructor::toString(JSContext *ctx, JSValue *value,
     name = L"[Object: null prototype]";
   } else {
     auto constructor = ctx->getConstructorOf(value);
-    if (ctx->checkedBoolean(ctx->isEqual(
-            constructor, ctx->getGlobal(ctx->createString(L"Object"))))) {
+    auto res =
+        ctx->isEqual(constructor, ctx->getField(ctx->getGlobal(),
+                                                ctx->createString(L"Object")));
+    CHECK(ctx, res);
+    if (ctx->checkedBoolean(res)) {
       name = L"";
     } else {
       name = constructor->getData()->cast<JSCallable>()->getName();
@@ -39,41 +42,26 @@ JSValue *JSObjectConstructor::toString(JSContext *ctx, JSValue *value,
 
 JSValue *JSObjectConstructor::initialize(JSContext *ctx) {
   auto Object = ctx->createNativeFunction(&constructor, L"Object");
-  auto Function = ctx->getGlobal(ctx->createString(L"Function"));
+  CHECK(ctx, Object);
+  auto global = ctx->getGlobal();
+  auto Function = ctx->getField(global, ctx->createString(L"Function"));
+  CHECK(ctx, Function);
   auto prototype = ctx->getField(Object, ctx->createString(L"prototype"));
-  if (prototype->isTypeof<JSExceptionType>()) {
-    return prototype;
-  }
+  CHECK(ctx, prototype);
   auto err = ctx->defineProperty(prototype, ctx->createString(L"constructor"),
                                  Object, true, false, true);
-  if (err) {
-    return err;
-  }
+  CHECK(ctx, err);
   auto funcPrototype = ctx->getField(Function, ctx->createString(L"prototype"));
-
+  CHECK(ctx, funcPrototype);
   err = ctx->setPrototype(funcPrototype, prototype);
-  if (err) {
-    return err;
-  }
-
-  auto global = ctx->getGlobal();
-
+  CHECK(ctx, err);
   err = ctx->setPrototype(global, prototype);
-  if (err) {
-    return err;
-  }
-
+  CHECK(ctx, err);
   err = ctx->defineProperty(prototype, ctx->createString(L"toString"),
                             ctx->createNativeFunction(toString, L"toString"),
                             true, false, true);
-  if (err) {
-    return err;
-  }
-
+  CHECK(ctx, err);
   err = ctx->setField(global, ctx->createString(L"Object"), Object);
-
-  if (err) {
-    return err;
-  }
+  CHECK(ctx, err);
   return nullptr;
 }

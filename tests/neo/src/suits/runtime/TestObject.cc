@@ -1,5 +1,6 @@
 #include "script/engine/JSCallableType.hpp"
 #include "script/engine/JSContext.hpp"
+#include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSNullType.hpp"
 #include "script/engine/JSObjectType.hpp"
 #include <gtest/gtest.h>
@@ -20,10 +21,11 @@ protected:
 };
 
 TEST_F(TestObject, constructor) {
-  auto Object = ctx->getGlobal(ctx->createString(L"Object"));
-  ASSERT_TRUE(Object && Object->isTypeof<JSCallableType>());
-  auto Function = ctx->getGlobal(ctx->createString(L"Function"));
-  ASSERT_TRUE(Function && Function->isTypeof<JSCallableType>());
+  auto Object = ctx->getField(ctx->getGlobal(), ctx->createString(L"Object"));
+  ASSERT_TRUE(Object->isTypeof<JSCallableType>());
+  auto Function =
+      ctx->getField(ctx->getGlobal(), ctx->createString(L"Function"));
+  ASSERT_TRUE(Function->isTypeof<JSCallableType>());
   ASSERT_TRUE(ctx->checkedBoolean(
       ctx->isEqual(ctx->getField(Object, ctx->createString(L"name")),
                    ctx->createString(L"Object"))));
@@ -38,11 +40,12 @@ TEST_F(TestObject, constructor) {
 }
 
 TEST_F(TestObject, prototype) {
-  auto Object = ctx->getGlobal(ctx->createString(L"Object"));
-  ASSERT_TRUE(Object && Object->isTypeof<JSCallableType>());
+  auto Object = ctx->getField(ctx->getGlobal(), ctx->createString(L"Object"));
+  ASSERT_TRUE(Object->isTypeof<JSCallableType>());
+  auto Function =
+      ctx->getField(ctx->getGlobal(), ctx->createString(L"Function"));
+  ASSERT_TRUE(Function->isTypeof<JSCallableType>());
   auto prototype = ctx->getPrototypeOf(Object);
-  auto Function = ctx->getGlobal(ctx->createString(L"Function"));
-  ASSERT_TRUE(Function && Function->isTypeof<JSCallableType>());
   ASSERT_TRUE(ctx->checkedBoolean(ctx->isEqual(
       prototype, ctx->getField(Function, ctx->createString(L"prototype")))));
 }
@@ -53,10 +56,13 @@ TEST_F(TestObject, toString) {
   ASSERT_TRUE(object && object->isTypeof<JSObjectType>());
   ASSERT_EQ(ctx->checkedString(ctx->toString(object)), L"{}");
   object = ctx->createObject(ctx->createNull());
-  ASSERT_EQ(ctx->checkedString(ctx->toString(object)),
-            L"[Object: null prototype] {}");
+  auto str = ctx->toString(object);
+  ASSERT_TRUE(!str->isTypeof<JSExceptionType>());
+  ASSERT_EQ(ctx->checkedString(str), L"[Object: null prototype] {}");
   object = ctx->createObject();
-  ctx->setConstructor(object, ctx->getGlobal(ctx->createString(L"Function")));
+  auto Function =
+      ctx->getField(ctx->getGlobal(), ctx->createString(L"Function"));
+  ctx->setConstructor(object, Function);
 
   ASSERT_EQ(ctx->checkedString(ctx->toString(object)), L"Function {}");
 }
