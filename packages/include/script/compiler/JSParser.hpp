@@ -1,14 +1,15 @@
 #pragma once
 
+#include "../engine/JSEvalType.hpp"
 #include "../util/JSAllocator.hpp"
 #include "../util/JSLocation.hpp"
 #include "../util/JSON.hpp"
-#include "../engine/JSEvalType.hpp"
+#include <algorithm>
 #include <array>
 #include <set>
 #include <string>
 #include <vector>
-#include <algorithm>
+
 
 enum class JS_ACCESSOR_TYPE { GET, SET };
 
@@ -7322,12 +7323,6 @@ private:
     if (!identifier) {
       _allocator->dispose(node);
       return createError(L"Unexpected end of input", source, current);
-    }
-    if (isKeyword(source, identifier->location)) {
-      _allocator->dispose(identifier);
-      _allocator->dispose(node);
-      return createError(L"Invalid or unexpected token", source,
-                         identifier->location.start);
     }
     node->host = left;
     left->addParent(node);

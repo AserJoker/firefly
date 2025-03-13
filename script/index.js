@@ -1,4 +1,1 @@
-"use strict";
-class Test {
-  constructor() {}
-}
+print("hello world".toString())

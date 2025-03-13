@@ -79,7 +79,7 @@ public:
     return value->isTypeof<JSExceptionType>();
   }
 
-  JSValue *checkUninitialized(JSValue *value);
+  JSValue *isUninitialized(JSValue *value);
 
   JSValue *createValue(JSValue *value);
 
@@ -128,6 +128,9 @@ public:
 
   JSValue *call(JSValue *func, JSValue *self,
                 const std::vector<JSValue *> args);
+
+  JSValue *construct(JSValue *constructor,
+                     const std::vector<JSValue *> &args = {});
 
   JSValue *getPrototypeOf(JSValue *value);
 
@@ -184,6 +187,12 @@ public:
 };
 
 #define CHECK(ctx, value)                                                      \
-  if (value && ctx->isException(value)) {                                      \
-    return value;                                                              \
+  if (value) {                                                                 \
+    if (ctx->isUninitialized(value)) {                                         \
+      return ctx->createException(JSException::TYPE::SYNTAX,                   \
+                                  L"variable is uninitialized");               \
+    }                                                                          \
+    if (ctx->isException(value)) {                                             \
+      return value;                                                            \
+    }                                                                          \
   }

@@ -30,7 +30,8 @@ JSValue *JSStringType::clone(JSContext *ctx, JSValue *value) const {
   return ctx->createString(value->getData()->cast<JSString>()->getValue());
 }
 JSValue *JSStringType::pack(JSContext *ctx, JSValue *value) const {
-  return ctx->createException(JSException::TYPE::INTERNAL, L"not implement");
+  auto String = ctx->getField(ctx->getGlobal(), ctx->createString(L"String"));
+  return ctx->construct(String, {value});
 };
 JSValue *JSStringType::equal(JSContext *ctx, JSValue *value,
                              JSValue *another) const {

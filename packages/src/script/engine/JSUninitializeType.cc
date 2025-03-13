@@ -5,7 +5,9 @@
 #include "script/util/JSAllocator.hpp"
 JSUninitializeType::JSUninitializeType(JSAllocator *allocator)
     : JSType(allocator, 0) {}
-const wchar_t *JSUninitializeType::getTypeName() const { return L"internal"; }
+const wchar_t *JSUninitializeType::getTypeName() const {
+  return L"uninitialized";
+}
 
 JSValue *JSUninitializeType::toString(JSContext *ctx, JSValue *value) const {
   return nullptr;

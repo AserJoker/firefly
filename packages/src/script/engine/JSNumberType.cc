@@ -3,9 +3,7 @@
 #include "script/engine/JSNumber.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSAllocator.hpp"
-JSNumberType::JSNumberType(JSAllocator *allocator) : JSType(allocator, 1) {
-}
-
+JSNumberType::JSNumberType(JSAllocator *allocator) : JSType(allocator, 1) {}
 
 const wchar_t *JSNumberType::getTypeName() const { return L"number"; }
 
@@ -27,7 +25,8 @@ JSValue *JSNumberType::clone(JSContext *ctx, JSValue *value) const {
   return ctx->createNumber(value->getData()->cast<JSNumber>()->getValue());
 }
 JSValue *JSNumberType::pack(JSContext *ctx, JSValue *value) const {
-  return ctx->createException(JSException::TYPE::INTERNAL, L"not implement");
+  auto Number = ctx->getField(ctx->getGlobal(), ctx->createString(L"Number"));
+  return ctx->construct(Number, {value});
 };
 JSValue *JSNumberType::equal(JSContext *ctx, JSValue *value,
                              JSValue *another) const {

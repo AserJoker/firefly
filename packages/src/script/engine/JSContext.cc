@@ -22,10 +22,14 @@
 #include "script/engine/JSUninitializeType.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/engine/JSVirtualMachine.hpp"
+#include "script/runtime/JSBooleanConstructor.hpp"
 #include "script/runtime/JSFunctionConstructor.hpp"
+#include "script/runtime/JSNumberConstructor.hpp"
 #include "script/runtime/JSObjectConstructor.hpp"
+#include "script/runtime/JSStringConstructor.hpp"
 #include "script/runtime/JSSymbolConstructor.hpp"
 #include <fstream>
+#include <iostream>
 
 JSContext::JSContext(JSRuntime *runtime) : _runtime(runtime), _global(nullptr) {
   _root = getAllocator()->create<JSScope>();
@@ -101,6 +105,18 @@ JSValue *JSContext::initializeGlobal() {
   if (err) {
     return err;
   }
+  err = JSBooleanConstructor::initialize(this);
+  if (err) {
+    return err;
+  }
+  err = JSNumberConstructor::initialize(this);
+  if (err) {
+    return err;
+  }
+  err = JSStringConstructor::initialize(this);
+  if (err) {
+    return err;
+  }
   return nullptr;
 }
 
@@ -153,7 +169,7 @@ JSScope *JSContext::setRootScope(JSScope *scope) {
   return old;
 }
 
-JSValue *JSContext::checkUninitialized(JSValue *value) {
+JSValue *JSContext::isUninitialized(JSValue *value) {
   if (value->isTypeof<JSUninitializeType>()) {
     return createException(JSException::TYPE::REFERENCE,
                            L"Cannot access variable before initialization");
@@ -325,7 +341,12 @@ JSValue *JSContext::queryValue(const std::wstring &name) {
 }
 
 JSValue *JSContext::assigmentValue(JSValue *variable, JSValue *value) {
-
+  if (variable->isConst() && !variable->isTypeof<JSUninitializeType>()) {
+    return createException(JSException::TYPE::TYPE,
+                           L"Assignment to constant variable.");
+  }
+  CHECK(this, value);
+  variable->getAtom()->setData(clone(value)->getData());
   return value;
 }
 
@@ -348,6 +369,24 @@ JSValue *JSContext::call(JSValue *func, JSValue *self,
   auto result = current->createValue(res->getAtom());
   popScope();
   return result;
+}
+
+JSValue *JSContext::construct(JSValue *constructor,
+                              const std::vector<JSValue *> &args) {
+  CHECK(this, constructor);
+  auto prototype = getField(constructor, createString(L"prototype"));
+  CHECK(this, prototype);
+  auto obj = createObject(prototype);
+  CHECK(this, obj);
+  auto err = setField(obj, createString(L"constructor"), constructor);
+  CHECK(this, err);
+  err = setConstructor(obj, constructor);
+  CHECK(this, err);
+  auto res = call(constructor, obj, args);
+  if (res->isTypeof<JSObjectType>()) {
+    return res;
+  }
+  return obj;
 }
 
 JSValue *JSContext::getPrototypeOf(JSValue *value) {
@@ -391,13 +430,12 @@ JSValue *JSContext::setField(JSValue *obj, JSValue *name, JSValue *value) {
   CHECK(this, obj);
   CHECK(this, name);
   CHECK(this, value);
-  auto type = obj->getType();
-  auto object = type->pack(this, obj);
-  if (object->isTypeof<JSExceptionType>()) {
-    return object;
+  auto otype = obj->getType()->cast<JSObjectType>();
+  if (!otype) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a object");
   }
-  auto otype = object->getType()->cast<JSObjectType>();
-  return otype->setField(this, object, name, value);
+  return otype->setField(this, obj, name, value);
 }
 
 JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *value,
@@ -405,14 +443,13 @@ JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *value,
                                    bool writable) {
   CHECK(this, obj);
   CHECK(this, value);
-  auto type = obj->getType();
-  auto object = type->pack(this, obj);
-  if (object->isTypeof<JSExceptionType>()) {
-    return object;
+  auto otype = obj->getType()->cast<JSObjectType>();
+  if (!otype) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a object");
   }
-  auto otype = object->getType()->cast<JSObjectType>();
-  return otype->defineProperty(this, object, name, value, configurable,
-                               enumable, writable);
+  return otype->defineProperty(this, obj, name, value, configurable, enumable,
+                               writable);
 }
 
 JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *getter,
@@ -421,27 +458,34 @@ JSValue *JSContext::defineProperty(JSValue *obj, JSValue *name, JSValue *getter,
   CHECK(this, obj);
   CHECK(this, getter);
   CHECK(this, setter);
-  auto type = obj->getType();
-  auto object = type->pack(this, obj);
-  if (object->isTypeof<JSExceptionType>()) {
-    return object;
+  auto otype = obj->getType()->cast<JSObjectType>();
+  if (!otype) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a object");
   }
-  auto otype = object->getType()->cast<JSObjectType>();
-  return otype->defineProperty(this, object, name, getter, setter, configurable,
+  return otype->defineProperty(this, obj, name, getter, setter, configurable,
                                enumable);
 }
 JSValue *JSContext::getPrivateField(JSValue *obj, const std::wstring &name) {
   CHECK(this, obj);
-  auto type = obj->getType()->cast<JSObjectType>();
-  return type->getPrivateField(this, obj, name);
+  auto otype = obj->getType()->cast<JSObjectType>();
+  if (!otype) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a object");
+  }
+  return otype->getPrivateField(this, obj, name);
 }
 
 JSValue *JSContext::setPrivateField(JSValue *obj, const std::wstring &name,
                                     JSValue *value) {
   CHECK(this, obj);
   CHECK(this, value);
-  auto type = obj->getType()->cast<JSObjectType>();
-  return type->setPrivateField(this, obj, name, value);
+  auto otype = obj->getType()->cast<JSObjectType>();
+  if (!otype) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a object");
+  }
+  return otype->setPrivateField(this, obj, name, value);
 }
 
 JSValue *JSContext::definePrivateProperty(JSValue *obj,
@@ -449,8 +493,12 @@ JSValue *JSContext::definePrivateProperty(JSValue *obj,
                                           JSValue *value) {
   CHECK(this, obj);
   CHECK(this, value);
-  auto type = obj->getType()->cast<JSObjectType>();
-  return type->definePrivateProperty(this, obj, name, value);
+  auto otype = obj->getType()->cast<JSObjectType>();
+  if (!otype) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a object");
+  }
+  return otype->definePrivateProperty(this, obj, name, value);
 }
 
 JSValue *JSContext::definePrivateProperty(JSValue *obj,
@@ -459,34 +507,35 @@ JSValue *JSContext::definePrivateProperty(JSValue *obj,
   CHECK(this, obj);
   CHECK(this, getter);
   CHECK(this, setter);
-  auto type = obj->getType()->cast<JSObjectType>();
-  return type->definePrivateProperty(this, obj, name, getter, setter);
+  auto otype = obj->getType()->cast<JSObjectType>();
+  if (!otype) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a object");
+  }
+  return otype->definePrivateProperty(this, obj, name, getter, setter);
 }
 
 JSValue *JSContext::getField(JSValue *obj, JSValue *name) {
   CHECK(this, obj);
-  auto type = obj->getType();
-  auto object = type->pack(this, obj);
-  if (object->isTypeof<JSExceptionType>()) {
-    return object;
+  auto otype = obj->getType()->cast<JSObjectType>();
+  if (!otype) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a object");
   }
-  auto otype = object->getType()->cast<JSObjectType>();
-  return otype->getField(this, object, name);
+  return otype->getField(this, obj, name);
 }
 
 JSValue *JSContext::getKeys(JSValue *obj) {
   CHECK(this, obj);
-  auto type = obj->getType();
-  auto object = type->pack(this, obj);
-  if (object->isTypeof<JSExceptionType>()) {
-    return object;
+  auto otype = obj->getType()->cast<JSObjectType>();
+  if (!otype) {
+    return createException(JSException::TYPE::TYPE,
+                           L"variable is not a object");
   }
-  auto otype = object->getType()->cast<JSObjectType>();
-  return otype->getKeys(this, object);
+  return otype->getKeys(this, obj);
 }
 
 JSValue *JSContext::toString(JSValue *value) {
-  CHECK(this, value);
   return value->getType()->toString(this, value);
 }
 
@@ -527,14 +576,14 @@ bool JSContext::isNaN(JSValue *value) const {
 }
 
 JSValue *JSContext::isEqual(JSValue *left, JSValue *right) {
-  CHECK(this, left);
-  CHECK(this, right);
   if (left->isTypeof<JSObjectType>()) {
     left = left->getType()->cast<JSObjectType>()->unpack(this, left);
   }
   if (right->isTypeof<JSObjectType>()) {
     right = right->getType()->cast<JSObjectType>()->unpack(this, right);
   }
+  CHECK(this, left);
+  CHECK(this, right);
   auto type = left->getType();
   if (left->getType()->getPriority() < right->getType()->getPriority()) {
     type = right->getType();

@@ -4,6 +4,8 @@
 #include "JSContext.hpp"
 #include "JSEvalContext.hpp"
 #include "JSExceptionType.hpp"
+#include "JSValue.hpp"
+#include "script/engine/JSEvalContext.hpp"
 #include "script/util/JSSingleton.hpp"
 #include <cstdint>
 
@@ -30,6 +32,16 @@ private:
   const std::wstring &getString(const JSProgram &program, size_t &address) {
     auto idx = getUint32(program, address);
     return program.constants[idx];
+  }
+
+  bool checkException(JSContext *ctx, JSValue *value, JSEvalContext &ectx,
+                      const JSProgram &program) {
+    if (ctx->isException(value)) {
+      ectx.pc = program.codes.size();
+      ectx.stack.push_back(value);
+      return true;
+    }
+    return false;
   }
 
 private:
@@ -90,30 +102,35 @@ private:
   void runLoad(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     auto name = getString(program, ectx.pc);
     auto val = ctx->queryValue(name);
-    ectx.stack.push_back(val);
-    if (val->getType() == JSSingleton::query<JSExceptionType>()) {
-      ectx.pc = program.codes.size();
+    if (checkException(ctx, val, ectx, program)) {
+      return;
     }
+    ectx.stack.push_back(val);
   }
   void runStore(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     auto name = getString(program, ectx.pc);
     auto value = *ectx.stack.rbegin();
     ectx.stack.pop_back();
     auto variable = ctx->queryValue(name);
-    if (variable->getType() == JSSingleton::query<JSExceptionType>()) {
-      ectx.stack.push_back(variable);
-      ectx.pc = program.codes.size();
+    if (checkException(ctx, variable, ectx, program)) {
       return;
     }
-    ctx->assigmentValue(variable, value);
-    ectx.stack.push_back(value);
+    auto res = ctx->assigmentValue(variable, value);
+    if (checkException(ctx, res, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(res);
   }
   void runRef(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     auto identifier = getString(program, ectx.pc);
     auto func = *ectx.stack.rbegin();
     auto callable = dynamic_cast<JSCallable *>(func->getData());
     auto val = ctx->queryValue(identifier);
-    if (callable->getClosure(identifier)) {
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    auto old = callable->getClosure(identifier);
+    if (old) {
       ctx->recycle(callable->getClosure(identifier));
     }
     callable->setClosure(identifier, val->getAtom());
@@ -192,6 +209,7 @@ private:
     ectx.stack.pop_back();
     auto field = *ectx.stack.rbegin();
     ectx.stack.pop_back();
+    obj = ctx->pack(obj);
     auto result = ctx->getField(obj, field);
     if (result->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.stack.push_back(result);
@@ -208,6 +226,7 @@ private:
     ectx.stack.pop_back();
     auto val = *ectx.stack.rbegin();
     ectx.stack.pop_back();
+    obj = ctx->pack(obj);
     auto result = ctx->setField(obj, field, val);
     if (result->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.stack.push_back(result);
@@ -254,6 +273,7 @@ private:
     ectx.stack.pop_back();
     auto obj = *ectx.stack.rbegin();
     ectx.stack.pop_back();
+    obj = ctx->pack(obj);
     auto func = ctx->getField(obj, field);
     if (func->getType() == JSSingleton::query<JSExceptionType>()) {
       ectx.stack.push_back(func);
@@ -398,8 +418,15 @@ private:
     ectx.pc = program.codes.size();
   }
   void runEq(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->isEqual(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runSeq(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement

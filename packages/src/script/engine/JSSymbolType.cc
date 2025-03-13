@@ -31,17 +31,20 @@ JSValue *JSSymbolType::pack(JSContext *ctx, JSValue *value) const {
   CHECK(ctx, prototype);
   auto object = ctx->createObject(prototype);
   CHECK(ctx, object);
-  auto err = ctx->setField(object, ctx->createString(L"constructor"), Symbol);
+  auto err = ctx->defineProperty(object, ctx->createString(L"constructor"),
+                                 Symbol, true, false, true);
   CHECK(ctx, err);
   err = ctx->setConstructor(object, Symbol);
   CHECK(ctx, err);
   ctx->setMetadata(object, L"primitive", value);
-  auto fieldname = ctx->createString(L"descriptin");
-  err = ctx->setField(prototype, fieldname, ctx->getField(value, fieldname));
+  auto fieldname = ctx->createString(L"description");
+  auto description = value->getData()->cast<JSSymbol>()->getDescription();
+  err = ctx->defineProperty(prototype, fieldname,
+                            ctx->createString(description), true, false, false);
   CHECK(ctx, err);
   return object;
 };
 JSValue *JSSymbolType::equal(JSContext *ctx, JSValue *value,
                              JSValue *another) const {
-  return ctx->createBoolean(value->getAtom() == another->getAtom());
+  return ctx->createBoolean(value->getData() == another->getData());
 }

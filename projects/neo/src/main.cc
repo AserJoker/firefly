@@ -1,11 +1,12 @@
 
 #include "script/engine/JSContext.hpp"
-#include "script/engine/JSExceptionType.hpp"
 // #include <SDL2/SDL.h>
 #include <codecvt>
 #include <exception>
+#include <fstream>
 #include <iostream>
 #include <locale>
+#include <string>
 #include <vector>
 
 #ifdef _WIN32
@@ -14,10 +15,8 @@
 
 JSValue *print(JSContext *ctx, JSValue *self, std::vector<JSValue *> args) {
   for (auto &arg : args) {
-    auto str = ctx->toString(arg);
-    if (str->isTypeof<JSExceptionType>()) {
-      return str;
-    }
+    auto str = ctx->toString(ctx->pack(arg));
+    CHECK(ctx, str);
     std::wcout << ctx->checkedString(str) << std::endl;
   }
   return ctx->createUndefined();
@@ -34,13 +33,24 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     filename = argv[1];
   }
+  std::wifstream file(filename, std::ios::binary | std::ios::in);
+  file.seekg(0, std::ios::end);
+  size_t size = file.tellg();
+  file.seekg(0, std::ios::beg);
+  auto buf = new wchar_t[size + 1];
+  file.read(buf, size);
+  file.close();
+  buf[size] = 0;
+  std::wstring source = buf;
+  delete[] buf;
   try {
     auto runtime = new JSRuntime(argc, argv);
     auto ctx = new JSContext(runtime);
-    auto obj = ctx->createObject();
-    auto num = ctx->createNumber(123);
-    ctx->setField(obj, ctx->createString(L"test"), num);
-    ctx->getField(obj, ctx->createString(L"test"));
+    ctx->setField(ctx->getGlobal(), ctx->createString(L"print"),
+                  ctx->createNativeFunction(print, L"print"));
+    auto res = ctx->eval(L"../script/index.js", source);
+    std::wcout << res->getType()->getTypeName()
+               << ctx->checkedString(ctx->toString(res)) << std::endl;
     delete ctx;
     delete runtime;
     return 0;

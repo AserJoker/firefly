@@ -1,7 +1,6 @@
 #include "script/engine/JSBooleanType.hpp"
 #include "script/engine/JSBoolean.hpp"
 #include "script/engine/JSContext.hpp"
-#include "script/engine/JSException.hpp"
 #include "script/engine/JSType.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSAllocator.hpp"
@@ -28,8 +27,8 @@ JSValue *JSBooleanType::clone(JSContext *ctx, JSValue *value) const {
 }
 
 JSValue *JSBooleanType::pack(JSContext *ctx, JSValue *value) const {
-  // TODO: pack boolean
-  return ctx->createException(JSException::TYPE::INTERNAL, L"not implement");
+  auto Boolean = ctx->getField(ctx->getGlobal(), ctx->createString(L"Boolean"));
+  return ctx->construct(Boolean, {value});
 };
 
 JSValue *JSBooleanType::equal(JSContext *ctx, JSValue *value,

@@ -43,5 +43,5 @@ JSValue *JSExceptionType::pack(JSContext *ctx, JSValue *value) const {
 };
 JSValue *JSExceptionType::equal(JSContext *ctx, JSValue *value,
                                 JSValue *another) const {
-  return ctx->createBoolean(value->getAtom() == another->getAtom());
+  return ctx->createBoolean(value->getData() == another->getData());
 }

@@ -65,7 +65,7 @@ JSValue *JSObjectType::pack(JSContext *ctx, JSValue *value) const {
 
 JSValue *JSObjectType::equal(JSContext *ctx, JSValue *value,
                              JSValue *another) const {
-  return ctx->createBoolean(value->getAtom() == another->getAtom());
+  return ctx->createBoolean(value->getData() == another->getData());
 }
 
 JSField *JSObjectType::getFieldDescriptor(JSContext *ctx, JSValue *value,
