@@ -6,6 +6,7 @@
 #include "JSExceptionType.hpp"
 #include "JSValue.hpp"
 #include "script/engine/JSEvalContext.hpp"
+#include "script/engine/JSNullType.hpp"
 #include "script/util/JSSingleton.hpp"
 #include <cstdint>
 
@@ -54,8 +55,12 @@ private:
     return res;
   }
   JSValue *construct(JSContext *ctx, JSValue *constructor,
-                     std::vector<JSValue *> args) {
-    return ctx->createUndefined();
+                     std::vector<JSValue *> args, const JSStackFrame &frame) {
+    ctx->pushCallStack(frame.filename, frame.position.funcname,
+                       frame.position.column, frame.position.line);
+    auto res = ctx->construct(constructor, args);
+    ctx->popCallStack();
+    return res;
   }
 
 private:
@@ -194,15 +199,9 @@ private:
     ectx.pc = program.codes.size();
   }
   void runEnable(JSContext *ctx, const JSProgram &program,
-                 JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
-  }
+                 JSEvalContext &ectx) {}
   void runDisable(JSContext *ctx, const JSProgram &program,
-                  JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
-  }
+                  JSEvalContext &ectx) {}
   void runGetField(JSContext *ctx, const JSProgram &program,
                    JSEvalContext &ectx) {
     auto obj = *ectx.stack.rbegin();
@@ -252,9 +251,7 @@ private:
     ectx.stack.pop_back();
     frame.position.funcname = func->getData()->cast<JSCallable>()->getName();
     auto result = call(ctx, func, ctx->createUndefined(), arguments, frame);
-    if (result->getType() == JSSingleton::query<JSExceptionType>()) {
-      ectx.stack.push_back(result);
-      ectx.pc = program.codes.size();
+    if (checkException(ctx, result, ectx, program)) {
       return;
     }
     ectx.stack.push_back(result);
@@ -275,13 +272,15 @@ private:
     ectx.stack.pop_back();
     obj = ctx->pack(obj);
     auto func = ctx->getField(obj, field);
-    if (func->getType() == JSSingleton::query<JSExceptionType>()) {
-      ectx.stack.push_back(func);
-      ectx.pc = program.codes.size();
+    if (checkException(ctx, func, ectx, program)) {
       return;
     }
     frame.position.funcname = func->getData()->cast<JSCallable>()->getName();
-    ectx.stack.push_back(call(ctx, func, obj, arguments, frame));
+    auto result = call(ctx, func, obj, arguments, frame);
+    if (checkException(ctx, result, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(result);
   }
   void runPrivateMemberCall(JSContext *ctx, const JSProgram &program,
                             JSEvalContext &ectx) {
@@ -291,19 +290,19 @@ private:
   }
 
   void runVoid(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-
-    // not implement
-    ectx.pc = program.codes.size();
+    ectx.stack.pop_back();
+    ectx.stack.push_back(ctx->createUndefined());
   }
 
   void runTypeof(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
-
-    // not implement
-    ectx.pc = program.codes.size();
+    auto value = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    ectx.stack.push_back(ctx->createString(value->getType()->getTypeName()));
   }
 
   void runNew(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
+    auto frame = program.stacks.at(ectx.pc);
     auto size = getUint32(program, ectx.pc);
     std::vector<JSValue *> arguments;
     for (size_t index = 0; index < size; index++) {
@@ -313,10 +312,10 @@ private:
     }
     auto constructor = *ectx.stack.rbegin();
     ectx.stack.pop_back();
-    auto result = construct(ctx, constructor, arguments);
-    if (result->getType() == JSSingleton::query<JSExceptionType>()) {
-      ectx.stack.push_back(result);
-      ectx.pc = program.codes.size();
+    frame.position.funcname =
+        constructor->getData()->cast<JSCallable>()->getName();
+    auto result = construct(ctx, constructor, arguments, frame);
+    if (checkException(ctx, result, ectx, program)) {
       return;
     }
     ectx.stack.push_back(result);
@@ -348,22 +347,42 @@ private:
     ectx.pc = address;
   }
   void runJtrue(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto address = getAddress(program, ectx.pc);
+    auto value = *ectx.stack.rbegin();
+    auto boolean = ctx->toBoolean(value);
+    if (checkException(ctx, boolean, ectx, program)) {
+      return;
+    }
+    if (ctx->checkedBoolean(boolean)) {
+      ectx.pc = address;
+    }
   }
   void runJfalse(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto address = getAddress(program, ectx.pc);
+    auto value = *ectx.stack.rbegin();
+    auto boolean = ctx->toBoolean(value);
+    if (checkException(ctx, boolean, ectx, program)) {
+      return;
+    }
+    if (!ctx->checkedBoolean(boolean)) {
+      ectx.pc = address;
+    }
   }
   void runJnull(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto address = getAddress(program, ectx.pc);
+    auto value = *ectx.stack.rbegin();
+    if (value->isTypeof<JSNullType>()) {
+      ectx.pc = address;
+    }
   }
   void runJnotNull(JSContext *ctx, const JSProgram &program,
                    JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto address = getAddress(program, ectx.pc);
+    auto value = *ectx.stack.rbegin();
+    if (!value->isTypeof<JSNullType>()) {
+      ectx.pc = address;
+    }
   }
   void runAdd(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement
@@ -429,16 +448,45 @@ private:
     ectx.stack.push_back(val);
   }
   void runSeq(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    if (left->getType() == right->getType()) {
+      auto val = ctx->isEqual(left, right);
+      if (checkException(ctx, val, ectx, program)) {
+        return;
+      }
+      ectx.stack.push_back(val);
+    } else {
+      ectx.stack.push_back(ctx->createBoolean(false));
+    }
   }
   void runNe(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->isEqual(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(ctx->createBoolean(!ctx->checkedBoolean(val)));
   }
   void runSne(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto res = ctx->isEqual(left, right);
+    if (left->getType() != right->getType()) {
+      ectx.stack.push_back(ctx->createBoolean(true));
+    } else {
+      if (checkException(ctx, res, ectx, program)) {
+        return;
+      }
+      ectx.stack.push_back(ctx->createBoolean(!ctx->checkedBoolean(res)));
+    }
   }
   void runGt(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement

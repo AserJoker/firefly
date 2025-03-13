@@ -257,8 +257,6 @@ JSValue *JSContext::createArray() {
 JSValue *JSContext::createNativeFunction(
     const JS_NATIVE &func, const std::wstring &name,
     const std::unordered_map<std::wstring, JSValue *> &closure) {
-  auto Function = getField(getGlobal(), createString(L"Function"));
-  CHECK(this, Function);
   std::unordered_map<std::wstring, JSAtom *> clo;
   for (auto &[n, val] : closure) {
     clo[n] = val->getAtom();
@@ -268,6 +266,8 @@ JSValue *JSContext::createNativeFunction(
   for (auto &[_, atom] : clo) {
     val->getAtom()->addChild(atom);
   }
+  auto Function = getField(getGlobal(), createString(L"Function"));
+  CHECK(this, Function);
   auto prototype = createObject();
   auto err = defineProperty(val, createString(L"prototype"), prototype, true,
                             false, true);
@@ -308,6 +308,33 @@ JSValue *JSContext::createFunction(
   for (auto &[n, atom] : clo) {
     val->getAtom()->addChild(atom);
   }
+  auto Function = getField(getGlobal(), createString(L"Function"));
+  CHECK(this, Function);
+  auto prototype = createObject();
+  auto err = defineProperty(val, createString(L"prototype"), prototype, true,
+                            false, true);
+  CHECK(this, err);
+  err = defineProperty(prototype, createString(L"constructor"), val, true,
+                       false, true);
+  CHECK(this, err);
+  err = defineProperty(val, createString(L"name"), createString(name), false,
+                       false, false);
+  CHECK(this, err);
+  if (Function->isTypeof<JSCallableType>()) {
+    auto prototype = getField(Function, createString(L"prototype"));
+    val->getData()->cast<JSCallable>()->setPrototype(prototype->getAtom());
+    val->getAtom()->addChild(prototype->getAtom());
+    err = defineProperty(val, createString(L"constructor"), Function, true,
+                         false, true);
+    CHECK(this, err);
+    err = setConstructor(val, Function);
+    CHECK(this, err);
+  } else {
+    auto prototype = createObject();
+    val->getData()->cast<JSCallable>()->setPrototype(prototype->getAtom());
+    val->getAtom()->addChild(prototype->getAtom());
+  }
+  CHECK(this, err);
   return val;
 }
 
