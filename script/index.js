@@ -1,1 +1,1 @@
-print("hello world".toString())
+print(~-1n)

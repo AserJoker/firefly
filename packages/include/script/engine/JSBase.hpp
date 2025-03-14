@@ -22,9 +22,11 @@ public:
   template <class T> bool isTypeof() const {
     return getType()->cast<T>() != nullptr;
   }
+  
   inline const std::unordered_map<std::wstring, JSAtom *> &getMetadata() const {
     return _metadata;
   }
+
   inline std::unordered_map<std::wstring, JSAtom *> &getMetadata() {
     return _metadata;
   }
