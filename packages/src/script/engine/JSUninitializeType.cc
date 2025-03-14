@@ -4,7 +4,7 @@
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSAllocator.hpp"
 JSUninitializeType::JSUninitializeType(JSAllocator *allocator)
-    : JSType(allocator, 0) {}
+    : JSType(allocator) {}
 const wchar_t *JSUninitializeType::getTypeName() const {
   return L"uninitialized";
 }
@@ -26,7 +26,7 @@ JSValue *JSUninitializeType::clone(JSContext *ctx, JSValue *value) const {
 }
 
 JSValue *JSUninitializeType::pack(JSContext *ctx, JSValue *value) const {
-  return ctx->createException(JSException::TYPE::INTERNAL, L"not implement");
+  return value;
 };
 
 JSValue *JSUninitializeType::equal(JSContext *ctx, JSValue *value,

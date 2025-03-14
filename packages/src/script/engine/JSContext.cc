@@ -1,5 +1,7 @@
 #include "script/engine/JSContext.hpp"
 #include "script/engine/JSArray.hpp"
+#include "script/engine/JSBigInt.hpp"
+#include "script/engine/JSBigIntType.hpp"
 #include "script/engine/JSBoolean.hpp"
 #include "script/engine/JSBooleanType.hpp"
 #include "script/engine/JSCallable.hpp"
@@ -7,21 +9,27 @@
 #include "script/engine/JSException.hpp"
 #include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSFunction.hpp"
+#include "script/engine/JSInfinity.hpp"
 #include "script/engine/JSNaN.hpp"
 #include "script/engine/JSNaNType.hpp"
 #include "script/engine/JSNativeFunction.hpp"
 #include "script/engine/JSNull.hpp"
+#include "script/engine/JSNullType.hpp"
 #include "script/engine/JSNumber.hpp"
+#include "script/engine/JSNumberType.hpp"
 #include "script/engine/JSObject.hpp"
 #include "script/engine/JSObjectType.hpp"
 #include "script/engine/JSString.hpp"
 #include "script/engine/JSStringType.hpp"
 #include "script/engine/JSSymbol.hpp"
+#include "script/engine/JSSymbolType.hpp"
 #include "script/engine/JSUndefined.hpp"
+#include "script/engine/JSUndefinedType.hpp"
 #include "script/engine/JSUninitialize.hpp"
 #include "script/engine/JSUninitializeType.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/engine/JSVirtualMachine.hpp"
+#include "script/runtime/JSBigIntConstructor.hpp"
 #include "script/runtime/JSBooleanConstructor.hpp"
 #include "script/runtime/JSFunctionConstructor.hpp"
 #include "script/runtime/JSNumberConstructor.hpp"
@@ -117,6 +125,10 @@ JSValue *JSContext::initializeGlobal() {
   if (err) {
     return err;
   }
+  err = JSBigIntConstructor::initialize(this);
+  if (err) {
+    return err;
+  }
   return nullptr;
 }
 
@@ -203,6 +215,16 @@ JSValue *JSContext::createNull() {
 
 JSValue *JSContext::createNaN() {
   return _current->createValue(_runtime->getAllocator()->create<JSNaN>());
+}
+
+JSValue *JSContext::createInfinity(bool negative) {
+  return _current->createValue(
+      _runtime->getAllocator()->create<JSInfinity>(negative));
+}
+
+JSValue *JSContext::createBigInt(const BigInt<> &bigint) {
+  return _current->createValue(
+      _runtime->getAllocator()->create<JSBigInt>(bigint));
 }
 
 JSValue *JSContext::createSymbol(const std::wstring &description) {
@@ -359,7 +381,8 @@ JSValue *JSContext::queryValue(const std::wstring &name) {
   }
   auto &fields = _global->getData()->cast<JSObject>()->getFields();
   for (auto &[atomKey, _] : fields) {
-    if (atomKey->isTypeof<JSStringType>()) {
+    if (atomKey->isTypeof<JSStringType>() &&
+        atomKey->getData()->cast<JSString>()->getValue() == name) {
       return getField(_global, createString(name));
     }
   }
@@ -601,22 +624,459 @@ bool JSContext::checkedBoolean(JSValue *value) const {
 bool JSContext::isNaN(JSValue *value) const {
   return value->isTypeof<JSNaNType>();
 }
+JSValue *JSContext::unaryNegation(JSValue *value) {
+  value = unpack(value);
+  if (value->isTypeof<JSBigIntType>()) {
+    return value->getType()->cast<JSBigIntType>()->unaryNegation(this, value);
+  }
+  value = toNumber(value);
+  CHECK(this, value);
+  return value->getType()->cast<JSNumberType>()->unaryNegation(this, value);
+}
+
+JSValue *JSContext::unaryPlus(JSValue *value) {
+  value = unpack(value);
+  if (value->isTypeof<JSBigIntType>()) {
+    return createException(JSException::TYPE::TYPE,
+                           L"Cannot convert a BigInt value to a number");
+  }
+  value = toNumber(value);
+  CHECK(this, value);
+  return value->getType()->cast<JSNumberType>()->unaryPlus(this, value);
+}
 
 JSValue *JSContext::isEqual(JSValue *left, JSValue *right) {
-  if (left->isTypeof<JSObjectType>()) {
-    left = left->getType()->cast<JSObjectType>()->unpack(this, left);
+  CHECK(this, left);
+  CHECK(this, right);
+  if (left->getType() != right->getType()) {
+    if ((left->isTypeof<JSNullType>() || left->isTypeof<JSUndefinedType>()) &&
+        (right->isTypeof<JSNullType>() || right->isTypeof<JSUndefinedType>())) {
+      return createBoolean(true);
+    }
+    if (left->isTypeof<JSObjectType>() && !right->isTypeof<JSObjectType>()) {
+      left = unpack(left);
+    }
+    if (right->isTypeof<JSObjectType>() && !left->isTypeof<JSObjectType>()) {
+      right = unpack(right);
+    }
   }
-  if (right->isTypeof<JSObjectType>()) {
-    right = right->getType()->cast<JSObjectType>()->unpack(this, right);
+  if (left->getType() != right->getType()) {
+    if (right->isTypeof<JSSymbolType>()) {
+      auto tmp = right;
+      right = left;
+      left = tmp;
+    }
+    if (!left->isTypeof<JSObjectType>() && !right->isTypeof<JSObjectType>() &&
+        !left->isTypeof<JSSymbolType>()) {
+      if (left->isTypeof<JSBooleanType>() || right->isTypeof<JSBooleanType>()) {
+        left = toNumber(left);
+        right = toNumber(right);
+      }
+      if (right->isTypeof<JSBigIntType>()) {
+        auto tmp = left;
+        left = right;
+        right = tmp;
+      }
+      if (left->isTypeof<JSBigIntType>()) {
+        if (right->isTypeof<JSStringType>()) {
+          CHECK(this, right);
+          right = createBigInt(checkedString(right));
+        } else {
+          auto num = toNumber(right);
+          CHECK(this, num);
+          right = createBigInt(checkedNumber(num));
+        }
+      }
+      if (right->isTypeof<JSNumberType>()) {
+        auto tmp = left;
+        left = right;
+        right = tmp;
+      }
+      if (left->isTypeof<JSNumberType>()) {
+        if (right->isTypeof<JSStringType>()) {
+          right = toNumber(right);
+        }
+      }
+      if (right->isTypeof<JSStringType>()) {
+        auto tmp = left;
+        left = right;
+        right = tmp;
+      }
+      if (left->isTypeof<JSStringType>()) {
+        right = toString(right);
+      }
+    }
+  }
+  if (left->isTypeof<JSObjectType>() && !right->isTypeof<JSObjectType>()) {
+    return createBoolean(false);
+  }
+  if (right->isTypeof<JSObjectType>() && !left->isTypeof<JSObjectType>()) {
+    return createBoolean(false);
   }
   CHECK(this, left);
   CHECK(this, right);
-  auto type = left->getType();
-  if (left->getType()->getPriority() < right->getType()->getPriority()) {
-    type = right->getType();
-  }
-  return type->equal(this, left, right);
+  return left->getType()->equal(this, left, right);
 }
+
+JSValue *JSContext::add(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->add(this, left, right);
+  }
+  if (left->isTypeof<JSStringType>() || right->isTypeof<JSStringType>()) {
+    left = toString(left);
+    right = toString(right);
+    return left->getType()->cast<JSStringType>()->add(this, left, right);
+  } else {
+    left = toNumber(left);
+    right = toNumber(right);
+    return left->getType()->cast<JSNumberType>()->add(this, left, right);
+  }
+}
+
+JSValue *JSContext::sub(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->sub(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->sub(this, left, right);
+}
+
+JSValue *JSContext::mul(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->mul(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->mul(this, left, right);
+}
+
+JSValue *JSContext::div(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->div(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->div(this, left, right);
+}
+
+JSValue *JSContext::mod(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->mod(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->mod(this, left, right);
+}
+
+JSValue *JSContext::pow(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->pow(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->pow(this, left, right);
+}
+
+JSValue *JSContext::and_(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->and_(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->and_(this, left, right);
+}
+
+JSValue *JSContext::or_(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->or_(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->or_(this, left, right);
+}
+
+JSValue *JSContext::xor_(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->xor_(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->xor_(this, left, right);
+}
+
+JSValue *JSContext::shr(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->shr(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->shr(this, left, right);
+}
+
+JSValue *JSContext::shl(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->shl(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->shl(this, left, right);
+}
+
+JSValue *JSContext::gt(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->gt(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->gt(this, left, right);
+}
+
+JSValue *JSContext::ge(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->ge(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->ge(this, left, right);
+}
+
+JSValue *JSContext::lt(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->lt(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->lt(this, left, right);
+}
+
+JSValue *JSContext::le(JSValue *left, JSValue *right) {
+  left = unpack(left);
+  right = unpack(right);
+  if (left->isTypeof<JSBigIntType>() && !right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (!left->isTypeof<JSBigIntType>() && right->isTypeof<JSBigIntType>()) {
+    return createException(
+        JSException::TYPE::TYPE,
+        L"Cannot mix BigInt and other types, use explicit conversions");
+  }
+  if (left->isTypeof<JSBigIntType>()) {
+    return left->getType()->cast<JSBigIntType>()->le(this, left, right);
+  }
+  left = toNumber(left);
+  right = toNumber(right);
+  CHECK(this, left);
+  CHECK(this, right);
+  return left->getType()->cast<JSNumberType>()->le(this, left, right);
+}
+
+JSValue *JSContext::not_(JSValue *value) {
+  value = unpack(value);
+  if (value->isTypeof<JSBigIntType>()) {
+    return value->getType()->cast<JSBigIntType>()->not_(this, value);
+  }
+  value = toNumber(value);
+  CHECK(this, value);
+  return value->getType()->cast<JSNumberType>()->not_(this, value);
+}
+
 void JSContext::setMetadata(JSValue *value, const std::wstring &name,
                             JSValue *metadata) {
   auto base = value->getData();
@@ -640,7 +1100,42 @@ JSValue *JSContext::getMetadata(JSValue *value, const std::wstring &name) {
   }
   return nullptr;
 }
+
 JSValue *JSContext::pack(JSValue *value) {
   CHECK(this, value);
   return value->getType()->pack(this, value);
+}
+JSValue *JSContext::unpack(JSValue *value) {
+  if (value->isTypeof<JSObjectType>()) {
+    auto Symbol = getField(getGlobal(), createString(L"Symbol"));
+    auto toPrimitiveSymbol = getField(Symbol, createString(L"toPrimitive"));
+    CHECK(this, toPrimitiveSymbol);
+    auto toPrimitive = getField(value, toPrimitiveSymbol);
+    CHECK(this, toPrimitive);
+    if (toPrimitive->isTypeof<JSCallableType>()) {
+      value = call(toPrimitive, value, {createString(L"default")});
+      CHECK(this, value);
+      if (value->isTypeof<JSObjectType>()) {
+        return createException(JSException::TYPE::TYPE,
+                               L"Cannot convert object to primitive value");
+      }
+    }
+    if (!value->isTypeof<JSObjectType>()) {
+      return value;
+    }
+    auto valueOf = getField(Symbol, createString(L"valueOf"));
+    CHECK(this, valueOf);
+    if (valueOf->isTypeof<JSCallableType>()) {
+      auto res = call(valueOf, value, {});
+      CHECK(this, res);
+      if (!res->isTypeof<JSObjectType>()) {
+        value = res;
+      }
+    }
+    if (!value->isTypeof<JSObjectType>()) {
+      return value;
+    }
+    value = toString(value);
+  }
+  return value;
 }

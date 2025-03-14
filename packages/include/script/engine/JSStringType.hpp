@@ -19,4 +19,6 @@ public:
 
   JSValue *equal(JSContext *ctx, JSValue *value,
                  JSValue *another) const override;
+                 
+  virtual JSValue *add(JSContext *ctx, JSValue *value, JSValue *another) const;
 };

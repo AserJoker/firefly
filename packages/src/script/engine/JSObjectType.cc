@@ -13,7 +13,7 @@
 #include "script/util/JSAllocator.hpp"
 #include <string>
 
-JSObjectType::JSObjectType(JSAllocator *allocator) : JSType(allocator, 3) {}
+JSObjectType::JSObjectType(JSAllocator *allocator) : JSType(allocator) {}
 
 const wchar_t *JSObjectType::getTypeName() const { return L"object"; }
 
@@ -182,13 +182,16 @@ JSValue *JSObjectType::setField(JSContext *ctx, JSValue *object, JSValue *name,
   if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
     name = ctx->toString(name);
   }
-  std::wstring fieldname = ctx->checkedString(ctx->toString(name));
+  CHECK(ctx, name);
+  std::wstring fieldname = ctx->checkedString(name);
   auto obj = object->getData()->cast<JSObject>();
   JSField *pfield = nullptr;
   auto &fields = obj->getFields();
   for (auto &[keyAtom, field] : fields) {
     auto key = ctx->createValue(keyAtom);
-    if (ctx->checkedBoolean(ctx->isEqual(key, name))) {
+    auto res = ctx->isEqual(key, name);
+    CHECK(ctx, res);
+    if (ctx->checkedBoolean(res)) {
       pfield = &field;
       break;
     }
@@ -349,11 +352,12 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
 
   auto obj = object->getData()->cast<JSObject>();
   ctx->pushScope();
+  name = ctx->clone(name);
   if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
     name = ctx->toString(name);
   }
-  name = ctx->clone(name);
-  std::wstring fieldname = ctx->checkedString(ctx->toString(name));
+  CHECK(ctx, name);
+  std::wstring fieldname = ctx->checkedString(name);
   JSField *field = getOwnFieldDescriptor(ctx, object, name);
   if (field) {
     if (!field->configurable &&
@@ -415,7 +419,8 @@ JSValue *JSObjectType::defineProperty(JSContext *ctx, JSValue *object,
   if (!name->isTypeof<JSStringType>() && !name->isTypeof<JSSymbolType>()) {
     name = ctx->toString(name);
   }
-  std::wstring fieldname = ctx->checkedString(ctx->toString(name));
+  CHECK(ctx, name);
+  std::wstring fieldname = ctx->checkedString(name);
   JSField *field = getOwnFieldDescriptor(ctx, object, name);
   if (field) {
     if (!field->configurable &&

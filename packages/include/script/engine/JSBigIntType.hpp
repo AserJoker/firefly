@@ -1,8 +1,11 @@
 #pragma once
-#include "JSType.hpp"
-class JSNumberType : public JSType {
+#include "script/engine/JSContext.hpp"
+#include "script/engine/JSType.hpp"
+#include "script/engine/JSValue.hpp"
+class JSBigIntType : public JSType {
+
 public:
-  JSNumberType(JSAllocator *allocator);
+  JSBigIntType(JSAllocator *allocator);
 
 public:
   const wchar_t *getTypeName() const override;
@@ -50,10 +53,8 @@ public:
   virtual JSValue *lt(JSContext *ctx, JSValue *value, JSValue *another) const;
 
   virtual JSValue *le(JSContext *ctx, JSValue *value, JSValue *another) const;
-
+  
   virtual JSValue *not_(JSContext *ctx, JSValue *value) const;
 
   virtual JSValue *unaryNegation(JSContext *ctx, JSValue *value) const;
-
-  virtual JSValue *unaryPlus(JSContext *ctx, JSValue *value) const;
 };

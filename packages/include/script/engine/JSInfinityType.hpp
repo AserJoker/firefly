@@ -1,9 +1,8 @@
 #pragma once
 #include "script/engine/JSNumberType.hpp"
-#include "script/util/JSAllocator.hpp"
-class JSNaNType : public JSNumberType {
+class JSInfinityType : public JSNumberType {
 public:
-  JSNaNType(JSAllocator *allocator);
+  JSInfinityType(JSAllocator *allocator);
 
   JSValue *toNumber(JSContext *ctx, JSValue *value) const override;
 

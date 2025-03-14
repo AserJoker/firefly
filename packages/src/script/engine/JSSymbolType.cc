@@ -4,7 +4,7 @@
 #include "script/engine/JSSymbol.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSAllocator.hpp"
-JSSymbolType::JSSymbolType(JSAllocator *allocator) : JSType(allocator, 5) {}
+JSSymbolType::JSSymbolType(JSAllocator *allocator) : JSType(allocator) {}
 const wchar_t *JSSymbolType::getTypeName() const { return L"symbol"; }
 JSValue *JSSymbolType::toString(JSContext *ctx, JSValue *value) const {
   return ctx->createException(JSException::TYPE::TYPE,

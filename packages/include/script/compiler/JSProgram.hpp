@@ -247,6 +247,14 @@ struct JSProgram {
         offset += 4;
         break;
       }
+      case JS_OPERATOR::UPLUS: {
+        ss << L"UPLUS";
+        break;
+      }
+      case JS_OPERATOR::UNEG: {
+        ss << L"UNEG";
+        break;
+      }
       case JS_OPERATOR::ADD: {
         ss << L"ADD";
         break;
@@ -281,6 +289,10 @@ struct JSProgram {
       }
       case JS_OPERATOR::NOT: {
         ss << L"NOT";
+        break;
+      }
+      case JS_OPERATOR::LNOT: {
+        ss << L"LNOT";
         break;
       }
       case JS_OPERATOR::XOR: {

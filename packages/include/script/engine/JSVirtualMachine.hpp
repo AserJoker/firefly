@@ -102,10 +102,18 @@ private:
   }
   void runBigint(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
-    // not implement
+    auto init = getString(program, ectx.pc);
+    ectx.stack.push_back(ctx->createBigInt(init));
   }
   void runLoad(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     auto name = getString(program, ectx.pc);
+    if (name == L"NaN") {
+      ectx.stack.push_back(ctx->createNaN());
+      return;
+    } else if (name == L"Infinity") {
+      ectx.stack.push_back(ctx->createInfinity());
+      return;
+    }
     auto val = ctx->queryValue(name);
     if (checkException(ctx, val, ectx, program)) {
       return;
@@ -384,53 +392,161 @@ private:
       ectx.pc = address;
     }
   }
+  void runUnaryPlus(JSContext *ctx, const JSProgram &program,
+                    JSEvalContext &ectx) {
+    auto value = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    ectx.stack.push_back(ctx->unaryPlus(value));
+  }
+
+  void runUnaryNegative(JSContext *ctx, const JSProgram &program,
+                        JSEvalContext &ectx) {
+    auto value = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    ectx.stack.push_back(ctx->unaryNegation(value));
+  }
+
   void runAdd(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->add(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runSub(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->sub(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runDiv(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->div(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runMul(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->mul(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runMod(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->mod(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runPow(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->pow(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runAnd(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->and_(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runOr(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->or_(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runNot(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
+
+    auto value = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->not_(value);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
+  }
+  void runLNot(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement
     ectx.pc = program.codes.size();
   }
   void runXor(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->xor_(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runShr(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->shr(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runShl(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->shl(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runUshr(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement
@@ -489,20 +605,48 @@ private:
     }
   }
   void runGt(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->gt(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runLt(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->lt(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runGe(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->ge(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runLe(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto right = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto left = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto val = ctx->le(left, right);
+    if (checkException(ctx, val, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(val);
   }
   void runInc(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement
@@ -880,6 +1024,12 @@ private:
       case JS_OPERATOR::JNOT_NULL:
         runJnotNull(ctx, program, ectx);
         break;
+      case JS_OPERATOR::UPLUS:
+        runUnaryPlus(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::UNEG:
+        runUnaryNegative(ctx, program, ectx);
+        break;
       case JS_OPERATOR::ADD:
         runAdd(ctx, program, ectx);
         break;
@@ -906,6 +1056,9 @@ private:
         break;
       case JS_OPERATOR::NOT:
         runNot(ctx, program, ectx);
+        break;
+      case JS_OPERATOR::LNOT:
+        runLNot(ctx, program, ectx);
         break;
       case JS_OPERATOR::XOR:
         runXor(ctx, program, ectx);

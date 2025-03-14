@@ -4,7 +4,7 @@
 #include "script/engine/JSValue.hpp"
 
 JSExceptionType::JSExceptionType(JSAllocator *allocator)
-    : JSType(allocator, 0) {}
+    : JSType(allocator) {}
 
 const wchar_t *JSExceptionType::getTypeName() const { return L"internal"; }
 JSValue *JSExceptionType::toString(JSContext *ctx, JSValue *value) const {
@@ -39,7 +39,7 @@ JSValue *JSExceptionType::clone(JSContext *ctx, JSValue *value) const {
   return ctx->createValue(value);
 }
 JSValue *JSExceptionType::pack(JSContext *ctx, JSValue *value) const {
-  return ctx->createException(JSException::TYPE::INTERNAL, L"not implement");
+  return value;
 };
 JSValue *JSExceptionType::equal(JSContext *ctx, JSValue *value,
                                 JSValue *another) const {

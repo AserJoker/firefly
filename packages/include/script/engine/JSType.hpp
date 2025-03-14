@@ -1,20 +1,12 @@
 #pragma once
 #include "script/util/JSAllocator.hpp"
 #include "script/util/JSRef.hpp"
-#include <cstdint>
 class JSContext;
 class JSValue;
 class JSType : public JSRef {
 private:
-  int32_t _priority;
-
 public:
-  JSType(JSAllocator *allocator, int32_t priority)
-      : JSRef(allocator), _priority(priority){};
-
-  inline const int32_t &getPriority() const { return _priority; }
-
-  inline void setPriority(int32_t priority) { _priority = priority; }
+  JSType(JSAllocator *allocator) : JSRef(allocator) {}
 
   virtual ~JSType() = default;
 

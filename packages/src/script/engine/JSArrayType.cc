@@ -17,6 +17,7 @@ JSValue *JSArrayType::toString(JSContext *ctx, JSValue *value) const {
   for (size_t index = 0; index < arr->getLength(); index++) {
     if (items.contains(index)) {
       auto str = ctx->toString(ctx->getScope()->createValue(items[index]));
+      CHECK(ctx, str);
       ss << ctx->checkedString(str);
     }
     if (index != arr->getLength() - 1) {

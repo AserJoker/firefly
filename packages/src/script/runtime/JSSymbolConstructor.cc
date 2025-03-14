@@ -46,6 +46,7 @@ JSValue *JSSymbolConstructor::for_(JSContext *ctx, JSValue *self,
   auto result = ctx->getField(map, key);
   CHECK(ctx, result);
   if (!result->isTypeof<JSSymbolType>()) {
+    CHECK(ctx, key);
     result = ctx->createSymbol(ctx->checkedString(key));
     auto err = ctx->setField(map, key, result);
     CHECK(ctx, err);

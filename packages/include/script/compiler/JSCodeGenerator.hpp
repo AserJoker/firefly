@@ -1043,7 +1043,9 @@ public:
   JSNode *resolveBigintLiteral(const std::wstring &source, JSNode *node,
                                JSProgram &program) {
     pushOperator(program, JS_OPERATOR::BIGINT);
-    pushString(program, node->location.get(source));
+    auto raw = node->location.get(source);
+    raw = raw.substr(0, raw.length() - 1);
+    pushString(program, raw);
     return nullptr;
   }
   JSNode *resolveTemplateLiteral(const std::wstring &source, JSNode *node,
@@ -2161,7 +2163,25 @@ public:
       if (err) {
         return err;
       }
+      pushOperator(program, JS_OPERATOR::LNOT);
+    } else if (opt == L"~") {
+      auto err = resolve(source, expression->right, program);
+      if (err) {
+        return err;
+      }
       pushOperator(program, JS_OPERATOR::NOT);
+    } else if (opt == L"+" && !expression->left) {
+      auto err = resolve(source, expression->right, program);
+      if (err) {
+        return err;
+      }
+      pushOperator(program, JS_OPERATOR::UPLUS);
+    } else if (opt == L"-" && !expression->left) {
+      auto err = resolve(source, expression->right, program);
+      if (err) {
+        return err;
+      }
+      pushOperator(program, JS_OPERATOR::UNEG);
     } else {
       auto err = resolve(source, expression->left, program);
       if (err) {

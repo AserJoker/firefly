@@ -4,7 +4,7 @@
 #include "script/engine/JSType.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSAllocator.hpp"
-JSBooleanType::JSBooleanType(JSAllocator *allocator) : JSType(allocator, 0) {}
+JSBooleanType::JSBooleanType(JSAllocator *allocator) : JSType(allocator) {}
 
 const wchar_t *JSBooleanType::getTypeName() const { return L"boolean"; }
 

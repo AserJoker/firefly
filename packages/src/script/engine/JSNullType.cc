@@ -3,7 +3,7 @@
 #include "script/engine/JSType.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSAllocator.hpp"
-JSNullType::JSNullType(JSAllocator *allocator) : JSType(allocator, 0) {}
+JSNullType::JSNullType(JSAllocator *allocator) : JSType(allocator) {}
 const wchar_t *JSNullType::getTypeName() const { return L"object"; }
 
 JSValue *JSNullType::toString(JSContext *ctx, JSValue *value) const {
@@ -22,7 +22,7 @@ JSValue *JSNullType::clone(JSContext *ctx, JSValue *value) const {
   return ctx->createNull();
 }
 JSValue *JSNullType::pack(JSContext *ctx, JSValue *value) const {
-  return ctx->createException(JSException::TYPE::INTERNAL, L"not implement");
+  return value;
 };
 JSValue *JSNullType::equal(JSContext *ctx, JSValue *value,
                            JSValue *another) const {

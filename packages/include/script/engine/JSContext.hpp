@@ -8,6 +8,7 @@
 #include "script/engine/JSCallable.hpp"
 #include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSValue.hpp"
+#include "script/util/BigInt.hpp"
 #include <string>
 
 class JSContext {
@@ -95,6 +96,10 @@ public:
 
   JSValue *createNaN();
 
+  JSValue *createInfinity(bool negative = false);
+
+  JSValue *createBigInt(const BigInt<> &bigint);
+
   JSValue *createSymbol(const std::wstring &description = L"");
 
   JSValue *createNumber(double value);
@@ -177,13 +182,51 @@ public:
 
   bool isNaN(JSValue *value) const;
 
+  JSValue *unaryNegation(JSValue *left);
+
+  JSValue *unaryPlus(JSValue *left);
+
   JSValue *isEqual(JSValue *left, JSValue *right);
+
+  JSValue *add(JSValue *left, JSValue *right);
+
+  JSValue *sub(JSValue *value, JSValue *another);
+
+  JSValue *mul(JSValue *value, JSValue *another);
+
+  JSValue *div(JSValue *value, JSValue *another);
+
+  JSValue *mod(JSValue *value, JSValue *another);
+
+  JSValue *pow(JSValue *value, JSValue *another);
+
+  JSValue *and_(JSValue *value, JSValue *another);
+
+  JSValue *or_(JSValue *value, JSValue *another);
+
+  JSValue *xor_(JSValue *value, JSValue *another);
+
+  JSValue *shr(JSValue *value, JSValue *another);
+
+  JSValue *shl(JSValue *value, JSValue *another);
+
+  JSValue *gt(JSValue *value, JSValue *another);
+
+  JSValue *ge(JSValue *value, JSValue *another);
+
+  JSValue *lt(JSValue *value, JSValue *another);
+
+  JSValue *le(JSValue *value, JSValue *another);
+
+  JSValue *not_(JSValue *value);
 
   void setMetadata(JSValue *value, const std::wstring &name, JSValue *metadata);
 
   JSValue *getMetadata(JSValue *value, const std::wstring &name);
 
   JSValue *pack(JSValue *value);
+
+  JSValue *unpack(JSValue *value);
 };
 
 #define CHECK(ctx, value)                                                      \

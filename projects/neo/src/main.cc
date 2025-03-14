@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     ctx->setField(ctx->getGlobal(), ctx->createString(L"print"),
                   ctx->createNativeFunction(print, L"print"));
     auto res = ctx->eval(L"../script/index.js", source);
-    std::wcout << res->getType()->getTypeName()
+    std::wcout << res->getType()->getTypeName()<<":"
                << ctx->checkedString(ctx->toString(res)) << std::endl;
     delete ctx;
     delete runtime;
