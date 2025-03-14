@@ -145,9 +145,8 @@ JSValue *JSNumberType::div(JSContext *ctx, JSValue *value,
     return ctx->createNumber(0);
   }
   if (another->getData()->cast<JSNumber>()->getValue() == 0) {
-    return ctx->createInfinity(
-        (another->getData()->cast<JSInfinity>()->isNegative()) ==
-        (value->getData()->cast<JSNumber>()->getValue() < 0));
+    return ctx->createInfinity(value->getData()->cast<JSNumber>()->getValue() <
+                               0);
   }
   return ctx->createNumber(ctx->checkedNumber(value) /
                            ctx->checkedNumber(another));
