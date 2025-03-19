@@ -1,0 +1,17 @@
+build
+cmake-build
+.cache
+*.exe
+*.dll
+*.pdb
+*.run
+config
+Audio
+Graphics
+saves
+.vscode
+Debug
+Release
+Testing
+tests/*/entry.cc
+build-linux
