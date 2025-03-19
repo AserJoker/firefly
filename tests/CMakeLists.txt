@@ -1,0 +1,10 @@
+file(GLOB TESTS ${PROJECT_SOURCE_DIR}/tests/*)
+foreach(TEST_MODULE ${TESTS})
+    if(IS_DIRECTORY ${TEST_MODULE})
+        set(FF_MODULE_NAME ${TEST_MODULE})
+        get_filename_component(FF_MODULE_NAME ${FF_MODULE_NAME} NAME)
+        set(FF_TEST_NAME test.${FF_MODULE_NAME})
+        add_subdirectory(${TEST_MODULE})
+    endif()
+endforeach(TEST_MODULE ${TESTS})
+
