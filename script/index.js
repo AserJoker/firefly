@@ -1,10 +1,7 @@
-let index = 0;
-label: while (index < 10) {
-  try {
-    print(index);
-    index++;
-    break label;
-  } finally {
-    print(234);
-  }
+function* test() {
+  yield 1;
+  yield 2;
+  return 3;
 }
+const [a, b, c, d] = test();
+print(a, b, c, d);

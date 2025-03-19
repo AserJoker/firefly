@@ -256,6 +256,9 @@ JS_CFUNCTION(JSGeneratorConstructor::next) {
   }
   return result;
 }
+
+JS_CFUNCTION(JSGeneratorConstructor::iterator) { return self; }
+
 JSValue *JSGeneratorConstructor::initialize(JSContext *ctx) {
   auto Generator = ctx->createNativeFunction(&constructor, L"Generator");
   auto prototype = ctx->getField(Generator, ctx->createString(L"prototype"));
@@ -268,6 +271,11 @@ JSValue *JSGeneratorConstructor::initialize(JSContext *ctx) {
   CHECK(ctx, err);
   err = ctx->setField(prototype, ctx->createString(L"return"),
                       ctx->createNativeFunction(&return_, L"return"));
+  auto symbolIterator = ctx->getField(ctx->getSymbolConstructor(),
+                                      ctx->createString(L"iterator"));
+  err =
+      ctx->setField(prototype, symbolIterator,
+                    ctx->createNativeFunction(&iterator, L"[Symbol.iterator]"));
   CHECK(ctx, err);
   return Generator;
 }

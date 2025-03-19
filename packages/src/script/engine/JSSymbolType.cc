@@ -21,8 +21,7 @@ JSValue *JSSymbolType::toBoolean(JSContext *ctx, JSValue *value) const {
 };
 
 JSValue *JSSymbolType::clone(JSContext *ctx, JSValue *value) const {
-  return ctx->createSymbol(
-      value->getData()->cast<JSSymbol>()->getDescription());
+  return value;
 }
 JSValue *JSSymbolType::pack(JSContext *ctx, JSValue *value) const {
   auto Symbol = ctx->getSymbolConstructor();

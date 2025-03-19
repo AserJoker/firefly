@@ -458,11 +458,11 @@ JSValue *JSContext::construct(JSValue *constructor,
   auto prototype = getField(constructor, createString(L"prototype"));
   CHECK(this, prototype);
   JSValue *obj = nullptr;
-  if (_Array->getData() == constructor->getData()) {
+  if (_Array && _Array->getData() == constructor->getData()) {
     obj =
         _current->createValue(getRuntime()->getAllocator()->create<JSArray>());
   }
-  if (_Generator->getData() == constructor->getData()) {
+  if (_Generator && _Generator->getData() == constructor->getData()) {
     obj = _current->createValue(
         getRuntime()->getAllocator()->create<JSGenerator>());
   }

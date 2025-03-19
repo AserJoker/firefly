@@ -13,6 +13,8 @@ private:
 
   static JS_CFUNCTION(return_);
 
+  static JS_CFUNCTION(iterator);
+
 public:
   static JSValue *initialize(JSContext *ctx);
 };

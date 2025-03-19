@@ -9,7 +9,9 @@
 #include "JSValue.hpp"
 #include "script/compiler/JSOperator.hpp"
 #include "script/engine/JSCallable.hpp"
+#include "script/engine/JSCallableType.hpp"
 #include "script/engine/JSEvalContext.hpp"
+#include "script/engine/JSException.hpp"
 #include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSInterruptType.hpp"
 #include "script/engine/JSNullType.hpp"
@@ -839,9 +841,42 @@ private:
     ectx.stack.push_back(res);
   }
   void runNext(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
-    return;
+    auto iterator = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto next = ctx->getField(iterator, ctx->createString(L"next"));
+    if (checkException(ctx, next, ectx, program)) {
+      return;
+    }
+    if (!next->isTypeof<JSCallableType>()) {
+      ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                L"variable is not iterable"));
+      ectx.pc = program.codes.size();
+      return;
+    }
+    auto res = call(ctx, next, iterator, {},
+                    {
+                        .position =
+                            {
+                                .funcname = L"next",
+                            },
+                    });
+    if (checkException(ctx, res, ectx, program)) {
+      return;
+    }
+    auto value = ctx->getField(res, ctx->createString(L"value"));
+    if (checkException(ctx, value, ectx, program)) {
+      return;
+    }
+    auto done = ctx->toBoolean(ctx->getField(res, ctx->createString(L"done")));
+    if (checkException(ctx, done, ectx, program)) {
+      return;
+    }
+    if (ctx->checkedBoolean(done)) {
+      ectx.stack.push_back(ctx->createUndefined());
+    } else {
+      ectx.stack.push_back(value);
+    }
+    ectx.stack.push_back(done);
   }
   void runAwaitNext(JSContext *ctx, const JSProgram &program,
                     JSEvalContext &ectx) {
@@ -1001,8 +1036,34 @@ private:
 
   void runIterator(JSContext *ctx, const JSProgram &program,
                    JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto value = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto iterator = ctx->getField(ctx->getSymbolConstructor(),
+                                  ctx->createString(L"iterator"));
+    iterator = ctx->getField(value, iterator);
+    if (checkException(ctx, iterator, ectx, program)) {
+      return;
+    }
+    if (!iterator->isTypeof<JSCallableType>()) {
+      ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                L"variable is not iterable"));
+      ectx.pc = program.codes.size();
+      return;
+    }
+    auto func = iterator->getData()->cast<JSCallable>();
+    auto funcname = func->getName();
+    iterator = call(ctx, iterator, value, {},
+                    {
+                        .position =
+                            {
+                                .funcname = funcname,
+                            },
+                        .filename = program.filename,
+                    });
+    if (checkException(ctx, iterator, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(iterator);
   }
 
   void runSetPrivateField(JSContext *ctx, const JSProgram &program,
