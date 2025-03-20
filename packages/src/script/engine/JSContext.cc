@@ -9,6 +9,7 @@
 #include "script/engine/JSFunction.hpp"
 #include "script/engine/JSGeneratorFunction.hpp"
 #include "script/engine/JSInfinity.hpp"
+#include "script/engine/JSInfinityType.hpp"
 #include "script/engine/JSInterrupt.hpp"
 #include "script/engine/JSNaN.hpp"
 #include "script/engine/JSNaNType.hpp"
@@ -639,7 +640,8 @@ const std::wstring &JSContext::checkedString(JSValue *value) const {
 }
 
 double JSContext::checkedNumber(JSValue *value) const {
-  if (value->isTypeof<JSNumberType>()) {
+  if (value->isTypeof<JSNumberType>() && !value->isTypeof<JSNaNType>() &&
+      !value->isTypeof<JSInfinityType>()) {
     return value->getData()->cast<JSNumber>()->getValue();
   }
   return 0;

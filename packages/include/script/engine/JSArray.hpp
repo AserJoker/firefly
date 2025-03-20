@@ -18,7 +18,7 @@ public:
     return _items;
   }
 
-  inline size_t &getLength() { return _length; }
-
   inline size_t getLength() const { return _length; }
+
+  inline void setLength(size_t length) { _length = length; }
 };

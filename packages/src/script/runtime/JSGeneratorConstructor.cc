@@ -51,6 +51,10 @@ JS_CFUNCTION(JSGeneratorConstructor::return_) {
       for (auto &atom : generator->getArgs()) {
         args.push_back(ctx->createValue(atom));
       }
+      for (auto &[key, atom] : func->getClosure()) {
+        auto val = ctx->createValue(atom);
+        ctx->getScope()->storeValue(key, val);
+      }
       if (func->getClass()) {
         ectx.clazz = ctx->createValue(func->getClass());
       }
@@ -131,6 +135,10 @@ JS_CFUNCTION(JSGeneratorConstructor::throw_) {
       std::vector<JSValue *> args;
       for (auto &atom : generator->getArgs()) {
         args.push_back(ctx->createValue(atom));
+      }
+      for (auto &[key, atom] : func->getClosure()) {
+        auto val = ctx->createValue(atom);
+        ctx->getScope()->storeValue(key, val);
       }
       if (func->getClass()) {
         ectx.clazz = ctx->createValue(func->getClass());
@@ -218,6 +226,10 @@ JS_CFUNCTION(JSGeneratorConstructor::next) {
     std::vector<JSValue *> args;
     for (auto &atom : generator->getArgs()) {
       args.push_back(ctx->createValue(atom));
+    }
+    for (auto &[key, atom] : func->getClosure()) {
+      auto val = ctx->createValue(atom);
+      ctx->getScope()->storeValue(key, val);
     }
     auto self = ctx->createValue(func->getSelf() ? func->getSelf()
                                                  : generator->getSelf());

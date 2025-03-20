@@ -890,8 +890,36 @@ private:
   }
   void runArraySpread(JSContext *ctx, const JSProgram &program,
                       JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto iterator = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto next = ctx->getField(iterator, ctx->createString(L"next"));
+    auto res = call(ctx, next, iterator, {},
+                    {
+                        .position =
+                            {
+                                .funcname = L"next",
+                            },
+                    });
+    auto done = ctx->getField(res, ctx->createString(L"done"));
+    auto value = ctx->getField(res, ctx->createString(L"value"));
+    auto array = ctx->createArray();
+    auto index = ctx->createNumber(0);
+    done = ctx->toBoolean(done);
+    while (!ctx->checkedBoolean(done)) {
+      ctx->setField(array, index, value);
+      ctx->inc(index);
+      res = call(ctx, next, iterator, {},
+                 {
+                     .position =
+                         {
+                             .funcname = L"next",
+                         },
+                 });
+      done = ctx->getField(res, ctx->createString(L"done"));
+      value = ctx->getField(res, ctx->createString(L"value"));
+      done = ctx->toBoolean(done);
+    }
+    ectx.stack.push_back(array);
   }
   void runSuperCall(JSContext *ctx, const JSProgram &program,
                     JSEvalContext &ectx) {

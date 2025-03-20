@@ -1,5 +1,6 @@
 #include "script/runtime/JSArrayConstructor.hpp"
 #include "script/engine/JSArray.hpp"
+#include "script/engine/JSContext.hpp"
 #include "script/engine/JSValue.hpp"
 JSValue *JSArrayConstructor::initialize(JSContext *ctx) {
   auto Array = ctx->createNativeFunction(constructor, L"Array");
@@ -10,6 +11,11 @@ JSValue *JSArrayConstructor::initialize(JSContext *ctx) {
   CHECK(ctx, toStringFn);
   auto err =
       ctx->setField(prototype, ctx->createString(L"toString"), toStringFn);
+  CHECK(ctx, err);
+  err = ctx->setField(prototype,
+                      ctx->getField(ctx->getSymbolConstructor(),
+                                    ctx->createString(L"iterator")),
+                      ctx->createNativeFunction(&iterator, L"Symbol.iterator"));
   CHECK(ctx, err);
   auto global = ctx->getGlobal();
   err = ctx->setField(global, ctx->createString(L"Array"), Array);
@@ -46,4 +52,52 @@ JSValue *JSArrayConstructor::toString(JSContext *ctx, JSValue *self,
     }
   }
   return ctx->createString(result);
+}
+
+JS_CFUNCTION(JSArrayConstructor::iterator) {
+  auto iterator = ctx->createObject();
+  auto err = ctx->setField(
+      iterator,
+      ctx->getField(ctx->getSymbolConstructor(),
+                    ctx->createString(L"iterator")),
+      ctx->createNativeFunction(&JSArrayConstructor::Iterator::iterator,
+                                L"[Symbol.iterator]"));
+  CHECK(ctx, err);
+  err = ctx->setField(
+      iterator, ctx->createString(L"next"),
+      ctx->createNativeFunction(&JSArrayConstructor::Iterator::next, L"next",
+                                {
+                                    {L"array", self},
+                                    {L"index", ctx->createNumber(0)},
+                                }));
+  CHECK(ctx, err);
+  err = ctx->setField(iterator,
+                      ctx->getField(ctx->getSymbolConstructor(),
+                                    ctx->createString(L"toStringTag")),
+                      ctx->createString(L"Array Iterator"));
+  CHECK(ctx, err);
+  return iterator;
+}
+
+JS_CFUNCTION(JSArrayConstructor::Iterator::iterator) { return self; }
+
+JS_CFUNCTION(JSArrayConstructor::Iterator::next) {
+  auto array = ctx->queryValue(L"array");
+  auto idx = ctx->queryValue(L"index");
+  auto arr = array->getData()->cast<JSArray>();
+  auto length = arr->getLength();
+  JSValue *value = nullptr;
+  JSValue *done = nullptr;
+  if (ctx->checkedNumber(idx) < length) {
+    value = ctx->getField(array, idx);
+    ctx->inc(idx);
+    done = ctx->createBoolean(false);
+  } else {
+    value = ctx->createUndefined();
+    done = ctx->createBoolean(true);
+  }
+  auto result = ctx->createObject();
+  ctx->setField(result, ctx->createString(L"value"), value);
+  ctx->setField(result, ctx->createString(L"done"), done);
+  return result;
 }

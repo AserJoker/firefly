@@ -3,6 +3,7 @@
 #include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSNullType.hpp"
 #include "script/engine/JSObject.hpp"
+#include "script/engine/JSStringType.hpp"
 #include "script/engine/JSValue.hpp"
 #include <vector>
 JSValue *JSObjectConstructor::constructor(JSContext *ctx, JSValue *self,
@@ -20,18 +21,25 @@ JSValue *JSObjectConstructor::toString(JSContext *ctx, JSValue *value,
   if (prototype->isTypeof<JSNullType>()) {
     name = L"[Object: null prototype]";
   } else {
-    auto constructor = ctx->getConstructorOf(value);
-    if (constructor->getData() == ctx->getObjectConstructor()->getData()) {
-      name = L"";
+    auto toStringTag =
+        ctx->getField(value, ctx->getField(ctx->getSymbolConstructor(),
+                                           ctx->createString(L"toStringTag")));
+    CHECK(ctx, toStringTag);
+    if (toStringTag->isTypeof<JSStringType>()) {
+      name = ctx->checkedString(toStringTag);
     } else {
-      name = constructor->getData()->cast<JSCallable>()->getName();
+      auto constructor = ctx->getConstructorOf(value);
+      if (constructor->getData() == ctx->getObjectConstructor()->getData()) {
+        name = L"";
+      } else {
+        name = constructor->getData()->cast<JSCallable>()->getName();
+      }
     }
   }
   if (name.empty()) {
-    name = L"{}";
-  } else {
-    name = name + L" {}";
+    name = L"Object";
   }
+  name = std::format(L"[object {}]", name);
   ctx->popScope();
   return ctx->createString(name);
 }

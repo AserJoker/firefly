@@ -1,7 +1,4 @@
-function* test() {
-  yield 1;
-  yield 2;
-  return 3;
-}
-const [a, b, c, d] = test();
-print(a, b, c, d);
+const arr = [1, 2, 3];
+arr[10] = 1;
+arr.length = 4;
+print(arr);

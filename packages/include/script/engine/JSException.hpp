@@ -6,7 +6,7 @@
 #include <vector>
 class JSException : public JSBase {
 public:
-  enum class TYPE { ERROR, INTERNAL, REFERENCE, SYNTAX, TYPE };
+  enum class TYPE { ERROR, INTERNAL, REFERENCE, SYNTAX, TYPE, RANGE };
 
 private:
   std::wstring _message;
@@ -42,6 +42,8 @@ public:
       return L"SyntaxError";
     case TYPE::TYPE:
       return L"TypeError";
+    case TYPE::RANGE:
+      return L"RangeError";
     };
     return L"Error";
   }
