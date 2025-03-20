@@ -1,6 +1,8 @@
 #include "script/runtime/JSArrayConstructor.hpp"
 #include "script/engine/JSArray.hpp"
 #include "script/engine/JSContext.hpp"
+#include "script/engine/JSException.hpp"
+#include "script/engine/JSNumberType.hpp"
 #include "script/engine/JSValue.hpp"
 JSValue *JSArrayConstructor::initialize(JSContext *ctx) {
   auto Array = ctx->createNativeFunction(constructor, L"Array");
@@ -65,25 +67,31 @@ JS_CFUNCTION(JSArrayConstructor::iterator) {
   CHECK(ctx, err);
   err = ctx->setField(
       iterator, ctx->createString(L"next"),
-      ctx->createNativeFunction(&JSArrayConstructor::Iterator::next, L"next",
-                                {
-                                    {L"array", self},
-                                    {L"index", ctx->createNumber(0)},
-                                }));
+      ctx->createNativeFunction(&JSArrayConstructor::Iterator::next, L"next"));
   CHECK(ctx, err);
   err = ctx->setField(iterator,
                       ctx->getField(ctx->getSymbolConstructor(),
                                     ctx->createString(L"toStringTag")),
                       ctx->createString(L"Array Iterator"));
   CHECK(ctx, err);
+  ctx->setMetadata(iterator, L"array", self);
+  ctx->setMetadata(iterator, L"index", ctx->createNumber(0));
   return iterator;
 }
 
 JS_CFUNCTION(JSArrayConstructor::Iterator::iterator) { return self; }
 
 JS_CFUNCTION(JSArrayConstructor::Iterator::next) {
-  auto array = ctx->queryValue(L"array");
-  auto idx = ctx->queryValue(L"index");
+  auto array = ctx->getMetadata(self, L"array");
+  auto idx = ctx->getMetadata(self, L"index");
+  if (!array || !array->isTypeof<JSArray>() || !idx ||
+      !idx->isTypeof<JSNumberType>()) {
+    return ctx->createException(
+        JSException::TYPE::TYPE,
+        std::format(L"Method Array Iterator.prototype.next called on "
+                    L"incompatible receiver {}",
+                    ctx->checkedString(ctx->toString(ctx->pack(self)))));
+  }
   auto arr = array->getData()->cast<JSArray>();
   auto length = arr->getLength();
   JSValue *value = nullptr;

@@ -21,10 +21,11 @@ JSValue *JSFunctionType::call(JSContext *ctx, JSValue *func, JSValue *self,
   if (fn->getClass()) {
     clazz = ctx->createValue(fn->getClass());
   }
+  std::vector<JSValue *> arguments = {args.rbegin(), args.rend()};
   auto res = vm->eval(ctx, program,
                       {
                           .pc = fn->getAddress(),
-                          .stack = args,
+                          .stack = arguments,
                           .self = self,
                           .clazz = clazz,
                       });

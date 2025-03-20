@@ -897,13 +897,19 @@ private:
       ectx.stack.pop_back();
       count--;
     }
-    auto &keys = ctx->getKeys(obj)->getData()->cast<JSArray>()->getItems();
-    for (auto &[_, key] : keys) {
+    auto keys = ctx->getKeys(obj);
+    if (checkException(ctx, keys, ectx, program)) {
+      return;
+    }
+    for (auto &[_, key] : keys->getData()->cast<JSArray>()->getItems()) {
       auto keystr = key->getData()->cast<JSString>()->getValue();
       if (std::find(usedkeys.begin(), usedkeys.end(), keystr) ==
           usedkeys.end()) {
-        ctx->setField(result, ctx->createString(keystr),
-                      ctx->getField(obj, ctx->createString(keystr)));
+        auto err = ctx->setField(result, ctx->createString(keystr),
+                                 ctx->getField(obj, ctx->createString(keystr)));
+        if (checkException(ctx, err, ectx, program)) {
+          return;
+        }
       }
     }
     ectx.stack.push_back(result);
@@ -920,6 +926,9 @@ private:
                                 .funcname = L"next",
                             },
                     });
+    if (checkException(ctx, res, ectx, program)) {
+      return;
+    }
     auto done = ctx->getField(res, ctx->createString(L"done"));
     auto value = ctx->getField(res, ctx->createString(L"value"));
     auto array = ctx->createArray();
@@ -935,6 +944,9 @@ private:
                              .funcname = L"next",
                          },
                  });
+      if (checkException(ctx, res, ectx, program)) {
+        return;
+      }
       done = ctx->getField(res, ctx->createString(L"done"));
       value = ctx->getField(res, ctx->createString(L"value"));
       done = ctx->toBoolean(done);
@@ -961,8 +973,15 @@ private:
   }
   void runArgumentSpread(JSContext *ctx, const JSProgram &program,
                          JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto result = ctx->createArray();
+    auto idx = ctx->createNumber(0);
+    while (!ectx.stack.empty()) {
+      auto value = *ectx.stack.rbegin();
+      ectx.stack.pop_back();
+      ctx->setField(result, idx, value);
+      ctx->inc(idx);
+    }
+    ectx.stack.push_back(result);
   }
   void runHlt(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     if (ectx.stack.empty()) {
