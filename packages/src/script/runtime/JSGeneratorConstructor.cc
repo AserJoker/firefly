@@ -9,7 +9,16 @@
 #include "script/engine/JSVirtualMachine.hpp"
 #include <vector>
 JS_CFUNCTION(JSGeneratorConstructor::constructor) {
-  return ctx->createUndefined();
+  auto generator =
+      ctx->getScope()->createValue(ctx->getAllocator()->create<JSGenerator>());
+  auto constructor = ctx->getGeneratorConstructor();
+  auto prototype = ctx->getField(constructor, ctx->createString(L"prototype"));
+  CHECK(ctx, prototype);
+  auto err = ctx->setPrototype(generator, prototype);
+  CHECK(ctx, err);
+  err = ctx->setConstructor(generator, constructor);
+  CHECK(ctx, err);
+  return generator;
 }
 JS_CFUNCTION(JSGeneratorConstructor::return_) {
   auto result = ctx->createObject();

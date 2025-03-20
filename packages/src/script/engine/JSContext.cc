@@ -1,5 +1,4 @@
 #include "script/engine/JSContext.hpp"
-#include "script/engine/JSArray.hpp"
 #include "script/engine/JSBigInt.hpp"
 #include "script/engine/JSBigIntType.hpp"
 #include "script/engine/JSBoolean.hpp"
@@ -8,7 +7,6 @@
 #include "script/engine/JSCallableType.hpp"
 #include "script/engine/JSException.hpp"
 #include "script/engine/JSFunction.hpp"
-#include "script/engine/JSGenerator.hpp"
 #include "script/engine/JSGeneratorFunction.hpp"
 #include "script/engine/JSInfinity.hpp"
 #include "script/engine/JSInterrupt.hpp"
@@ -457,18 +455,7 @@ JSValue *JSContext::construct(JSValue *constructor,
   CHECK(this, constructor);
   auto prototype = getField(constructor, createString(L"prototype"));
   CHECK(this, prototype);
-  JSValue *obj = nullptr;
-  if (_Array && _Array->getData() == constructor->getData()) {
-    obj =
-        _current->createValue(getRuntime()->getAllocator()->create<JSArray>());
-  }
-  if (_Generator && _Generator->getData() == constructor->getData()) {
-    obj = _current->createValue(
-        getRuntime()->getAllocator()->create<JSGenerator>());
-  }
-  if (!obj) {
-    obj = createObject();
-  }
+  JSValue *obj = createObject();
   CHECK(this, obj);
   auto err = setPrototype(obj, prototype);
   CHECK(this, err);

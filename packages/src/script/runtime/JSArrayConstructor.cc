@@ -18,7 +18,16 @@ JSValue *JSArrayConstructor::initialize(JSContext *ctx) {
 }
 JSValue *JSArrayConstructor::constructor(JSContext *ctx, JSValue *self,
                                          std::vector<JSValue *> args) {
-  return ctx->createUndefined();
+  auto array =
+      ctx->getScope()->createValue(ctx->getAllocator()->create<JSArray>());
+  auto constructor = ctx->getArrayConstructor();
+  auto prototype = ctx->getField(constructor, ctx->createString(L"prototype"));
+  CHECK(ctx, prototype);
+  auto err = ctx->setPrototype(array, prototype);
+  CHECK(ctx, err);
+  err = ctx->setConstructor(array, constructor);
+  CHECK(ctx, err);
+  return array;
 }
 
 JSValue *JSArrayConstructor::toString(JSContext *ctx, JSValue *self,
