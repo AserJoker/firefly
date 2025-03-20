@@ -155,15 +155,26 @@ JSValue *JSObjectType::getKeys(JSContext *ctx, JSValue *value) const {
   auto arr = ctx->createArray();
   ctx->pushScope();
   auto obj = value->getData()->cast<JSObject>();
-  auto &fields = obj->getFields();
-  uint32_t index = 0;
-  for (auto &[keyAtom, field] : fields) {
-    auto key = ctx->createValue(keyAtom);
-    if (field.enumable && key->isTypeof<JSStringType>()) {
-      auto err = ctx->setField(arr, ctx->createNumber(index), key);
-      CHECK(ctx, err);
-      index++;
+  std::vector<std::wstring> keys;
+  while (obj) {
+    auto &fields = obj->getFields();
+    for (auto &[keyAtom, field] : fields) {
+      auto key = ctx->createValue(keyAtom);
+      if (field.enumable && key->isTypeof<JSStringType>()) {
+        auto keystr = ctx->checkedString(key);
+        if (std::find(keys.begin(), keys.end(), keystr) == keys.end()) {
+          keys.push_back(keystr);
+        }
+      }
     }
+    obj = obj->getPrototype()->getData()->cast<JSObject>();
+  }
+  size_t index = 0;
+  for (auto it = keys.rbegin(); it != keys.rend(); it++) {
+    auto err =
+        ctx->setField(arr, ctx->createNumber(index), ctx->createString(*it));
+    CHECK(ctx, err);
+    index++;
   }
   ctx->popScope();
   return arr;

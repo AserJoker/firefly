@@ -8,6 +8,7 @@
 #include "JSObject.hpp"
 #include "JSValue.hpp"
 #include "script/compiler/JSOperator.hpp"
+#include "script/engine/JSArray.hpp"
 #include "script/engine/JSCallable.hpp"
 #include "script/engine/JSCallableType.hpp"
 #include "script/engine/JSEvalContext.hpp"
@@ -15,6 +16,7 @@
 #include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSInterruptType.hpp"
 #include "script/engine/JSNullType.hpp"
+#include "script/engine/JSString.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSSingleton.hpp"
 #include <cstdint>
@@ -885,8 +887,26 @@ private:
   }
   void runObjectSpread(JSContext *ctx, const JSProgram &program,
                        JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto count = getUint32(program, ectx.pc);
+    auto obj = *ectx.stack.rbegin();
+    auto result = ctx->createObject();
+    ectx.stack.pop_back();
+    std::vector<std::wstring> usedkeys;
+    while (count > 0) {
+      usedkeys.push_back(ctx->checkedString(*ectx.stack.rbegin()));
+      ectx.stack.pop_back();
+      count--;
+    }
+    auto &keys = ctx->getKeys(obj)->getData()->cast<JSArray>()->getItems();
+    for (auto &[_, key] : keys) {
+      auto keystr = key->getData()->cast<JSString>()->getValue();
+      if (std::find(usedkeys.begin(), usedkeys.end(), keystr) ==
+          usedkeys.end()) {
+        ctx->setField(result, ctx->createString(keystr),
+                      ctx->getField(obj, ctx->createString(keystr)));
+      }
+    }
+    ectx.stack.push_back(result);
   }
   void runArraySpread(JSContext *ctx, const JSProgram &program,
                       JSEvalContext &ectx) {
@@ -966,8 +986,13 @@ private:
   }
   void runGetKeys(JSContext *ctx, const JSProgram &program,
                   JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto value = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto keys = ctx->getKeys(value);
+    if (checkException(ctx, keys, ectx, program)) {
+      return;
+    }
+    ectx.stack.push_back(keys);
   }
   void runTryBegin(JSContext *ctx, const JSProgram &program,
                    JSEvalContext &ectx) {

@@ -1,4 +1,2 @@
-const arr = [1, 2, 3];
-arr[10] = 1;
-arr.length = 4;
-print(arr);
+const { a, ...b } = { a: 1, b: 2, c: 3 };
+print(a, b.b, b.c);
