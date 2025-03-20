@@ -328,8 +328,10 @@ JSNode *JSCodeGenerator::resolveMemberChain(const std::wstring &source,
       addresses.push_back(program.codes.size());
       pushAddress(program, 0);
     }
-    for (auto it = expression->arguments.rbegin();
-         it != expression->arguments.rend(); it++) {
+    size_t index = 0;
+    bool spread = false;
+    for (auto it = expression->arguments.begin();
+         it != expression->arguments.end(); it++) {
       auto arg = *it;
       if (is(arg, JS_NODE_TYPE::EXPRESSION_SPREAD)) {
         auto expr = arg->cast<JSSpreadExpressionNode>();
@@ -338,12 +340,19 @@ JSNode *JSCodeGenerator::resolveMemberChain(const std::wstring &source,
           return err;
         }
         pushOperator(program, JS_OPERATOR::SPREAD);
+        pushUint32(program, index);
+        spread = true;
       } else {
         auto err = resolve(source, arg, program);
         if (err) {
           return err;
         }
+        index++;
       }
+    }
+    if (!spread) {
+      pushOperator(program, JS_OPERATOR::PUSH);
+      pushNumber(program, index);
     }
     if (is(callee, JS_NODE_TYPE::EXPRESSION_MEMBER) ||
         is(callee, JS_NODE_TYPE::EXPRESSION_COMPUTED_MEMBER) ||
@@ -373,7 +382,6 @@ JSNode *JSCodeGenerator::resolveMemberChain(const std::wstring &source,
         .position = callee->location.end,
         .filename = program.filename,
     };
-    pushUint32(program, (uint32_t)expression->arguments.size());
   } else if (is(node, JS_NODE_TYPE::EXPRESSION_GROUP)) {
     auto expression = node->cast<JSGroupExpressionNode>();
     return resolveMemberChain(source, expression->expression, program,

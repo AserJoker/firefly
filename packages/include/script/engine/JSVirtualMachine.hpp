@@ -394,7 +394,8 @@ private:
   }
   void runCall(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     auto frame = program.stacks.at(ectx.pc);
-    auto size = getUint32(program, ectx.pc);
+    auto size = (uint32_t)ctx->checkedNumber(*ectx.stack.rbegin());
+    ectx.stack.pop_back();
     std::vector<JSValue *> arguments;
     for (size_t index = 0; index < size; index++) {
       auto val = *ectx.stack.rbegin();
@@ -404,7 +405,8 @@ private:
     auto func = *ectx.stack.rbegin();
     ectx.stack.pop_back();
     frame.position.funcname = func->getData()->cast<JSCallable>()->getName();
-    auto result = call(ctx, func, ctx->createUndefined(), arguments, frame);
+    auto result = call(ctx, func, ctx->createUndefined(),
+                       {arguments.rbegin(), arguments.rend()}, frame);
     if (checkException(ctx, result, ectx, program)) {
       return;
     }
@@ -413,7 +415,8 @@ private:
   void runMemberCall(JSContext *ctx, const JSProgram &program,
                      JSEvalContext &ectx) {
     auto frame = program.stacks.at(ectx.pc);
-    auto size = getUint32(program, ectx.pc);
+    auto size = (uint32_t)ctx->checkedNumber(*ectx.stack.rbegin());
+    ectx.stack.pop_back();
     std::vector<JSValue *> arguments;
     for (size_t index = 0; index < size; index++) {
       auto val = *ectx.stack.rbegin();
@@ -996,8 +999,67 @@ private:
   }
   void runSpread(JSContext *ctx, const JSProgram &program,
                  JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto size = getUint32(program, ectx.pc);
+    auto value = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto iterator =
+        ctx->getField(value, ctx->getField(ctx->getSymbolConstructor(),
+                                           ctx->createString(L"iterator")));
+    if (!iterator->isTypeof<JSCallableType>()) {
+      ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                L"variable is not iterable"));
+      ectx.pc = program.codes.size();
+      return;
+    }
+    iterator = call(ctx, iterator, value, {},
+                    {
+                        .position =
+                            {
+                                .funcname = L"[Symbol.iterator]",
+                            },
+                    });
+    if (checkException(ctx, iterator, ectx, program)) {
+      return;
+    }
+    auto next = ctx->getField(iterator, ctx->createString(L"next"));
+    if (!next->isTypeof<JSCallableType>()) {
+      ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                L"variable is not iterable"));
+      ectx.pc = program.codes.size();
+      return;
+    }
+    auto res = call(ctx, next, iterator, {},
+                    {
+                        .position =
+                            {
+                                .funcname = L"next",
+                            },
+                    });
+    if (checkException(ctx, res, ectx, program)) {
+      return;
+    }
+    value = ctx->getField(res, ctx->createString(L"value"));
+    auto done = ctx->getField(res, ctx->createString(L"done"));
+    done = ctx->toBoolean(done);
+    size_t index = 0;
+    while (!ctx->checkedBoolean(done)) {
+      ectx.stack.push_back(value);
+      index++;
+      auto res = call(ctx, next, iterator, {},
+                      {
+                          .position =
+                              {
+                                  .funcname = L"next",
+                              },
+                      });
+      if (checkException(ctx, res, ectx, program)) {
+        return;
+      }
+      value = ctx->getField(res, ctx->createString(L"value"));
+      done = ctx->getField(res, ctx->createString(L"done"));
+      done = ctx->toBoolean(done);
+    }
+    ectx.stack.push_back(ctx->createNumber(size + index));
   }
   void runMerge(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     // not implement

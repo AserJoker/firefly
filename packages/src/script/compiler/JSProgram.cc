@@ -116,8 +116,7 @@ std::wstring JSProgram::toString() {
       break;
     }
     case JS_OPERATOR::SUPER_CALL: {
-      ss << L"SUPER_CALL " << *(uint32_t *)(codes.data() + offset);
-      offset += 2;
+      ss << L"SUPER_CALL";
       break;
     }
     case JS_OPERATOR::GET_FIELD: {
@@ -165,18 +164,15 @@ std::wstring JSProgram::toString() {
       break;
     }
     case JS_OPERATOR::CALL: {
-      ss << L"CALL " << *(uint32_t *)(codes.data() + offset);
-      offset += 2;
+      ss << L"CALL";
       break;
     }
     case JS_OPERATOR::MEMBER_CALL: {
-      ss << L"MEMBER_CALL " << *(uint32_t *)(codes.data() + offset);
-      offset += 2;
+      ss << L"MEMBER_CALL";
       break;
     }
     case JS_OPERATOR::PRIVATE_MEMBER_CALL: {
-      ss << L"PRIVATE_MEMBER_CALL " << *(uint32_t *)(codes.data() + offset);
-      offset += 2;
+      ss << L"PRIVATE_MEMBER_CALL";
       break;
     }
     case JS_OPERATOR::VOID: {
@@ -461,7 +457,8 @@ std::wstring JSProgram::toString() {
       break;
     }
     case JS_OPERATOR::SPREAD: {
-      ss << L"SPREAD";
+      ss << L"SPREAD " << *(uint32_t *)(codes.data() + offset);
+      offset += 2;
       break;
     }
     case JS_OPERATOR::MERGE: {
