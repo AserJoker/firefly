@@ -1,5 +1,6 @@
 #include "script/runtime/JSArrayConstructor.hpp"
 #include "script/engine/JSArray.hpp"
+#include "script/engine/JSArrayType.hpp"
 #include "script/engine/JSContext.hpp"
 #include "script/engine/JSException.hpp"
 #include "script/engine/JSNumberType.hpp"
@@ -84,7 +85,7 @@ JS_CFUNCTION(JSArrayConstructor::Iterator::iterator) { return self; }
 JS_CFUNCTION(JSArrayConstructor::Iterator::next) {
   auto array = ctx->getMetadata(self, L"array");
   auto idx = ctx->getMetadata(self, L"index");
-  if (!array || !array->isTypeof<JSArray>() || !idx ||
+  if (!array || !array->isTypeof<JSArrayType>() || !idx ||
       !idx->isTypeof<JSNumberType>()) {
     return ctx->createException(
         JSException::TYPE::TYPE,
