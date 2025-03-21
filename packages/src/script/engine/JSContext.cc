@@ -445,7 +445,13 @@ JSValue *JSContext::call(JSValue *func, JSValue *self,
     auto val = _current->createValue(atom);
     _current->storeValue(name, val);
   }
+  if (fn->getSelf()) {
+    self = createValue(fn->getSelf());
+  }
+  auto classContext = _classContext;
+  _classContext = fn->getClass();
   auto res = type->call(this, func, self, args);
+  _classContext = classContext;
   auto result = current->createValue(res->getAtom());
   popScope();
   return result;

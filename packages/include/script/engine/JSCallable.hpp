@@ -18,6 +18,10 @@ private:
 
   bool _globalContext;
 
+  JSAtom *_self;
+
+  JSAtom *_clazz;
+
 public:
   JSCallable(JSAllocator *allocator, const std::wstring &name,
              const std::unordered_map<std::wstring, JSAtom *> &closure,
@@ -44,4 +48,12 @@ public:
     }
     return nullptr;
   }
+
+  void setSelf(JSAtom *self);
+
+  JSAtom *getSelf();
+
+  void setClass(JSAtom *clazz);
+
+  JSAtom *getClass();
 };

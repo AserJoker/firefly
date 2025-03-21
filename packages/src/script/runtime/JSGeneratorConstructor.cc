@@ -41,6 +41,7 @@ JS_CFUNCTION(JSGeneratorConstructor::return_) {
     JSScope *scope = nullptr;
     JSEvalContext ectx;
     auto *pectx = &ectx;
+    JSValue *classContext = nullptr;
     if (interrupt) {
       pectx = &interrupt->getEvalContext();
       scope = interrupt->getScope();
@@ -56,7 +57,7 @@ JS_CFUNCTION(JSGeneratorConstructor::return_) {
         ctx->getScope()->storeValue(key, val);
       }
       if (func->getClass()) {
-        ectx.clazz = ctx->createValue(func->getClass());
+        classContext = ctx->setCurrentClass(ctx->createValue(func->getClass()));
       }
       ectx.self = ctx->createValue(func->getSelf() ? func->getSelf()
                                                    : generator->getSelf());
@@ -64,6 +65,9 @@ JS_CFUNCTION(JSGeneratorConstructor::return_) {
       pectx = &ectx;
     }
     ctx->setScope(scope);
+    if (func->getClass()) {
+      ctx->setCurrentClass(classContext);
+    }
     if (args.empty()) {
       pectx->stack.push_back(ctx->createUndefined());
     } else {
@@ -126,6 +130,7 @@ JS_CFUNCTION(JSGeneratorConstructor::throw_) {
     JSScope *scope = nullptr;
     JSEvalContext ectx;
     auto *pectx = &ectx;
+    JSValue *classContext = nullptr;
     if (interrupt) {
       pectx = &interrupt->getEvalContext();
       scope = interrupt->getScope();
@@ -141,7 +146,7 @@ JS_CFUNCTION(JSGeneratorConstructor::throw_) {
         ctx->getScope()->storeValue(key, val);
       }
       if (func->getClass()) {
-        ectx.clazz = ctx->createValue(func->getClass());
+        classContext = ctx->setCurrentClass(ctx->createValue(func->getClass()));
       }
       ectx.self = ctx->createValue(func->getSelf() ? func->getSelf()
                                                    : generator->getSelf());
@@ -149,6 +154,9 @@ JS_CFUNCTION(JSGeneratorConstructor::throw_) {
       pectx = &ectx;
     }
     ctx->setScope(scope);
+    if (func->getClass()) {
+      ctx->setCurrentClass(classContext);
+    }
     if (args.empty()) {
       pectx->stack.push_back(ctx->createException(ctx->createUndefined()));
     } else {
@@ -235,12 +243,13 @@ JS_CFUNCTION(JSGeneratorConstructor::next) {
                                                  : generator->getSelf());
     auto clazz =
         func->getClass() ? ctx->createValue(func->getClass()) : nullptr;
+    auto old = ctx->setCurrentClass(clazz);
     res = vm->eval(ctx, program,
                    {
                        .pc = func->getAddress(),
                        .self = self,
-                       .clazz = clazz,
                    });
+    ctx->setCurrentClass(old);
   }
   if (res) {
     res = current->createValue(res->getAtom());

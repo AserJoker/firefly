@@ -11,4 +11,12 @@ public:
 public:
   virtual JSValue *call(JSContext *ctx, JSValue *func, JSValue *self,
                         std::vector<JSValue *> args) const = 0;
+
+  JSValue *setSelf(JSContext *ctx, JSValue *value, JSValue *self) const;
+
+  JSValue *getSelf(JSContext *ctx, JSValue *value) const;
+
+  JSValue *setClass(JSContext *ctx, JSValue *value, JSValue *clazz) const;
+
+  JSValue *getClass(JSContext *ctx, JSValue *value) const;
 };

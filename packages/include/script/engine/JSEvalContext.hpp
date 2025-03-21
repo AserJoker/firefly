@@ -21,7 +21,6 @@ struct JSEvalContext {
   std::vector<size_t> frames;
   std::vector<JSLabelFrame> labels;
   JSValue *self{};
-  JSValue *clazz{};
   std::vector<size_t> defer;
   JSValue *result;
   std::vector<JSTryFrame> tryFrames;

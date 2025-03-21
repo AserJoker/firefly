@@ -10,12 +10,4 @@ JSFunction::JSFunction(
                  type != nullptr
                      ? type
                      : JSSingleton::instance<JSFunctionType>(allocator)),
-      _path(path), _address(address), _self(nullptr), _clazz(nullptr) {}
-
-void JSFunction::setSelf(JSAtom *self) { _self = self; }
-
-JSAtom *JSFunction::getSelf() { return _self; }
-
-void JSFunction::setClass(JSAtom *clazz) { _clazz = clazz; }
-
-JSAtom *JSFunction::getClass() { return _clazz; }
+      _path(path), _address(address) {}

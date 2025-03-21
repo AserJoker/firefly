@@ -8,10 +8,6 @@ private:
 
   size_t _address;
 
-  JSAtom *_self;
-
-  JSAtom *_clazz;
-
 public:
   JSFunction(JSAllocator *allocator, const std::wstring &name = L"",
              const std::wstring &path = L"", size_t address = 0,
@@ -26,12 +22,4 @@ public:
     _path = path;
     _address = address;
   }
-
-  void setSelf(JSAtom *self);
-
-  JSAtom *getSelf();
-
-  void setClass(JSAtom *clazz);
-
-  JSAtom *getClass();
 };

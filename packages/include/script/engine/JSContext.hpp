@@ -25,22 +25,37 @@ private:
   std::vector<JSStackFrame> _callstacks;
 
   JSValue *_Object{};
+
   JSValue *_Function{};
+
   JSValue *_Symbol{};
+
   JSValue *_Array{};
+
   JSValue *_String{};
+
   JSValue *_Number{};
+
   JSValue *_Boolean{};
+
   JSValue *_BigInt{};
+
   JSValue *_GeneratorFunction{};
+
   JSValue *_Generator{};
+
   JSValue *_AsyncFunction{};
+
   JSValue *_AsyncGeneratorFunction{};
+
   JSValue *_AsyncGenerator{};
+
   JSValue *_Promise{};
 
 private:
-  JSValue *_global;
+  JSValue *_global{};
+
+  JSAtom *_classContext{};
 
 public:
   JSContext(JSRuntime *runtime);
@@ -285,6 +300,19 @@ public:
   JSValue *getAsyncGeneratorConstructor() { return _AsyncGenerator; };
 
   JSValue *getPromiseConstructor() { return _Promise; };
+
+  JSValue *getCurrentClass() {
+    return _classContext ? createValue(_classContext) : nullptr;
+  }
+  JSValue *setCurrentClass(JSValue *clazz) {
+    auto old = _classContext;
+    if (clazz) {
+      _classContext = clazz->getAtom();
+    } else {
+      _classContext = nullptr;
+    }
+    return old ? createValue(old) : nullptr;
+  }
 };
 
 #define CHECK(ctx, value)                                                      \

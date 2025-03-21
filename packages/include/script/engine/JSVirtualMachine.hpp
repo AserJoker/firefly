@@ -212,8 +212,12 @@ private:
     ectx.stack.push_back(func);
   }
   void runArrow(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto entry = getAddress(program, ectx.pc);
+    auto func = ctx->createFunction(L"", program.filename, entry);
+    func->getType()->cast<JSCallableType>()->setSelf(ctx, func, ectx.self);
+    func->getType()->cast<JSCallableType>()->setClass(ctx, func,
+                                                      ctx->getCurrentClass());
+    ectx.stack.push_back(func);
   }
   void runAsyncArrow(JSContext *ctx, const JSProgram &program,
                      JSEvalContext &ectx) {
