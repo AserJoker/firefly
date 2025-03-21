@@ -1,5 +1,13 @@
-const arr = [1, 2, 3];
-function test(...arr) {
-  print(arr);
+function* gen() {
+  yield 1;
+  yield 2;
+  return 2;
 }
-test("a", "b", "c", ...arr);
+function* test() {
+  let data = yield* gen();
+  print(data);
+}
+const obj = test();
+obj.next();
+obj.next(1);
+obj.next('a');

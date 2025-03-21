@@ -127,6 +127,10 @@ std::wstring JSProgram::toString() {
       ss << L"SET_FIELD";
       break;
     }
+    case JS_OPERATOR::PUSH_BACK: {
+      ss << L"PUSH_BACK";
+      break;
+    }
     case JS_OPERATOR::SET_ACCESSOR_GETTER: {
       ss << L"SET_ACCESSOR_GETTER";
       break;

@@ -6686,6 +6686,13 @@ JSNode *JSParser::readYieldExpression(const std::wstring &source,
     node->comments.clear();
     _allocator->dispose(node);
     node = n;
+    while (skipInvisible(source, current)) {
+    };
+    auto err = readComments(source, current, node->comments);
+    if (err) {
+      _allocator->dispose(node);
+      return err;
+    }
   }
   auto value = readExpression2(source, current);
   if (value) {

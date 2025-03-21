@@ -1521,7 +1521,6 @@ JSNode *JSCodeGenerator::resolveArrayDeclaration(const std::wstring &source,
                                                  JSProgram &program) {
   auto declaration = node->cast<JSArrayDeclarationNode>();
   pushOperator(program, JS_OPERATOR::ARRAY);
-  size_t index = 0;
   for (auto item : declaration->items) {
     if (item->type == JS_NODE_TYPE::EXPRESSION_SPREAD) {
       auto p = item->cast<JSSpreadExpressionNode>();
@@ -1535,13 +1534,7 @@ JSNode *JSCodeGenerator::resolveArrayDeclaration(const std::wstring &source,
       if (err) {
         return err;
       }
-      pushOperator(program, JS_OPERATOR::PUSH);
-      pushNumber(program, index);
-      pushOperator(program, JS_OPERATOR::PUSH_VALUE);
-      pushUint32(program, 2);
-      pushOperator(program, JS_OPERATOR::SET_FIELD);
-      pushOperator(program, JS_OPERATOR::POP);
-      index++;
+      pushOperator(program, JS_OPERATOR::PUSH_BACK);
     }
   }
   return nullptr;
@@ -2413,6 +2406,8 @@ JSNode *JSCodeGenerator::resolveYieldDelegateExpression(
   if (err) {
     return err;
   }
+  pushOperator(program, JS_OPERATOR::ITERATOR);
+  pushOperator(program, JS_OPERATOR::UNDEFINED);
   pushOperator(program, JS_OPERATOR::YIELD_DELEGATE);
   return nullptr;
 }

@@ -9,6 +9,7 @@
 #include "JSValue.hpp"
 #include "script/compiler/JSOperator.hpp"
 #include "script/engine/JSArray.hpp"
+#include "script/engine/JSArrayType.hpp"
 #include "script/engine/JSCallable.hpp"
 #include "script/engine/JSCallableType.hpp"
 #include "script/engine/JSEvalContext.hpp"
@@ -16,6 +17,7 @@
 #include "script/engine/JSExceptionType.hpp"
 #include "script/engine/JSInterruptType.hpp"
 #include "script/engine/JSNullType.hpp"
+#include "script/engine/JSObjectType.hpp"
 #include "script/engine/JSString.hpp"
 #include "script/engine/JSValue.hpp"
 #include "script/util/JSSingleton.hpp"
@@ -59,8 +61,17 @@ private:
 
 private:
   JSValue *call(JSContext *ctx, JSValue *func, JSValue *self,
-                std::vector<JSValue *> args, const JSStackFrame &frame) {
-    ctx->pushCallStack(frame.filename, frame.position.funcname,
+                std::vector<JSValue *> args = {},
+                const JSStackFrame &frame = {}) {
+    auto fn = func->getData()->cast<JSCallable>();
+    if (!fn) {
+      return ctx->createException(JSException::TYPE::TYPE,
+                                  L"variable is not a function");
+    }
+    ctx->pushCallStack(frame.filename,
+                       frame.position.funcname.empty()
+                           ? fn->getName()
+                           : frame.position.funcname,
                        frame.position.column, frame.position.line);
     auto res = ctx->call(func, self, args);
     ctx->popCallStack();
@@ -404,7 +415,6 @@ private:
     }
     auto func = *ectx.stack.rbegin();
     ectx.stack.pop_back();
-    frame.position.funcname = func->getData()->cast<JSCallable>()->getName();
     auto result = call(ctx, func, ctx->createUndefined(),
                        {arguments.rbegin(), arguments.rend()}, frame);
     if (checkException(ctx, result, ectx, program)) {
@@ -432,7 +442,6 @@ private:
     if (checkException(ctx, func, ectx, program)) {
       return;
     }
-    frame.position.funcname = func->getData()->cast<JSCallable>()->getName();
     auto result = call(ctx, func, obj, arguments, frame);
     if (checkException(ctx, result, ectx, program)) {
       return;
@@ -499,8 +508,45 @@ private:
   }
   void runYieldDelegate(JSContext *ctx, const JSProgram &program,
                         JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto arg = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto iterator = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto next = ctx->getField(iterator, ctx->createString(L"next"));
+    if (checkException(ctx, next, ectx, program)) {
+      return;
+    }
+    if (!next->isTypeof<JSCallableType>()) {
+      ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                L"variable is not iterable"));
+      ectx.pc = program.codes.size();
+      return;
+    }
+    auto res = call(ctx, next, iterator);
+    if (!res->isTypeof<JSObjectType>()) {
+      ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                L"variable is not iterable"));
+      ectx.pc = program.codes.size();
+      return;
+    }
+    auto value = ctx->getField(res, ctx->createString(L"value"));
+    auto done = ctx->getField(res, ctx->createString(L"done"));
+    done = ctx->toBoolean(done);
+    if (checkException(ctx, value, ectx, program)) {
+      return;
+    }
+    if (checkException(ctx, done, ectx, program)) {
+      return;
+    }
+    if (!ctx->checkedBoolean(done)) {
+      ectx.pc--;
+      ectx.stack.push_back(iterator);
+      auto interrupt = ctx->createInterrupt(ectx, value);
+      ectx.stack.push_back(interrupt);
+      ectx.pc = program.codes.size();
+    } else {
+      ectx.stack.push_back(arg);
+    }
   }
   void runJmp(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
     auto address = getAddress(program, ectx.pc);
@@ -858,13 +904,7 @@ private:
       ectx.pc = program.codes.size();
       return;
     }
-    auto res = call(ctx, next, iterator, {},
-                    {
-                        .position =
-                            {
-                                .funcname = L"next",
-                            },
-                    });
+    auto res = call(ctx, next, iterator, {});
     if (checkException(ctx, res, ectx, program)) {
       return;
     }
@@ -922,13 +962,7 @@ private:
     auto iterator = *ectx.stack.rbegin();
     ectx.stack.pop_back();
     auto next = ctx->getField(iterator, ctx->createString(L"next"));
-    auto res = call(ctx, next, iterator, {},
-                    {
-                        .position =
-                            {
-                                .funcname = L"next",
-                            },
-                    });
+    auto res = call(ctx, next, iterator, {});
     if (checkException(ctx, res, ectx, program)) {
       return;
     }
@@ -940,13 +974,7 @@ private:
     while (!ctx->checkedBoolean(done)) {
       ctx->setField(array, index, value);
       ctx->inc(index);
-      res = call(ctx, next, iterator, {},
-                 {
-                     .position =
-                         {
-                             .funcname = L"next",
-                         },
-                 });
+      res = call(ctx, next, iterator, {});
       if (checkException(ctx, res, ectx, program)) {
         return;
       }
@@ -1011,13 +1039,7 @@ private:
       ectx.pc = program.codes.size();
       return;
     }
-    iterator = call(ctx, iterator, value, {},
-                    {
-                        .position =
-                            {
-                                .funcname = L"[Symbol.iterator]",
-                            },
-                    });
+    iterator = call(ctx, iterator, value, {});
     if (checkException(ctx, iterator, ectx, program)) {
       return;
     }
@@ -1028,13 +1050,7 @@ private:
       ectx.pc = program.codes.size();
       return;
     }
-    auto res = call(ctx, next, iterator, {},
-                    {
-                        .position =
-                            {
-                                .funcname = L"next",
-                            },
-                    });
+    auto res = call(ctx, next, iterator, {});
     if (checkException(ctx, res, ectx, program)) {
       return;
     }
@@ -1045,13 +1061,7 @@ private:
     while (!ctx->checkedBoolean(done)) {
       ectx.stack.push_back(value);
       index++;
-      auto res = call(ctx, next, iterator, {},
-                      {
-                          .position =
-                              {
-                                  .funcname = L"next",
-                              },
-                      });
+      auto res = call(ctx, next, iterator, {});
       if (checkException(ctx, res, ectx, program)) {
         return;
       }
@@ -1062,9 +1072,102 @@ private:
     ectx.stack.push_back(ctx->createNumber(size + index));
   }
   void runMerge(JSContext *ctx, const JSProgram &program, JSEvalContext &ectx) {
-    // not implement
-    ectx.pc = program.codes.size();
+    auto source = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto target = *ectx.stack.rbegin();
+    if (target->isTypeof<JSArrayType>()) {
+      auto iterator =
+          ctx->getField(source, ctx->getField(ctx->getSymbolConstructor(),
+                                              ctx->createString(L"iterator")));
+      if (checkException(ctx, iterator, ectx, program)) {
+        return;
+      }
+      if (!iterator->isTypeof<JSCallableType>()) {
+        ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                  L"variable is not iterable"));
+        ectx.pc = program.codes.size();
+        return;
+      }
+      iterator = call(ctx, iterator, source);
+      if (checkException(ctx, iterator, ectx, program)) {
+        return;
+      }
+      auto next = ctx->getField(iterator, ctx->createString(L"next"));
+      if (checkException(ctx, next, ectx, program)) {
+        return;
+      }
+      if (!next->isTypeof<JSCallableType>()) {
+        ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                  L"variable is not iterable"));
+        ectx.pc = program.codes.size();
+        return;
+      }
+      auto res = call(ctx, next, iterator);
+      if (!res->isTypeof<JSObjectType>()) {
+        ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                  L"variable is not iterable"));
+        ectx.pc = program.codes.size();
+        return;
+      }
+      auto value = ctx->getField(res, ctx->createString(L"value"));
+      auto done = ctx->getField(res, ctx->createString(L"done"));
+      done = ctx->toBoolean(done);
+      if (checkException(ctx, value, ectx, program)) {
+        return;
+      }
+      if (checkException(ctx, done, ectx, program)) {
+        return;
+      }
+      while (!ctx->checkedBoolean(done)) {
+        auto len = target->getData()->cast<JSArray>()->getLength();
+        ctx->setField(target, ctx->createNumber(len), value);
+        res = call(ctx, next, iterator);
+        if (!res->isTypeof<JSObjectType>()) {
+          ectx.stack.push_back(ctx->createException(
+              JSException::TYPE::TYPE, L"variable is not iterable"));
+          ectx.pc = program.codes.size();
+          return;
+        }
+        value = ctx->getField(res, ctx->createString(L"value"));
+        done = ctx->getField(res, ctx->createString(L"done"));
+        done = ctx->toBoolean(done);
+        if (checkException(ctx, value, ectx, program)) {
+          return;
+        }
+        if (checkException(ctx, done, ectx, program)) {
+          return;
+        }
+      }
+    } else {
+      if (!target->isTypeof<JSObjectType>()) {
+        ectx.stack.push_back(ctx->createException(JSException::TYPE::TYPE,
+                                                  L"variable is not object"));
+        ectx.pc = program.codes.size();
+        return;
+      }
+      auto keys = ctx->getKeys(source);
+      if (checkException(ctx, keys, ectx, program)) {
+        return;
+      }
+      auto &keyItems = keys->getData()->cast<JSArray>()->getItems();
+      for (auto &[_, keyAtom] : keyItems) {
+        auto key = ctx->createValue(keyAtom);
+        auto err = ctx->setField(target, key, ctx->getField(source, key));
+        if (checkException(ctx, err, ectx, program)) {
+          return;
+        }
+      }
+    }
   }
+  void runPushBack(JSContext *ctx, const JSProgram &program,
+                   JSEvalContext &ectx) {
+    auto value = *ectx.stack.rbegin();
+    ectx.stack.pop_back();
+    auto array = *ectx.stack.rbegin();
+    ctx->setField(array, ctx->getField(array, ctx->createString(L"length")),
+                  value);
+  }
+
   void runGetKeys(JSContext *ctx, const JSProgram &program,
                   JSEvalContext &ectx) {
     auto value = *ectx.stack.rbegin();
@@ -1186,14 +1289,7 @@ private:
     }
     auto func = iterator->getData()->cast<JSCallable>();
     auto funcname = func->getName();
-    iterator = call(ctx, iterator, value, {},
-                    {
-                        .position =
-                            {
-                                .funcname = funcname,
-                            },
-                        .filename = program.filename,
-                    });
+    iterator = call(ctx, iterator, value, {});
     if (checkException(ctx, iterator, ectx, program)) {
       return;
     }
@@ -1447,6 +1543,9 @@ private:
       break;
     case JS_OPERATOR::DISABLE:
       runDisable(ctx, program, ectx);
+      break;
+    case JS_OPERATOR::PUSH_BACK:
+      runPushBack(ctx, program, ectx);
       break;
     case JS_OPERATOR::GET_FIELD:
       runGetField(ctx, program, ectx);
